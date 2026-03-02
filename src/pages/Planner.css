@@ -1,0 +1,425 @@
+.planner-container {
+    display: grid;
+    grid-template-columns: 260px 1fr 320px;
+    gap: 1.5rem;
+    height: calc(100vh - 72px - 4rem);
+}
+
+@media (max-width: 1280px) {
+    .planner-container {
+        grid-template-columns: 240px 1fr 280px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .planner-container {
+        grid-template-columns: 220px 1fr;
+        /* Hide IA panel or move it below on smaller screens */
+    }
+
+    .planner-ia {
+        display: none !important;
+    }
+}
+
+/* L: Sidebar */
+.planner-sidebar {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-main);
+}
+
+.planner-sidebar-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.planner-sidebar-header h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.units-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.unit-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.unit-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+
+.chevron {
+    color: var(--text-secondary);
+    transition: transform var(--transition-fast);
+}
+
+.chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.unit-classes {
+    margin-left: 1rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.unit-class-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.unit-class-item:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+}
+
+[data-theme='dark'] .unit-class-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.unit-class-item.active {
+    background-color: rgba(11, 78, 162, 0.1);
+    color: var(--primary);
+    font-weight: 500;
+}
+
+[data-theme='dark'] .unit-class-item.active {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: var(--accent-ia);
+}
+
+.add-class-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.add-class-btn:hover {
+    color: var(--primary);
+}
+
+/* C: Editor */
+.planner-editor {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-panel);
+}
+
+.editor-header {
+    padding: 2rem 2.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.editor-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    border: none;
+    background: transparent;
+    width: 100%;
+    font-family: inherit;
+    outline: none;
+}
+
+.editor-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 2.5rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.editor-block {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    position: relative;
+}
+
+.block-drag {
+    opacity: 0;
+    color: var(--text-secondary);
+    cursor: grab;
+    padding-top: 0.25rem;
+    transition: opacity 0.2s;
+}
+
+.editor-block:hover .block-drag {
+    opacity: 1;
+}
+
+.block-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.block-content h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.editor-text {
+    font-size: 1rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.todo-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.todo-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.border-dashed {
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    background-color: var(--bg-main);
+    transition: background-color var(--transition-fast);
+}
+
+.border-dashed:hover {
+    background-color: var(--bg-panel);
+    border-color: var(--text-secondary);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.block-new {
+    margin-left: 2.25rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px dashed transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+}
+
+.block-new:hover {
+    background-color: var(--bg-main);
+    border-color: var(--border-color);
+}
+
+/* R: IA Assistant */
+.planner-ia {
+    display: flex;
+    flex-direction: column;
+}
+
+.bg-ia {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, var(--bg-panel) 100%);
+}
+
+[data-theme='dark'] .bg-ia {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-panel) 100%);
+}
+
+.text-ia-accent {
+    color: var(--accent-ia);
+}
+
+.border-bottom {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.border-top {
+    border-top: 1px solid var(--border-color);
+}
+
+.ia-header {
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ia-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.ia-actions {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.btn-ia {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--accent-ia);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.btn-ia:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+}
+
+.border-ia {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.ia-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chat-bubble {
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 90%;
+    position: relative;
+}
+
+.ia-msg {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    align-self: flex-start;
+    border-top-left-radius: 0;
+}
+
+.msg-icon {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    background-color: var(--bg-panel);
+    color: var(--accent-ia);
+    border-radius: 50%;
+    padding: 2px;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.user-msg {
+    background-color: var(--primary);
+    color: var(--white);
+    align-self: flex-end;
+    border-top-right-radius: 0;
+}
+
+.chat-input-area {
+    padding: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    background-color: var(--bg-panel);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+.chat-input-area input {
+    flex: 1;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.chat-input-area input:focus {
+    border-color: var(--accent-ia);
+}
+
+.btn-send {
+    background-color: var(--accent-ia);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.btn-send:hover {
+    background-color: #2563EB;
+    /* darker blue */
+}
