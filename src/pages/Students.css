@@ -1,3 +1,4 @@
+/* AGORA IA — Estudiantes */
 .students-container {
     display: flex;
     gap: 1.5rem;
@@ -32,7 +33,7 @@
     gap: 1rem;
 }
 
-/* Table Styles */
+/* Table */
 .table-responsive {
     flex: 1;
     overflow: auto;
@@ -49,7 +50,8 @@
     font-size: 0.75rem;
     text-transform: uppercase;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
+    letter-spacing: 0.05em;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--bg-main);
     position: sticky;
@@ -61,17 +63,18 @@
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     font-size: 0.875rem;
+    color: var(--text-primary);
     background-color: var(--bg-panel);
     transition: background-color var(--transition-fast);
 }
 
 .modern-table tr:hover td {
-    background-color: var(--bg-main);
+    background-color: var(--bg-elevated);
     cursor: pointer;
 }
 
 .modern-table tr.selected-row td {
-    background-color: rgba(11, 78, 162, 0.05);
+    background-color: rgba(0, 168, 255, 0.08);
 }
 
 .student-cell {
@@ -81,16 +84,16 @@
 }
 
 .student-avatar {
-    width: 32px;
-    height: 32px;
-    background-color: var(--gray-medium);
+    width: 32px; height: 32px;
+    background-color: var(--bg-elevated);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 
 .alert-count {
@@ -98,10 +101,6 @@
     align-items: center;
     gap: 0.25rem;
     font-weight: 600;
-}
-
-.text-danger {
-    color: var(--danger);
 }
 
 /* Progress Bar */
@@ -115,7 +114,7 @@
 .progress-bar-bg {
     flex: 1;
     height: 6px;
-    background-color: var(--gray-medium);
+    background-color: var(--bg-elevated);
     border-radius: 9999px;
     overflow: hidden;
 }
@@ -125,18 +124,9 @@
     border-radius: 9999px;
 }
 
-.pb-excellent,
-.pb-good {
-    background-color: var(--success);
-}
-
-.pb-warning {
-    background-color: var(--warning);
-}
-
-.pb-critical {
-    background-color: var(--danger);
-}
+.pb-excellent, .pb-good { background-color: var(--success); }
+.pb-warning { background-color: var(--warning); }
+.pb-critical { background-color: var(--danger); }
 
 /* R: Profile Panel */
 .student-profile-panel {
@@ -150,27 +140,9 @@
 @media (max-width: 1024px) {
     .student-profile-panel {
         position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
+        top: 0; right: 0; bottom: 0;
         z-index: 20;
         box-shadow: var(--shadow-lg);
-    }
-}
-
-.animate-slide-in {
-    animation: slideInFromRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInFromRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
     }
 }
 
@@ -180,6 +152,7 @@
     top: 0;
     background-color: var(--bg-panel);
     z-index: 10;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .profile-title-row {
@@ -208,17 +181,17 @@
 }
 
 .profile-avatar-large {
-    width: 80px;
-    height: 80px;
+    width: 80px; height: 80px;
     border-radius: 50%;
-    background-color: var(--primary);
-    color: var(--white);
+    background: linear-gradient(135deg, var(--cyan-bright), var(--cyan-dim));
+    color: #FFFFFF;
     font-size: 1.5rem;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 1rem;
+    box-shadow: 0 4px 16px rgba(0, 168, 255, 0.2);
 }
 
 .profile-name {
@@ -236,7 +209,7 @@
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
@@ -250,7 +223,7 @@
 }
 
 .metric-box {
-    background-color: var(--bg-main);
+    background-color: var(--bg-elevated);
     padding: 1rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
@@ -263,7 +236,7 @@
 .metric-label {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
 }
 
 .metric-val {
@@ -275,7 +248,7 @@
 /* Chart Placeholder */
 .evolution-chart-placeholder {
     height: 80px;
-    background-color: var(--bg-main);
+    background-color: var(--bg-elevated);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     position: relative;
@@ -287,8 +260,7 @@
 .chart-line {
     position: absolute;
     bottom: 25px;
-    left: 10px;
-    right: 10px;
+    left: 10px; right: 10px;
     height: 2px;
     border-radius: 2px;
 }
@@ -296,40 +268,23 @@
 .chart-line::before {
     content: '';
     position: absolute;
-    top: -4px;
-    left: 50%;
-    width: 10px;
-    height: 10px;
+    top: -4px; left: 50%;
+    width: 10px; height: 10px;
     background: inherit;
     border-radius: 50%;
 }
 
-.chart-excellent {
-    background: var(--success);
-    transform: rotate(-10deg);
-}
-
-.chart-good {
-    background: var(--success);
-    transform: rotate(-5deg);
-}
-
-.chart-warning {
-    background: var(--warning);
-    transform: rotate(5deg);
-}
-
-.chart-critical {
-    background: var(--danger);
-    transform: rotate(15deg);
-}
+.chart-excellent { background: var(--success); transform: rotate(-10deg); }
+.chart-good { background: var(--success); transform: rotate(-5deg); }
+.chart-warning { background: var(--warning); transform: rotate(5deg); }
+.chart-critical { background: var(--danger); transform: rotate(15deg); }
 
 .chart-labels {
     display: flex;
     justify-content: space-between;
     width: 100%;
     font-size: 0.625rem;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
 }
 
 /* Alerts section */
@@ -337,8 +292,7 @@
     padding: 0.75rem 1rem;
     border-radius: var(--radius-md);
     border-left: 3px solid transparent;
-    background-color: rgba(245, 158, 11, 0.05);
-    /* warning default */
+    background-color: rgba(251, 191, 36, 0.06);
 }
 
 .profile-alert-item.pb-warning {
@@ -356,7 +310,10 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
 }
+
+.eval-item:last-child { border-bottom: none; }
 
 .eval-score {
     font-weight: 700;

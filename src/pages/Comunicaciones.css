@@ -1,0 +1,208 @@
+/* AGORA IA — Comunicaciones (Director) */
+.comms-container {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 72px - 4rem);
+}
+
+@media (max-width: 1024px) {
+  .comms-container { grid-template-columns: 1fr; }
+}
+
+/* Left panel */
+.comms-list-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.comms-list-header {
+  padding: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comms-list-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+}
+
+.comms-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.comms-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  width: 100%;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--transition-fast);
+  font-family: inherit;
+  color: inherit;
+}
+
+.comms-item:hover { background-color: var(--bg-hover); }
+.comms-item.active { background-color: var(--cyan-glow); border-right: 3px solid var(--cyan-bright); }
+
+.comms-item-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.comms-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.comms-item-subject {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comms-item-to {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.comms-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.comms-item-date {
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.comms-item-arrow {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+
+/* Right panel */
+.comms-detail-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.comms-detail-header {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-primary);
+}
+
+.comms-detail-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.comms-detail-meta {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comms-detail-body {
+  padding: 1.5rem 1.25rem;
+  flex: 1;
+  overflow-y: auto;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.comms-detail-body p { margin-bottom: 0.5rem; }
+
+.comms-detail-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Compose */
+.comms-compose {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.comms-compose-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.comms-compose-form .login-field input,
+.comms-compose-form .login-field textarea {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.comms-compose-form .login-field input:focus,
+.comms-compose-form .login-field textarea:focus {
+  border-color: var(--cyan-bright);
+  box-shadow: 0 0 0 2px var(--cyan-glow);
+}
+
+/* Empty state */
+.comms-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-subtle);
+  gap: 0.75rem;
+}
+
+.comms-empty p {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}

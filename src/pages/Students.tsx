@@ -1,27 +1,25 @@
 import { useState } from 'react';
 import { Search, Filter, MoreHorizontal, TrendingUp, AlertTriangle, FileSignature, X } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getStudentsByTeacher } from '../data/mockStudents';
+import type { Student } from '../types';
 import './Students.css';
 
-interface Student {
-    id: string;
-    name: string;
-    course: string;
-    status: 'excellent' | 'good' | 'warning' | 'critical';
-    alerts: number;
-    progress: number;
-    avatar: string;
-}
-
-const mockStudents: Student[] = [
-    { id: '1', name: 'Martina Silva', course: '4to 2da', status: 'excellent', alerts: 0, progress: 95, avatar: 'MS' },
-    { id: '2', name: 'Juan Pérez', course: '4to 2da', status: 'critical', alerts: 3, progress: 45, avatar: 'JP' },
-    { id: '3', name: 'Lucía Gómez', course: '5to 1ra', status: 'good', alerts: 0, progress: 80, avatar: 'LG' },
-    { id: '4', name: 'Tomás Rodríguez', course: '5to 1ra', status: 'warning', alerts: 1, progress: 65, avatar: 'TR' },
-    { id: '5', name: 'Valentina López', course: '3er 3ra', status: 'excellent', alerts: 0, progress: 92, avatar: 'VL' },
-];
-
 export default function Students() {
+    const { user } = useAuth();
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [search, setSearch] = useState('');
+
+    if (!user) return null;
+
+    const courseIds = user.subjects?.map(s => s.courseId) ?? [];
+    const allStudents = getStudentsByTeacher(courseIds);
+    const filteredStudents = search.trim()
+        ? allStudents.filter(s =>
+            `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+            s.courseName.toLowerCase().includes(search.toLowerCase())
+        )
+        : allStudents;
 
     const getStatusBadge = (status: Student['status']) => {
         switch (status) {
@@ -40,7 +38,13 @@ export default function Students() {
                     <div className="students-actions">
                         <div className="search-bar">
                             <Search size={16} className="search-icon" />
-                            <input type="text" placeholder="Buscar alumno..." className="search-input" />
+                            <input
+                                type="text"
+                                placeholder="Buscar alumno..."
+                                className="search-input"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
                         </div>
                         <button className="btn btn-outline"><Filter size={16} /> Filtros</button>
                     </div>
@@ -59,7 +63,7 @@ export default function Students() {
                             </tr>
                         </thead>
                         <tbody>
-                            {mockStudents.map(student => (
+                            {filteredStudents.map(student => (
                                 <tr
                                     key={student.id}
                                     onClick={() => setSelectedStudent(student)}
@@ -67,11 +71,11 @@ export default function Students() {
                                 >
                                     <td>
                                         <div className="student-cell">
-                                            <div className="student-avatar">{student.avatar}</div>
-                                            <span className="font-medium">{student.name}</span>
+                                            <div className="student-avatar">{student.avatarInitials}</div>
+                                            <span className="font-medium">{student.firstName} {student.lastName}</span>
                                         </div>
                                     </td>
-                                    <td className="text-secondary">{student.course}</td>
+                                    <td className="text-secondary">{student.courseName}</td>
                                     <td>{getStatusBadge(student.status)}</td>
                                     <td>
                                         {student.alerts > 0
@@ -111,9 +115,9 @@ export default function Students() {
 
                     <div className="profile-body">
                         <div className="profile-hero">
-                            <div className="profile-avatar-large">{selectedStudent.avatar}</div>
-                            <h2 className="profile-name">{selectedStudent.name}</h2>
-                            <p className="profile-course">{selectedStudent.course}</p>
+                            <div className="profile-avatar-large">{selectedStudent.avatarInitials}</div>
+                            <h2 className="profile-name">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
+                            <p className="profile-course">{selectedStudent.courseName}</p>
                             <div className="profile-status mt-2">{getStatusBadge(selectedStudent.status)}</div>
                         </div>
 
@@ -122,11 +126,11 @@ export default function Students() {
                             <div className="metrics-grid">
                                 <div className="metric-box">
                                     <span className="metric-label">Asistencia</span>
-                                    <span className="metric-val">{selectedStudent.status === 'critical' ? '78%' : '96%'}</span>
+                                    <span className="metric-val">{selectedStudent.attendance}%</span>
                                 </div>
                                 <div className="metric-box">
                                     <span className="metric-label">Promedio</span>
-                                    <span className="metric-val">{selectedStudent.status === 'critical' ? '5.5' : '8.9'}</span>
+                                    <span className="metric-val">{selectedStudent.average}</span>
                                 </div>
                             </div>
                         </div>
@@ -178,7 +182,6 @@ export default function Students() {
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             )}

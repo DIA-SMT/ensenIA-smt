@@ -1,75 +1,71 @@
-import { Monitor, Moon, Sun, Search, PlusCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Search, PlusCircle, Command } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import NotificationDropdown from './NotificationDropdown';
 import './Topbar.css';
 
 const routeNames: Record<string, string> = {
     '/dashboard': 'Dashboard',
     '/agenda': 'Mi Agenda',
-    '/planner': 'Planificación',
-    '/students': 'Estudiantes',
-    '/evaluations': 'Evaluaciones',
     '/ia-lab': 'Laboratorio IA',
-    '/materials': 'Materiales',
+    '/students': 'Estudiantes',
+    '/biblioteca': 'Biblioteca Docente',
     '/alerts': 'Alertas',
     '/settings': 'Configuración',
-    '/director': 'Panel Directivo'
+    '/docentes': 'Equipo Docente',
+    '/comunicaciones': 'Comunicaciones',
 };
 
 export default function Topbar() {
-    const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, isDocente } = useAuth();
+
     const pageTitle = routeNames[location.pathname] || 'Dashboard';
 
     const today = new Date().toLocaleDateString('es-AR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
+        weekday: 'long', day: 'numeric', month: 'long'
     });
-
     const formattedDate = today.charAt(0).toUpperCase() + today.slice(1);
 
-    useEffect(() => {
-        const root = window.document.documentElement;
-        if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            root.setAttribute('data-theme', systemTheme);
-        } else {
-            root.setAttribute('data-theme', theme);
-        }
-    }, [theme]);
+    const greeting = (() => {
+        const h = new Date().getHours();
+        if (h < 12) return 'Buenos días';
+        if (h < 18) return 'Buenas tardes';
+        return 'Buenas noches';
+    })();
 
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
+    const firstName = user?.firstName ?? '';
 
     return (
         <header className="topbar glass-panel">
             <div className="topbar-left">
-                <div>
-                    <h2 className="page-title">{pageTitle}</h2>
-                    <div className="topbar-greeting">
-                        <span>¡Buen día, Marco!</span>
-                        <span className="dot-separator">•</span>
-                        <span className="date-display">{formattedDate}</span>
-                    </div>
+                <h2 className="page-title">{pageTitle}</h2>
+                <div className="topbar-greeting">
+                    <span>{greeting}, {firstName}</span>
+                    <span className="dot-sep">·</span>
+                    <span className="date-display">{formattedDate}</span>
                 </div>
             </div>
 
             <div className="topbar-right">
-                <div className="search-bar">
-                    <Search size={18} className="search-icon" />
-                    <input type="text" placeholder="Buscar alumnos, clases..." className="search-input" />
+                <div className="search-trigger">
+                    <Search size={16} className="search-trigger-icon" />
+                    <span className="search-trigger-text">Buscar...</span>
+                    <kbd className="search-kbd"><Command size={11} />K</kbd>
                 </div>
 
-                <button className="btn btn-outline theme-toggle" onClick={toggleTheme}>
-                    {theme === 'light' ? <Moon size={18} /> : (theme === 'dark' ? <Sun size={18} /> : <Monitor size={18} />)}
-                </button>
+                <NotificationDropdown />
 
-                <button className="btn btn-primary">
-                    <PlusCircle size={18} />
-                    Nueva Clase
-                </button>
+                {isDocente && (
+                    <button
+                        className="btn btn-primary nueva-clase-btn"
+                        onClick={() => navigate('/ia-lab')}
+                    >
+                        <PlusCircle size={18} />
+                        <span>Nueva Clase</span>
+                    </button>
+                )}
             </div>
         </header>
     );

@@ -1,3 +1,4 @@
+/* AGORA IA — Alertas */
 .alerts-container {
     display: flex;
     flex-direction: column;
@@ -10,25 +11,11 @@
     margin-bottom: 2rem;
 }
 
-.mt-1 {
-    margin-top: 0.25rem;
-}
-
-.mb-4 {
-    margin-bottom: 1rem;
-}
-
-.mt-3 {
-    margin-top: 0.75rem;
-}
-
-.mt-6 {
-    margin-top: 1.5rem;
-}
-
-.padding-lg {
-    padding: 1.5rem;
-}
+.mt-1 { margin-top: 0.25rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-6 { margin-top: 1.5rem; }
+.padding-lg { padding: 1.5rem; }
 
 .alerts-actions {
     display: flex;
@@ -55,21 +42,12 @@
     box-shadow: var(--shadow-md);
 }
 
-.border-danger {
-    border-top-color: var(--danger);
-}
-
-.border-warning {
-    border-top-color: var(--warning);
-}
-
-.border-success {
-    border-top-color: var(--success);
-}
+.border-danger { border-top-color: var(--danger); }
+.border-warning { border-top-color: var(--warning); }
+.border-success { border-top-color: var(--success); }
 
 .warning-icon-wrapper {
-    width: 48px;
-    height: 48px;
+    width: 48px; height: 48px;
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
@@ -77,46 +55,16 @@
     margin-bottom: 1.25rem;
 }
 
-.bg-danger {
-    background-color: rgba(239, 68, 68, 0.1);
-}
+.bg-danger { background-color: var(--danger-light); }
+.bg-warning { background-color: var(--warning-light); }
+.bg-success { background-color: var(--success-light); }
 
-.bg-warning {
-    background-color: rgba(245, 158, 11, 0.1);
-}
-
-.bg-success {
-    background-color: rgba(16, 185, 129, 0.1);
-}
-
-/* Override bg colors for charts if needed, using custom opacity utilities */
-.opacity-80 {
-    opacity: 0.8;
-}
-
-.h-60 {
-    height: 60%;
-}
-
-.h-80 {
-    height: 80%;
-}
-
-.h-40 {
-    height: 40%;
-}
-
-.h-90 {
-    height: 90%;
-}
-
-.h-30 {
-    height: 30%;
-}
-
-.h-50 {
-    height: 50%;
-}
+.h-60 { height: 60%; }
+.h-80 { height: 80%; }
+.h-40 { height: 40%; }
+.h-90 { height: 90%; }
+.h-30 { height: 30%; }
+.h-50 { height: 50%; }
 
 .warning-title-row {
     display: flex;
@@ -162,7 +110,7 @@
 
 .affected-list li {
     font-size: 0.875rem;
-    color: var(--text-primary);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -170,16 +118,7 @@
 
 .affected-list li::before {
     content: '•';
-    color: var(--text-secondary);
-}
-
-.btn-ghost {
-    align-self: flex-start;
-    padding: 0;
-    margin-left: -0.25rem;
-    /* Optical alignment */
-    padding-left: 0.25rem;
-    padding-right: 0.25rem;
+    color: var(--text-subtle);
 }
 
 /* Visual Chart Placeholder */
@@ -201,19 +140,75 @@
     cursor: pointer;
 }
 
-.chart-bar:hover {
-    opacity: 1;
+.chart-bar:hover { opacity: 1; }
+
+.chart-placeholder .bg-danger { background-color: var(--danger); }
+.chart-placeholder .bg-warning { background-color: var(--warning); }
+.chart-placeholder .bg-success { background-color: var(--success); }
+
+/* ── Alerts Timeline ── */
+.alerts-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 1.5rem;
 }
 
-/* Added background utility colors for the chart */
-.chart-placeholder .bg-danger {
-    background-color: var(--danger);
+.alerts-timeline::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 11px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--border-color), transparent);
 }
 
-.chart-placeholder .bg-warning {
-    background-color: var(--warning);
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    position: relative;
 }
 
-.chart-placeholder .bg-success {
-    background-color: var(--success);
+.timeline-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: -1.5rem;
+    z-index: 1;
+    border: 2px solid var(--bg-panel);
+}
+
+.timeline-danger .timeline-dot { background: var(--danger-light); color: var(--danger); }
+.timeline-warning .timeline-dot { background: var(--warning-light); color: var(--warning); }
+.timeline-success .timeline-dot { background: var(--success-light); color: var(--success); }
+.timeline-info .timeline-dot { background: var(--cyan-glow); color: var(--cyan-bright); }
+
+.timeline-content {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.timeline-msg {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+
+.timeline-date {
+    font-size: 0.6875rem;
+    color: var(--text-subtle);
+    font-weight: 500;
 }

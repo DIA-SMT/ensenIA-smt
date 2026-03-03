@@ -1,40 +1,52 @@
 import { useState } from 'react';
 import { X, Users, MapPin, FlaskConical, CheckSquare } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getScheduleByTeacher } from '../data/mockSchedule';
+import type { ScheduleBlock } from '../types';
 import './Agenda.css';
-
-interface ClassBlock {
-    id: string;
-    day: number; // 0 (Mon) to 4 (Fri)
-    startHour: number; // e.g., 8.5 for 08:30
-    duration: number; // in hours, e.g., 1.5
-    subject: string;
-    course: string;
-    room: string;
-    colorClass: string;
-    studentsCount: number;
-}
-
-const scheduleBlocks: ClassBlock[] = [
-    { id: '1', day: 0, startHour: 8, duration: 2, subject: 'Biología Celular', course: '4to 2da', room: 'Aula 12', colorClass: 'block-blue', studentsCount: 28 },
-    { id: '2', day: 0, startHour: 10.5, duration: 1.5, subject: 'Física', course: '5to 1ra', room: 'Laboratorio', colorClass: 'block-green', studentsCount: 24 },
-    { id: '3', day: 1, startHour: 9, duration: 2, subject: 'Química Orgánica', course: '5to 2da', room: 'Laboratorio', colorClass: 'block-purple', studentsCount: 22 },
-    { id: '4', day: 2, startHour: 8, duration: 1.5, subject: 'Biología Celular', course: '4to 1ra', room: 'Aula 11', colorClass: 'block-blue', studentsCount: 30 },
-    { id: '5', day: 2, startHour: 10, duration: 2, subject: 'Física', course: '5to 1ra', room: 'Aula 14', colorClass: 'block-green', studentsCount: 24 },
-    { id: '6', day: 3, startHour: 13, duration: 2, subject: 'Anatomía', course: '6to 1ra', room: 'Aula 9', colorClass: 'block-orange', studentsCount: 18 },
-    { id: '7', day: 4, startHour: 9, duration: 3, subject: 'Laboratorio Práctico', course: '5to 2da', room: 'Laboratorio', colorClass: 'block-purple', studentsCount: 22 },
-];
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 const hours = Array.from({ length: 9 }, (_, i) => i + 8); // 8:00 to 16:00
 
+const blockColors: Record<string, string> = {
+    green: 'block-blue',
+    blue: 'block-green',
+    purple: 'block-purple',
+    orange: 'block-orange',
+    amber: 'block-orange',
+    teal: 'block-blue',
+};
+
+function formatHourLabel(h: number): string {
+    const hh = Math.floor(h);
+    const mm = h % 1 ? '30' : '00';
+    return `${hh}:${mm}`;
+}
+
 export default function Agenda() {
-    const [selectedBlock, setSelectedBlock] = useState<ClassBlock | null>(null);
+    const { user } = useAuth();
+    const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
 
-    const handleBlockClick = (block: ClassBlock) => {
-        setSelectedBlock(block);
-    };
+    if (!user) return null;
 
-    const closeModal = () => setSelectedBlock(null);
+    const myBlocks = getScheduleByTeacher(user.id);
+
+    // Get current week dates
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset);
+
+    const todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0
+
+    const weekDates = days.map((_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        return d.getDate();
+    });
+
+    const weekLabel = `Semana ${monday.getDate()} - ${weekDates[4]} ${today.toLocaleDateString('es-AR', { month: 'long' })}`;
 
     return (
         <div className="agenda-container">
@@ -43,7 +55,7 @@ export default function Agenda() {
                 <div className="agenda-controls">
                     <button className="btn btn-outline">Hoy</button>
                     <button className="btn btn-ghost">&lt;</button>
-                    <span className="current-week">Semana 15 - 19 Mayo</span>
+                    <span className="current-week">{weekLabel}</span>
                     <button className="btn btn-ghost">&gt;</button>
                 </div>
             </div>
@@ -61,9 +73,9 @@ export default function Agenda() {
                 <div className="days-wrapper">
                     <div className="days-header">
                         {days.map((day, idx) => (
-                            <div key={day} className={`day-header-cell ${idx === 2 ? 'today' : ''}`}>
+                            <div key={day} className={`day-header-cell ${idx === todayIndex ? 'today' : ''}`}>
                                 <span className="day-name">{day}</span>
-                                <span className="day-date">{15 + idx}</span>
+                                <span className="day-date">{weekDates[idx]}</span>
                             </div>
                         ))}
                     </div>
@@ -77,20 +89,20 @@ export default function Agenda() {
                         </div>
 
                         {/* Schedule Blocks */}
-                        {scheduleBlocks.map(block => (
+                        {myBlocks.map(block => (
                             <div
                                 key={block.id}
-                                className={`schedule-block ${block.colorClass}`}
+                                className={`schedule-block ${blockColors[block.colorClass] || 'block-blue'}`}
                                 style={{
-                                    gridColumn: block.day + 1,
+                                    gridColumn: block.dayIndex + 1,
                                     top: `${(block.startHour - 8) * 60}px`,
                                     height: `${block.duration * 60}px`
                                 }}
-                                onClick={() => handleBlockClick(block)}
+                                onClick={() => setSelectedBlock(block)}
                             >
-                                <div className="block-title">{block.subject}</div>
+                                <div className="block-title">{block.subjectName}</div>
                                 <div className="block-details">
-                                    <span>{block.course}</span> • <span>{block.room}</span>
+                                    <span>{block.courseName}</span> • <span>{block.room}</span>
                                 </div>
                             </div>
                         ))}
@@ -100,16 +112,16 @@ export default function Agenda() {
 
             {/* Detail Modal */}
             {selectedBlock && (
-                <div className="modal-overlay" onClick={closeModal}>
+                <div className="modal-overlay" onClick={() => setSelectedBlock(null)}>
                     <div className="modal-content card" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>Detalle de Clase</h3>
-                            <button className="btn-icon" onClick={closeModal}><X size={20} /></button>
+                            <button className="btn-icon" onClick={() => setSelectedBlock(null)}><X size={20} /></button>
                         </div>
 
-                        <div className={`modal-banner ${selectedBlock.colorClass}`}>
-                            <h2>{selectedBlock.subject}</h2>
-                            <p>{selectedBlock.startHour}:00 - {selectedBlock.startHour + selectedBlock.duration}:00</p>
+                        <div className={`modal-banner ${blockColors[selectedBlock.colorClass] || 'block-blue'}`}>
+                            <h2>{selectedBlock.subjectName}</h2>
+                            <p>{formatHourLabel(selectedBlock.startHour)} - {formatHourLabel(selectedBlock.startHour + selectedBlock.duration)}</p>
                         </div>
 
                         <div className="modal-body">
@@ -117,7 +129,7 @@ export default function Agenda() {
                                 <Users className="text-secondary" size={18} />
                                 <div className="detail-text">
                                     <span className="detail-label">Curso</span>
-                                    <span className="detail-value">{selectedBlock.course} ({selectedBlock.studentsCount} est.)</span>
+                                    <span className="detail-value">{selectedBlock.courseName} ({selectedBlock.studentCount} est.)</span>
                                 </div>
                             </div>
                             <div className="detail-row">

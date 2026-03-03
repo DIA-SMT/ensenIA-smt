@@ -1,3 +1,4 @@
+/* AGORA IA — Agenda */
 .agenda-container {
     display: flex;
     flex-direction: column;
@@ -36,6 +37,7 @@
     display: flex;
     overflow: hidden;
     background-color: var(--bg-panel);
+    border-radius: var(--radius-lg);
 }
 
 .time-col {
@@ -56,7 +58,7 @@
     justify-content: center;
     padding-top: 0.5rem;
     font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
     font-weight: 500;
     border-bottom: 1px solid transparent;
     position: relative;
@@ -99,12 +101,12 @@
 }
 
 .day-header-cell.today {
-    background-color: rgba(11, 78, 162, 0.05);
+    background-color: rgba(0, 168, 255, 0.06);
 }
 
 .day-header-cell.today .day-date {
-    background-color: var(--primary);
-    color: var(--white);
+    background-color: var(--cyan-bright);
+    color: #FFFFFF;
     border-radius: 9999px;
     width: 28px;
     height: 28px;
@@ -116,7 +118,7 @@
 .day-name {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
     text-transform: uppercase;
     margin-bottom: 0.125rem;
 }
@@ -132,15 +134,11 @@
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     min-height: calc(9 * 60px);
-    /* 9 hours * 60px */
 }
 
 .grid-lines {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     pointer-events: none;
     z-index: 0;
 }
@@ -150,17 +148,16 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.days-grid-content>.schedule-block {
+.days-grid-content > .schedule-block {
     position: absolute;
-    left: 4px;
-    right: 4px;
+    left: 4px; right: 4px;
     border-radius: var(--radius-md);
     padding: 0.5rem 0.75rem;
     z-index: 1;
     cursor: pointer;
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .schedule-block:hover {
@@ -180,63 +177,44 @@
 
 .block-details {
     font-size: 0.75rem;
-    opacity: 0.9;
+    opacity: 0.85;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Colors for blocks */
+/* ── Block Colors (AGORA IA dark) ── */
 .block-blue {
-    background-color: rgba(59, 130, 246, 0.15);
-    border-left: 3px solid #3B82F6;
-    color: #1e3a8a;
-}
-
-[data-theme='dark'] .block-blue {
-    color: #bfdbfe;
+    background-color: rgba(0, 168, 255, 0.15);
+    border-left: 3px solid var(--cyan-bright);
+    color: #7DD3FC;
 }
 
 .block-green {
-    background-color: rgba(16, 185, 129, 0.15);
-    border-left: 3px solid #10B981;
-    color: #064e3b;
-}
-
-[data-theme='dark'] .block-green {
-    color: #a7f3d0;
+    background-color: rgba(16, 217, 129, 0.15);
+    border-left: 3px solid var(--success);
+    color: #6EE7B7;
 }
 
 .block-purple {
-    background-color: rgba(139, 92, 246, 0.15);
-    border-left: 3px solid #8B5CF6;
-    color: #4c1d95;
-}
-
-[data-theme='dark'] .block-purple {
-    color: #ddd6fe;
+    background-color: rgba(79, 70, 229, 0.18);
+    border-left: 3px solid #818CF8;
+    color: #C4B5FD;
 }
 
 .block-orange {
-    background-color: rgba(245, 158, 11, 0.15);
-    border-left: 3px solid #F59E0B;
-    color: #78350f;
+    background-color: rgba(251, 191, 36, 0.15);
+    border-left: 3px solid var(--warning);
+    color: #FDE68A;
 }
 
-[data-theme='dark'] .block-orange {
-    color: #fde68a;
-}
-
-/* Modal Styles */
+/* ── Modal ── */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: 50;
     display: flex;
     align-items: center;
@@ -248,18 +226,6 @@
     max-width: 400px;
     overflow: hidden;
     animation: modalSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalSlideIn {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
 }
 
 .modal-header {
@@ -276,21 +242,9 @@
     color: var(--text-primary);
 }
 
-.btn-icon {
-    color: var(--text-secondary);
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-}
-
-.btn-icon:hover {
-    background-color: var(--bg-main);
-    color: var(--text-primary);
-}
-
 .modal-banner {
     padding: 1.5rem;
     border-left: none;
-    /* Override block style */
 }
 
 .modal-banner h2 {
@@ -301,7 +255,7 @@
 
 .modal-banner p {
     font-size: 0.875rem;
-    opacity: 0.9;
+    opacity: 0.85;
 }
 
 .modal-body {
@@ -324,7 +278,7 @@
 
 .detail-label {
     font-size: 0.75rem;
-    color: var(--text-secondary);
+    color: var(--text-subtle);
     font-weight: 500;
 }
 
@@ -342,6 +296,4 @@
     gap: 0.75rem;
 }
 
-.w-full {
-    width: 100%;
-}
+.w-full { width: 100%; }
