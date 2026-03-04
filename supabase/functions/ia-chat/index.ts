@@ -93,8 +93,14 @@ Deno.serve(async (req: Request) => {
     return new Response('Unauthorized', { status: 401, headers: corsHeaders() });
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return new Response(
+      sseEvent('error', { code: 'CONFIG_ERROR', message: 'Configuración de Supabase incompleta.' }),
+      { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
+    );
+  }
 
   // Verify the user's JWT
   const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);

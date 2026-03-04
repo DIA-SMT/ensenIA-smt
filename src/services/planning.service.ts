@@ -91,11 +91,13 @@ export async function updateClass(id: string, updates: Partial<{
   if (updates.content !== undefined) dbUpdates.content = updates.content;
   if (updates.isComplete !== undefined) dbUpdates.is_complete = updates.isComplete;
 
-  await supabase.from('planning_classes').update(dbUpdates).eq('id', id);
+  const { error } = await supabase.from('planning_classes').update(dbUpdates).eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteUnit(id: string): Promise<void> {
-  await supabase.from('planning_units').delete().eq('id', id);
+  const { error } = await supabase.from('planning_units').delete().eq('id', id);
+  if (error) throw error;
 }
 
 function mapUnit(row: any): PlanningUnit {

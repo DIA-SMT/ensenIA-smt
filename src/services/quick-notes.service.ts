@@ -27,11 +27,13 @@ export async function createNote(text: string, teacherId: string): Promise<Quick
 }
 
 export async function togglePin(noteId: string, isPinned: boolean): Promise<void> {
-  await supabase.from('quick_notes').update({ is_pinned: isPinned }).eq('id', noteId);
+  const { error } = await supabase.from('quick_notes').update({ is_pinned: isPinned }).eq('id', noteId);
+  if (error) throw error;
 }
 
 export async function deleteNote(noteId: string): Promise<void> {
-  await supabase.from('quick_notes').delete().eq('id', noteId);
+  const { error } = await supabase.from('quick_notes').delete().eq('id', noteId);
+  if (error) throw error;
 }
 
 function mapNote(row: any): QuickNote {

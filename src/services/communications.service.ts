@@ -44,11 +44,14 @@ export async function sendCommunication(data: {
   );
 
   if (!isBroadcast && Array.isArray(data.toUserIds)) {
-    const recipients = data.toUserIds.map(uid => ({
+    const recipients = data.toUserIds.filter(uid => uid).map(uid => ({
       communication_id: comm.id,
       user_id: uid,
     }));
-    await supabase.from('communication_recipients').insert(recipients);
+    if (recipients.length > 0) {
+      const { error } = await supabase.from('communication_recipients').insert(recipients);
+      if (error) throw error;
+    }
   }
 }
 

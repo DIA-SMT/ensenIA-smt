@@ -37,7 +37,8 @@ export async function getUnreadAlertCount(teacherId: string): Promise<number> {
 }
 
 export async function markAlertRead(alertId: string): Promise<void> {
-  await supabase.from('alerts').update({ is_read: true }).eq('id', alertId);
+  const { error } = await supabase.from('alerts').update({ is_read: true }).eq('id', alertId);
+  if (error) throw error;
 }
 
 function mapAlert(row: any): Alert {

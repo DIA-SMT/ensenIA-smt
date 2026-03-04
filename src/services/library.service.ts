@@ -26,10 +26,13 @@ export async function getMaterialsBySubject(subjectId: string): Promise<LibraryM
 }
 
 export async function searchMaterials(query: string, teacherId?: string): Promise<LibraryMaterial[]> {
+  // Escape special PostgREST characters to prevent filter injection
+  const safeQuery = query.replace(/[%_\\()",.*]/g, '');
+  if (!safeQuery) return [];
   let q = supabase
     .from('library_materials')
     .select('*')
-    .or(`title.ilike.%${query}%,description.ilike.%${query}%,subject_name.ilike.%${query}%`);
+    .or(`title.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,subject_name.ilike.%${safeQuery}%`);
 
   if (teacherId) q = q.eq('teacher_id', teacherId);
 
@@ -74,7 +77,8 @@ export async function createMaterial(material: {
 }
 
 export async function deleteMaterial(id: string): Promise<void> {
-  await supabase.from('library_materials').delete().eq('id', id);
+  const { error } = await supabase.from('library_materials').delete().eq('id', id);
+  if (error) throw error;
 }
 
 function mapMaterial(row: any): LibraryMaterial {

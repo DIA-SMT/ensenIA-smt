@@ -54,16 +54,18 @@ export async function getAllSentNotifications(schoolId: string): Promise<Notific
 }
 
 export async function markNotificationRead(notificationId: string, userId: string): Promise<void> {
-  await supabase.from('notification_reads').upsert({
+  const { error } = await supabase.from('notification_reads').upsert({
     notification_id: notificationId,
     user_id: userId,
   });
+  if (error) throw error;
 }
 
 export async function markAllNotificationsRead(userId: string, notificationIds: string[]): Promise<void> {
   if (notificationIds.length === 0) return;
   const rows = notificationIds.map(nid => ({ notification_id: nid, user_id: userId }));
-  await supabase.from('notification_reads').upsert(rows);
+  const { error } = await supabase.from('notification_reads').upsert(rows);
+  if (error) throw error;
 }
 
 export async function createNotification(data: {

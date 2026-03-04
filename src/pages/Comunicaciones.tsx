@@ -161,7 +161,7 @@ export default function Comunicaciones() {
                 />
               </div>
 
-              <button className="btn btn-primary" onClick={handleSend} disabled={!subject.trim() || !body.trim()}>
+              <button className="btn btn-primary" onClick={handleSend} disabled={!subject.trim() || !body.trim() || (!toAll && !selectedTeacherId)}>
                 <Send size={16} />
                 Enviar Comunicado
               </button>
