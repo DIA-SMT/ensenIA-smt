@@ -6,17 +6,17 @@ import {
     StickyNote, Pin, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import {
-    getTeacherStats, getDirectorStats, getWeeklyCalendar,
-    sparklineData, statsTrends,
-    getTodaySchedule, getNextClass, getAlertsByTeacher, getAlertsBySchool,
-    getTeacherUsers, getScheduleByTeacher, getCommunicationsBySchool
-} from '../data';
-import { getNotificationsForUser } from '../data/mockNotifications';
-import type { ScheduleBlock, Alert as AlertType, Notification as NotifType } from '../types';
+import { getTeacherStats, getDirectorStats } from '../services/stats.service';
+import { getTodaySchedule, getNextClass, getScheduleByTeacher } from '../services/schedule.service';
+import { getAlertsByTeacher, getAlertsBySchool } from '../services/alerts.service';
+import { getNotificationsForUser } from '../services/notifications.service';
+import { getTeacherUsers } from '../services/profiles.service';
+import { getCommunicationsBySchool } from '../services/communications.service';
+import { getQuickNotes } from '../services/quick-notes.service';
+import type { TeacherStats, DirectorStats, ScheduleBlock, Alert as AlertType, Notification as NotifType, Communication, User as UserType, QuickNote } from '../types';
 import './Dashboard.css';
 
-/* ── Shared hooks / components ── */
+/* -- Shared hooks / components -- */
 
 function useCounter(target: number, duration = 1200, decimals = 0) {
     const [count, setCount] = useState(0);
@@ -79,8 +79,23 @@ function TrendBadge({ value, up }: { value: number; up: boolean }) {
     );
 }
 
-/* ── Color helpers ── */
+/* -- Color helpers -- */
 const colorMap: Record<string, string> = { green: 'teal', blue: 'teal', orange: 'amber', amber: 'amber', purple: 'violet', teal: 'teal' };
+
+// Synthetic sparkline data (placeholder until real analytics)
+const sparklineData = {
+    students: [120, 125, 130, 128, 135, 138, 142],
+    classes: [4, 3, 5, 4, 4, 3, 4],
+    evaluations: [12, 10, 8, 9, 11, 8, 7],
+    attendance: [88, 89, 90, 89, 91, 90, 91.4],
+};
+
+const statsTrends = {
+    students: { value: 3.2, up: true },
+    classes: { value: 0, up: true },
+    evaluations: { value: 22, up: false },
+    attendance: { value: 1.2, up: true },
+};
 
 function formatHour(h: number): string {
     const hh = Math.floor(h);
@@ -88,37 +103,73 @@ function formatHour(h: number): string {
     return `${hh}:${mm}`;
 }
 
-/* ═══════════════════════════════════════
+function getWeeklyCalendar(schedule: ScheduleBlock[]) {
+    const dayLabels = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE'];
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+    return dayLabels.map((day, idx) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() + mondayOffset + idx);
+        const classes = schedule.filter(b => b.dayIndex === idx);
+        return {
+            day,
+            date: date.getDate(),
+            active: idx === (dayOfWeek === 0 ? 6 : dayOfWeek - 1),
+            classes: classes.length,
+        };
+    });
+}
+
+/* ========================================
    TEACHER DASHBOARD
-   ═══════════════════════════════════════ */
+   ======================================== */
 
 function TeacherDashboardContent() {
     const { user } = useAuth();
+    const [teacherStats, setTeacherStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, avgAttendance: 0 });
+    const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
+    const [nextClassBlock, setNextClassBlock] = useState<ScheduleBlock | null>(null);
+    const [weekSchedule, setWeekSchedule] = useState<ScheduleBlock[]>([]);
+    const [myAlerts, setMyAlerts] = useState<AlertType[]>([]);
+    const [myNotifs, setMyNotifs] = useState<NotifType[]>([]);
+    const [notes, setNotes] = useState<QuickNote[]>([]);
+
+    useEffect(() => {
+        if (!user) return;
+        const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
+        const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
+
+        Promise.all([
+            getTeacherStats(user.id, todayIndex),
+            getTodaySchedule(user.id, todayIndex),
+            getNextClass(user.id, todayIndex, currentHour),
+            getScheduleByTeacher(user.id),
+            getAlertsByTeacher(user.id),
+            getNotificationsForUser(user.id),
+            getQuickNotes(user.id),
+        ]).then(([stats, today, next, week, alerts, notifs, qn]) => {
+            setTeacherStats(stats);
+            setTodayClasses(today);
+            setNextClassBlock(next ?? today[0] ?? null);
+            setWeekSchedule(week);
+            setMyAlerts(alerts.slice(0, 3));
+            setMyNotifs(notifs.slice(0, 3));
+            setNotes(qn);
+        }).catch(console.error);
+    }, [user]);
+
     if (!user) return null;
 
-    const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
-    const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-
-    const teacherStats = getTeacherStats(user, todayIndex);
-    const todayClasses = getTodaySchedule(user.id, todayIndex);
-    const nextClass = getNextClass(user.id, todayIndex, currentHour) || todayClasses[0];
-    const weekCalendar = getWeeklyCalendar(user.id);
-    const myAlerts = getAlertsByTeacher(user.id).slice(0, 3);
-    const myNotifs = getNotificationsForUser(user.id).slice(0, 3);
+    const weekCalendar = getWeeklyCalendar(weekSchedule);
 
     const studentsCount = useCounter(teacherStats.totalStudents);
     const classesCount = useCounter(teacherStats.classesToday, 800);
     const evalsCount = useCounter(teacherStats.pendingEvaluations, 900);
     const attendanceCount = useCounter(teacherStats.avgAttendance, 1400, 1);
 
-    // Mock quick notes
-    const [notes] = useState([
-        { id: '1', text: 'Preparar examen parcial Biología para el viernes', isPinned: true },
-        { id: '2', text: 'Revisar trabajos prácticos de Química — 5to 2da', isPinned: false },
-        { id: '3', text: 'Coordinar con Lab IA actividad interactiva', isPinned: false },
-    ]);
-
-    // Mock recent activity
+    // Mock recent activity (no service for this yet)
     const recentActivity = [
         { id: 1, action: 'Generó actividad con IA', subject: 'Biología Celular', time: 'Hace 2 horas', type: 'ia' },
         { id: 2, action: 'Calificó evaluaciones', subject: 'Física', time: 'Ayer, 18:30', type: 'eval' },
@@ -182,7 +233,7 @@ function TeacherDashboardContent() {
                 {/* Left Column */}
                 <div className="dashboard-col-left">
                     {/* Next Class */}
-                    {nextClass && (
+                    {nextClassBlock && (
                         <section className="next-class-card animate-in stagger-5">
                             <div className="next-class-header">
                                 <div className="next-class-badge">
@@ -190,17 +241,17 @@ function TeacherDashboardContent() {
                                     <span>Próxima clase</span>
                                 </div>
                                 <span className="next-class-time">
-                                    {formatHour(nextClass.startHour)} - {formatHour(nextClass.startHour + nextClass.duration)}
+                                    {formatHour(nextClassBlock.startHour)} - {formatHour(nextClassBlock.startHour + nextClassBlock.duration)}
                                 </span>
                             </div>
                             <div className="next-class-body">
-                                <h3 className="next-class-subject">{nextClass.subjectName}</h3>
+                                <h3 className="next-class-subject">{nextClassBlock.subjectName}</h3>
                                 <div className="next-class-meta">
-                                    <span>{nextClass.courseName}</span>
+                                    <span>{nextClassBlock.courseName}</span>
                                     <span className="meta-dot">·</span>
-                                    <span>{nextClass.room}</span>
+                                    <span>{nextClassBlock.room}</span>
                                     <span className="meta-dot">·</span>
-                                    <span>{nextClass.studentCount} est.</span>
+                                    <span>{nextClassBlock.studentCount} est.</span>
                                 </div>
                             </div>
                             <div className="next-class-actions">
@@ -358,26 +409,54 @@ function TeacherDashboardContent() {
     );
 }
 
-/* ═══════════════════════════════════════
+/* ========================================
    DIRECTOR DASHBOARD
-   ═══════════════════════════════════════ */
+   ======================================== */
 
 function DirectorDashboardContent() {
-    const dirStats = getDirectorStats();
-    const teachers = getTeacherUsers();
-    const schoolAlerts = getAlertsBySchool('school-1').filter(a => !a.isRead).slice(0, 4);
-    const recentComms = getCommunicationsBySchool('school-1').slice(0, 3);
+    const { user } = useAuth();
+    const [dirStats, setDirStats] = useState<DirectorStats>({ totalTeachers: 0, activeClasses: 0, totalAlerts: 0, avgAttendance: 0, totalStudents: 0 });
+    const [teachers, setTeachers] = useState<UserType[]>([]);
+    const [schoolAlerts, setSchoolAlerts] = useState<AlertType[]>([]);
+    const [recentComms, setRecentComms] = useState<Communication[]>([]);
+    const [teacherWeeklyClasses, setTeacherWeeklyClasses] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        if (!user) return;
+        const schoolId = user.schoolId;
+
+        Promise.all([
+            getDirectorStats(schoolId),
+            getTeacherUsers(),
+            getAlertsBySchool(schoolId),
+            getCommunicationsBySchool(schoolId),
+        ]).then(([stats, t, alerts, comms]) => {
+            setDirStats(stats);
+            setTeachers(t);
+            setSchoolAlerts(alerts.filter(a => !a.isRead).slice(0, 4));
+            setRecentComms(comms.slice(0, 3));
+
+            // Load weekly class counts per teacher
+            Promise.all(t.map(teacher =>
+                getScheduleByTeacher(teacher.id).then(blocks => ({ id: teacher.id, count: blocks.length }))
+            )).then(results => {
+                const map: Record<string, number> = {};
+                results.forEach(r => { map[r.id] = r.count; });
+                setTeacherWeeklyClasses(map);
+            });
+        }).catch(console.error);
+    }, [user]);
 
     const teachersCount = useCounter(dirStats.totalTeachers, 800);
     const classesCount = useCounter(dirStats.activeClasses, 900);
     const alertsCount = useCounter(dirStats.totalAlerts, 1000);
     const attendanceCount = useCounter(dirStats.avgAttendance, 1400, 1);
 
-    // Compute teacher engagement (classes per week)
-    const teacherActivity = teachers.map(t => {
-        const weeklyClasses = getScheduleByTeacher(t.id).length;
-        return { name: `${t.firstName} ${t.lastName.charAt(0)}.`, classes: weeklyClasses, max: 10 };
-    });
+    const teacherActivity = teachers.map(t => ({
+        name: `${t.firstName} ${t.lastName.charAt(0)}.`,
+        classes: teacherWeeklyClasses[t.id] ?? 0,
+        max: 10,
+    }));
 
     return (
         <div className="dashboard-container">
@@ -504,9 +583,9 @@ function DirectorDashboardContent() {
     );
 }
 
-/* ═══════════════════════════════════════
+/* ========================================
    MAIN EXPORT
-   ═══════════════════════════════════════ */
+   ======================================== */
 
 export default function Dashboard() {
     const { isDirector } = useAuth();

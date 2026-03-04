@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Users, User as UserIcon, Clock, ChevronRight, MessageSquare, Plus } from 'lucide-react';
-import { getCommunicationsBySchool } from '../data/mockCommunications';
-import { getTeacherUsers } from '../data/mockUsers';
-import type { Communication, NotificationPriority } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { getCommunicationsBySchool, sendCommunication } from '../services/communications.service';
+import { getTeacherUsers } from '../services/profiles.service';
+import type { Communication, NotificationPriority, User } from '../types';
 import './Comunicaciones.css';
 
 const priorityLabels: Record<NotificationPriority, string> = {
@@ -18,10 +19,11 @@ const priorityBadgeClass: Record<NotificationPriority, string> = {
 };
 
 export default function Comunicaciones() {
+  const { user } = useAuth();
   const [selectedComm, setSelectedComm] = useState<Communication | null>(null);
   const [composing, setComposing] = useState(false);
-  const communications = getCommunicationsBySchool('school-1');
-  const teachers = getTeacherUsers();
+  const [communications, setCommunications] = useState<Communication[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]);
 
   // Compose form state
   const [toAll, setToAll] = useState(true);
@@ -30,13 +32,36 @@ export default function Comunicaciones() {
   const [body, setBody] = useState('');
   const [priority, setPriority] = useState<NotificationPriority>('medium');
 
-  function handleSend() {
-    // Mock send — just close composer
-    alert(`Comunicado "${subject}" enviado correctamente.`);
-    setComposing(false);
-    setSubject('');
-    setBody('');
+  useEffect(() => {
+    if (!user) return;
+    getCommunicationsBySchool(user.schoolId).then(setCommunications).catch(console.error);
+    getTeacherUsers().then(setTeachers).catch(console.error);
+  }, [user]);
+
+  async function handleSend() {
+    if (!user) return;
+    try {
+      await sendCommunication({
+        fromUserId: user.id,
+        subject,
+        body,
+        priority,
+        schoolId: user.schoolId,
+        toUserIds: toAll ? 'all' : [selectedTeacherId],
+      });
+      // Refresh list
+      const updated = await getCommunicationsBySchool(user.schoolId);
+      setCommunications(updated);
+      setComposing(false);
+      setSubject('');
+      setBody('');
+    } catch (err) {
+      console.error(err);
+      alert('Error al enviar el comunicado.');
+    }
   }
+
+  if (!user) return null;
 
   return (
     <div className="comms-container">
@@ -164,7 +189,7 @@ export default function Comunicaciones() {
             </div>
             <div className="comms-detail-footer">
               <span className="text-subtle text-sm">
-                Leído por {selectedComm.readBy.length} de {selectedComm.toUserIds === 'all' ? getTeacherUsers().length : (selectedComm.toUserIds as string[]).length} destinatarios
+                Leído por {selectedComm.readBy.length} de {selectedComm.toUserIds === 'all' ? teachers.length : (selectedComm.toUserIds as string[]).length} destinatarios
               </span>
             </div>
           </div>

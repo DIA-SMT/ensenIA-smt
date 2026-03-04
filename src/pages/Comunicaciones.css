@@ -1,14 +1,11 @@
-/* AGORA IA — Comunicaciones (Director) */
+/* ── Comunicaciones ── */
 .comms-container {
   display: grid;
   grid-template-columns: 400px 1fr;
-  gap: 1.5rem;
-  height: calc(100vh - 72px - 4rem);
+  gap: var(--space-6);
+  height: calc(100vh - var(--topbar-height) - var(--space-12));
 }
-
-@media (max-width: 1024px) {
-  .comms-container { grid-template-columns: 1fr; }
-}
+@media (max-width: 1024px) { .comms-container { grid-template-columns: 1fr; } }
 
 /* Left panel */
 .comms-list-panel {
@@ -18,7 +15,7 @@
 }
 
 .comms-list-header {
-  padding: 1.25rem;
+  padding: var(--space-5);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -26,14 +23,9 @@
 }
 
 .comms-list-header h3 {
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 0.8125rem;
 }
 
 .comms-list {
@@ -44,8 +36,8 @@
 .comms-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   width: 100%;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
@@ -55,10 +47,14 @@
 }
 
 .comms-item:hover { background-color: var(--bg-hover); }
-.comms-item.active { background-color: var(--cyan-glow); border-right: 3px solid var(--cyan-bright); }
+.comms-item.active {
+  background-color: var(--cyan-glow);
+  border-right: 3px solid var(--cyan-bright);
+}
 
 .comms-item-icon {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
   display: flex;
@@ -73,11 +69,11 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 2px;
 }
 
 .comms-item-subject {
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -86,7 +82,7 @@
 }
 
 .comms-item-to {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text-subtle);
 }
 
@@ -94,16 +90,16 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.25rem;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
 .comms-item-date {
-  font-size: 0.6875rem;
+  font-size: 11px;
   color: var(--text-subtle);
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .comms-item-arrow {
@@ -119,40 +115,39 @@
 }
 
 .comms-detail-header {
-  padding: 1.25rem;
+  padding: var(--space-5);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   color: var(--text-primary);
 }
 
 .comms-detail-header h3 {
-  font-size: 1.125rem;
+  font-size: 18px;
   font-weight: 600;
 }
 
 .comms-detail-meta {
-  padding: 1rem 1.25rem;
+  padding: var(--space-4) var(--space-5);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
   border-bottom: 1px solid var(--border-color);
 }
 
 .comms-detail-body {
-  padding: 1.5rem 1.25rem;
+  padding: var(--space-6) var(--space-5);
   flex: 1;
   overflow-y: auto;
-  font-size: 0.9375rem;
+  font-size: 15px;
   line-height: 1.7;
   color: var(--text-secondary);
 }
-
-.comms-detail-body p { margin-bottom: 0.5rem; }
+.comms-detail-body p { margin-bottom: var(--space-2); }
 
 .comms-detail-footer {
-  padding: 1rem 1.25rem;
+  padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--border-color);
 }
 
@@ -164,10 +159,10 @@
 }
 
 .comms-compose-form {
-  padding: 1.5rem;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-5);
   flex: 1;
   overflow-y: auto;
 }
@@ -176,19 +171,20 @@
 .comms-compose-form .login-field textarea {
   width: 100%;
   padding: 10px 14px;
-  background-color: var(--bg-main);
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: 14px;
   font-family: inherit;
   outline: none;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .comms-compose-form .login-field input:focus,
 .comms-compose-form .login-field textarea:focus {
   border-color: var(--cyan-bright);
-  box-shadow: 0 0 0 2px var(--cyan-glow);
+  box-shadow: 0 0 0 3px var(--cyan-glow);
 }
 
 /* Empty state */
@@ -199,10 +195,10 @@
   justify-content: center;
   height: 100%;
   color: var(--text-subtle);
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .comms-empty p {
-  font-size: 0.9375rem;
+  font-size: 15px;
   color: var(--text-secondary);
 }

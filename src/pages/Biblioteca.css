@@ -1,15 +1,12 @@
-/* AGORA IA — Biblioteca Docente */
+/* ── Biblioteca Docente ── */
 .biblioteca-container {
   display: grid;
   grid-template-columns: 260px 1fr;
-  gap: 1.5rem;
-  height: calc(100vh - 72px - 4rem);
+  gap: var(--space-6);
+  height: calc(100vh - var(--topbar-height) - var(--space-12));
 }
-
 @media (max-width: 1024px) {
-  .biblioteca-container {
-    grid-template-columns: 1fr;
-  }
+  .biblioteca-container { grid-template-columns: 1fr; }
   .biblioteca-sidebar { display: none; }
 }
 
@@ -21,40 +18,40 @@
 }
 
 .biblioteca-sidebar-header {
-  padding: 1.25rem;
+  padding: var(--space-5);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   color: var(--text-primary);
 }
 
 .biblioteca-sidebar-header h3 {
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .biblioteca-filters {
-  padding: 1.25rem;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex: 1;
 }
 
 .filter-label {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-subtle);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .filter-chip {
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   text-align: left;
@@ -75,7 +72,7 @@
 }
 
 .biblioteca-upload {
-  padding: 1.25rem;
+  padding: var(--space-5);
   border-top: 1px solid var(--border-color);
 }
 
@@ -88,23 +85,19 @@
 
 .biblioteca-main-header {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
-.biblioteca-search {
-  flex: 1;
-}
+.biblioteca-search { flex: 1; }
 
-.biblioteca-count {
-  margin-bottom: 1rem;
-}
+.biblioteca-count { margin-bottom: var(--space-4); }
 
 .biblioteca-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
   overflow-y: auto;
   flex: 1;
 }
@@ -113,8 +106,8 @@
 .biblioteca-card {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: var(--space-4);
+  padding: var(--space-5);
 }
 
 .mat-icon-wrap {
@@ -129,22 +122,19 @@
   flex-shrink: 0;
 }
 
-.mat-info {
-  flex: 1;
-  min-width: 0;
-}
+.mat-info { flex: 1; min-width: 0; }
 
 .mat-title {
-  font-size: 0.9375rem;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .mat-desc {
-  font-size: 0.8125rem;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -154,23 +144,23 @@
 .mat-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .mat-size {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text-subtle);
 }
 
 .mat-tags {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .mat-tag {
-  font-size: 0.6875rem;
+  font-size: 11px;
   color: var(--text-subtle);
   background: var(--bg-elevated);
   border-radius: var(--radius-full);
@@ -178,7 +168,7 @@
 }
 
 .mat-date {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text-subtle);
   white-space: nowrap;
   flex-shrink: 0;
@@ -190,13 +180,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 4rem;
+  gap: var(--space-3);
+  padding: var(--space-16);
   color: var(--text-subtle);
 }
 
 .biblioteca-empty p {
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-secondary);
 }

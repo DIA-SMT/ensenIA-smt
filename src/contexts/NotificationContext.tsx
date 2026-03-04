@@ -1,6 +1,10 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { Notification } from '../types';
-import { getNotificationsForUser } from '../data/mockNotifications';
+import {
+  getNotificationsForUser,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '../services/notifications.service';
 import { useAuth } from './AuthContext';
 
 interface NotificationContextType {
@@ -8,40 +12,55 @@ interface NotificationContextType {
   unreadCount: number;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
+  refreshNotifications: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Local copy of notifications (so we can mark as read)
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const data = await getNotificationsForUser(user.id);
+      setNotifications(data);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  }, [user]);
 
-  const allNotifs = user ? getNotificationsForUser(user.id) : [];
-
-  // Merge mock read state with our local read state
-  const notifications = allNotifs.map(n => ({
-    ...n,
-    isRead: n.isRead || readIds.has(n.id),
-  }));
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const markAsRead = useCallback((id: string) => {
-    setReadIds(prev => new Set(prev).add(id));
-  }, []);
+  const markAsRead = useCallback(async (id: string) => {
+    if (!user) return;
+    // Optimistic update
+    setNotifications(prev =>
+      prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
+    );
+    await markNotificationRead(id, user.id);
+  }, [user]);
 
-  const markAllAsRead = useCallback(() => {
-    setReadIds(prev => {
-      const next = new Set(prev);
-      allNotifs.forEach(n => next.add(n.id));
-      return next;
-    });
-  }, [allNotifs]);
+  const markAllAsRead = useCallback(async () => {
+    if (!user) return;
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    // Optimistic update
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    await markAllNotificationsRead(user.id, unreadIds);
+  }, [user, notifications]);
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead }}>
+    <NotificationContext.Provider
+      value={{ notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications: fetchNotifications }}
+    >
       {children}
     </NotificationContext.Provider>
   );

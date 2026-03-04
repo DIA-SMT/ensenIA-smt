@@ -1,16 +1,15 @@
-import { CheckCircle2, TrendingDown, BookX, Activity, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle2, TrendingDown, BookX, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAlertsByTeacher, getAlertsBySchool } from '../data/mockAlerts';
-import { students } from '../data/mockStudents';
+import { getAlertsByTeacher, getAlertsBySchool } from '../services/alerts.service';
+import { getAllStudents } from '../services/students.service';
 import type { Alert } from '../types';
 import './Alerts.css';
 
-function groupAlerts(alertsList: Alert[]) {
+function groupAlerts(alertsList: Alert[], totalStudents: number) {
     const dangerAlerts = alertsList.filter(a => a.type === 'danger');
     const warningAlerts = alertsList.filter(a => a.type === 'warning');
-    const successAlerts = alertsList.filter(a => a.type === 'success');
 
-    // Build grouped warning cards
     const groups = [
         {
             id: 'g-danger',
@@ -33,7 +32,7 @@ function groupAlerts(alertsList: Alert[]) {
         {
             id: 'g-success',
             title: 'Estudiantes en Seguimiento Normal',
-            count: students.length - dangerAlerts.length - warningAlerts.length,
+            count: Math.max(0, totalStudents - dangerAlerts.length - warningAlerts.length),
             level: 'success' as const,
             icon: CheckCircle2,
             description: 'Trayectoria educativa estable y sin alertas activas.',
@@ -46,14 +45,23 @@ function groupAlerts(alertsList: Alert[]) {
 
 export default function Alerts() {
     const { user, isDirector } = useAuth();
+    const [alertsList, setAlertsList] = useState<Alert[]>([]);
+    const [totalStudents, setTotalStudents] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const loadAlerts = isDirector
+            ? getAlertsBySchool(user.schoolId)
+            : getAlertsByTeacher(user.id);
+
+        loadAlerts.then(setAlertsList).catch(console.error);
+        getAllStudents().then(s => setTotalStudents(s.length)).catch(console.error);
+    }, [user, isDirector]);
 
     if (!user) return null;
 
-    const alertsList = isDirector
-        ? getAlertsBySchool('school-1')
-        : getAlertsByTeacher(user.id);
-
-    const warningGroups = groupAlerts(alertsList);
+    const warningGroups = groupAlerts(alertsList, totalStudents);
     const subtitle = isDirector
         ? 'Monitoreo de toda la institución'
         : 'Alertas de tus estudiantes y cursos';

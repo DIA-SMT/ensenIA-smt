@@ -11,6 +11,11 @@ export type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes';
 export type NotificationPriority = 'high' | 'medium' | 'low';
 export type FileType = 'pdf' | 'doc' | 'image' | 'link';
 
+// ── IA Chat ──
+export type ChatRole = 'user' | 'assistant' | 'system';
+export type IAToolType = 'act' | 'eval' | 'sum' | 'pres' | 'oral' | 'free';
+export type IAModel = 'haiku' | 'sonnet';
+
 // ── School ──
 export interface School {
   id: string;
@@ -194,6 +199,49 @@ export interface RecentActivity {
   time: string;
   type: 'ia' | 'eval' | 'material' | 'alert' | 'communication';
   userId: string;
+}
+
+// ── IA Chat Session ──
+export interface ChatSession {
+  id: string;
+  teacherId: string;
+  classId: string | null;
+  subjectId: string | null;
+  courseId: string | null;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: ChatRole;
+  content: string;
+  toolUsed: IAToolType | null;
+  modelUsed: IAModel | null;
+  tokenCount: number | null;
+  createdAt: string;
+}
+
+export interface IAUsage {
+  id: string;
+  teacherId: string;
+  usageDate: string;
+  messageCount: number;
+  tokenCountIn: number;
+  tokenCountOut: number;
+}
+
+export interface IAChatContext {
+  subjectName: string;
+  courseName: string;
+  unitTitle?: string;
+  classTitle?: string;
+  classObjectives?: string[];
+  classContent?: string;
+  difficulty?: number;
+  educationLevel?: string;
 }
 
 // ── Quick Note / Reminder ──

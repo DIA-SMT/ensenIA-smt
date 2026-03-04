@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Upload, FileText, Link2, Image, Filter, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMaterialsByTeacher, searchMaterials, subjects } from '../data';
-import type { LibraryMaterial } from '../types';
+import { getMaterialsByTeacher, searchMaterials } from '../services/library.service';
+import { getSubjects } from '../services/subjects.service';
+import type { LibraryMaterial, Subject } from '../types';
 import './Biblioteca.css';
 
 const fileIcons: Record<string, typeof FileText> = {
@@ -16,24 +17,37 @@ export default function Biblioteca() {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
+  const [allMaterials, setAllMaterials] = useState<LibraryMaterial[]>([]);
+  const [searchResults, setSearchResults] = useState<LibraryMaterial[] | null>(null);
+  const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    getMaterialsByTeacher(user.id).then(setAllMaterials).catch(console.error);
+    getSubjects().then(setSubjectsList).catch(console.error);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !query.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      searchMaterials(query, user.id).then(setSearchResults).catch(console.error);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [query, user]);
 
   if (!user) return null;
 
-  const allMaterials = getMaterialsByTeacher(user.id);
-
-  let filtered: LibraryMaterial[];
-  if (query.trim()) {
-    filtered = searchMaterials(query, user.id);
-  } else {
-    filtered = allMaterials;
-  }
+  let filtered = searchResults ?? allMaterials;
 
   if (activeSubject) {
     filtered = filtered.filter(m => m.subjectId === activeSubject);
   }
 
   const mySubjectIds = [...new Set(allMaterials.map(m => m.subjectId))];
-  const mySubjects = subjects.filter(s => mySubjectIds.includes(s.id));
+  const mySubjects = subjectsList.filter(s => mySubjectIds.includes(s.id));
 
   return (
     <div className="biblioteca-container">

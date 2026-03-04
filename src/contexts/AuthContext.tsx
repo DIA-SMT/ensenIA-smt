@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User, School } from '../types';
-import { loginCredentials, getUserById } from '../data/mockUsers';
-import { school as mockSchool } from '../data/mockSchool';
+import { supabase } from '../lib/supabase';
+import { getProfile, getSchool } from '../services/profiles.service';
 
 interface AuthContextType {
   user: User | null;
@@ -17,61 +17,79 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'ensenia_userId';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [school, setSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Restore session from localStorage on mount
-  useEffect(() => {
-    const savedUserId = localStorage.getItem(STORAGE_KEY);
-    if (savedUserId) {
-      const found = getUserById(savedUserId);
-      if (found) {
-        setUser(found);
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
+  async function loadProfile(userId: string) {
+    try {
+      const profile = await getProfile(userId);
+      const schoolData = await getSchool(profile.schoolId);
+      setUser(profile);
+      setSchool(schoolData);
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      setUser(null);
+      setSchool(null);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        } else {
+          setUser(null);
+          setSchool(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate async (mirrors real Supabase auth)
-    await new Promise(r => setTimeout(r, 400));
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase().trim(),
+      password,
+    });
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const cred = loginCredentials[normalizedEmail];
-
-    if (!cred) {
-      return { success: false, error: 'No se encontró una cuenta con ese email.' };
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        return { success: false, error: 'Email o contraseña incorrectos.' };
+      }
+      return { success: false, error: error.message };
     }
 
-    if (cred.password !== password) {
-      return { success: false, error: 'Contraseña incorrecta.' };
-    }
-
-    const found = getUserById(cred.userId);
-    if (!found) {
-      return { success: false, error: 'Error interno: usuario no encontrado.' };
-    }
-
-    setUser(found);
-    localStorage.setItem(STORAGE_KEY, found.id);
     return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    setSchool(null);
     navigate('/login');
   }, [navigate]);
 
   const value: AuthContextType = {
     user,
-    school: user ? mockSchool : null,
+    school,
     isAuthenticated: !!user,
     isDirector: user?.role === 'director',
     isDocente: user?.role === 'docente',

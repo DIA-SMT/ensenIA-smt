@@ -1,19 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, TrendingUp, AlertTriangle, FileSignature, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getStudentsByTeacher } from '../data/mockStudents';
+import { getStudentsByTeacher } from '../services/students.service';
 import type { Student } from '../types';
 import './Students.css';
 
 export default function Students() {
     const { user } = useAuth();
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [search, setSearch] = useState('');
 
+    useEffect(() => {
+        if (!user) return;
+        const courseIds = user.subjects?.map(s => s.courseId) ?? [];
+        getStudentsByTeacher(courseIds).then(setAllStudents).catch(console.error);
+    }, [user]);
+
     if (!user) return null;
 
-    const courseIds = user.subjects?.map(s => s.courseId) ?? [];
-    const allStudents = getStudentsByTeacher(courseIds);
     const filteredStudents = search.trim()
         ? allStudents.filter(s =>
             `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||

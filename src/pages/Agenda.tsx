@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Users, MapPin, FlaskConical, CheckSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getScheduleByTeacher } from '../data/mockSchedule';
+import { getScheduleByTeacher } from '../services/schedule.service';
 import type { ScheduleBlock } from '../types';
 import './Agenda.css';
 
@@ -26,10 +26,14 @@ function formatHourLabel(h: number): string {
 export default function Agenda() {
     const { user } = useAuth();
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
+    const [myBlocks, setMyBlocks] = useState<ScheduleBlock[]>([]);
+
+    useEffect(() => {
+        if (!user) return;
+        getScheduleByTeacher(user.id).then(setMyBlocks).catch(console.error);
+    }, [user]);
 
     if (!user) return null;
-
-    const myBlocks = getScheduleByTeacher(user.id);
 
     // Get current week dates
     const today = new Date();

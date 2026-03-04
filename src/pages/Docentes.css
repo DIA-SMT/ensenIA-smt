@@ -1,8 +1,8 @@
-/* AGORA IA — Gestión Docentes (Director) */
+/* ── Gestión Docentes ── */
 .docentes-container {
   display: flex;
-  gap: 1.5rem;
-  height: calc(100vh - 72px - 4rem);
+  gap: var(--space-6);
+  height: calc(100vh - var(--topbar-height) - var(--space-12));
   position: relative;
 }
 
@@ -15,14 +15,14 @@
 }
 
 .docentes-header {
-  padding: 1.5rem;
+  padding: var(--space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .docentes-header h2 {
-  font-size: 1.25rem;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
 }

@@ -1,28 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X, Calendar, BookOpen, Users, Activity } from 'lucide-react';
-import { getTeacherUsers } from '../data/mockUsers';
-import { getScheduleByTeacher, getTodaySchedule } from '../data/mockSchedule';
-import { subjects } from '../data/mockSubjects';
-import { students } from '../data/mockStudents';
-import type { User } from '../types';
+import { getTeacherUsers } from '../services/profiles.service';
+import { getScheduleByTeacher, getTodaySchedule } from '../services/schedule.service';
+import { getSubjects } from '../services/subjects.service';
+import { getAllStudents } from '../services/students.service';
+import type { User, Subject, Student, ScheduleBlock } from '../types';
 import './Docentes.css';
 
 export default function Docentes() {
   const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
-  const teachers = getTeacherUsers();
+  const [teachers, setTeachers] = useState<User[]>([]);
+  const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
+  const [studentsList, setStudentsList] = useState<Student[]>([]);
+  const [teacherTodayClasses, setTeacherTodayClasses] = useState<Record<string, ScheduleBlock[]>>({});
+  const [teacherWeeklyClasses, setTeacherWeeklyClasses] = useState<Record<string, number>>({});
   const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
+
+  useEffect(() => {
+    Promise.all([
+      getTeacherUsers(),
+      getSubjects(),
+      getAllStudents(),
+    ]).then(([t, s, st]) => {
+      setTeachers(t);
+      setSubjectsList(s);
+      setStudentsList(st);
+
+      // Load today's classes for each teacher
+      Promise.all(t.map(teacher =>
+        getTodaySchedule(teacher.id, todayIndex).then(classes => ({ id: teacher.id, classes }))
+      )).then(results => {
+        const map: Record<string, ScheduleBlock[]> = {};
+        results.forEach(r => { map[r.id] = r.classes; });
+        setTeacherTodayClasses(map);
+      });
+
+      // Load weekly schedule counts
+      Promise.all(t.map(teacher =>
+        getScheduleByTeacher(teacher.id).then(blocks => ({ id: teacher.id, count: blocks.length }))
+      )).then(results => {
+        const map: Record<string, number> = {};
+        results.forEach(r => { map[r.id] = r.count; });
+        setTeacherWeeklyClasses(map);
+      });
+    }).catch(console.error);
+  }, []);
 
   function getTeacherSubjectNames(teacher: User): string {
     if (!teacher.subjects) return '-';
     const subjectIds = [...new Set(teacher.subjects.map(s => s.subjectId))];
-    return subjectIds.map(id => subjects.find(s => s.id === id)?.name || id).join(', ');
+    return subjectIds.map(id => subjectsList.find(s => s.id === id)?.name || id).join(', ');
   }
 
   function getTeacherStudentCount(teacher: User): number {
     if (!teacher.subjects) return 0;
     const courseIds = [...new Set(teacher.subjects.map(s => s.courseId))];
-    return students.filter(s => courseIds.includes(s.courseId)).length;
+    return studentsList.filter(s => courseIds.includes(s.courseId)).length;
   }
+
+  const todayClassesForTeacher = (teacherId: string) => teacherTodayClasses[teacherId] ?? [];
 
   return (
     <div className="docentes-container">
@@ -49,7 +85,7 @@ export default function Docentes() {
               </thead>
               <tbody>
                 {teachers.map(t => {
-                  const todayClasses = getTodaySchedule(t.id, todayIndex);
+                  const todayClasses = todayClassesForTeacher(t.id);
                   const studentCount = getTeacherStudentCount(t);
                   return (
                     <tr
@@ -104,7 +140,7 @@ export default function Docentes() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {selectedTeacher.subjects?.map((sa, i) => (
                   <span key={i} className="badge badge-cyan">
-                    {subjects.find(s => s.id === sa.subjectId)?.name} — {sa.courseName}
+                    {subjectsList.find(s => s.id === sa.subjectId)?.name} — {sa.courseName}
                   </span>
                 ))}
               </div>
@@ -113,13 +149,13 @@ export default function Docentes() {
             <div className="profile-section">
               <h4><Calendar size={14} style={{ marginRight: 6 }} /> Horario Hoy</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {getTodaySchedule(selectedTeacher.id, todayIndex).map(block => (
+                {todayClassesForTeacher(selectedTeacher.id).map(block => (
                   <div key={block.id} className="metric-box" style={{ alignItems: 'flex-start' }}>
                     <span className="text-sm font-semibold">{Math.floor(block.startHour)}:{block.startHour % 1 ? '30' : '00'} — {block.subjectName}</span>
                     <span className="text-secondary text-xs">{block.courseName} · {block.room}</span>
                   </div>
                 ))}
-                {getTodaySchedule(selectedTeacher.id, todayIndex).length === 0 && (
+                {todayClassesForTeacher(selectedTeacher.id).length === 0 && (
                   <p className="text-secondary text-sm">Sin clases hoy</p>
                 )}
               </div>
@@ -134,7 +170,7 @@ export default function Docentes() {
                 </div>
                 <div className="metric-box">
                   <span className="metric-label">Clases/sem</span>
-                  <span className="metric-val">{getScheduleByTeacher(selectedTeacher.id).length}</span>
+                  <span className="metric-val">{teacherWeeklyClasses[selectedTeacher.id] ?? 0}</span>
                 </div>
               </div>
             </div>

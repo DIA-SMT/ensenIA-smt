@@ -1,44 +1,154 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
-    MessageSquare, PenLine, ChevronDown
+    MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPlanningByTeacher, getSubjectById } from '../data';
-import type { PlanningUnit, PlanningClass, SubjectAssignment } from '../types';
+import { getPlanningByTeacher, updateClass } from '../services/planning.service';
+import { getSubjects } from '../services/subjects.service';
+import {
+    getOrCreateSession, getSessionMessages, saveUserMessage,
+    getTodayUsage, clearSession
+} from '../services/chat-history.service';
+import { streamChat } from '../services/ia-chat.service';
+import MarkdownRenderer from '../components/MarkdownRenderer';
+import type {
+    PlanningUnit, PlanningClass, SubjectAssignment, Subject,
+    ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext
+} from '../types';
 import './IALab.css';
 
-/* ── Tool definitions ── */
+/* -- Tool definitions -- */
 const tools = [
-    { id: 'act', label: 'Generar actividad', icon: FileText },
-    { id: 'eval', label: 'Generar evaluación', icon: ListChecks },
-    { id: 'sum', label: 'Resumir documento', icon: FileInput },
-    { id: 'pres', label: 'Crear presentación', icon: Presentation },
-    { id: 'oral', label: 'Evaluar oral', icon: Mic },
+    { id: 'act' as IAToolType, label: 'Generar actividad', icon: FileText },
+    { id: 'eval' as IAToolType, label: 'Generar evaluación', icon: ListChecks },
+    { id: 'sum' as IAToolType, label: 'Resumir documento', icon: FileInput },
+    { id: 'pres' as IAToolType, label: 'Crear presentación', icon: Presentation },
+    { id: 'oral' as IAToolType, label: 'Evaluar oral', icon: Mic },
 ];
+
+const DAILY_QUOTA = 50;
+const SUMMARY_INPUT_LIMIT = 8000;
 
 type CenterMode = 'chat' | 'editor';
 
+/* -- Tool-specific suggestion chips -- */
+function getSuggestions(tool: IAToolType, classTitle?: string): string[] {
+    switch (tool) {
+        case 'act':
+            return [
+                'Actividad grupal colaborativa',
+                'Experimento práctico con materiales caseros',
+                'Actividad de investigación guiada',
+            ];
+        case 'eval':
+            return [
+                'Evaluación con rúbrica',
+                'Cuestionario de opción múltiple',
+                'Evaluación integradora',
+            ];
+        case 'sum':
+            return [
+                'Resumen con conceptos clave',
+                'Resumen visual con glosario',
+            ];
+        case 'pres':
+            return [
+                'Presentación de 10 diapositivas',
+                'Presentación interactiva con preguntas',
+            ];
+        case 'oral':
+            return [
+                'Rúbrica de exposición oral',
+                'Rúbrica de debate grupal',
+                'Guía para evaluar presentaciones',
+            ];
+        default:
+            return classTitle
+                ? [`Generar contenido para "${classTitle}"`, 'Crear actividad práctica', 'Ayudame a planificar']
+                : ['Ayudame a planificar una clase', 'Generar una actividad', 'Ideas para evaluar'];
+    }
+}
+
+/* -- Tool-specific pre-fill prompts -- */
+function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
+    const ctx = classTitle ? ` para la clase "${classTitle}"` : '';
+    switch (toolId) {
+        case 'act': return `Generá una actividad didáctica${ctx}. Incluií objetivos, materiales, duración y desarrollo paso a paso.`;
+        case 'eval': return `Creá una evaluación${ctx}. Incluií consignas variadas, rúbrica y criterios de calificación.`;
+        case 'sum': return `Resumí el siguiente texto de forma clara y estructurada:\n\n[Pegá tu texto acá]`;
+        case 'pres': return `Creá una presentación en diapositivas${ctx}. Máximo 10-12 slides con notas para el docente.`;
+        case 'oral': return `Diseñá una rúbrica para evaluar la exposición oral${ctx}. Incluií dimensiones, escala y preguntas disparadoras.`;
+        default: return '';
+    }
+}
+
 export default function IALab() {
     const { user } = useAuth();
-    const [chatInput, setChatInput] = useState('');
-    const [activeTool, setActiveTool] = useState('act');
-    const [centerMode, setCenterMode] = useState<CenterMode>('chat');
+
+    // ── Planning state ──
+    const [allUnits, setAllUnits] = useState<PlanningUnit[]>([]);
+    const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
+    const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [selectedClass, setSelectedClass] = useState<PlanningClass | null>(null);
     const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-    const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
+
+    // ── Chat state ──
+    const [chatInput, setChatInput] = useState('');
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [streamingContent, setStreamingContent] = useState('');
+    const [todayUsage, setTodayUsage] = useState<IAUsage | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // ── UI state ──
+    const [activeTool, setActiveTool] = useState<IAToolType>('free');
+    const [centerMode, setCenterMode] = useState<CenterMode>('chat');
+    const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+    // ── Config state ──
+    const [educationLevel, setEducationLevel] = useState('4to');
+    const [difficulty, setDifficulty] = useState(3);
+
+    // ── Subject selector (must be before any conditional return — React hooks rule) ──
+    const [selectedAssignmentIdx, setSelectedAssignmentIdx] = useState(0);
 
     if (!user) return null;
 
-    /* ── Subject / Course selector ── */
+    /* -- Subject / Course selector -- */
     const assignments = user.subjects ?? [];
-    const [selectedAssignmentIdx, setSelectedAssignmentIdx] = useState(0);
     const currentAssignment: SubjectAssignment | undefined = assignments[selectedAssignmentIdx];
 
-    /* ── Planning data ── */
-    const allUnits = getPlanningByTeacher(user.id);
+    // ── Load planning data + usage + subjects ──
+    useEffect(() => {
+        if (!user) return;
+        getPlanningByTeacher(user.id).then(setAllUnits).catch(console.error);
+        getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
+
+        getSubjects().then(subjects => {
+            const map: Record<string, Subject> = {};
+            subjects.forEach(s => { map[s.id] = s; });
+            setSubjectsMap(map);
+        }).catch(console.error);
+    }, [user]);
+
+    // ── Cleanup AbortController on unmount ──
+    useEffect(() => {
+        return () => {
+            abortControllerRef.current?.abort();
+        };
+    }, []);
+
+    // ── Auto-scroll on new messages / streaming ──
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, streamingContent]);
+
+    /* -- Planning data -- */
     const filteredUnits = useMemo(() => {
         if (!currentAssignment) return allUnits;
         return allUnits.filter(
@@ -46,7 +156,14 @@ export default function IALab() {
         );
     }, [allUnits, currentAssignment]);
 
-    /* ── Helpers ── */
+    /* -- Helpers -- */
+    const subjectsLoaded = Object.keys(subjectsMap).length > 0;
+    const getSubjectName = (subjectId: string) => subjectsMap[subjectId]?.name ?? (subjectsLoaded ? '' : 'Cargando...');
+    const subjectName = currentAssignment ? getSubjectName(currentAssignment.subjectId) : '';
+
+    const currentModelLabel = activeTool === 'sum' ? 'Haiku' : 'Sonnet';
+    const usageCount = todayUsage?.messageCount ?? 0;
+
     const toggleUnit = (unitId: string) => {
         setExpandedUnits(prev => {
             const next = new Set(prev);
@@ -55,25 +172,285 @@ export default function IALab() {
         });
     };
 
-    const handleSelectClass = (cls: PlanningClass, unitId: string) => {
+    // ── Build context for API ──
+    const buildContext = useCallback((): IAChatContext => {
+        const unit = selectedUnitId ? allUnits.find(u => u.id === selectedUnitId) : undefined;
+        return {
+            subjectName: currentAssignment ? getSubjectName(currentAssignment.subjectId) : '',
+            courseName: currentAssignment?.courseName ?? '',
+            unitTitle: unit?.title,
+            classTitle: selectedClass?.title,
+            classObjectives: selectedClass?.objectives,
+            classContent: selectedClass?.content ?? undefined,
+            difficulty,
+            educationLevel,
+        };
+    }, [currentAssignment, selectedClass, selectedUnitId, allUnits, difficulty, educationLevel, subjectsMap]);
+
+    // ── Select class → load/create session ──
+    const handleSelectClass = async (cls: PlanningClass, unitId: string) => {
         setSelectedClass(cls);
         setSelectedUnitId(unitId);
         setCenterMode('editor');
+
+        try {
+            const session = await getOrCreateSession(user.id, cls.id, {
+                subjectId: currentAssignment?.subjectId,
+                courseId: currentAssignment?.courseId,
+                title: cls.title,
+            });
+            setCurrentSession(session);
+            const msgs = await getSessionMessages(session.id);
+            setMessages(msgs);
+        } catch (err) {
+            console.error('Error loading session:', err);
+        }
     };
 
-    const handleBackToChat = () => {
+    // ── Switch to chat mode (create free session if needed) ──
+    const handleSwitchToChat = async () => {
         setCenterMode('chat');
-        setSelectedClass(null);
-        setSelectedUnitId(null);
+
+        if (!currentSession) {
+            try {
+                const session = await getOrCreateSession(user.id, selectedClass?.id ?? null, {
+                    subjectId: currentAssignment?.subjectId,
+                    courseId: currentAssignment?.courseId,
+                    title: selectedClass?.title ?? 'Chat libre',
+                });
+                setCurrentSession(session);
+                const msgs = await getSessionMessages(session.id);
+                setMessages(msgs);
+            } catch (err) {
+                console.error('Error creating session:', err);
+            }
+        }
     };
 
-    const subjectName = currentAssignment
-        ? getSubjectById(currentAssignment.subjectId)?.name ?? ''
-        : '';
+    // ── Tool click → pre-fill prompt ──
+    const handleToolClick = (toolId: IAToolType) => {
+        setActiveTool(toolId);
+        setCenterMode('chat');
+        if (toolId !== 'free') {
+            setChatInput(getToolPrompt(toolId, selectedClass?.title));
+        }
+
+        // Ensure session exists
+        if (!currentSession) {
+            getOrCreateSession(user.id, selectedClass?.id ?? null, {
+                subjectId: currentAssignment?.subjectId,
+                courseId: currentAssignment?.courseId,
+                title: selectedClass?.title ?? 'Chat libre',
+            }).then(session => {
+                setCurrentSession(session);
+                getSessionMessages(session.id).then(setMessages);
+            }).catch(console.error);
+        }
+    };
+
+    // ── Send message ──
+    const handleSend = async () => {
+        const text = chatInput.trim();
+        if (!text || isStreaming) return;
+
+        // Validate summary input length
+        if (activeTool === 'sum' && text.length > SUMMARY_INPUT_LIMIT) {
+            alert(`El texto para resumir es demasiado largo (máx. ${SUMMARY_INPUT_LIMIT} caracteres). Intentá con un fragmento más corto.`);
+            return;
+        }
+
+        // Quota check
+        if (usageCount >= DAILY_QUOTA) {
+            alert(`Alcanzaste el límite de ${DAILY_QUOTA} mensajes por hoy. ¡Volvé mañana!`);
+            return;
+        }
+
+        // Ensure session
+        let session = currentSession;
+        if (!session) {
+            try {
+                session = await getOrCreateSession(user.id, selectedClass?.id ?? null, {
+                    subjectId: currentAssignment?.subjectId,
+                    courseId: currentAssignment?.courseId,
+                    title: selectedClass?.title ?? 'Chat libre',
+                });
+                setCurrentSession(session);
+            } catch {
+                return;
+            }
+        }
+
+        // Save user message locally
+        setChatInput('');
+        const userMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            sessionId: session.id,
+            role: 'user',
+            content: text,
+            toolUsed: activeTool !== 'free' ? activeTool : null,
+            modelUsed: null,
+            tokenCount: null,
+            createdAt: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, userMsg]);
+
+        // Save to DB
+        saveUserMessage(session.id, text, activeTool !== 'free' ? activeTool : undefined).catch(console.error);
+
+        // Prepare conversation history for API
+        const history = [...messages, userMsg].map(m => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+        }));
+
+        // Start streaming
+        setIsStreaming(true);
+        setStreamingContent('');
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        let fullContent = '';
+
+        await streamChat(
+            history,
+            buildContext(),
+            {
+                sessionId: session.id,
+                tool: activeTool,
+            },
+            {
+                onToken: (text) => {
+                    fullContent += text;
+                    setStreamingContent(fullContent);
+                },
+                onDone: (metadata) => {
+                    // Add assistant message to local state
+                    const assistantMsg: ChatMessage = {
+                        id: metadata.messageId || crypto.randomUUID(),
+                        sessionId: session!.id,
+                        role: 'assistant',
+                        content: fullContent,
+                        toolUsed: activeTool !== 'free' ? activeTool : null,
+                        modelUsed: activeTool === 'sum' ? 'haiku' : 'sonnet',
+                        tokenCount: metadata.tokensOut,
+                        createdAt: new Date().toISOString(),
+                    };
+                    setMessages(prev => [...prev, assistantMsg]);
+                    setStreamingContent('');
+                    setIsStreaming(false);
+                    abortControllerRef.current = null;
+
+                    // Update usage count
+                    setTodayUsage(prev => prev
+                        ? { ...prev, messageCount: prev.messageCount + 1 }
+                        : {
+                            id: '',
+                            teacherId: user.id,
+                            usageDate: new Date().toISOString().split('T')[0],
+                            messageCount: 1,
+                            tokenCountIn: metadata.tokensIn,
+                            tokenCountOut: metadata.tokensOut,
+                        });
+                },
+                onError: (error) => {
+                    console.error('Stream error:', error);
+                    // Show error as a system message
+                    const errorMsg: ChatMessage = {
+                        id: crypto.randomUUID(),
+                        sessionId: session!.id,
+                        role: 'assistant',
+                        content: `⚠️ ${error.message}`,
+                        toolUsed: null,
+                        modelUsed: null,
+                        tokenCount: null,
+                        createdAt: new Date().toISOString(),
+                    };
+                    setMessages(prev => [...prev, errorMsg]);
+                    setStreamingContent('');
+                    setIsStreaming(false);
+                    abortControllerRef.current = null;
+                },
+            },
+            controller.signal,
+        );
+    };
+
+    // ── Stop streaming ──
+    const handleStop = () => {
+        abortControllerRef.current?.abort();
+        if (streamingContent) {
+            const partialMsg: ChatMessage = {
+                id: crypto.randomUUID(),
+                sessionId: currentSession?.id ?? '',
+                role: 'assistant',
+                content: streamingContent + '\n\n*[Generación interrumpida]*',
+                toolUsed: null,
+                modelUsed: null,
+                tokenCount: null,
+                createdAt: new Date().toISOString(),
+            };
+            setMessages(prev => [...prev, partialMsg]);
+        }
+        setStreamingContent('');
+        setIsStreaming(false);
+        abortControllerRef.current = null;
+    };
+
+    // ── Clear chat ──
+    const handleClearChat = async () => {
+        if (!currentSession) return;
+        try {
+            await clearSession(currentSession.id);
+            setMessages([]);
+        } catch (err) {
+            console.error('Error clearing session:', err);
+        }
+    };
+
+    // ── Copy message ──
+    const handleCopyMessage = (msg: ChatMessage) => {
+        navigator.clipboard.writeText(msg.content).then(() => {
+            setCopiedMsgId(msg.id);
+            setTimeout(() => setCopiedMsgId(null), 2000);
+        });
+    };
+
+    // ── Insert from chat into editor ──
+    const handleInsertFromChat = async (msg: ChatMessage) => {
+        if (!selectedClass) return;
+        const newContent = selectedClass.content
+            ? selectedClass.content + '\n\n' + msg.content
+            : msg.content;
+        try {
+            await updateClass(selectedClass.id, { content: newContent });
+            // Update local state
+            setSelectedClass({ ...selectedClass, content: newContent });
+            // Refresh planning
+            const units = await getPlanningByTeacher(user.id);
+            setAllUnits(units);
+        } catch (err) {
+            console.error('Error inserting content:', err);
+        }
+    };
+
+    // ── Enter key handler ──
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    // ── Suggestion chip click ──
+    const handleSuggestionClick = (text: string) => {
+        setChatInput(text);
+    };
+
+    const suggestions = getSuggestions(activeTool, selectedClass?.title);
 
     return (
         <div className="ia-lab-container">
-            {/* ═══════════ LEFT: Planning Tree ═══════════ */}
+            {/* LEFT: Planning Tree */}
             <div className="lab-sidebar card">
                 <div className="lab-panel-header">
                     <Folder size={18} className="text-ia-accent" />
@@ -87,16 +464,19 @@ export default function IALab() {
                             <select
                                 className="form-select compact-select"
                                 value={selectedAssignmentIdx}
-                                onChange={e => setSelectedAssignmentIdx(Number(e.target.value))}
+                                onChange={e => {
+                                    setSelectedAssignmentIdx(Number(e.target.value));
+                                    setSelectedClass(null);
+                                    setSelectedUnitId(null);
+                                    setCurrentSession(null);
+                                    setMessages([]);
+                                }}
                             >
-                                {assignments.map((a, i) => {
-                                    const sName = getSubjectById(a.subjectId)?.name ?? a.subjectId;
-                                    return (
-                                        <option key={i} value={i}>
-                                            {sName} — {a.courseName}
-                                        </option>
-                                    );
-                                })}
+                                {assignments.map((a, i) => (
+                                    <option key={i} value={i}>
+                                        {getSubjectName(a.subjectId) || 'Materia'} — {a.courseName}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>
@@ -153,14 +533,14 @@ export default function IALab() {
                 </div>
             </div>
 
-            {/* ═══════════ CENTER: Chat / Editor (dual mode) ═══════════ */}
+            {/* CENTER: Chat / Editor (dual mode) */}
             <div className="lab-main card">
                 {/* Mode toggle tabs */}
                 <div className="lab-main-header border-bottom">
                     <div className="mode-tabs">
                         <button
                             className={`mode-tab ${centerMode === 'chat' ? 'active' : ''}`}
-                            onClick={handleBackToChat}
+                            onClick={handleSwitchToChat}
                         >
                             <MessageSquare size={15} />
                             <span>Chat IA</span>
@@ -175,66 +555,154 @@ export default function IALab() {
                         </button>
                     </div>
                     <div className="header-right">
-                        <span className="badge badge-ia">Edu-Model v4</span>
-                        {centerMode === 'chat' && (
-                            <button className="btn btn-outline text-sm">Limpiar chat</button>
+                        <span className="badge badge-ia model-badge">{currentModelLabel}</span>
+                        <span className="quota-badge" title="Mensajes usados hoy">
+                            {usageCount}/{DAILY_QUOTA}
+                        </span>
+                        {centerMode === 'chat' && messages.length > 0 && (
+                            <button className="btn btn-outline text-sm" onClick={handleClearChat}>
+                                <Trash2 size={13} />
+                                Limpiar
+                            </button>
                         )}
                     </div>
                 </div>
 
-                {/* ── Chat Mode ── */}
+                {/* Chat Mode */}
                 {centerMode === 'chat' && (
                     <>
                         <div className="lab-chat-area">
-                            <div className="lab-msg bot-msg">
-                                <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
-                                <div className="msg-content">
-                                    <p>Hola {user.firstName}, estoy listo para ayudarte con <strong>{subjectName || 'tu materia'}</strong>
-                                        {currentAssignment ? ` para ${currentAssignment.courseName}` : ''}.</p>
-                                    <br />
-                                    <p>Seleccioná una herramienta a la derecha, o describí lo que necesitás generar. También podés seleccionar una clase del árbol de planificación para editarla.</p>
-                                </div>
-                            </div>
-
-                            <div className="lab-msg user-msg">
-                                <div className="msg-content">
-                                    <p>Quiero un experimento breve sobre ósmosis usando materiales caseros, como una papa y sal. Debe durar unos 20 minutos.</p>
-                                </div>
-                                <div className="msg-avatar user-avatar"><User size={18} className="text-white" /></div>
-                            </div>
-
-                            <div className="lab-msg bot-msg">
-                                <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
-                                <div className="msg-content">
-                                    <div className="generation-loader">
-                                        <span className="dot"></span><span className="dot"></span><span className="dot"></span>
-                                        <span className="text-xs text-ia-accent ml-2">Generando paso a paso...</span>
+                            {/* Welcome message (when no messages) */}
+                            {messages.length === 0 && !isStreaming && (
+                                <div className="lab-msg bot-msg">
+                                    <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
+                                    <div className="msg-content">
+                                        <p>¡Hola {user.firstName}! Soy tu asistente pedagógico para <strong>{subjectName || 'tu materia'}</strong>
+                                            {currentAssignment ? ` en ${currentAssignment.courseName}` : ''}.</p>
+                                        <br />
+                                        <p>Seleccioná una herramienta a la derecha, o describí lo que necesitás. También podés elegir una clase del árbol para trabajar con contexto.</p>
                                     </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* Message history */}
+                            {messages.map(msg => (
+                                <div key={msg.id} className={`lab-msg ${msg.role === 'user' ? 'user-msg' : 'bot-msg'}`}>
+                                    {msg.role === 'assistant' && (
+                                        <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
+                                    )}
+                                    <div className="msg-content">
+                                        {msg.role === 'assistant' ? (
+                                            <>
+                                                {msg.toolUsed && msg.toolUsed !== 'free' && (
+                                                    <span className="msg-tool-badge">
+                                                        {tools.find(t => t.id === msg.toolUsed)?.label ?? msg.toolUsed}
+                                                    </span>
+                                                )}
+                                                <MarkdownRenderer content={msg.content} />
+                                                <div className="msg-actions">
+                                                    <button
+                                                        className="msg-action-btn"
+                                                        onClick={() => handleCopyMessage(msg)}
+                                                        title="Copiar"
+                                                    >
+                                                        {copiedMsgId === msg.id
+                                                            ? <><CheckCircle size={13} /> Copiado</>
+                                                            : <><Copy size={13} /> Copiar</>
+                                                        }
+                                                    </button>
+                                                    {selectedClass && (
+                                                        <button
+                                                            className="msg-action-btn btn-insert-chat"
+                                                            onClick={() => handleInsertFromChat(msg)}
+                                                            title="Insertar en editor"
+                                                        >
+                                                            <ArrowDownToLine size={13} /> Insertar en clase
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+                                        )}
+                                    </div>
+                                    {msg.role === 'user' && (
+                                        <div className="msg-avatar user-avatar"><User size={18} className="text-white" /></div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {/* Streaming indicator */}
+                            {isStreaming && (
+                                <div className="lab-msg bot-msg">
+                                    <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
+                                    <div className="msg-content">
+                                        {streamingContent ? (
+                                            <MarkdownRenderer content={streamingContent} />
+                                        ) : (
+                                            <div className="generation-loader">
+                                                <span className="dot"></span><span className="dot"></span><span className="dot"></span>
+                                                <span className="text-xs text-ia-accent ml-2">Generando...</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div ref={chatEndRef} />
                         </div>
 
                         <div className="lab-input-wrapper border-top">
+                            {isStreaming && (
+                                <button className="btn-stop" onClick={handleStop}>
+                                    <Square size={14} /> Detener generación
+                                </button>
+                            )}
                             <div className="lab-input-box">
-                                <input
-                                    type="text"
-                                    placeholder="Describe lo que necesitas crear..."
+                                <textarea
+                                    aria-label="Mensaje para la IA"
+                                    placeholder={activeTool !== 'free'
+                                        ? `Describí lo que necesitás para ${tools.find(t => t.id === activeTool)?.label.toLowerCase()}...`
+                                        : 'Describí lo que necesitás crear...'
+                                    }
                                     value={chatInput}
                                     onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    rows={chatInput.split('\n').length > 3 ? 5 : 2}
+                                    disabled={isStreaming}
                                 />
-                                <button className="btn-send-large"><Send size={18} /></button>
+                                <button
+                                    className="btn-send-large"
+                                    onClick={handleSend}
+                                    disabled={isStreaming || !chatInput.trim()}
+                                >
+                                    <Send size={18} />
+                                </button>
                             </div>
+                            {activeTool === 'sum' && (
+                                <div className="sum-limit-hint">
+                                    <FileInput size={12} />
+                                    Límite: {SUMMARY_INPUT_LIMIT.toLocaleString()} caracteres
+                                    {chatInput.length > 0 && (
+                                        <span className={chatInput.length > SUMMARY_INPUT_LIMIT ? 'text-danger' : ''}>
+                                            {' '}({chatInput.length.toLocaleString()})
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                             <div className="lab-input-hints">
                                 <span>Sugerencias:</span>
-                                <button className="hint-chip">Añadir rúbrica de evaluación</button>
-                                <button className="hint-chip">Hacerlo más visual</button>
-                                <button className="hint-chip">Generar cuestionario</button>
+                                {suggestions.map((s, i) => (
+                                    <button key={i} className="hint-chip" onClick={() => handleSuggestionClick(s)}>
+                                        {s}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </>
                 )}
 
-                {/* ── Editor Mode ── */}
+                {/* Editor Mode */}
                 {centerMode === 'editor' && selectedClass && (
                     <>
                         <div className="editor-area">
@@ -277,7 +745,9 @@ export default function IALab() {
                                     <div className="block-body">
                                         <h4>Desarrollo / Texto</h4>
                                         {selectedClass.content ? (
-                                            <p className="editor-text">{selectedClass.content}</p>
+                                            <div className="editor-text">
+                                                <MarkdownRenderer content={selectedClass.content} />
+                                            </div>
                                         ) : (
                                             <p className="editor-text placeholder-text">
                                                 Hacé clic para escribir o usá el chat IA para generar contenido...
@@ -309,25 +779,34 @@ export default function IALab() {
                         {/* Bottom: quick IA input for editor */}
                         <div className="lab-input-wrapper border-top">
                             <div className="lab-input-box">
-                                <input
-                                    type="text"
+                                <textarea
+                                    aria-label="Mensaje rápido para la IA"
                                     placeholder={`Pedile a la IA que complete "${selectedClass.title}"...`}
                                     value={chatInput}
                                     onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    rows={1}
+                                    disabled={isStreaming}
                                 />
-                                <button className="btn-send-large"><Send size={18} /></button>
+                                <button
+                                    className="btn-send-large"
+                                    onClick={() => { setCenterMode('chat'); handleSend(); }}
+                                    disabled={isStreaming || !chatInput.trim()}
+                                >
+                                    <Send size={18} />
+                                </button>
                             </div>
                             <div className="lab-input-hints">
                                 <span>Sugerencias:</span>
-                                <button className="hint-chip">Generar contenido completo</button>
-                                <button className="hint-chip">Crear actividad práctica</button>
+                                <button className="hint-chip" onClick={() => handleSuggestionClick('Generar contenido completo')}>Generar contenido completo</button>
+                                <button className="hint-chip" onClick={() => handleSuggestionClick('Crear actividad práctica')}>Crear actividad práctica</button>
                             </div>
                         </div>
                     </>
                 )}
             </div>
 
-            {/* ═══════════ RIGHT: Tools + Config ═══════════ */}
+            {/* RIGHT: Tools + Config */}
             <div className="lab-config card">
                 {/* Tools Section */}
                 <div className="lab-panel-header">
@@ -339,12 +818,21 @@ export default function IALab() {
                         <div
                             key={t.id}
                             className={`tool-item ${activeTool === t.id ? 'active' : ''}`}
-                            onClick={() => { setActiveTool(t.id); setCenterMode('chat'); }}
+                            onClick={() => handleToolClick(t.id)}
                         >
                             <t.icon size={16} className={activeTool === t.id ? 'text-ia-accent' : 'text-secondary'} />
                             <span>{t.label}</span>
+                            {t.id === 'sum' && <span className="tool-model-tag">Haiku</span>}
                         </div>
                     ))}
+                    {/* Free chat option */}
+                    <div
+                        className={`tool-item ${activeTool === 'free' ? 'active' : ''}`}
+                        onClick={() => handleToolClick('free')}
+                    >
+                        <MessageSquare size={16} className={activeTool === 'free' ? 'text-ia-accent' : 'text-secondary'} />
+                        <span>Chat libre</span>
+                    </div>
                 </div>
 
                 {/* Config Section */}
@@ -357,7 +845,11 @@ export default function IALab() {
                 <div className="config-form">
                     <div className="form-group">
                         <label><Users size={14} /> Edad / Nivel Educativo</label>
-                        <select className="form-select" defaultValue="4to">
+                        <select
+                            className="form-select"
+                            value={educationLevel}
+                            onChange={e => setEducationLevel(e.target.value)}
+                        >
                             <option value="1ro">1er Año (13-14 años)</option>
                             <option value="2do">2do Año (14-15 años)</option>
                             <option value="3ro">3er Año (15-16 años)</option>
@@ -368,10 +860,10 @@ export default function IALab() {
 
                     <div className="form-group">
                         <label><BookOpen size={14} /> Materia</label>
-                        <select className="form-select" value={currentAssignment?.subjectId ?? ''} readOnly>
+                        <select className="form-select" value={currentAssignment?.subjectId ?? ''} disabled>
                             {assignments.map((a, i) => (
                                 <option key={i} value={a.subjectId}>
-                                    {getSubjectById(a.subjectId)?.name ?? a.subjectId}
+                                    {getSubjectName(a.subjectId) || 'Materia'}
                                 </option>
                             ))}
                         </select>
@@ -380,7 +872,14 @@ export default function IALab() {
                     <div className="form-group">
                         <label><SlidersHorizontal size={14} /> Dificultad</label>
                         <div className="range-wrapper">
-                            <input type="range" min="1" max="5" defaultValue="3" className="form-range" />
+                            <input
+                                type="range"
+                                min="1"
+                                max="5"
+                                value={difficulty}
+                                onChange={e => setDifficulty(Number(e.target.value))}
+                                className="form-range"
+                            />
                             <div className="range-labels">
                                 <span>Básica</span>
                                 <span>Avanzada</span>
@@ -388,16 +887,15 @@ export default function IALab() {
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label>Objetivos Pedagógicos (Opcional)</label>
-                        <textarea
-                            className="form-textarea"
-                            placeholder="Ej: Fomentar el pensamiento crítico y el trabajo en equipo..."
-                            rows={3}
-                        ></textarea>
-                    </div>
-
-                    <button className="btn btn-outline w-full">Guardar como preset</button>
+                    {selectedClass && (
+                        <div className="config-context-info">
+                            <h5>Clase seleccionada</h5>
+                            <p className="text-sm text-secondary">{selectedClass.title}</p>
+                            {selectedClass.objectives && selectedClass.objectives.length > 0 && (
+                                <p className="text-xs text-subtle">{selectedClass.objectives.length} objetivo(s)</p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

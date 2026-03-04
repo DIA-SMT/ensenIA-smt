@@ -1,4 +1,7 @@
-/* AGORA IA — Login Page */
+/* ═══════════════════════════════════════════════
+   ENSEÑIA SMT — Login Page
+   ═══════════════════════════════════════════════ */
+
 .login-page {
   min-height: 100vh;
   display: flex;
@@ -41,7 +44,7 @@
   background-color: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-2xl);
-  padding: 2.5rem;
+  padding: var(--space-10);
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-xl);
@@ -50,23 +53,23 @@
 /* Header */
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .login-title {
-  font-size: 1.75rem;
+  font-size: 28px;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: 0.04em;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 .login-subtitle {
-  font-size: 0.875rem;
+  font-size: 14px;
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -75,29 +78,29 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .login-field label {
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .login-field input {
   width: 100%;
-  padding: 12px 16px;
-  background-color: var(--bg-main);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.9375rem;
+  font-size: 15px;
   font-family: inherit;
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -112,21 +115,22 @@
   box-shadow: 0 0 0 3px var(--cyan-glow);
 }
 
+/* Password toggle */
 .login-password-wrap {
   position: relative;
 }
 
 .login-password-wrap input {
-  padding-right: 48px;
+  padding-right: var(--space-12);
 }
 
 .login-eye-btn {
   position: absolute;
-  right: 12px;
+  right: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-subtle);
-  padding: 4px;
+  padding: var(--space-1);
   display: flex;
   transition: color var(--transition-fast);
 }
@@ -140,18 +144,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   width: 100%;
-  padding: 12px;
+  padding: var(--space-3);
   background-color: var(--cyan-bright);
   color: #FFFFFF;
   border-radius: var(--radius-md);
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
   font-family: inherit;
   transition: all var(--transition-normal);
   box-shadow: 0 2px 8px rgba(0, 168, 255, 0.3);
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 .login-submit:hover:not(:disabled) {
@@ -187,45 +191,45 @@
 .login-error {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 10px 14px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   background-color: var(--danger-light);
   color: var(--danger);
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 500;
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* Demo credentials */
 .login-demo {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
   border-top: 1px solid var(--border-color);
 }
 
 .login-demo-title {
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   text-align: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .login-demo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .login-demo-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 10px;
+  gap: var(--space-1);
+  padding: var(--space-3);
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -240,7 +244,7 @@
 }
 
 .demo-role {
-  font-size: 0.6875rem;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -248,7 +252,7 @@
 }
 
 .demo-name {
-  font-size: 0.8125rem;
+  font-size: 13px;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -256,7 +260,7 @@
 /* Responsive */
 @media (max-width: 480px) {
   .login-card {
-    margin: 1rem;
-    padding: 2rem 1.5rem;
+    margin: var(--space-4);
+    padding: var(--space-8) var(--space-6);
   }
 }
