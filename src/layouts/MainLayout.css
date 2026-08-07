@@ -1,7 +1,12 @@
-/* ── Main Layout ── */
+/* ── Main Layout ──
+   height (no min-height): acota el layout a la pantalla para que
+   .main-content sea quien scrollea. Con min-height, el layout crecía
+   con el contenido y, como <body> tiene overflow:hidden, todo lo que
+   quedaba debajo del alto de pantalla era inalcanzable (no scrolleable). */
 .layout-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background: var(--bg-main);
