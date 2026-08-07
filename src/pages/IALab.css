@@ -902,3 +902,79 @@
 }
 
 .text-ia-accent { color: #818CF8; }
+
+/* ── Planning CRUD (added) ── */
+.tree-inline-form {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+}
+.tree-inline-form input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg-input);
+    border: 1px solid var(--cyan-bright);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 12.5px;
+    padding: 6px 8px;
+    outline: none;
+}
+.tree-inline-form .btn-icon { width: 26px; height: 26px; }
+
+.unit-delete-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    color: var(--text-subtle);
+    flex-shrink: 0;
+}
+.unit-header:hover .unit-delete-btn { display: inline-flex; }
+.unit-delete-btn:hover { color: var(--danger); background: var(--danger-light); }
+
+.tree-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Attached document chip ── */
+.attached-doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    background: var(--indigo-glow);
+    color: #A5B4FC;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    border-radius: var(--radius-full);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 4px 6px 4px 12px;
+    margin-bottom: 8px;
+    max-width: 100%;
+}
+.attached-doc-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-publish-chat { color: var(--mint) !important; }
+.btn-publish-chat:hover { background: var(--mint-glow) !important; }
+
+/* ── Móvil: columnas apiladas ── */
+@media (max-width: 860px) {
+  .ia-lab-container {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    overflow-y: auto;
+    gap: var(--space-4);
+    padding-bottom: var(--space-8);
+  }
+  .lab-sidebar { order: 1; max-height: 300px; }
+  .lab-main { order: 2; min-height: 65vh; }
+  .lab-config { order: 3; max-height: none; }
+}

@@ -1,22 +1,28 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
-    MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine
+    MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine,
+    Paperclip, X, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPlanningByTeacher, updateClass } from '../services/planning.service';
+import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
+import { getMaterialsByTeacher } from '../services/library.service';
 import {
     getOrCreateSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
 } from '../services/chat-history.service';
 import { streamChat } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import ImportProgramModal from '../components/ImportProgramModal';
+import PublishActivityModal from '../components/PublishActivityModal';
 import type {
     PlanningUnit, PlanningClass, SubjectAssignment, Subject,
-    ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext
+    ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
+    LibraryMaterial
 } from '../types';
 import './IALab.css';
 
@@ -114,20 +120,36 @@ export default function IALab() {
     const [educationLevel, setEducationLevel] = useState('4to');
     const [difficulty, setDifficulty] = useState(3);
 
-    // ── Subject selector (must be before any conditional return — React hooks rule) ──
+    // ── Subject selector ──
     const [selectedAssignmentIdx, setSelectedAssignmentIdx] = useState(0);
 
-    if (!user) return null;
+    // ── Planning CRUD state ──
+    const [creatingUnit, setCreatingUnit] = useState(false);
+    const [unitInput, setUnitInput] = useState('');
+    const [addingClassUnitId, setAddingClassUnitId] = useState<string | null>(null);
+    const [classInput, setClassInput] = useState('');
 
-    /* -- Subject / Course selector -- */
-    const assignments = user.subjects ?? [];
+    // ── Editor state ──
+    const [editingContent, setEditingContent] = useState(false);
+    const [contentDraft, setContentDraft] = useState('');
+
+    // ── Document context + modals ──
+    const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
+    const [attachedDoc, setAttachedDoc] = useState<LibraryMaterial | null>(null);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [publishSource, setPublishSource] = useState<ChatMessage | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
+    const assignments = user?.subjects ?? [];
     const currentAssignment: SubjectAssignment | undefined = assignments[selectedAssignmentIdx];
 
-    // ── Load planning data + usage + subjects ──
+    // ── Load planning data + usage + subjects + materials ──
     useEffect(() => {
         if (!user) return;
         getPlanningByTeacher(user.id).then(setAllUnits).catch(console.error);
         getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
+        getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
 
         getSubjects().then(subjects => {
             const map: Record<string, Subject> = {};
@@ -135,6 +157,16 @@ export default function IALab() {
             setSubjectsMap(map);
         }).catch(console.error);
     }, [user]);
+
+    // ── ?doc=<id>: llega desde la Biblioteca con un material adjunto ──
+    useEffect(() => {
+        const docId = searchParams.get('doc');
+        if (!docId || materials.length === 0) return;
+        const doc = materials.find(m => m.id === docId);
+        if (doc?.extractedText) setAttachedDoc(doc);
+        searchParams.delete('doc');
+        setSearchParams(searchParams, { replace: true });
+    }, [materials, searchParams, setSearchParams]);
 
     // ── Cleanup AbortController on unmount ──
     useEffect(() => {
@@ -184,14 +216,112 @@ export default function IALab() {
             classContent: selectedClass?.content ?? undefined,
             difficulty,
             educationLevel,
+            documentTitle: attachedDoc?.title,
+            documentText: attachedDoc?.extractedText ?? undefined,
         };
-    }, [currentAssignment, selectedClass, selectedUnitId, allUnits, difficulty, educationLevel, subjectsMap]);
+    }, [currentAssignment, selectedClass, selectedUnitId, allUnits, difficulty, educationLevel, subjectsMap, attachedDoc]);
+
+    // ProtectedRoute garantiza user; el early-return va DESPUÉS de todos los hooks
+    if (!user) return null;
+
+    const refreshPlanning = () => getPlanningByTeacher(user.id).then(setAllUnits).catch(console.error);
+
+    // ── Planning CRUD ──
+    const handleCreateUnit = async () => {
+        const title = unitInput.trim();
+        if (!title || !currentAssignment) return;
+        try {
+            const unit = await createUnit({
+                title,
+                subjectId: currentAssignment.subjectId,
+                courseId: currentAssignment.courseId,
+                teacherId: user.id,
+                order: filteredUnits.length + 1,
+            });
+            setUnitInput('');
+            setCreatingUnit(false);
+            await refreshPlanning();
+            setExpandedUnits(prev => new Set(prev).add(unit.id));
+        } catch (err) {
+            console.error('Error creando unidad:', err);
+        }
+    };
+
+    const handleCreateClass = async (unitId: string) => {
+        const title = classInput.trim();
+        if (!title) return;
+        const unit = allUnits.find(u => u.id === unitId);
+        try {
+            await createClass({
+                unitId,
+                title,
+                order: (unit?.classes.length ?? 0) + 1,
+            });
+            setClassInput('');
+            setAddingClassUnitId(null);
+            await refreshPlanning();
+        } catch (err) {
+            console.error('Error creando clase:', err);
+        }
+    };
+
+    const handleDeleteUnit = async (unit: PlanningUnit) => {
+        const ok = window.confirm(`¿Eliminar la unidad "${unit.title}" y sus ${unit.classes.length} clases?`);
+        if (!ok) return;
+        try {
+            await deleteUnit(unit.id);
+            if (selectedUnitId === unit.id) {
+                setSelectedClass(null);
+                setSelectedUnitId(null);
+                setCenterMode('chat');
+            }
+            await refreshPlanning();
+        } catch (err) {
+            console.error('Error eliminando unidad:', err);
+        }
+    };
+
+    const handleSaveTitle = async (newTitle: string) => {
+        if (!selectedClass || !newTitle.trim() || newTitle === selectedClass.title) return;
+        try {
+            await updateClass(selectedClass.id, { title: newTitle.trim() });
+            setSelectedClass({ ...selectedClass, title: newTitle.trim() });
+            refreshPlanning();
+        } catch (err) {
+            console.error('Error guardando título:', err);
+        }
+    };
+
+    const handleSaveContent = async () => {
+        if (!selectedClass) return;
+        try {
+            await updateClass(selectedClass.id, { content: contentDraft });
+            setSelectedClass({ ...selectedClass, content: contentDraft });
+            setEditingContent(false);
+            refreshPlanning();
+        } catch (err) {
+            console.error('Error guardando contenido:', err);
+        }
+    };
+
+    const handleToggleComplete = async () => {
+        if (!selectedClass) return;
+        try {
+            await updateClass(selectedClass.id, { isComplete: !selectedClass.isComplete });
+            setSelectedClass({ ...selectedClass, isComplete: !selectedClass.isComplete });
+            refreshPlanning();
+        } catch (err) {
+            console.error('Error actualizando estado:', err);
+        }
+    };
 
     // ── Select class → load/create session ──
     const handleSelectClass = async (cls: PlanningClass, unitId: string) => {
         setSelectedClass(cls);
         setSelectedUnitId(unitId);
         setCenterMode('editor');
+        setEditingContent(false);
+        setContentDraft(cls.content ?? '');
 
         try {
             const session = await getOrCreateSession(user.id, cls.id, {
@@ -497,6 +627,13 @@ export default function IALab() {
                                     <ChevronRight size={14} className={`chevron ${isExpanded ? 'expanded' : ''}`} />
                                     <Folder size={14} className="text-secondary" />
                                     <span className="unit-title">{unit.title}</span>
+                                    <button
+                                        className="unit-delete-btn"
+                                        title="Eliminar unidad"
+                                        onClick={e => { e.stopPropagation(); handleDeleteUnit(unit); }}
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
                                     <span className="unit-count">{unit.classes.length}</span>
                                 </div>
                                 {isExpanded && (
@@ -516,9 +653,26 @@ export default function IALab() {
                                                 <span>{cls.title}</span>
                                             </div>
                                         ))}
-                                        <button className="add-class-btn">
-                                            <Plus size={13} /> Añadir clase
-                                        </button>
+                                        {addingClassUnitId === unit.id ? (
+                                            <div className="tree-inline-form">
+                                                <input
+                                                    autoFocus
+                                                    value={classInput}
+                                                    placeholder="Título de la clase..."
+                                                    onChange={e => setClassInput(e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') handleCreateClass(unit.id);
+                                                        if (e.key === 'Escape') { setAddingClassUnitId(null); setClassInput(''); }
+                                                    }}
+                                                />
+                                                <button className="btn-icon" title="Crear" onClick={() => handleCreateClass(unit.id)}><CheckCircle size={14} /></button>
+                                                <button className="btn-icon" title="Cancelar" onClick={() => { setAddingClassUnitId(null); setClassInput(''); }}><X size={14} /></button>
+                                            </div>
+                                        ) : (
+                                            <button className="add-class-btn" onClick={() => { setAddingClassUnitId(unit.id); setClassInput(''); }}>
+                                                <Plus size={13} /> Añadir clase
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -527,8 +681,37 @@ export default function IALab() {
                 </div>
 
                 <div className="tree-actions">
-                    <button className="btn btn-outline w-full text-sm">
-                        <Plus size={15} /> Nueva Unidad
+                    {creatingUnit ? (
+                        <div className="tree-inline-form">
+                            <input
+                                autoFocus
+                                value={unitInput}
+                                placeholder="Título de la unidad..."
+                                onChange={e => setUnitInput(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleCreateUnit();
+                                    if (e.key === 'Escape') { setCreatingUnit(false); setUnitInput(''); }
+                                }}
+                            />
+                            <button className="btn-icon" title="Crear" onClick={handleCreateUnit}><CheckCircle size={14} /></button>
+                            <button className="btn-icon" title="Cancelar" onClick={() => { setCreatingUnit(false); setUnitInput(''); }}><X size={14} /></button>
+                        </div>
+                    ) : (
+                        <button
+                            className="btn btn-outline w-full text-sm"
+                            onClick={() => setCreatingUnit(true)}
+                            disabled={!currentAssignment}
+                        >
+                            <Plus size={15} /> Nueva Unidad
+                        </button>
+                    )}
+                    <button
+                        className="btn btn-secondary w-full text-sm"
+                        onClick={() => setShowImportModal(true)}
+                        disabled={!currentAssignment}
+                        title="Subí tu programa anual y la IA crea la planificación"
+                    >
+                        <FileUp size={15} /> Importar programa
                     </button>
                 </div>
             </div>
@@ -620,6 +803,15 @@ export default function IALab() {
                                                             <ArrowDownToLine size={13} /> Insertar en clase
                                                         </button>
                                                     )}
+                                                    {currentAssignment && (
+                                                        <button
+                                                            className="msg-action-btn btn-publish-chat"
+                                                            onClick={() => setPublishSource(msg)}
+                                                            title="Publicar como actividad para estudiantes"
+                                                        >
+                                                            <ClipboardList size={13} /> Publicar actividad
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </>
                                         ) : (
@@ -657,6 +849,15 @@ export default function IALab() {
                                 <button className="btn-stop" onClick={handleStop}>
                                     <Square size={14} /> Detener generación
                                 </button>
+                            )}
+                            {attachedDoc && (
+                                <div className="attached-doc-chip">
+                                    <Paperclip size={13} />
+                                    <span>{attachedDoc.title}</span>
+                                    <button className="btn-icon" style={{ width: 22, height: 22 }} title="Quitar material" onClick={() => setAttachedDoc(null)}>
+                                        <X size={12} />
+                                    </button>
+                                </div>
                             )}
                             <div className="lab-input-box">
                                 <textarea
@@ -712,11 +913,18 @@ export default function IALab() {
                                     className="editor-title"
                                     defaultValue={selectedClass.title}
                                     placeholder="Título de la clase..."
+                                    onBlur={e => handleSaveTitle(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                 />
                                 <div className="editor-meta">
-                                    <span className={`badge ${selectedClass.isComplete ? 'badge-success' : 'badge-warning'}`}>
-                                        {selectedClass.isComplete ? 'Completa' : 'Borrador'}
-                                    </span>
+                                    <button
+                                        className={`badge ${selectedClass.isComplete ? 'badge-success' : 'badge-warning'}`}
+                                        style={{ cursor: 'pointer', border: 'none' }}
+                                        title={selectedClass.isComplete ? 'Marcar como borrador' : 'Marcar como completa'}
+                                        onClick={handleToggleComplete}
+                                    >
+                                        {selectedClass.isComplete ? '✓ Completa' : 'Borrador'}
+                                    </button>
                                 </div>
                             </header>
 
@@ -743,35 +951,40 @@ export default function IALab() {
                                 <div className="editor-block">
                                     <div className="block-drag"><GripVertical size={16} /></div>
                                     <div className="block-body">
-                                        <h4>Desarrollo / Texto</h4>
-                                        {selectedClass.content ? (
+                                        <div className="flex items-center justify-between">
+                                            <h4>Desarrollo / Texto</h4>
+                                            {!editingContent ? (
+                                                <button
+                                                    className="btn btn-outline btn-sm"
+                                                    onClick={() => { setContentDraft(selectedClass.content ?? ''); setEditingContent(true); }}
+                                                >
+                                                    <PenLine size={13} /> Editar
+                                                </button>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <button className="btn btn-outline btn-sm" onClick={() => setEditingContent(false)}>Cancelar</button>
+                                                    <button className="btn btn-primary btn-sm" onClick={handleSaveContent}>Guardar</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {editingContent ? (
+                                            <textarea
+                                                className="form-textarea w-full mt-2"
+                                                rows={14}
+                                                value={contentDraft}
+                                                onChange={e => setContentDraft(e.target.value)}
+                                                placeholder="Escribí el desarrollo de la clase en Markdown..."
+                                            />
+                                        ) : selectedClass.content ? (
                                             <div className="editor-text">
                                                 <MarkdownRenderer content={selectedClass.content} />
                                             </div>
                                         ) : (
                                             <p className="editor-text placeholder-text">
-                                                Hacé clic para escribir o usá el chat IA para generar contenido...
+                                                Usá "Editar" para escribir, o generá contenido con el chat IA e insertalo acá...
                                             </p>
                                         )}
                                     </div>
-                                </div>
-
-                                {/* Material Drop Zone */}
-                                <div className="editor-block">
-                                    <div className="block-drag"><GripVertical size={16} /></div>
-                                    <div className="block-body border-dashed">
-                                        <div className="drop-zone">
-                                            <FileUp size={22} className="text-secondary" />
-                                            <p>Arrastrá material de apoyo aquí</p>
-                                            <button className="btn btn-outline text-xs">Subir archivo</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Add Block */}
-                                <div className="editor-block block-new">
-                                    <Plus size={18} className="text-secondary" />
-                                    <span className="text-secondary">Añadir bloque (Texto, Actividad, Recurso...)</span>
                                 </div>
                             </div>
                         </div>
@@ -887,6 +1100,26 @@ export default function IALab() {
                         </div>
                     </div>
 
+                    <div className="form-group">
+                        <label><Paperclip size={14} /> Material de la Biblioteca</label>
+                        <select
+                            className="form-select"
+                            value={attachedDoc?.id ?? ''}
+                            onChange={e => {
+                                const doc = materials.find(m => m.id === e.target.value);
+                                setAttachedDoc(doc?.extractedText ? doc : null);
+                            }}
+                        >
+                            <option value="">Sin material adjunto</option>
+                            {materials.filter(m => m.extractedText).map(m => (
+                                <option key={m.id} value={m.id}>{m.title}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-subtle mt-1">
+                            La IA usa el documento como fuente para generar o resumir.
+                        </p>
+                    </div>
+
                     {selectedClass && (
                         <div className="config-context-info">
                             <h5>Clase seleccionada</h5>
@@ -898,6 +1131,47 @@ export default function IALab() {
                     )}
                 </div>
             </div>
+
+            {/* Modales */}
+            {showImportModal && currentAssignment && (
+                <ImportProgramModal
+                    teacherId={user.id}
+                    schoolId={user.schoolId}
+                    subjectId={currentAssignment.subjectId}
+                    courseId={currentAssignment.courseId}
+                    subjectName={subjectName || 'Materia'}
+                    courseName={currentAssignment.courseName}
+                    existingUnitsCount={filteredUnits.length}
+                    onClose={() => setShowImportModal(false)}
+                    onImported={() => {
+                        refreshPlanning();
+                        getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
+                    }}
+                />
+            )}
+            {publishSource && currentAssignment && (
+                <PublishActivityModal
+                    contentMd={publishSource.content}
+                    sourceTool={publishSource.toolUsed}
+                    teacherId={user.id}
+                    schoolId={user.schoolId}
+                    subjectId={currentAssignment.subjectId}
+                    courseId={currentAssignment.courseId}
+                    subjectName={subjectName || 'Materia'}
+                    courseName={currentAssignment.courseName}
+                    unitId={selectedUnitId}
+                    classId={selectedClass?.id ?? null}
+                    defaultTitle={
+                        selectedClass
+                            ? `Actividad: ${selectedClass.title}`
+                            : publishSource.toolUsed
+                                ? `${tools.find(t => t.id === publishSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
+                                : `Actividad de ${subjectName}`
+                    }
+                    onClose={() => setPublishSource(null)}
+                    onPublished={() => { /* la actividad ya quedó publicada */ }}
+                />
+            )}
         </div>
     );
 }

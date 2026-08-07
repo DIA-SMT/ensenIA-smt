@@ -31,7 +31,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    // Cada rol tiene su "home"
+    const home = user.role === 'estudiante' ? '/mis-actividades'
+      : user.role === 'padre' ? '/comunicados-familia'
+      : '/dashboard';
+    return <Navigate to={home} replace />;
   }
 
   return <>{children}</>;

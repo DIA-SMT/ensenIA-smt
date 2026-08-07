@@ -1,0 +1,50 @@
+.checkin-card {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-color: rgba(129, 140, 248, 0.35);
+  background: linear-gradient(135deg, var(--bg-panel) 60%, rgba(79, 70, 229, 0.12));
+  position: relative;
+}
+
+.checkin-title { font-size: 14.5px; font-weight: 600; }
+.checkin-subtitle { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+
+.checkin-emojis {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.checkin-emoji {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  transition: all var(--transition-fast);
+  min-width: 64px;
+}
+.checkin-emoji:hover { transform: translateY(-2px); border-color: var(--cyan-bright); }
+.checkin-emoji.selected {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  box-shadow: 0 0 0 1px var(--cyan-bright);
+}
+.checkin-emoji-icon { font-size: 22px; line-height: 1; }
+.checkin-emoji-label { font-size: 10.5px; color: var(--text-secondary); }
+
+.checkin-comment { display: flex; flex-direction: column; gap: 8px; }
+
+.checkin-skip {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+.checkin-skip:hover { color: var(--text-secondary); text-decoration: underline; }

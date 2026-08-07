@@ -21,3 +21,47 @@
   padding: var(--space-6) var(--space-8);
   background-color: var(--bg-main);
 }
+
+/* ══════════════════════════════
+   MÓVIL (los chicos usan el celu)
+   ══════════════════════════════ */
+
+.topbar-menu-btn { display: none; }
+
+.mobile-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .topbar-menu-btn { display: inline-flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width) !important;
+    transform: translateX(-105%);
+    transition: transform 0.25s var(--ease-out);
+    z-index: 120;
+    box-shadow: var(--shadow-xl);
+  }
+  .mobile-nav-open .sidebar { transform: translateX(0); }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 14, 20, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 110;
+    animation: fadeIn 0.2s var(--ease-out);
+  }
+
+  /* En móvil, el botón de colapsar del sidebar no aplica */
+  .sidebar .collapse-btn:not(.logout-btn) { display: none; }
+
+  .main-content {
+    padding: var(--space-4);
+  }
+}

@@ -3,25 +3,26 @@
  *
  * POST /functions/v1/ia-chat
  *
- * Receives chat messages + context, calls Claude API with streaming,
- * and returns SSE events to the frontend. Handles auth, quota checking,
- * message persistence, and usage tracking.
+ * Recibe mensajes + contexto, llama a Claude VÍA OPENROUTER con streaming
+ * (protocolo chat completions) y reenvía SSE al frontend. Maneja auth,
+ * cuota diaria, persistencia y tracking de uso.
  *
- * Models:
- *   - Sonnet: chat libre, actividad, evaluación, presentación, oral
- *   - Haiku: solo "resumir documento" (input limitado a 8000 chars)
+ * Modelos:
+ *   - Sonnet (anthropic/claude-sonnet-5): chat, actividad, evaluación, presentación, oral
+ *   - Haiku (anthropic/claude-haiku-4.5): "resumir documento"
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildSystemPrompt, type PromptContext } from './_system-prompt.ts';
 
 // ── Config ──
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_VERSION = '2023-06-01';
-const MODEL_SONNET = 'claude-sonnet-4-20250514';
-const MODEL_HAIKU = 'claude-haiku-4-20250414';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MODEL_SONNET = 'anthropic/claude-sonnet-5';
+const MODEL_HAIKU = 'anthropic/claude-haiku-4.5';
 const DAILY_QUOTA = 50;
-const MAX_TOKENS = 4096;
+// Sonnet 5 razona por defecto y eso cuenta dentro de max_tokens:
+// margen para razonamiento + respuesta larga (streaming, sin timeout).
+const MAX_TOKENS = 12000;
 const SUMMARY_INPUT_LIMIT = 8000; // chars
 
 // ── Types ──
@@ -38,6 +39,8 @@ interface IAChatRequest {
     classContent?: string;
     difficulty?: number;
     educationLevel?: string;
+    documentTitle?: string;
+    documentText?: string;
   };
 }
 
@@ -65,10 +68,10 @@ Deno.serve(async (req: Request) => {
     return new Response('Method not allowed', { status: 405, headers: corsHeaders() });
   }
 
-  const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!ANTHROPIC_API_KEY) {
+  const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+  if (!OPENROUTER_API_KEY) {
     return new Response(
-      sseEvent('error', { code: 'CONFIG_ERROR', message: 'API key no configurada.' }),
+      sseEvent('error', { code: 'CONFIG_ERROR', message: 'API key de IA no configurada.' }),
       { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
@@ -173,6 +176,8 @@ Deno.serve(async (req: Request) => {
     difficulty: context.difficulty,
     educationLevel: context.educationLevel,
     tool: tool ?? undefined,
+    documentTitle: context.documentTitle,
+    documentText: context.documentText,
   };
   const systemPrompt = buildSystemPrompt(promptCtx);
 
@@ -180,49 +185,53 @@ Deno.serve(async (req: Request) => {
   const modelId = tool === 'sum' ? MODEL_HAIKU : MODEL_SONNET;
   const modelLabel = tool === 'sum' ? 'haiku' : 'sonnet';
 
-  // ── 8. Call Anthropic API with streaming ──
-  const anthropicBody = {
+  // ── 8. Call OpenRouter (Claude) with streaming ──
+  const orBody = {
     model: modelId,
     max_tokens: MAX_TOKENS,
-    system: systemPrompt,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
     stream: true,
+    stream_options: { include_usage: true },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
   };
 
-  let anthropicResponse: Response;
+  let orResponse: Response;
   try {
-    anthropicResponse = await fetch(ANTHROPIC_API_URL, {
+    orResponse = await fetch(OPENROUTER_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': ANTHROPIC_VERSION,
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://ensenia-aula.vercel.app',
+        'X-Title': 'ENSENIA SMT',
       },
-      body: JSON.stringify(anthropicBody),
+      body: JSON.stringify(orBody),
     });
-  } catch (err) {
+  } catch (_err) {
     return new Response(
       sseEvent('error', { code: 'API_ERROR', message: 'No se pudo conectar con el servicio de IA.' }),
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
 
-  if (!anthropicResponse.ok) {
-    const errText = await anthropicResponse.text();
-    console.error('Anthropic error:', anthropicResponse.status, errText);
+  if (!orResponse.ok) {
+    const errText = await orResponse.text();
+    console.error('OpenRouter error:', orResponse.status, errText.substring(0, 500));
+    const friendly = orResponse.status === 429
+      ? 'El servicio de IA está sobrecargado. Intentá de nuevo en unos segundos.'
+      : orResponse.status === 402
+        ? 'La cuenta de IA se quedó sin crédito. Avisale al administrador.'
+        : 'Error del servicio de IA. Intentá de nuevo.';
     return new Response(
-      sseEvent('error', {
-        code: 'API_ERROR',
-        message: anthropicResponse.status === 429
-          ? 'El servicio de IA está sobrecargado. Intentá de nuevo en unos segundos.'
-          : 'Error del servicio de IA. Intentá de nuevo.',
-      }),
+      sseEvent('error', { code: 'API_ERROR', message: friendly }),
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
 
-  // ── 9. Stream response ──
-  const reader = anthropicResponse.body!.getReader();
+  // ── 9. Stream response (SSE estilo OpenAI: choices[0].delta.content) ──
+  const reader = orResponse.body!.getReader();
   const decoder = new TextDecoder();
 
   let fullContent = '';
@@ -255,22 +264,18 @@ Deno.serve(async (req: Request) => {
               continue;
             }
 
-            // Content delta — stream text to client
-            if (event.type === 'content_block_delta' && event.delta?.text) {
-              fullContent += event.delta.text;
+            const delta = event.choices?.[0]?.delta?.content;
+            if (typeof delta === 'string' && delta.length > 0) {
+              fullContent += delta;
               controller.enqueue(
-                encoder.encode(sseEvent('token', { text: event.delta.text })),
+                encoder.encode(sseEvent('token', { text: delta })),
               );
             }
 
-            // Message start — capture input token count
-            if (event.type === 'message_start' && event.message?.usage) {
-              tokensIn = event.message.usage.input_tokens || 0;
-            }
-
-            // Message delta — capture output token count
-            if (event.type === 'message_delta' && event.usage) {
-              tokensOut = event.usage.output_tokens || 0;
+            // Chunk final con usage (stream_options.include_usage)
+            if (event.usage) {
+              tokensIn = event.usage.prompt_tokens || 0;
+              tokensOut = event.usage.completion_tokens || 0;
             }
           }
         }

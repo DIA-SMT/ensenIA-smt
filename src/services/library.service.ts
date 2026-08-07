@@ -81,6 +81,18 @@ export async function deleteMaterial(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function getSharedMaterialsForStudent(): Promise<LibraryMaterial[]> {
+  // RLS filtra: materiales compartidos de las materias donde el alumno está inscripto
+  const data = unwrap(
+    await supabase
+      .from('library_materials')
+      .select('*')
+      .eq('is_shared_with_students', true)
+      .order('uploaded_at', { ascending: false })
+  );
+  return data.map(mapMaterial);
+}
+
 function mapMaterial(row: any): LibraryMaterial {
   return {
     id: row.id,
@@ -96,5 +108,10 @@ function mapMaterial(row: any): LibraryMaterial {
     schoolId: row.school_id,
     tags: row.tags ?? [],
     uploadedAt: row.uploaded_at,
+    storagePath: row.storage_path,
+    fileSizeBytes: row.file_size_bytes,
+    extractedText: row.extracted_text,
+    aiSummary: row.ai_summary,
+    isSharedWithStudents: row.is_shared_with_students ?? false,
   };
 }

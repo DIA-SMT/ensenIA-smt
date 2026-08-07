@@ -1,0 +1,249 @@
+/* ═══════════════════════════════════════════════
+   ENSEÑIA SMT — Portal del estudiante
+   ═══════════════════════════════════════════════ */
+
+.sp-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: var(--space-8);
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Hero ── */
+.sp-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(0, 107, 179, 0.15) 100%);
+}
+.sp-hero h2 { font-size: 21px; }
+
+.sp-enrollments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: var(--space-3);
+}
+.sp-enrollment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+}
+.sp-enrollment-chip code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--cyan-bright);
+  background: var(--cyan-subtle);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+
+.sp-hero-stats { display: flex; gap: var(--space-6); }
+.sp-hero-stat { display: flex; flex-direction: column; align-items: center; }
+.sp-hero-num { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.sp-hero-label { font-size: 12px; color: var(--text-subtle); }
+
+.sp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: var(--space-2);
+}
+
+/* ── Lista de actividades ── */
+.sp-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sp-activity-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  color: var(--text-primary);
+}
+.sp-activity-card:hover { opacity: 1; }
+.sp-activity-card.done { opacity: 0.75; }
+.sp-activity-main h4 { font-size: 15px; font-weight: 600; }
+.sp-activity-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* ── Detalle / realizar ── */
+.sp-activity-detail {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sp-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sp-detail-header h2 { font-size: 19px; }
+
+.sp-score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--mint-glow);
+  border: 1px solid rgba(16, 217, 129, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 10px 20px;
+}
+.sp-score-num { font-size: 26px; font-weight: 700; color: var(--success); line-height: 1.1; }
+.sp-score-label { font-size: 11px; color: var(--text-secondary); }
+
+.sp-content {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+.sp-content ul, .sp-content ol { padding-left: 22px; margin: 8px 0; }
+.sp-content h1, .sp-content h2, .sp-content h3 { margin: 10px 0 6px; }
+.sp-content table { border-collapse: collapse; margin: 10px 0; }
+.sp-content th, .sp-content td { border: 1px solid var(--border-color); padding: 6px 10px; }
+
+.sp-notice {
+  background: var(--warning-light);
+  color: var(--warning);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 13.5px;
+}
+
+.sp-start-btn { align-self: center; padding: 14px 32px; }
+
+/* ── Formulario ── */
+.sp-form { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.sp-question { padding: var(--space-4) var(--space-5); }
+.sp-question.readonly { background: var(--bg-elevated); }
+.sp-question-prompt {
+  font-size: 14.5px;
+  font-weight: 500;
+  margin-bottom: var(--space-3);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.sp-q-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cyan-subtle);
+  color: var(--cyan-bright);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sp-options { display: flex; flex-direction: column; gap: 8px; }
+.sp-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+.sp-option:hover { border-color: var(--cyan-bright); background: var(--cyan-subtle); }
+.sp-option.selected {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  box-shadow: 0 0 0 1px var(--cyan-bright);
+}
+.sp-option input { display: none; }
+.sp-option-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sp-option.selected .sp-option-letter {
+  background: var(--cyan-bright);
+  border-color: var(--cyan-bright);
+  color: #fff;
+}
+
+.sp-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+}
+
+/* ── Resultado ── */
+.sp-result { display: flex; flex-direction: column; gap: var(--space-4); }
+.sp-result-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--mint-glow);
+  border: 1px solid rgba(16, 217, 129, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+.sp-feedback {
+  background: var(--indigo-glow);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: 14px;
+}
+.sp-answer-review { font-size: 14px; }
+
+/* ── Devolución rápida del docente ── */
+.sp-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 15px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  margin-right: 8px;
+}

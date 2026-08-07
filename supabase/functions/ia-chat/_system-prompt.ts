@@ -21,7 +21,11 @@ export interface PromptContext {
   difficulty?: number;
   educationLevel?: string;
   tool?: string;
+  documentTitle?: string;
+  documentText?: string;
 }
+
+const DOCUMENT_CONTEXT_LIMIT = 30000; // chars
 
 export function buildSystemPrompt(ctx: PromptContext): string {
   const parts: string[] = [];
@@ -74,7 +78,20 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 
   parts.push(contextLines.join('\n'));
 
-  // ── 3. Tool-specific instructions ──
+  // ── 3. Reference document from the library ──
+  if (ctx.documentText) {
+    const text = ctx.documentText.length > DOCUMENT_CONTEXT_LIMIT
+      ? ctx.documentText.substring(0, DOCUMENT_CONTEXT_LIMIT) + '\n[... documento truncado ...]'
+      : ctx.documentText;
+    parts.push(`\n## Material de referencia adjunto${ctx.documentTitle ? `: "${ctx.documentTitle}"` : ''}
+El docente adjuntó este material de su biblioteca. Basá tu respuesta en este contenido cuando sea relevante:
+
+<documento>
+${text}
+</documento>`);
+  }
+
+  // ── 4. Tool-specific instructions ──
   if (ctx.tool && ctx.tool !== 'free') {
     parts.push(getToolInstructions(ctx.tool));
   }

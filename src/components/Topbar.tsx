@@ -1,4 +1,4 @@
-import { Search, PlusCircle, Command } from 'lucide-react';
+import { Search, Zap, Command, Menu } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationDropdown from './NotificationDropdown';
@@ -14,14 +14,32 @@ const routeNames: Record<string, string> = {
     '/settings': 'Configuración',
     '/docentes': 'Equipo Docente',
     '/comunicaciones': 'Comunicaciones',
+    '/actividades': 'Actividades',
+    '/mis-actividades': 'Mis Actividades',
+    '/mi-biblioteca': 'Biblioteca',
+    '/familias': 'Familias',
+    '/comunicados-familia': 'Comunicados',
+    '/mis-hijos': 'Mis Hijos',
+    '/actividad-rapida': 'Actividad rápida',
 };
 
-export default function Topbar() {
+function titleFor(pathname: string): string {
+    if (routeNames[pathname]) return routeNames[pathname];
+    if (pathname.startsWith('/actividades/')) return 'Resultados de actividad';
+    if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
+    return 'ENSEÑIA';
+}
+
+interface TopbarProps {
+    onMenuClick?: () => void;
+}
+
+export default function Topbar({ onMenuClick }: TopbarProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, isDocente } = useAuth();
 
-    const pageTitle = routeNames[location.pathname] || 'Dashboard';
+    const pageTitle = titleFor(location.pathname);
 
     const today = new Date().toLocaleDateString('es-AR', {
         weekday: 'long', day: 'numeric', month: 'long'
@@ -40,6 +58,9 @@ export default function Topbar() {
     return (
         <header className="topbar glass-panel">
             <div className="topbar-left">
+                <button className="btn-icon topbar-menu-btn" onClick={onMenuClick} aria-label="Abrir menú">
+                    <Menu size={20} />
+                </button>
                 <h2 className="page-title">{pageTitle}</h2>
                 <div className="topbar-greeting">
                     <span>{greeting}, {firstName}</span>
@@ -60,10 +81,11 @@ export default function Topbar() {
                 {isDocente && (
                     <button
                         className="btn btn-primary nueva-clase-btn"
-                        onClick={() => navigate('/ia-lab')}
+                        onClick={() => navigate('/actividad-rapida')}
+                        title="Crear y publicar una actividad en un minuto"
                     >
-                        <PlusCircle size={18} />
-                        <span>Nueva Clase</span>
+                        <Zap size={18} />
+                        <span>Actividad rápida</span>
                     </button>
                 )}
             </div>

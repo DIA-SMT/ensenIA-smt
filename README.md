@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# ENSEÑIA SMT — Aula Municipal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma educativa con IA para escuelas municipales de San Miguel de Tucumán.
+Los docentes generan contenido con IA a partir de sus programas reales, lo publican
+como actividades para sus estudiantes, y analizan la **huella digital** de cada
+alumno (cuándo vio, cuánto trabajó, qué respondió).
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend**: React 19 + Vite + TypeScript (SPA, dark UI)
+- **Backend**: Supabase (Postgres + RLS, Auth, Storage, Edge Functions)
+- **IA**: Claude (Anthropic) — `claude-sonnet-5` para generación/estructura, `claude-haiku-4-5` para resúmenes y extracción de texto
 
-## React Compiler
+## Funcionalidades
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Rol | Qué puede hacer |
+|---|---|
+| **Docente** | Laboratorio IA (actividades, evaluaciones, resúmenes, presentaciones, rúbricas) · **Importar programa anual (PDF/Word, incluso escaneado) → planificación automática** · Biblioteca digital con archivos reales + resumen IA + compartir con estudiantes · Publicar actividades con cuestionarios autocorregibles · Resultados con huella digital, **"qué les costó" por pregunta**, cómo se sintió cada alumno · **Devoluciones rápidas de un toque** · **Observaciones** (la info que estaba solo en la cabeza del docente) · Señales por estudiante · Citar familias |
+| **Estudiante** | Cuenta propia con ID por materia · Realizar actividades con autoguardado (y offline) · **Check-in emocional al empezar y al terminar** (opcional, sin nota) · Ver notas, reacciones y devoluciones · Biblioteca compartida |
+| **Familia** | Cuenta padre/tutor vinculada a estudiantes · **Comunicados oficiales y citaciones** con confirmación de asistencia · Ficha de sus hijos |
+| **Director/a** | Dashboard institucional · Equipo docente · Comunicaciones internas · **Avisos a familias con acuses de recibo** · Alertas |
 
-## Expanding the ESLint configuration
+> La IA corre vía **OpenRouter** (modelos Claude). Secret requerido: `OPENROUTER_API_KEY`.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Inteligencia de señales
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **⚡ Actividad Rápida** (`/actividad-rapida`): flujo mobile-first para docentes — curso → tema → la IA genera → cuestionario opcional → publicada en un minuto. El botón principal del topbar lleva ahí.
+- **Resumen IA del estudiante**: en el perfil del alumno, sintetiza señales + observaciones + métricas en un texto accionable para reuniones con la familia.
+- **Alertas automáticas** (triggers en Postgres, migración 005): 2+ check-ins negativos en 7 días → alerta a los docentes del curso; entrega con ≤40% del puntaje → alerta al docente de la actividad. Con deduplicación.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Modo offline (PWA)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Pensado para estudiantes sin datos móviles:
+
+- La app es **instalable** (Agregar a pantalla de inicio) y arranca sin conexión.
+- Todo lo visto con conexión queda cacheado (actividades, planificación, material).
+- Las respuestas, entregas y huella digital de los estudiantes se **encolan en el dispositivo**
+  y se sincronizan solas al detectar conexión (wifi de la escuela, por ejemplo).
+- Banner de estado siempre visible: sin conexión / cambios pendientes / sincronizando.
+- Límites: el primer login y el primer "Comenzar actividad" necesitan conexión; las
+  funciones de IA (generación, importar programa) requieren internet.
+
+## Desarrollo
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Variables en `.env.local`:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon key>
+```
+
+### Backend (Supabase)
+
+- Migraciones en `supabase/migrations/` (001 esquema, 002 chat IA, 003 estudiantes+actividades+storage).
+- Edge functions en `supabase/functions/`: `ia-chat` (chat con streaming) y `process-document`
+  (extraer texto, resumir, importar programa, extraer preguntas — structured outputs).
+- Deploy de funciones: `supabase functions deploy <name> --project-ref <ref> --use-api`
+- Secret necesario para la IA: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-... --project-ref <ref>`
+- Seed de datos demo: `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed.ts`
+
+## Cuentas demo (password: `demo123`)
+
+| Rol | Email |
+|---|---|
+| Directora | `ana.martinez@ensenia.edu.ar` |
+| Docente | `marco.rossi@ensenia.edu.ar` (Física I 4°A · Historia 2°B · Geografía 5°B) |
+| Estudiante | `sofia.ramirez@estudiante.ensenia.edu.ar` (2°B, entregó la actividad demo) |
+| Estudiante | `nicolas.moreno@estudiante.ensenia.edu.ar` (2°B, actividad en curso) |
+| Estudiante | `martina.silva@estudiante.ensenia.edu.ar` (4°A) |
+
+## Flujo demo sugerido
+
+1. Entrá como **Marco (docente)** → Laboratorio IA → materia *Física I — 4° A* → **Importar programa** → subí `Física I - 4° A 2026.pdf` → la IA crea las 7 unidades del programa.
+2. Elegí una clase → generá una actividad → **Publicar actividad** (con "Extraer preguntas con IA").
+3. Entrá como **Sofía (estudiante)** → realizá la actividad → entregá.
+4. Volvé como Marco → **Actividades** → mirá resultados y la **huella digital** de cada alumno.

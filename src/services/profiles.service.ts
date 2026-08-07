@@ -76,7 +76,7 @@ export async function getUserById(userId: string): Promise<User | undefined> {
 export async function getSchool(schoolId: string): Promise<School> {
   const row = unwrap(
     await supabase.from('schools').select('*').eq('id', schoolId).single()
-  );
+  ) as { id: string; name: string; short_name: string; address: string | null; district: string | null };
   return {
     id: row.id,
     name: row.name,

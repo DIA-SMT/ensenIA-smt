@@ -321,3 +321,8 @@
   font-weight: 700;
   font-size: 16px;
 }
+
+/* ── Señales (added) ── */
+.signal-feed { display: flex; flex-direction: column; gap: 8px; }
+.signal-item { display: flex; gap: 10px; align-items: flex-start; }
+.signal-emoji { font-size: 20px; line-height: 1.2; flex-shrink: 0; }

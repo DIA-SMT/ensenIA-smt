@@ -64,7 +64,7 @@ export default function Login() {
         <div className="login-header">
           <LogoMark size={48} />
           <h1 className="login-title">ENSEÑIA SMT</h1>
-          <p className="login-subtitle">Escuela Municipal Alfonsina Storni</p>
+          <p className="login-subtitle">Escuela Municipal Gabriela Mistral</p>
         </div>
 
         {/* Form */}
@@ -134,6 +134,14 @@ export default function Login() {
             <button type="button" className="login-demo-btn" onClick={() => { setEmail('ana.martinez@ensenia.edu.ar'); setPassword('demo123'); }}>
               <span className="demo-role">Directora</span>
               <span className="demo-name">Ana Martínez</span>
+            </button>
+            <button type="button" className="login-demo-btn" onClick={() => { setEmail('sofia.ramirez@estudiante.ensenia.edu.ar'); setPassword('demo123'); }}>
+              <span className="demo-role">Estudiante</span>
+              <span className="demo-name">Sofía Ramírez</span>
+            </button>
+            <button type="button" className="login-demo-btn" onClick={() => { setEmail('roberto.perez@familia.ensenia.edu.ar'); setPassword('demo123'); }}>
+              <span className="demo-role">Familia</span>
+              <span className="demo-name">Roberto Pérez</span>
             </button>
           </div>
         </div>

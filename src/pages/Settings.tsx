@@ -3,11 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import './Settings.css';
 
 export default function Settings() {
-    const { user, school, isDirector, logout } = useAuth();
+    const { user, school, logout } = useAuth();
 
     if (!user) return null;
 
-    const roleLabel = isDirector ? 'Directora' : 'Docente';
+    const roleLabel = user.role === 'director' ? 'Directora'
+        : user.role === 'estudiante' ? 'Estudiante'
+        : user.role === 'padre' ? 'Familia'
+        : 'Docente';
 
     return (
         <div className="settings-container">

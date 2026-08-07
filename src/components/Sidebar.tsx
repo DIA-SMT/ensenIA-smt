@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
-    Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare
+    Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
@@ -17,8 +18,10 @@ const teacherNavItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Mi Agenda', path: '/agenda', icon: Calendar },
     { label: 'Laboratorio IA', path: '/ia-lab', icon: FlaskConical, isIA: true },
+    { label: 'Actividades', path: '/actividades', icon: ClipboardList },
     { label: 'Estudiantes', path: '/students', icon: Users },
     { label: 'Biblioteca Docente', path: '/biblioteca', icon: BookOpen },
+    { label: 'Familias', path: '/familias', icon: HeartHandshake },
     { label: 'Alertas', path: '/alerts', icon: Bell },
     { label: 'Configuración', path: '/settings', icon: Settings },
 ];
@@ -26,8 +29,21 @@ const teacherNavItems: NavItem[] = [
 const directorNavItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Docentes', path: '/docentes', icon: Users },
+    { label: 'Familias', path: '/familias', icon: HeartHandshake },
     { label: 'Alertas', path: '/alerts', icon: Bell },
     { label: 'Comunicaciones', path: '/comunicaciones', icon: MessageSquare },
+    { label: 'Configuración', path: '/settings', icon: Settings },
+];
+
+const studentNavItems: NavItem[] = [
+    { label: 'Mis Actividades', path: '/mis-actividades', icon: ClipboardList },
+    { label: 'Biblioteca', path: '/mi-biblioteca', icon: BookOpen },
+    { label: 'Configuración', path: '/settings', icon: Settings },
+];
+
+const guardianNavItems: NavItem[] = [
+    { label: 'Comunicados', path: '/comunicados-familia', icon: Megaphone },
+    { label: 'Mis Hijos', path: '/mis-hijos', icon: GraduationCap },
     { label: 'Configuración', path: '/settings', icon: Settings },
 ];
 
@@ -53,12 +69,16 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
-    const { user, isDirector, logout } = useAuth();
+    const { user, school, isDirector, isEstudiante, logout } = useAuth();
+    const isPadre = user?.role === 'padre';
 
-    const navItems = isDirector ? directorNavItems : teacherNavItems;
+    const navItems = isDirector ? directorNavItems
+        : isEstudiante ? studentNavItems
+        : isPadre ? guardianNavItems
+        : teacherNavItems;
 
     const displayName = user ? `${user.firstName} ${user.lastName}` : '';
-    const roleLabel = isDirector ? 'Directora' : 'Docente';
+    const roleLabel = isDirector ? 'Directora' : isEstudiante ? 'Estudiante' : isPadre ? 'Familia' : 'Docente';
     const avatarInitials = user?.avatarInitials ?? '??';
 
     return (
@@ -68,7 +88,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && (
                     <div className="logo-text">
                         <span className="logo-title">ENSEÑIA SMT</span>
-                        <span className="logo-subtitle">Alfonsina Storni</span>
+                        <span className="logo-subtitle">{school?.shortName ?? 'Escuela Municipal'}</span>
                     </div>
                 )}
             </div>

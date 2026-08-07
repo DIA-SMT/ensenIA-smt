@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════ */
 
 // ── Enums ──
-export type UserRole = 'director' | 'docente';
+export type UserRole = 'director' | 'docente' | 'estudiante' | 'padre';
 export type AlertLevel = 'danger' | 'warning' | 'info' | 'success';
 export type AlertCategory = 'academic' | 'attendance' | 'conduct' | 'system';
 export type StudentStatus = 'excellent' | 'good' | 'warning' | 'critical';
@@ -74,6 +74,173 @@ export interface Student {
   attendance: number;
   average: number;
   schoolId: string;
+  userId?: string | null;
+  email?: string | null;
+}
+
+// ── Enrollment (inscripción por materia, con ID visible) ──
+export interface Enrollment {
+  id: string;
+  studentId: string;
+  subjectId: string;
+  courseId: string;
+  enrollmentCode: string;
+  schoolId: string;
+  subjectName?: string;
+  courseName?: string;
+}
+
+// ── Activities ──
+export type ActivityStatus = 'draft' | 'published' | 'closed';
+export type SubmissionStatus = 'pending' | 'in_progress' | 'submitted' | 'graded';
+export type ActivityQuestionType = 'multiple_choice' | 'open';
+
+export interface ActivityQuestion {
+  id: string;
+  type: ActivityQuestionType;
+  prompt: string;
+  options?: string[];
+  correct_index?: number;
+}
+
+export interface Activity {
+  id: string;
+  title: string;
+  description?: string;
+  contentMd: string;
+  questions: ActivityQuestion[];
+  subjectId: string;
+  courseId: string;
+  teacherId: string;
+  schoolId: string;
+  unitId?: string | null;
+  classId?: string | null;
+  sourceTool?: IAToolType | null;
+  status: ActivityStatus;
+  dueDate?: string | null;
+  points?: number | null;
+  createdAt: string;
+  subjectName?: string;
+  courseName?: string;
+}
+
+export interface ActivityAnswer {
+  answer: string | number;
+  correct?: boolean;
+}
+
+export interface ActivitySubmission {
+  id: string;
+  activityId: string;
+  studentId: string;
+  status: SubmissionStatus;
+  answers: Record<string, ActivityAnswer>;
+  responseText?: string | null;
+  autoScore?: number | null;
+  score?: number | null;
+  feedback?: string | null;
+  feedbackReaction?: string | null;
+  timeSpentSeconds: number;
+  startedAt?: string | null;
+  submittedAt?: string | null;
+  gradedAt?: string | null;
+}
+
+// ── Bienestar: check-in emocional ──
+export type CheckinMoment = 'inicio' | 'fin';
+export type CheckinFeeling = 'genial' | 'bien' | 'neutral' | 'confundido' | 'frustrado';
+
+export interface StudentCheckin {
+  id: string;
+  studentId: string;
+  activityId?: string | null;
+  moment: CheckinMoment;
+  feeling: CheckinFeeling;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export const FEELING_META: Record<CheckinFeeling, { emoji: string; label: string; value: number }> = {
+  genial: { emoji: '😄', label: 'Genial', value: 5 },
+  bien: { emoji: '🙂', label: 'Bien', value: 4 },
+  neutral: { emoji: '😐', label: 'Más o menos', value: 3 },
+  confundido: { emoji: '😕', label: 'Confundido/a', value: 2 },
+  frustrado: { emoji: '😣', label: 'Frustrado/a', value: 1 },
+};
+
+// ── Observaciones del docente ──
+export type ObservationCategory = 'logro' | 'dificultad' | 'participacion' | 'conducta' | 'familia' | 'otro';
+
+export interface StudentObservation {
+  id: string;
+  studentId: string;
+  teacherId: string;
+  subjectId?: string | null;
+  category: ObservationCategory;
+  note: string;
+  createdAt: string;
+  teacherName?: string;
+}
+
+export const OBSERVATION_META: Record<ObservationCategory, { emoji: string; label: string }> = {
+  logro: { emoji: '⭐', label: 'Logro' },
+  dificultad: { emoji: '🧗', label: 'Dificultad' },
+  participacion: { emoji: '🙋', label: 'Participación' },
+  conducta: { emoji: '⚖️', label: 'Conducta' },
+  familia: { emoji: '👨‍👩‍👧', label: 'Familia' },
+  otro: { emoji: '📝', label: 'Otro' },
+};
+
+// ── Familias ──
+export interface GuardianLink {
+  id: string;
+  studentId: string;
+  guardianUserId: string;
+  relationship: string;
+  guardianName?: string;
+  guardianEmail?: string;
+}
+
+export type NoticeType = 'comunicado' | 'citacion';
+export type NoticeResponse = 'asistire' | 'no_puedo';
+
+export interface GuardianNotice {
+  id: string;
+  schoolId: string;
+  studentId?: string | null;
+  fromUserId: string;
+  fromName?: string;
+  type: NoticeType;
+  title: string;
+  body: string;
+  meetingAt?: string | null;
+  meetingPlace?: string | null;
+  createdAt: string;
+  studentName?: string;
+  /** estado del tutor logueado */
+  readAt?: string | null;
+  response?: NoticeResponse | null;
+}
+
+export interface NoticeReceipt {
+  guardianUserId: string;
+  guardianName?: string;
+  readAt?: string | null;
+  response?: NoticeResponse | null;
+  respondedAt?: string | null;
+}
+
+export type ActivityEventType =
+  | 'viewed' | 'started' | 'answer_changed' | 'submitted'
+  | 'reopened' | 'focus_lost' | 'focus_gained';
+
+export interface ActivityEvent {
+  id: string;
+  activityId: string;
+  studentId: string;
+  eventType: ActivityEventType;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 // ── Schedule ──
@@ -137,6 +304,20 @@ export interface LibraryMaterial {
   schoolId: string;
   tags: string[];
   uploadedAt: string;
+  storagePath?: string | null;
+  fileSizeBytes?: number | null;
+  extractedText?: string | null;
+  aiSummary?: string | null;
+  isSharedWithStudents: boolean;
+}
+
+// ── Programa importado (respuesta de process-document) ──
+export interface ImportedProgram {
+  subject_name: string;
+  course_name: string;
+  school_year: string;
+  teacher_name: string;
+  units: { title: string; classes: { title: string; objectives: string[] }[] }[];
 }
 
 // ── Planning ──
@@ -242,6 +423,8 @@ export interface IAChatContext {
   classContent?: string;
   difficulty?: number;
   educationLevel?: string;
+  documentTitle?: string;
+  documentText?: string;
 }
 
 // ── Quick Note / Reminder ──

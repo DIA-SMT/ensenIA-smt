@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════════
+   ENSEÑIA SMT — Familias (staff + portal padres)
+   ═══════════════════════════════════════════════ */
+
+.fam-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: var(--space-8);
+}
+.fam-container h2 { font-size: 20px; }
+
+.fam-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.fam-form {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+}
+.fam-form-title { font-size: 15px; font-weight: 600; }
+
+.fam-type-toggle {
+  display: flex;
+  gap: 6px;
+}
+.fam-type-toggle button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+.fam-type-toggle button.active {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  color: var(--text-primary);
+}
+
+.fam-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--mint-glow);
+  color: var(--success);
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.fam-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fam-notice {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fam-notice.unread { border-color: rgba(0, 168, 255, 0.45); }
+.fam-notice h4 { font-size: 15px; }
+
+.fam-notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.fam-notice-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.fam-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan-bright);
+  box-shadow: 0 0 8px var(--cyan-glow-strong);
+  flex-shrink: 0;
+}
+
+.fam-chevron { transition: transform var(--transition-fast); color: var(--text-subtle); flex-shrink: 0; }
+.fam-chevron.open { transform: rotate(180deg); }
+
+.fam-notice-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-3);
+}
+
+.fam-meeting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--warning-light);
+  color: var(--warning);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+}
+
+.fam-respond {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.fam-receipts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fam-receipts > span { display: inline-flex; align-items: center; gap: 3px; }
+
+/* ── Mis hijos ── */
+.fam-child {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.fam-child-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.fam-child-head h4 { font-size: 16px; }
+.fam-child-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .fam-grid { grid-template-columns: 1fr; }
+  .fam-form { position: static; }
+}

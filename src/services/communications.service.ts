@@ -41,7 +41,7 @@ export async function sendCommunication(data: {
       })
       .select()
       .single()
-  );
+  ) as { id: string };
 
   if (!isBroadcast && Array.isArray(data.toUserIds)) {
     const recipients = data.toUserIds.filter(uid => uid).map(uid => ({
