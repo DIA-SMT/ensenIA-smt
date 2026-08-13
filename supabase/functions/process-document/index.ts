@@ -22,7 +22,7 @@ const DAILY_QUOTA = 50;
 const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
-type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary';
+type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards';
 
 interface ProcessRequest {
   mode: Mode;
@@ -78,6 +78,27 @@ const PROGRAM_SCHEMA = {
               },
             },
           },
+        },
+      },
+    },
+  },
+};
+
+const STUDY_CARDS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['cards'],
+  properties: {
+    cards: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['emoji', 'title', 'body'],
+        properties: {
+          emoji: { type: 'string', description: 'Un solo emoji representativo del concepto' },
+          title: { type: 'string', description: 'Título corto y potente (máx. 6 palabras)' },
+          body: { type: 'string', description: 'Explicación clara en 2-4 oraciones cortas, lenguaje de secundaria' },
         },
       },
     },
@@ -143,6 +164,15 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
   - objectives: 1 a 3 objetivos, derivados de los objetivos/contenidos del programa, empezando con verbo en infinitivo.
 - Mantené el idioma y la terminología del documento.
 - Si el documento NO es un programa educativo, devolvé units como array vacío.`,
+
+  study_cards: `Sos ENSEÑIA, asistente pedagógico. Convertí el material de estudio en PLACAS: tarjetas visuales tipo "slides" para que estudiantes de secundaria repasen desde el celular.
+
+Reglas:
+- Entre 6 y 10 placas. La primera presenta el tema; la última es un mini-repaso o dato para recordar.
+- Cada placa = UN concepto. Título corto y potente + explicación en 2-4 oraciones simples.
+- Lenguaje claro de secundaria, español rioplatense. Ejemplos concretos cuando ayuden.
+- Un emoji distinto y representativo por placa.
+- Fiel al material: no inventes contenido que no esté.`,
 
   student_summary: `Sos ENSEÑIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
 
@@ -222,7 +252,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Build OpenRouter request ──
-  const isStructured = mode === 'import_program' || mode === 'extract_questions';
+  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   const maxTokens = mode === 'extract_text' ? 10000 : mode === 'import_program' ? 12000 : mode === 'student_summary' ? 3000 : 6000;
 
@@ -254,6 +284,7 @@ Deno.serve(async (req: Request) => {
         : mode === 'summarize' ? 'Resumí el documento.'
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
+        : mode === 'study_cards' ? 'Generá las placas de estudio.'
         : 'Extraé las preguntas del cuestionario.',
     ].filter(Boolean).join('\n\n'),
   });
@@ -271,13 +302,14 @@ Deno.serve(async (req: Request) => {
     orBody.plugins = [{ id: 'file-parser', pdf: { engine: 'native' } }];
   }
   if (isStructured) {
+    const schemas: Record<string, { name: string; schema: unknown }> = {
+      import_program: { name: 'programa', schema: PROGRAM_SCHEMA },
+      extract_questions: { name: 'preguntas', schema: QUESTIONS_SCHEMA },
+      study_cards: { name: 'placas', schema: STUDY_CARDS_SCHEMA },
+    };
     orBody.response_format = {
       type: 'json_schema',
-      json_schema: {
-        name: mode === 'import_program' ? 'programa' : 'preguntas',
-        strict: true,
-        schema: mode === 'import_program' ? PROGRAM_SCHEMA : QUESTIONS_SCHEMA,
-      },
+      json_schema: { ...schemas[mode], strict: true },
     };
   }
 
@@ -343,6 +375,7 @@ Deno.serve(async (req: Request) => {
   try {
     const parsed = JSON.parse(outputText);
     if (mode === 'import_program') return json({ program: parsed, truncated });
+    if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
     return json({ questions: parsed.questions ?? [], truncated });
   } catch {
     console.error('Structured output parse failed:', outputText.substring(0, 300));

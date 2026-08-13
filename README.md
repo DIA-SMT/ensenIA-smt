@@ -22,6 +22,12 @@ alumno (cuándo vio, cuánto trabajó, qué respondió).
 
 > La IA corre vía **OpenRouter** (modelos Claude). Secret requerido: `OPENROUTER_API_KEY`.
 
+### Acceso dinámico y material de estudio
+
+- **QR por actividad**: cada actividad tiene su QR (botón en la lista, en resultados y al publicar una Actividad Rápida) para proyectar en el aula o imprimir. El estudiante escanea y cae directo en la actividad; si no tiene sesión, loguea una vez y sigue derecho (`/login?next=...`).
+- **Placas de estudio**: la IA convierte cualquier material de la biblioteca en tarjetas visuales (un concepto por placa, emoji + título + explicación) que los estudiantes hojean en el celular. Se guardan en el material (`study_cards`) y se comparten junto con él.
+- **PDFs sin servidor** (jsPDF en el navegador): las placas se descargan como PDF cuadrado (una placa por página) y el resumen IA como A4 imprimible.
+
 ### Inteligencia de señales
 
 - **⚡ Actividad Rápida** (`/actividad-rapida`): flujo mobile-first para docentes — curso → tema → la IA genera → cuestionario opcional → publicada en un minuto. El botón principal del topbar lleva ahí.

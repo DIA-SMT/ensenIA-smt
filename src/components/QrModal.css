@@ -1,0 +1,34 @@
+.qr-modal { max-width: 520px; }
+
+.qr-body {
+  align-items: center;
+  text-align: center;
+}
+
+.qr-canvas-wrap {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  line-height: 0;
+  box-shadow: 0 0 0 1px var(--border-color), var(--shadow-lg);
+}
+.qr-canvas-wrap canvas {
+  width: min(72vw, 380px) !important;
+  height: auto !important;
+}
+
+.qr-hint {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  max-width: 380px;
+}
+
+.qr-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-subtle);
+  word-break: break-all;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}

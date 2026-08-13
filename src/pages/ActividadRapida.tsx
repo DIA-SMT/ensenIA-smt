@@ -10,8 +10,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Zap, Sparkles, Send, Trash2, PenLine, Square, CheckCircle, AlertCircle, ListChecks,
+  Zap, Sparkles, Send, Trash2, PenLine, Square, CheckCircle, AlertCircle, ListChecks, QrCode,
 } from 'lucide-react';
+import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getOrCreateSession, saveUserMessage } from '../services/chat-history.service';
@@ -43,6 +44,8 @@ export default function ActividadRapida() {
   const [points, setPoints] = useState('10');
   const [publishing, setPublishing] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
+  const [publishedTitle, setPublishedTitle] = useState('');
+  const [showQr, setShowQr] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -153,6 +156,7 @@ export default function ActividadRapida() {
         points: points ? Number(points) : null,
       });
       setPublishedId(activity.id);
+      setPublishedTitle(activity.title);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error publicando.');
     } finally {
@@ -171,7 +175,10 @@ export default function ActividadRapida() {
             Los estudiantes de <strong>{assignment?.courseName}</strong> ya la ven en su portal.
           </p>
           <div className="ar-done-actions">
-            <Link to={`/actividades/${publishedId}`} className="btn btn-primary">Ver resultados</Link>
+            <button className="btn btn-primary" onClick={() => setShowQr(true)}>
+              <QrCode size={16} /> Mostrar QR para el aula
+            </button>
+            <Link to={`/actividades/${publishedId}`} className="btn btn-secondary">Ver resultados</Link>
             <button
               className="btn btn-outline"
               onClick={() => { setPublishedId(null); setTopic(''); setContent(''); setQuestions([]); }}
@@ -180,6 +187,13 @@ export default function ActividadRapida() {
             </button>
           </div>
         </div>
+        {showQr && (
+          <QrModal
+            path={`/mis-actividades/${publishedId}`}
+            title={publishedTitle || 'Actividad'}
+            onClose={() => setShowQr(false)}
+          />
+        )}
       </div>
     );
   }

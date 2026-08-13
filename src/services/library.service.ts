@@ -113,5 +113,6 @@ function mapMaterial(row: any): LibraryMaterial {
     extractedText: row.extracted_text,
     aiSummary: row.ai_summary,
     isSharedWithStudents: row.is_shared_with_students ?? false,
+    studyCards: row.study_cards ?? null,
   };
 }

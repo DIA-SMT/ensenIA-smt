@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../types';
 
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   // Show nothing while checking auth status
   if (isLoading) {
@@ -27,7 +28,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Preservamos el destino (clave para los QR de actividades):
+    // el estudiante escanea, loguea una vez y cae donde apuntaba el QR.
+    const intended = location.pathname + location.search;
+    const next = intended && intended !== '/' ? `?next=${encodeURIComponent(intended)}` : '';
+    return <Navigate to={`/login${next}`} replace />;
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {

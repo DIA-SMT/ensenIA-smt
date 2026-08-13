@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Download, FileText, Sparkles, X } from 'lucide-react';
+import { BookOpen, Download, FileText, Sparkles, X, Layers } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import { getSignedUrl } from '../services/documents.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import StudyCardsViewer from '../components/StudyCardsViewer';
 import type { LibraryMaterial } from '../types';
 import './StudentPortal.css';
 import '../components/Modals.css';
@@ -13,6 +14,7 @@ export default function MiBiblioteca() {
   const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
+  const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -61,7 +63,12 @@ export default function MiBiblioteca() {
                 <span className="text-xs text-subtle">{mat.fileSize}</span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+              {mat.studyCards && mat.studyCards.length > 0 && (
+                <button className="btn btn-primary btn-sm" onClick={() => setCardsFor(mat)} title="Repasá con tarjetas visuales">
+                  <Layers size={14} /> Placas
+                </button>
+              )}
               {mat.aiSummary && (
                 <button className="btn btn-secondary btn-sm" onClick={() => setSummaryFor(mat)}>
                   <Sparkles size={14} /> Resumen
@@ -76,6 +83,15 @@ export default function MiBiblioteca() {
           </div>
         ))}
       </div>
+
+      {cardsFor?.studyCards && (
+        <StudyCardsViewer
+          cards={cardsFor.studyCards}
+          title={cardsFor.title}
+          subjectName={cardsFor.subjectName}
+          onClose={() => setCardsFor(null)}
+        />
+      )}
 
       {summaryFor && (
         <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setSummaryFor(null); }}>

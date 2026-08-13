@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import './Login.css';
@@ -23,15 +23,21 @@ function LogoMark({ size = 40 }: { size?: number }) {
 
 export default function Login() {
   const { login, isAuthenticated, isLoading } = useAuth();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Destino post-login: si vino de un QR (?next=/mis-actividades/...),
+  // va derecho ahí; si no, a "/" y HomeRedirect resuelve según el rol.
+  const rawNext = searchParams.get('next');
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+
   // If already logged in, redirect
   if (!isLoading && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={next} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {

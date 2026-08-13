@@ -309,6 +309,14 @@ export interface LibraryMaterial {
   extractedText?: string | null;
   aiSummary?: string | null;
   isSharedWithStudents: boolean;
+  studyCards?: StudyCard[] | null;
+}
+
+// ── Placas de estudio ──
+export interface StudyCard {
+  emoji: string;
+  title: string;
+  body: string;
 }
 
 // ── Programa importado (respuesta de process-document) ──

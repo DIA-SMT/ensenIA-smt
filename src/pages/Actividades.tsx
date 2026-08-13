@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardList, Users, CheckCircle, Clock, ChevronRight, Sparkles,
-  CircleDot, Lock, Unlock, Trash2,
+  CircleDot, Lock, Unlock, Trash2, QrCode,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivitiesByTeacher, getSubmissionsByActivity, updateActivityStatus, deleteActivity,
 } from '../services/activities.service';
+import QrModal from '../components/QrModal';
 import type { Activity, ActivitySubmission } from '../types';
 import './Actividades.css';
 
@@ -20,6 +21,7 @@ export default function Actividades() {
   const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityWithStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qrFor, setQrFor] = useState<Activity | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -126,6 +128,13 @@ export default function Actividades() {
               <div className="acts-card-actions">
                 <button
                   className="btn-icon"
+                  title="QR para el aula: escanean y entran directo"
+                  onClick={() => setQrFor(a)}
+                >
+                  <QrCode size={16} />
+                </button>
+                <button
+                  className="btn-icon"
                   title={a.status === 'closed' ? 'Reabrir' : 'Cerrar entregas'}
                   onClick={() => handleToggleStatus(a)}
                 >
@@ -142,6 +151,14 @@ export default function Actividades() {
           </div>
         ))}
       </div>
+
+      {qrFor && (
+        <QrModal
+          path={`/mis-actividades/${qrFor.id}`}
+          title={qrFor.title}
+          onClose={() => setQrFor(null)}
+        />
+      )}
     </div>
   );
 }

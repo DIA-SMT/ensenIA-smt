@@ -7,7 +7,7 @@
  */
 
 import { supabase } from './_helpers';
-import type { ImportedProgram, ActivityQuestion } from '../types';
+import type { ImportedProgram, ActivityQuestion, StudyCard } from '../types';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -118,6 +118,16 @@ export async function importProgram(input: {
   return program;
 }
 
+/** Placas de estudio: tarjetas visuales de conceptos a partir del material. */
+export async function generateStudyCards(text: string, title: string): Promise<StudyCard[]> {
+  const { cards } = await callProcessDocument<{ cards: StudyCard[] }>({
+    mode: 'study_cards',
+    text,
+    title,
+  });
+  return cards ?? [];
+}
+
 /** Síntesis IA del estudiante para reuniones/boletín (señales + observaciones + métricas). */
 export async function summarizeStudent(profileText: string, studentName: string): Promise<string> {
   const { summary } = await callProcessDocument<{ summary: string }>({
@@ -146,6 +156,7 @@ export async function updateMaterial(
     isSharedWithStudents: boolean;
     storagePath: string;
     fileSizeBytes: number;
+    studyCards: StudyCard[];
   }>,
 ): Promise<void> {
   const dbUpdates: Record<string, any> = {};
@@ -154,6 +165,7 @@ export async function updateMaterial(
   if (updates.isSharedWithStudents !== undefined) dbUpdates.is_shared_with_students = updates.isSharedWithStudents;
   if (updates.storagePath !== undefined) dbUpdates.storage_path = updates.storagePath;
   if (updates.fileSizeBytes !== undefined) dbUpdates.file_size_bytes = updates.fileSizeBytes;
+  if (updates.studyCards !== undefined) dbUpdates.study_cards = updates.studyCards;
   const { error } = await supabase.from('library_materials').update(dbUpdates).eq('id', id);
   if (error) throw error;
 }

@@ -774,6 +774,7 @@ export type Database = {
           is_shared_with_students: boolean
           school_id: string
           storage_path: string | null
+          study_cards: Json | null
           subject_id: string
           subject_name: string
           tags: string[] | null
@@ -794,6 +795,7 @@ export type Database = {
           is_shared_with_students?: boolean
           school_id: string
           storage_path?: string | null
+          study_cards?: Json | null
           subject_id: string
           subject_name: string
           tags?: string[] | null
@@ -814,6 +816,7 @@ export type Database = {
           is_shared_with_students?: boolean
           school_id?: string
           storage_path?: string | null
+          study_cards?: Json | null
           subject_id?: string
           subject_name?: string
           tags?: string[] | null

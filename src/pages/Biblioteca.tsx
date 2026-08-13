@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
-  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2,
+  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial } from '../services/library.service';
@@ -10,8 +10,11 @@ import { getSubjects } from '../services/subjects.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, extractDocxText,
   extractPdfText, summarizeDocument, updateMaterial, formatFileSize,
+  generateStudyCards,
 } from '../services/documents.service';
+import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import StudyCardsViewer from '../components/StudyCardsViewer';
 import type { LibraryMaterial, Subject } from '../types';
 import './Biblioteca.css';
 import '../components/Modals.css';
@@ -52,6 +55,10 @@ export default function Biblioteca() {
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+
+  // Placas de estudio
+  const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  const [cardsGeneratingId, setCardsGeneratingId] = useState<string | null>(null);
 
   const refresh = () => {
     if (!user) return;
@@ -202,6 +209,26 @@ export default function Biblioteca() {
     }
   };
 
+  const handleStudyCards = async (mat: LibraryMaterial) => {
+    if (mat.studyCards?.length) {
+      setCardsFor(mat);
+      return;
+    }
+    if (!mat.extractedText) return;
+    setCardsGeneratingId(mat.id);
+    try {
+      const cards = await generateStudyCards(mat.extractedText, mat.title);
+      if (!cards.length) throw new Error('La IA no generó placas para este material.');
+      await updateMaterial(mat.id, { studyCards: cards });
+      setCardsFor({ ...mat, studyCards: cards });
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error generando las placas.');
+    } finally {
+      setCardsGeneratingId(null);
+    }
+  };
+
   const handleSummary = async (mat: LibraryMaterial) => {
     setSummaryFor(mat);
     setSummaryError('');
@@ -334,6 +361,18 @@ export default function Biblioteca() {
                     {mat.extractedText && (
                       <button
                         className="mat-action-btn"
+                        title="Tarjetas visuales para que los chicos repasen en el celu"
+                        onClick={() => handleStudyCards(mat)}
+                        disabled={cardsGeneratingId === mat.id}
+                      >
+                        {cardsGeneratingId === mat.id
+                          ? <><Loader2 size={14} className="spin" /> Generando...</>
+                          : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
+                      </button>
+                    )}
+                    {mat.extractedText && (
+                      <button
+                        className="mat-action-btn"
                         title="Usar como contexto en el Laboratorio IA"
                         onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
                       >
@@ -425,6 +464,16 @@ export default function Biblioteca() {
         </div>
       )}
 
+      {/* ── Visor de placas ── */}
+      {cardsFor?.studyCards && (
+        <StudyCardsViewer
+          cards={cardsFor.studyCards}
+          title={cardsFor.title}
+          subjectName={cardsFor.subjectName}
+          onClose={() => setCardsFor(null)}
+        />
+      )}
+
       {/* ── Modal: resumen IA ── */}
       {summaryFor && (
         <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setSummaryFor(null); }}>
@@ -449,12 +498,20 @@ export default function Biblioteca() {
             </div>
             <div className="em-modal-footer">
               {!summaryLoading && summaryFor.aiSummary && (
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => { navigator.clipboard.writeText(summaryFor.aiSummary ?? ''); }}
-                >
-                  Copiar resumen
-                </button>
+                <>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => textToPdf(summaryFor.aiSummary ?? '', summaryFor.title, summaryFor.subjectName)}
+                  >
+                    <Download size={14} /> PDF
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => { navigator.clipboard.writeText(summaryFor.aiSummary ?? ''); }}
+                  >
+                    Copiar
+                  </button>
+                </>
               )}
               <button className="btn btn-primary btn-sm" onClick={() => setSummaryFor(null)}>Cerrar</button>
             </div>

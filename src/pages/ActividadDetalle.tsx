@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
-  MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText,
+  MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
 } from 'lucide-react';
+import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivityById, getSubmissionsByActivity, getEventsByActivity,
@@ -51,6 +52,7 @@ export default function ActividadDetalle() {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [selected, setSelected] = useState<EnrolledStudent | null>(null);
   const [showContent, setShowContent] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [gradeInput, setGradeInput] = useState('');
   const [feedbackInput, setFeedbackInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -214,9 +216,14 @@ export default function ActividadDetalle() {
               )}
             </div>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowContent(v => !v)}>
-            <FileText size={14} /> {showContent ? 'Ocultar consigna' : 'Ver consigna'}
-          </button>
+          <div className="flex gap-2">
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowQr(true)} title="Para proyectar en el aula">
+              <QrCode size={14} /> QR
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={() => setShowContent(v => !v)}>
+              <FileText size={14} /> {showContent ? 'Ocultar consigna' : 'Ver consigna'}
+            </button>
+          </div>
         </div>
 
         {showContent && (
@@ -485,6 +492,14 @@ export default function ActividadDetalle() {
           </aside>
         )}
       </div>
+
+      {showQr && (
+        <QrModal
+          path={`/mis-actividades/${activity.id}`}
+          title={activity.title}
+          onClose={() => setShowQr(false)}
+        />
+      )}
     </div>
   );
 }
