@@ -772,9 +772,11 @@ export type Database = {
           file_type: Database["public"]["Enums"]["file_type"]
           id: string
           is_shared_with_students: boolean
+          practice_quiz: Json | null
           school_id: string
           storage_path: string | null
           study_cards: Json | null
+          study_guide: string | null
           subject_id: string
           subject_name: string
           tags: string[] | null
@@ -793,9 +795,11 @@ export type Database = {
           file_type?: Database["public"]["Enums"]["file_type"]
           id?: string
           is_shared_with_students?: boolean
+          practice_quiz?: Json | null
           school_id: string
           storage_path?: string | null
           study_cards?: Json | null
+          study_guide?: string | null
           subject_id: string
           subject_name: string
           tags?: string[] | null
@@ -814,9 +818,11 @@ export type Database = {
           file_type?: Database["public"]["Enums"]["file_type"]
           id?: string
           is_shared_with_students?: boolean
+          practice_quiz?: Json | null
           school_id?: string
           storage_path?: string | null
           study_cards?: Json | null
+          study_guide?: string | null
           subject_id?: string
           subject_name?: string
           tags?: string[] | null
@@ -1023,6 +1029,51 @@ export type Database = {
           },
         ]
       }
+      practice_attempts: {
+        Row: {
+          created_at: string | null
+          id: string
+          material_id: string | null
+          score: number
+          student_id: string
+          total: number
+          xp_earned: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          score: number
+          student_id: string
+          total: number
+          xp_earned?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          material_id?: string | null
+          score?: number
+          student_id?: string
+          total?: number
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_attempts_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "library_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_initials: string
@@ -1206,6 +1257,32 @@ export type Database = {
         }
         Relationships: []
       }
+      student_badges: {
+        Row: {
+          badge_code: string
+          earned_at: string | null
+          student_id: string
+        }
+        Insert: {
+          badge_code: string
+          earned_at?: string | null
+          student_id: string
+        }
+        Update: {
+          badge_code?: string
+          earned_at?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_checkins: {
         Row: {
           activity_id: string | null
@@ -1290,6 +1367,41 @@ export type Database = {
           },
         ]
       }
+      student_notes: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_done: boolean
+          is_pinned: boolean
+          student_id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_done?: boolean
+          is_pinned?: boolean
+          student_id: string
+          text: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_done?: boolean
+          is_pinned?: boolean
+          student_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_observations: {
         Row: {
           category: string
@@ -1338,6 +1450,47 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_progress: {
+        Row: {
+          best_streak: number
+          last_practice_date: string | null
+          perfect_count: number
+          streak_days: number
+          student_id: string
+          total_attempts: number
+          updated_at: string | null
+          xp: number
+        }
+        Insert: {
+          best_streak?: number
+          last_practice_date?: string | null
+          perfect_count?: number
+          streak_days?: number
+          student_id: string
+          total_attempts?: number
+          updated_at?: string | null
+          xp?: number
+        }
+        Update: {
+          best_streak?: number
+          last_practice_date?: string | null
+          perfect_count?: number
+          streak_days?: number
+          student_id?: string
+          total_attempts?: number
+          updated_at?: string | null
+          xp?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]

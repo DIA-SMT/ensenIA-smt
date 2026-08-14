@@ -1,0 +1,109 @@
+/* ═══════════════════════════════════════════════
+   Estudiar — hub del Modo Estudio (namespace est-*)
+   ═══════════════════════════════════════════════ */
+
+/* ── Hero: fila de logros ── */
+.est-badge-row {
+  display: flex;
+  gap: 8px;
+  margin-top: var(--space-3);
+}
+.est-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  filter: grayscale(1);
+  opacity: 0.4;
+  cursor: default;
+  transition: all var(--transition-fast);
+}
+.est-badge.earned {
+  filter: none;
+  opacity: 1;
+  border-color: var(--warning);
+  background: var(--warning-light);
+}
+
+/* Racha encendida/apagada */
+.est-streak-on { color: #FB923C; }
+.est-streak-off { color: var(--text-subtle); }
+.sp-hero-num svg { vertical-align: -2px; margin-right: 2px; }
+
+/* ── Sugerencia de práctica ── */
+.est-suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(251, 191, 36, 0.08) 100%);
+  border-color: rgba(251, 191, 36, 0.25);
+  flex-wrap: wrap;
+}
+.est-suggestion-text { flex: 1; font-size: 14px; min-width: 200px; }
+.est-suggestion-text em { color: var(--cyan-bright); font-style: normal; }
+
+/* ── Notas ── */
+.est-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+}
+.est-note-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-2);
+}
+.est-note-input .form-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 8px 12px;
+}
+.est-note-input .form-input:focus {
+  outline: none;
+  border-color: var(--cyan-bright);
+}
+
+.est-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+.est-note:last-child { border-bottom: none; }
+.est-note.done span { text-decoration: line-through; color: var(--text-subtle); }
+
+.est-note-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  flex: 1;
+}
+.est-note-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--success);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.est-note-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}

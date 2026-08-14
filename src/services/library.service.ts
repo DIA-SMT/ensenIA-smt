@@ -114,5 +114,7 @@ function mapMaterial(row: any): LibraryMaterial {
     aiSummary: row.ai_summary,
     isSharedWithStudents: row.is_shared_with_students ?? false,
     studyCards: row.study_cards ?? null,
+    practiceQuiz: row.practice_quiz ?? null,
+    studyGuide: row.study_guide ?? null,
   };
 }

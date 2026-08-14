@@ -7,7 +7,7 @@
  */
 
 import { supabase } from './_helpers';
-import type { ImportedProgram, ActivityQuestion, StudyCard } from '../types';
+import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -138,6 +138,27 @@ export async function summarizeStudent(profileText: string, studentName: string)
   return summary;
 }
 
+/**
+ * Quiz de práctica pedagógico (Modo Estudio). Se genera UNA vez por
+ * material y queda cacheado en el servidor para todo el curso.
+ */
+export async function generatePracticeQuiz(materialId: string): Promise<{ questions: PracticeQuestion[]; cached: boolean }> {
+  const { questions, cached } = await callProcessDocument<{ questions: PracticeQuestion[]; cached: boolean }>({
+    mode: 'practice_quiz',
+    materialId,
+  });
+  return { questions: questions ?? [], cached: cached ?? false };
+}
+
+/** Guía de estudio dirigida al estudiante. Cacheada igual que el quiz. */
+export async function generateStudyGuide(materialId: string): Promise<{ guide: string; cached: boolean }> {
+  const { guide, cached } = await callProcessDocument<{ guide: string; cached: boolean }>({
+    mode: 'study_guide',
+    materialId,
+  });
+  return { guide: guide ?? '', cached: cached ?? false };
+}
+
 export async function extractQuestions(contentMd: string): Promise<ActivityQuestion[]> {
   const { questions } = await callProcessDocument<{ questions: Omit<ActivityQuestion, 'id'>[] }>({
     mode: 'extract_questions',
@@ -160,7 +181,12 @@ export async function updateMaterial(
   }>,
 ): Promise<void> {
   const dbUpdates: Record<string, any> = {};
-  if (updates.extractedText !== undefined) dbUpdates.extracted_text = updates.extractedText;
+  if (updates.extractedText !== undefined) {
+    dbUpdates.extracted_text = updates.extractedText;
+    // El texto cambió: invalidamos el quiz y la guía cacheados para que se regeneren
+    dbUpdates.practice_quiz = null;
+    dbUpdates.study_guide = null;
+  }
   if (updates.aiSummary !== undefined) dbUpdates.ai_summary = updates.aiSummary;
   if (updates.isSharedWithStudents !== undefined) dbUpdates.is_shared_with_students = updates.isSharedWithStudents;
   if (updates.storagePath !== undefined) dbUpdates.storage_path = updates.storagePath;

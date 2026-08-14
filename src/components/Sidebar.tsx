@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Rocket
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
@@ -37,6 +37,7 @@ const directorNavItems: NavItem[] = [
 
 const studentNavItems: NavItem[] = [
     { label: 'Mis Actividades', path: '/mis-actividades', icon: ClipboardList },
+    { label: 'Estudiar', path: '/estudiar', icon: Rocket, isIA: true },
     { label: 'Biblioteca', path: '/mi-biblioteca', icon: BookOpen },
     { label: 'Configuración', path: '/settings', icon: Settings },
 ];

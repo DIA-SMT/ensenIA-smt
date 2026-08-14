@@ -16,6 +16,7 @@ const routeNames: Record<string, string> = {
     '/comunicaciones': 'Comunicaciones',
     '/actividades': 'Actividades',
     '/mis-actividades': 'Mis Actividades',
+    '/estudiar': 'Estudiar',
     '/mi-biblioteca': 'Biblioteca',
     '/familias': 'Familias',
     '/comunicados-familia': 'Comunicados',

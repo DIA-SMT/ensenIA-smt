@@ -17,7 +17,8 @@ import {
   saveSubmissionProgress, submitActivity, logActivityEvent,
 } from './activities.service';
 import { saveCheckin } from './wellbeing.service';
-import type { ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment } from '../types';
+import { recordPracticeAttempt } from './practice.service';
+import type { ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment, PracticeAttempt } from '../types';
 
 const QUEUE_KEY = 'ensenia_offline_queue_v1';
 const FLUSH_INTERVAL_MS = 30_000;
@@ -26,7 +27,8 @@ type QueuedOp =
   | { kind: 'progress'; submissionId: string; updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number }; ts: number }
   | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; autoScore?: number | null; timeSpentSeconds: number }; ts: number }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown>; ts: number }
-  | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number };
+  | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number }
+  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number; ts: number };
 
 type Listener = (pending: number, syncing: boolean) => void;
 
@@ -72,6 +74,13 @@ async function run(op: QueuedOp): Promise<void> {
       moment: op.moment,
       feeling: op.feeling,
       comment: op.comment,
+    });
+  } else if (op.kind === 'practice') {
+    await recordPracticeAttempt({
+      studentId: op.studentId,
+      materialId: op.materialId,
+      score: op.score,
+      total: op.total,
     });
   } else {
     await logActivityEvent(op.activityId, op.studentId, op.eventType, {
@@ -202,6 +211,32 @@ export function saveCheckinResilient(c: {
     if (isNetworkError(err)) enqueue({ kind: 'checkin', ...c });
     else console.error('checkin:', err);
   });
+}
+
+/**
+ * Registra un intento de práctica.
+ * @returns el intento con el XP real (calculado por el trigger), o null si
+ * quedó encolado para sincronizar cuando vuelva la conexión.
+ */
+export async function recordPracticeAttemptResilient(input: {
+  studentId: string;
+  materialId: string;
+  score: number;
+  total: number;
+}): Promise<PracticeAttempt | null> {
+  if (!navigator.onLine) {
+    enqueue({ kind: 'practice', ...input });
+    return null;
+  }
+  try {
+    return await recordPracticeAttempt(input);
+  } catch (err) {
+    if (isNetworkError(err)) {
+      enqueue({ kind: 'practice', ...input });
+      return null;
+    }
+    throw err;
+  }
 }
 
 /** ¿Hay una entrega esperando sincronizarse para esta actividad? */

@@ -310,6 +310,8 @@ export interface LibraryMaterial {
   aiSummary?: string | null;
   isSharedWithStudents: boolean;
   studyCards?: StudyCard[] | null;
+  practiceQuiz?: PracticeQuestion[] | null;
+  studyGuide?: string | null;
 }
 
 // ── Placas de estudio ──
@@ -317,6 +319,58 @@ export interface StudyCard {
   emoji: string;
   title: string;
   body: string;
+}
+
+// ── Modo Estudio (práctica gamificada del estudiante) ──
+export interface PracticeQuestion {
+  prompt: string;
+  options: string[];
+  correct_index: number;
+  explanation: string;
+  hint?: string;
+}
+
+export interface PracticeAttempt {
+  id: string;
+  studentId: string;
+  materialId: string | null;
+  score: number;
+  total: number;
+  xpEarned: number;
+  createdAt: string;
+}
+
+export interface StudentProgress {
+  studentId: string;
+  xp: number;
+  streakDays: number;
+  bestStreak: number;
+  lastPracticeDate: string | null;
+  totalAttempts: number;
+  perfectCount: number;
+}
+
+export type BadgeCode = 'primer_quiz' | 'quiz_perfecto' | 'racha_5' | 'diez_practicas';
+
+export interface StudentBadge {
+  code: BadgeCode;
+  earnedAt: string;
+}
+
+export const BADGE_META: Record<BadgeCode, { emoji: string; label: string; description: string }> = {
+  primer_quiz: { emoji: '🎯', label: 'Primer quiz', description: 'Completaste tu primera práctica' },
+  quiz_perfecto: { emoji: '💯', label: 'Quiz perfecto', description: 'Respondiste todo bien en una práctica' },
+  racha_5: { emoji: '🔥', label: 'Racha de 5 días', description: 'Practicaste 5 días seguidos' },
+  diez_practicas: { emoji: '🏅', label: '10 prácticas', description: 'Completaste 10 prácticas' },
+};
+
+export interface StudentNote {
+  id: string;
+  studentId: string;
+  text: string;
+  isDone: boolean;
+  isPinned: boolean;
+  createdAt: string;
 }
 
 // ── Programa importado (respuesta de process-document) ──

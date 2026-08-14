@@ -22,6 +22,7 @@ import Familias from './pages/Familias';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
 import MisHijos from './pages/MisHijos';
+import Estudiar from './pages/Estudiar';
 
 /** Redirige al home según el rol. */
 function HomeRedirect() {
@@ -100,6 +101,9 @@ function App() {
             } />
             <Route path="mis-actividades/:id" element={
               <ProtectedRoute allowedRoles={['estudiante']}><RealizarActividad /></ProtectedRoute>
+            } />
+            <Route path="estudiar" element={
+              <ProtectedRoute allowedRoles={['estudiante']}><Estudiar /></ProtectedRoute>
             } />
             <Route path="mi-biblioteca" element={
               <ProtectedRoute allowedRoles={['estudiante']}><MiBiblioteca /></ProtectedRoute>

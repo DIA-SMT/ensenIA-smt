@@ -1,0 +1,202 @@
+/* ═══════════════════════════════════════════════
+   Player de práctica gamificada (Modo Estudio)
+   ═══════════════════════════════════════════════ */
+
+.pq-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 20, 0.92);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.pq-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header con barra de progreso ── */
+.pq-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+}
+.pq-progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.pq-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-bright), var(--accent-ia));
+  border-radius: var(--radius-full);
+  transition: width 0.4s var(--ease-spring);
+}
+.pq-counter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* ── Cuerpo ── */
+.pq-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  animation: fadeInUp 0.35s var(--ease-spring);
+}
+.pq-material { text-transform: uppercase; letter-spacing: 0.4px; }
+.pq-prompt { font-size: 17px; font-weight: 600; line-height: 1.45; }
+
+/* Opciones: reusa .sp-option y agrega estados de feedback */
+.pq-option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.pq-option:disabled { cursor: default; }
+.pq-option.pq-correct {
+  border-color: var(--success);
+  background: var(--mint-glow);
+  box-shadow: 0 0 0 1px var(--success);
+}
+.pq-option.pq-correct .sp-option-letter {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.pq-option.pq-wrong {
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.pq-option.pq-wrong .sp-option-letter {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.pq-option.pq-disabled { opacity: 0.45; }
+.pq-option.pq-disabled:hover { border-color: var(--border-color); background: transparent; }
+
+/* ── Pista ── */
+.pq-hint-btn { align-self: flex-start; }
+.pq-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--warning-light);
+  color: var(--warning);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13.5px;
+}
+
+/* ── Feedback formativo ── */
+.pq-feedback {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.pq-feedback strong { display: block; margin-bottom: 6px; }
+.pq-feedback.ok {
+  background: var(--mint-glow);
+  border: 1px solid rgba(16, 217, 129, 0.3);
+}
+.pq-feedback.nope {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ── Footer ── */
+.pq-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-color);
+  min-height: 68px;
+}
+
+/* ── Pantalla final ── */
+.pq-final {
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-6);
+}
+.pq-final-emoji { font-size: 52px; line-height: 1; }
+.pq-final h2 { font-size: 22px; }
+.pq-final-score { padding: 14px 32px; }
+
+.pq-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--accent-ia);
+  background: var(--indigo-glow);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: var(--radius-full);
+  padding: 8px 22px;
+}
+
+.pq-queued {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--warning);
+}
+
+.pq-badges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  width: 100%;
+  max-width: 380px;
+}
+.pq-badges h4 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--warning);
+}
+.pq-badge-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: left;
+}
+.pq-badge-emoji { font-size: 26px; line-height: 1; }
+
+@media (max-width: 480px) {
+  .pq-overlay { padding: 0; }
+  .pq-panel { max-width: none; height: 100%; max-height: none; border-radius: 0; border: none; }
+}

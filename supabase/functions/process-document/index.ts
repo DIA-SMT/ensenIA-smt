@@ -8,6 +8,8 @@
  *  - summarize:         texto o PDF → resumen pedagógico en Markdown
  *  - import_program:    programa anual (PDF/texto) → { subject_name, course_name, units[] } (structured output)
  *  - extract_questions: consigna en Markdown → { questions[] } autocorregibles (structured output)
+ *  - practice_quiz:     materialId → quiz pedagógico para estudiantes, CACHEADO en el material (1 sola generación)
+ *  - study_guide:       materialId → guía de estudio para estudiantes, CACHEADA en el material
  *
  * Nota: llamamos a Claude vía OpenRouter (chat completions) con fetch crudo,
  * mismo estilo que ia-chat, sin dependencias npm en el bundle de Deno.
@@ -22,13 +24,20 @@ const DAILY_QUOTA = 50;
 const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
-type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards';
+type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards'
+  | 'practice_quiz' | 'study_guide';
+
+/** Modos habilitados para el rol estudiante (siempre cacheados por material). */
+const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
+/** Modos que se cachean en library_materials y reciben materialId. */
+const CACHED_MODES: Mode[] = ['practice_quiz', 'study_guide'];
 
 interface ProcessRequest {
   mode: Mode;
   pdfBase64?: string;
   text?: string;
   title?: string;
+  materialId?: string;
   context?: { subjectName?: string; courseName?: string };
 }
 
@@ -99,6 +108,29 @@ const STUDY_CARDS_SCHEMA = {
           emoji: { type: 'string', description: 'Un solo emoji representativo del concepto' },
           title: { type: 'string', description: 'Título corto y potente (máx. 6 palabras)' },
           body: { type: 'string', description: 'Explicación clara en 2-4 oraciones cortas, lenguaje de secundaria' },
+        },
+      },
+    },
+  },
+};
+
+const PRACTICE_QUIZ_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['questions'],
+  properties: {
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['prompt', 'options', 'correct_index', 'explanation', 'hint'],
+        properties: {
+          prompt: { type: 'string', description: 'La pregunta, clara y autocontenida' },
+          options: { type: 'array', items: { type: 'string' }, description: 'Exactamente 4 opciones plausibles' },
+          correct_index: { type: 'integer', description: 'Índice (0-based) de la opción correcta' },
+          explanation: { type: 'string', description: 'Por qué la correcta es correcta, en 1-3 oraciones formativas' },
+          hint: { type: 'string', description: 'Pista corta que orienta sin revelar la respuesta. Vacía si no aplica.' },
         },
       },
     },
@@ -188,6 +220,26 @@ Reglas:
 - Tono constructivo y respetuoso: es material para hablar con la familia o el equipo.
 - Español rioplatense. Nada de tecnicismos psicológicos ni diagnósticos.`,
 
+  practice_quiz: `Sos ENSEÑIA, un tutor amigable para estudiantes de secundaria argentina. Creá un quiz de práctica a partir del material de estudio.
+
+Reglas:
+- Entre 5 y 8 preguntas multiple choice, cada una con exactamente 4 opciones plausibles (los distractores reflejan confusiones típicas, no opciones absurdas).
+- Cubrí las ideas centrales del material, ordenadas de lo más básico a lo más desafiante.
+- En "explanation" explicá POR QUÉ la respuesta correcta es correcta, en 1-3 oraciones, como un profe copado; si sirve, aclará por qué las otras confunden. Es feedback para APRENDER, no solo corregir.
+- En "hint" da una pista corta que oriente el razonamiento sin regalar la respuesta.
+- Voseo, lenguaje claro de secundaria, español rioplatense.
+- Fiel al material: no inventes contenido que no esté.`,
+
+  study_guide: `Sos ENSEÑIA, un tutor que ayuda a estudiantes de secundaria argentina a ESTUDIAR un material (no solo leerlo). Escribí una guía de estudio en Markdown dirigida al estudiante (voseo):
+
+**¿De qué se trata?** — 2-3 oraciones que sitúan el tema.
+**Ideas clave** — 4-6, cada una con explicación breve y un ejemplo cotidiano si ayuda.
+**Ojo con esto** — 2-3 confusiones típicas o errores comunes al estudiar este tema.
+**Preguntate esto** — 4-5 preguntas para auto-evaluarte (sin las respuestas: la idea es que vuelvas al material si no las sabés).
+**Truco para recordarlo** — una mnemotecnia, analogía o regla práctica.
+
+Lenguaje cercano y motivador, español rioplatense. Fiel al material: no inventes contenido que no esté.`,
+
   extract_questions: `Sos un asistente pedagógico. A partir de la consigna/actividad dada, extraé o generá preguntas para un cuestionario autocorregible para estudiantes de secundaria.
 
 Reglas:
@@ -216,10 +268,17 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ error: 'INVALID_JSON' }, 400);
   }
-  const { mode, pdfBase64, text, title, context } = body;
+  const { mode, pdfBase64, materialId, context } = body;
+  let { text, title } = body;
 
   if (!mode || !PROMPTS[mode]) return json({ error: 'INVALID_MODE' }, 400);
-  if (!pdfBase64 && !text) return json({ error: 'MISSING_INPUT', message: 'Falta pdfBase64 o text.' }, 400);
+  const isCached = CACHED_MODES.includes(mode);
+  if (isCached) {
+    // Los modos cacheados trabajan SOLO desde el material en DB (nunca texto del cliente)
+    if (!materialId) return json({ error: 'MISSING_INPUT', message: 'Falta materialId.' }, 400);
+  } else if (!pdfBase64 && !text) {
+    return json({ error: 'MISSING_INPUT', message: 'Falta pdfBase64 o text.' }, 400);
+  }
   if (pdfBase64 && pdfBase64.length > MAX_PDF_BASE64) {
     return json({ error: 'FILE_TOO_LARGE', message: 'El PDF supera el tamaño máximo (11 MB).' }, 400);
   }
@@ -238,6 +297,89 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'AUTH_INVALID', message: 'Sesión expirada. Volvé a iniciar sesión.' }, 401);
   }
 
+  // ── Guard de rol: estudiantes solo acceden a los modos de estudio ──
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, school_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role === 'estudiante' && !STUDENT_MODES.includes(mode)) {
+    return json({ error: 'FORBIDDEN_MODE', message: 'Este modo no está disponible para estudiantes.' }, 403);
+  }
+
+  // ── Modos cacheados: cargar material, autorizar y devolver cache si existe ──
+  // (el cache-hit va ANTES del chequeo de cuota: releer no gasta usos de IA)
+  let cacheMaterial: {
+    id: string; title: string; subject_name: string; subject_id: string;
+    teacher_id: string; school_id: string; is_shared_with_students: boolean;
+    extracted_text: string | null; ai_summary: string | null;
+    study_cards: { title: string; body: string }[] | null;
+    practice_quiz: unknown | null; study_guide: string | null;
+  } | null = null;
+
+  if (isCached) {
+    const { data: mat } = await supabase
+      .from('library_materials')
+      .select('id, title, subject_name, subject_id, teacher_id, school_id, is_shared_with_students, extracted_text, ai_summary, study_cards, practice_quiz, study_guide')
+      .eq('id', materialId)
+      .maybeSingle();
+
+    if (!mat) return json({ error: 'NOT_FOUND', message: 'El material no existe.' }, 404);
+
+    // Autorización por rol
+    if (profile?.role === 'estudiante') {
+      if (!mat.is_shared_with_students) {
+        return json({ error: 'FORBIDDEN', message: 'Este material no está compartido con estudiantes.' }, 403);
+      }
+      const { data: student } = await supabase
+        .from('students').select('id').eq('user_id', user.id).maybeSingle();
+      if (!student) return json({ error: 'FORBIDDEN', message: 'No encontramos tu ficha de estudiante.' }, 403);
+      const { data: enrollment } = await supabase
+        .from('enrollments').select('id')
+        .eq('student_id', student.id).eq('subject_id', mat.subject_id)
+        .limit(1).maybeSingle();
+      if (!enrollment) {
+        return json({ error: 'FORBIDDEN', message: 'No estás inscripto/a en esta materia.' }, 403);
+      }
+    } else if (profile?.role === 'docente') {
+      if (mat.teacher_id !== user.id) {
+        return json({ error: 'FORBIDDEN', message: 'El material pertenece a otro docente.' }, 403);
+      }
+    } else if (profile?.role === 'director') {
+      if (mat.school_id !== profile.school_id) {
+        return json({ error: 'FORBIDDEN', message: 'El material pertenece a otra escuela.' }, 403);
+      }
+    } else {
+      return json({ error: 'FORBIDDEN' }, 403);
+    }
+
+    // Cache hit: no gasta cuota ni llama a la IA
+    if (mode === 'practice_quiz' && mat.practice_quiz) {
+      return json({ questions: mat.practice_quiz, cached: true });
+    }
+    if (mode === 'study_guide' && mat.study_guide) {
+      return json({ guide: mat.study_guide, cached: true });
+    }
+
+    // Fuente de texto: extracted_text, o resumen + placas como fallback
+    const fallback = [
+      mat.ai_summary ?? '',
+      (mat.study_cards ?? []).map(c => `${c.title}: ${c.body}`).join('\n'),
+    ].filter(Boolean).join('\n\n');
+    const source = mat.extracted_text || fallback;
+    if (!source.trim()) {
+      return json({
+        error: 'NO_TEXT',
+        message: 'Este material todavía no tiene texto procesado. Pedile a tu docente que lo procese en la Biblioteca.',
+      }, 422);
+    }
+
+    cacheMaterial = mat;
+    text = source;
+    title = mat.title;
+  }
+
   // ── Quota (compartida con el chat IA) ──
   const today = new Date().toISOString().split('T')[0];
   const { data: usage } = await supabase
@@ -252,7 +394,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Build OpenRouter request ──
-  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards';
+  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   const maxTokens = mode === 'extract_text' ? 10000 : mode === 'import_program' ? 12000 : mode === 'student_summary' ? 3000 : 6000;
 
@@ -268,6 +410,7 @@ Deno.serve(async (req: Request) => {
   }
   const hints: string[] = [];
   if (title) hints.push(`Título del documento: ${title}`);
+  if (cacheMaterial?.subject_name) hints.push(`Materia: ${cacheMaterial.subject_name}`);
   if (context?.subjectName) hints.push(`Materia esperada: ${context.subjectName}`);
   if (context?.courseName) hints.push(`Curso esperado: ${context.courseName}`);
 
@@ -285,6 +428,8 @@ Deno.serve(async (req: Request) => {
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
+        : mode === 'practice_quiz' ? 'Generá el quiz de práctica.'
+        : mode === 'study_guide' ? 'Escribí la guía de estudio.'
         : 'Extraé las preguntas del cuestionario.',
     ].filter(Boolean).join('\n\n'),
   });
@@ -306,6 +451,7 @@ Deno.serve(async (req: Request) => {
       import_program: { name: 'programa', schema: PROGRAM_SCHEMA },
       extract_questions: { name: 'preguntas', schema: QUESTIONS_SCHEMA },
       study_cards: { name: 'placas', schema: STUDY_CARDS_SCHEMA },
+      practice_quiz: { name: 'quiz_practica', schema: PRACTICE_QUIZ_SCHEMA },
     };
     orBody.response_format = {
       type: 'json_schema',
@@ -372,10 +518,57 @@ Deno.serve(async (req: Request) => {
   if (mode === 'extract_text') return json({ text: outputText, truncated });
   if (mode === 'summarize' || mode === 'student_summary') return json({ summary: outputText, truncated });
 
+  // ── Guía de estudio: validar y cachear (anti-race: solo si sigue NULL) ──
+  if (mode === 'study_guide') {
+    if (truncated || !outputText.trim()) {
+      return json({ error: 'API_ERROR', message: 'La guía salió incompleta. Intentá de nuevo.' }, 502);
+    }
+    const { data: won } = await supabase
+      .from('library_materials')
+      .update({ study_guide: outputText })
+      .eq('id', cacheMaterial!.id)
+      .is('study_guide', null)
+      .select('id');
+    if (!won || won.length === 0) {
+      // Otro request generó primero: devolvemos el del ganador (mismo contenido para todos)
+      const { data: fresh } = await supabase
+        .from('library_materials').select('study_guide').eq('id', cacheMaterial!.id).single();
+      if (fresh?.study_guide) return json({ guide: fresh.study_guide, cached: true });
+    }
+    return json({ guide: outputText, cached: false });
+  }
+
   try {
     const parsed = JSON.parse(outputText);
     if (mode === 'import_program') return json({ program: parsed, truncated });
     if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
+
+    // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──
+    if (mode === 'practice_quiz') {
+      const questions = (parsed.questions ?? []).filter((q: {
+        prompt?: string; options?: string[]; correct_index?: number; explanation?: string;
+      }) =>
+        q.prompt && Array.isArray(q.options) && q.options.length >= 2 &&
+        typeof q.correct_index === 'number' && q.correct_index >= 0 && q.correct_index < q.options.length &&
+        q.explanation,
+      );
+      if (truncated || questions.length < 3) {
+        return json({ error: 'API_ERROR', message: 'El quiz salió incompleto. Intentá de nuevo.' }, 502);
+      }
+      const { data: won } = await supabase
+        .from('library_materials')
+        .update({ practice_quiz: questions })
+        .eq('id', cacheMaterial!.id)
+        .is('practice_quiz', null)
+        .select('id');
+      if (!won || won.length === 0) {
+        const { data: fresh } = await supabase
+          .from('library_materials').select('practice_quiz').eq('id', cacheMaterial!.id).single();
+        if (fresh?.practice_quiz) return json({ questions: fresh.practice_quiz, cached: true });
+      }
+      return json({ questions, cached: false });
+    }
+
     return json({ questions: parsed.questions ?? [], truncated });
   } catch {
     console.error('Structured output parse failed:', outputText.substring(0, 300));
