@@ -49,13 +49,17 @@ export default function ActividadRapida() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getSubjects().then(subjects => {
+    if (!user) return;
+    getSubjects(user.schoolId).then(subjects => {
       const map: Record<string, Subject> = {};
       subjects.forEach(s => { map[s.id] = s; });
       setSubjectsMap(map);
     }).catch(console.error);
-    return () => abortRef.current?.abort();
-  }, []);
+  }, [user]);
+
+  // Abort SOLO al desmontar: si estuviera en el efecto de arriba, un cambio
+  // de identidad de `user` (refresh de sesión) cortaría la generación en curso.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   if (!user) return null;
 

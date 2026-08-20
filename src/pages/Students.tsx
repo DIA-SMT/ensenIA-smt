@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByTeacher } from '../services/students.service';
+import { logAccess } from '../services/audit.service';
 import { getCheckinsByStudent, getObservationsByStudent, addObservation } from '../services/wellbeing.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
 import { summarizeStudent } from '../services/documents.service';
@@ -63,6 +64,17 @@ export default function Students() {
         getCheckinsByStudent(selectedStudent.id, 8).then(setCheckins).catch(console.error);
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
+        // Bitácora: queda registrado cada acceso a la ficha del estudiante.
+        if (user) {
+            logAccess({
+                userId: user.id,
+                userLabel: `${user.firstName} ${user.lastName} (${user.role})`,
+                schoolId: user.schoolId,
+                action: 'view_student_profile',
+                entityType: 'student',
+                entityId: selectedStudent.id,
+            });
+        }
     }, [selectedStudent?.id]);
 
     if (!user) return null;

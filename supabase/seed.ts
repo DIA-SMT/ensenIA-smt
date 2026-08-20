@@ -461,13 +461,162 @@ async function main() {
   });
   console.log('  ✓ Alerts + notification');
 
+  // ═══ 12. Segunda escuela: E.M. Alfonsina Storni ═══
+  // Ejercita el modo multiescuela desde el día uno: RLS por escuela,
+  // filtros explícitos en servicios y (a futuro) supervisión municipal.
+  console.log('\n🏫 Creating second school (Alfonsina Storni)...');
+  const { data: school2, error: school2Err } = await supabase
+    .from('schools')
+    .insert({
+      name: 'Escuela Municipal Alfonsina Storni Secundaria',
+      short_name: 'E.M. Alfonsina Storni',
+      address: 'San Miguel de Tucumán',
+      district: 'Capital',
+    })
+    .select()
+    .single();
+  if (school2Err) throw school2Err;
+  ids.school2 = school2.id;
+  console.log(`  ✓ School: ${school2.id}`);
+
+  const storniStaff = [
+    { email: 'silvia.aguirre@ensenia.edu.ar', firstName: 'Silvia', lastName: 'Aguirre', role: 'director', initials: 'SA', key: 'director2' },
+    { email: 'pablo.leiva@ensenia.edu.ar', firstName: 'Pablo', lastName: 'Leiva', role: 'docente', initials: 'PL', key: 'pablo' },
+  ];
+  for (const u of storniStaff) {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: u.email,
+      password: PASSWORD,
+      email_confirm: true,
+      user_metadata: {
+        first_name: u.firstName,
+        last_name: u.lastName,
+        role: u.role,
+        school_id: ids.school2,
+        avatar_initials: u.initials,
+      },
+    });
+    if (error) throw new Error(`Failed to create user ${u.email}: ${error.message}`);
+    ids[`user_${u.key}`] = data.user.id;
+    console.log(`  ✓ ${u.firstName} ${u.lastName} (${u.role})`);
+  }
+
+  const { data: sub2, error: sub2Err } = await supabase
+    .from('subjects')
+    .insert({ name: 'Matemática', color: 'purple', school_id: ids.school2 })
+    .select()
+    .single();
+  if (sub2Err) throw sub2Err;
+  ids.sub2_mat = sub2.id;
+
+  const { data: course2, error: course2Err } = await supabase
+    .from('courses')
+    .insert({ name: '3° A', year: 3, division: 'A', student_count: 4, school_id: ids.school2 })
+    .select()
+    .single();
+  if (course2Err) throw course2Err;
+  ids.course2_3a = course2.id;
+
+  const { error: assign2Err } = await supabase
+    .from('teacher_assignments')
+    .insert({ teacher_id: ids.user_pablo, subject_id: ids.sub2_mat, course_id: ids.course2_3a });
+  if (assign2Err) throw assign2Err;
+
+  const storniStudents = [
+    { firstName: 'Bruno', lastName: 'Ledesma', initials: 'BL', status: 'good', alerts: 0, progress: 77, attendance: 89, average: 7.3, key: 'st2_1' },
+    { firstName: 'Milagros', lastName: 'Ponce', initials: 'MP', status: 'excellent', alerts: 0, progress: 93, attendance: 96, average: 9.1, key: 'st2_2' },
+    { firstName: 'Thiago', lastName: 'Correa', initials: 'TC', status: 'warning', alerts: 1, progress: 58, attendance: 71, average: 5.7, key: 'st2_3' },
+    { firstName: 'Zoe', lastName: 'Villagra', initials: 'ZV', status: 'good', alerts: 0, progress: 83, attendance: 91, average: 7.9, key: 'st2_4' },
+  ];
+  let matCounter = 0;
+  for (const s of storniStudents) {
+    const email = slugEmail(s.firstName, s.lastName, 'estudiante.ensenia.edu.ar');
+    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+      email,
+      password: PASSWORD,
+      email_confirm: true,
+      user_metadata: {
+        first_name: s.firstName,
+        last_name: s.lastName,
+        role: 'estudiante',
+        school_id: ids.school2,
+        avatar_initials: s.initials,
+      },
+    });
+    if (authErr) throw new Error(`auth ${email}: ${authErr.message}`);
+
+    const { data, error } = await supabase
+      .from('students')
+      .insert({
+        first_name: s.firstName,
+        last_name: s.lastName,
+        avatar_initials: s.initials,
+        course_id: ids.course2_3a,
+        status: s.status,
+        alerts_count: s.alerts,
+        progress: s.progress,
+        attendance: s.attendance,
+        average: s.average,
+        school_id: ids.school2,
+        user_id: authUser.user.id,
+        email,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    ids[s.key] = data.id;
+
+    matCounter += 1;
+    const { error: enrErr } = await supabase.from('enrollments').insert({
+      student_id: data.id,
+      subject_id: ids.sub2_mat,
+      course_id: ids.course2_3a,
+      enrollment_code: `MAT3A-${String(matCounter).padStart(2, '0')}`,
+      school_id: ids.school2,
+    });
+    if (enrErr) throw enrErr;
+  }
+  console.log(`  ✓ ${storniStudents.length} students + accounts + enrollments`);
+
+  const { error: sched2Err } = await supabase.from('schedule_blocks').insert({
+    teacher_id: ids.user_pablo,
+    subject_id: ids.sub2_mat,
+    course_id: ids.course2_3a,
+    subject_name: 'Matemática',
+    course_name: '3° A',
+    day_of_week: 'lunes',
+    day_index: 0,
+    start_hour: 8,
+    duration: 1.5,
+    room: 'Aula 2',
+    color_class: 'purple',
+    student_count: 4,
+    school_id: ids.school2,
+  });
+  if (sched2Err) throw sched2Err;
+
+  await supabase.from('notifications').insert({
+    from_user_id: ids.user_director2,
+    to_user_id: null,
+    title: 'Bienvenidos a ENSEÑIA',
+    message: 'La plataforma ya está disponible para la E.M. Alfonsina Storni.',
+    priority: 'medium',
+    school_id: ids.school2,
+  });
+  console.log('  ✓ Schedule + notification');
+
   console.log('\n✅ Seed completo.\n');
   console.log('── Cuentas de prueba (password: demo123) ──');
+  console.log('── E.M. Gabriela Mistral ──');
   console.log('  Directora:  ana.martinez@ensenia.edu.ar');
   console.log('  Docente:    marco.rossi@ensenia.edu.ar  (Física I 4°A, Historia 2°B, Geografía 5°B)');
   console.log('  Estudiante: sofia.ramirez@estudiante.ensenia.edu.ar  (2° B, entregó la actividad)');
   console.log('  Estudiante: nicolas.moreno@estudiante.ensenia.edu.ar (2° B, actividad en progreso)');
   console.log('  Estudiante: martina.silva@estudiante.ensenia.edu.ar  (4° A, Física)');
+  console.log('── E.M. Alfonsina Storni ──');
+  console.log('  Directora:  silvia.aguirre@ensenia.edu.ar');
+  console.log('  Docente:    pablo.leiva@ensenia.edu.ar  (Matemática 3°A)');
+  console.log('  Estudiante: bruno.ledesma@estudiante.ensenia.edu.ar (3° A)');
 }
 
 main().catch((err) => {

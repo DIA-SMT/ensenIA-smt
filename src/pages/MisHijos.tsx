@@ -7,7 +7,7 @@ import './Familias.css';
 import './StudentPortal.css';
 
 export default function MisHijos() {
-  const { user } = useAuth();
+  const { user, school } = useAuth();
   const [children, setChildren] = useState<(Student & { relationship: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +45,7 @@ export default function MisHijos() {
             <div className="student-avatar" style={{ width: 46, height: 46, fontSize: 16 }}>{c.avatarInitials}</div>
             <div>
               <h4>{c.firstName} {c.lastName}</h4>
-              <span className="text-sm text-secondary">{c.courseName} · E.M. Gabriela Mistral</span>
+              <span className="text-sm text-secondary">{c.courseName}{school ? ` · ${school.shortName}` : ''}</span>
             </div>
             <div style={{ marginLeft: 'auto' }}>{statusBadge(c)}</div>
           </div>

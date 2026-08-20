@@ -315,6 +315,50 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+          school_id: string
+          user_id: string
+          user_label: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+          school_id: string
+          user_id: string
+          user_label?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          school_id?: string
+          user_id?: string
+          user_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string

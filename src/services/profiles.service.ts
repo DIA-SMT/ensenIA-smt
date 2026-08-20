@@ -22,9 +22,10 @@ export async function getProfile(userId: string): Promise<User> {
   return mapProfileToUser(profile, subjects);
 }
 
-export async function getTeacherUsers(): Promise<User[]> {
+/** Docentes de una escuela. El filtro por school_id es explícito además de la RLS. */
+export async function getTeacherUsers(schoolId: string): Promise<User[]> {
   const profiles = unwrap(
-    await supabase.from('profiles').select('*').eq('role', 'docente')
+    await supabase.from('profiles').select('*').eq('role', 'docente').eq('school_id', schoolId)
   );
 
   const teacherIds = profiles.map((p: any) => p.id);

@@ -151,7 +151,7 @@ export default function IALab() {
         getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
         getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
 
-        getSubjects().then(subjects => {
+        getSubjects(user.schoolId).then(subjects => {
             const map: Record<string, Subject> = {};
             subjects.forEach(s => { map[s.id] = s; });
             setSubjectsMap(map);

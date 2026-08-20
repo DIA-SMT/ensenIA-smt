@@ -20,10 +20,11 @@ function stripEmoji(s: string): string {
   return s.replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/\s+/g, ' ').trim();
 }
 
+// Marca neutra: la app sirve a varias escuelas municipales.
 function footer(doc: jsPDF, w: number, h: number, subjectName?: string) {
   doc.setFontSize(9);
   doc.setTextColor(...SUBTLE);
-  doc.text(`ENSEÑIA · E.M. Gabriela Mistral${subjectName ? ` · ${subjectName}` : ''}`, w / 2, h - 18, { align: 'center' });
+  doc.text(`ENSEÑIA SMT${subjectName ? ` · ${subjectName}` : ''}`, w / 2, h - 18, { align: 'center' });
 }
 
 /** Placas de estudio: una placa por página, formato cuadrado apaisado para leer en el celu. */

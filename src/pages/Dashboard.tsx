@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Clock, AlertTriangle, CheckCircle, Info, Users, BookOpen,
-    Activity, TrendingUp, TrendingDown, ArrowRight, Sparkles,
+    Activity, ArrowRight, Sparkles,
     GraduationCap, ClipboardCheck, CalendarCheck, Bell, MessageSquare,
     StickyNote, Pin, AlertCircle
 } from 'lucide-react';
@@ -13,7 +14,9 @@ import { getNotificationsForUser } from '../services/notifications.service';
 import { getTeacherUsers } from '../services/profiles.service';
 import { getCommunicationsBySchool } from '../services/communications.service';
 import { getQuickNotes } from '../services/quick-notes.service';
-import type { TeacherStats, DirectorStats, ScheduleBlock, Alert as AlertType, Notification as NotifType, Communication, User as UserType, QuickNote } from '../types';
+import { getActivitiesByTeacher } from '../services/activities.service';
+import { formatRelative } from '../lib/format';
+import type { TeacherStats, DirectorStats, ScheduleBlock, Alert as AlertType, Notification as NotifType, Communication, User as UserType, QuickNote, Activity as ActivityType } from '../types';
 import './Dashboard.css';
 
 /* -- Shared hooks / components -- */
@@ -38,64 +41,8 @@ function useCounter(target: number, duration = 1200, decimals = 0) {
     return count;
 }
 
-function Sparkline({ data, color, className = '' }: { data: number[]; color: string; className?: string }) {
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-    const w = 100;
-    const h = 32;
-    const pad = 2;
-
-    const points = data.map((v, i) => {
-        const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-        const y = h - pad - ((v - min) / range) * (h - pad * 2);
-        return `${x},${y}`;
-    });
-
-    const areaPoints = [...points, `${pad + w - pad * 2},${h}`, `${pad},${h}`].join(' ');
-
-    return (
-        <svg viewBox={`0 0 ${w} ${h}`} className={`sparkline-svg ${className}`} preserveAspectRatio="none">
-            <defs>
-                <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-                    <stop offset="100%" stopColor={color} stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <polygon points={areaPoints} fill={`url(#grad-${color})`} />
-            <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx={points[points.length - 1].split(',')[0]} cy={points[points.length - 1].split(',')[1]} r="2.5" fill={color} />
-        </svg>
-    );
-}
-
-function TrendBadge({ value, up }: { value: number; up: boolean }) {
-    if (value === 0) return <span className="trend-badge trend-neutral">Estable</span>;
-    return (
-        <span className={`trend-badge ${up ? 'trend-up' : 'trend-down'}`}>
-            {up ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {Math.abs(value)}%
-        </span>
-    );
-}
-
 /* -- Color helpers -- */
 const colorMap: Record<string, string> = { green: 'teal', blue: 'teal', orange: 'amber', amber: 'amber', purple: 'violet', teal: 'teal' };
-
-// Synthetic sparkline data (placeholder until real analytics)
-const sparklineData = {
-    students: [120, 125, 130, 128, 135, 138, 142],
-    classes: [4, 3, 5, 4, 4, 3, 4],
-    evaluations: [12, 10, 8, 9, 11, 8, 7],
-    attendance: [88, 89, 90, 89, 91, 90, 91.4],
-};
-
-const statsTrends = {
-    students: { value: 3.2, up: true },
-    classes: { value: 0, up: true },
-    evaluations: { value: 22, up: false },
-    attendance: { value: 1.2, up: true },
-};
 
 function formatHour(h: number): string {
     const hh = Math.floor(h);
@@ -128,6 +75,7 @@ function getWeeklyCalendar(schedule: ScheduleBlock[]) {
 
 function TeacherDashboardContent() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [teacherStats, setTeacherStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, avgAttendance: 0 });
     const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
     const [nextClassBlock, setNextClassBlock] = useState<ScheduleBlock | null>(null);
@@ -135,6 +83,7 @@ function TeacherDashboardContent() {
     const [myAlerts, setMyAlerts] = useState<AlertType[]>([]);
     const [myNotifs, setMyNotifs] = useState<NotifType[]>([]);
     const [notes, setNotes] = useState<QuickNote[]>([]);
+    const [recentActivities, setRecentActivities] = useState<ActivityType[]>([]);
 
     useEffect(() => {
         if (!user) return;
@@ -149,7 +98,8 @@ function TeacherDashboardContent() {
             getAlertsByTeacher(user.id),
             getNotificationsForUser(user.id),
             getQuickNotes(user.id),
-        ]).then(([stats, today, next, week, alerts, notifs, qn]) => {
+            getActivitiesByTeacher(user.id),
+        ]).then(([stats, today, next, week, alerts, notifs, qn, acts]) => {
             setTeacherStats(stats);
             setTodayClasses(today);
             setNextClassBlock(next ?? today[0] ?? null);
@@ -157,24 +107,18 @@ function TeacherDashboardContent() {
             setMyAlerts(alerts.slice(0, 3));
             setMyNotifs(notifs.slice(0, 3));
             setNotes(qn);
+            setRecentActivities(acts.slice(0, 3));
         }).catch(console.error);
     }, [user]);
-
-    if (!user) return null;
-
-    const weekCalendar = getWeeklyCalendar(weekSchedule);
 
     const studentsCount = useCounter(teacherStats.totalStudents);
     const classesCount = useCounter(teacherStats.classesToday, 800);
     const evalsCount = useCounter(teacherStats.pendingEvaluations, 900);
     const attendanceCount = useCounter(teacherStats.avgAttendance, 1400, 1);
 
-    // Mock recent activity (no service for this yet)
-    const recentActivity = [
-        { id: 1, action: 'Generó actividad con IA', subject: 'Biología Celular', time: 'Hace 2 horas', type: 'ia' },
-        { id: 2, action: 'Calificó evaluaciones', subject: 'Física', time: 'Ayer, 18:30', type: 'eval' },
-        { id: 3, action: 'Subió material', subject: 'Química Orgánica', time: 'Lunes, 09:15', type: 'material' },
-    ];
+    if (!user) return null;
+
+    const weekCalendar = getWeeklyCalendar(weekSchedule);
 
     return (
         <div className="dashboard-container">
@@ -183,49 +127,41 @@ function TeacherDashboardContent() {
                 <div className="card stat-card animate-in stagger-1">
                     <div className="stat-header">
                         <div className="stat-icon-wrap icon-teal"><GraduationCap size={20} /></div>
-                        <TrendBadge {...statsTrends.students} />
                     </div>
                     <div className="stat-body">
                         <span className="stat-value">{studentsCount}</span>
                         <span className="stat-label">Estudiantes</span>
                     </div>
-                    <Sparkline data={sparklineData.students} color="#00A8FF" />
                 </div>
 
                 <div className="card stat-card animate-in stagger-2">
                     <div className="stat-header">
                         <div className="stat-icon-wrap icon-amber"><CalendarCheck size={20} /></div>
-                        <TrendBadge {...statsTrends.classes} />
                     </div>
                     <div className="stat-body">
                         <span className="stat-value">{classesCount}</span>
                         <span className="stat-label">Clases Hoy</span>
                     </div>
-                    <Sparkline data={sparklineData.classes} color="#FBBF24" />
                 </div>
 
                 <div className="card stat-card animate-in stagger-3">
                     <div className="stat-header">
                         <div className="stat-icon-wrap icon-violet"><ClipboardCheck size={20} /></div>
-                        <TrendBadge {...statsTrends.evaluations} />
                     </div>
                     <div className="stat-body">
                         <span className="stat-value">{evalsCount}</span>
                         <span className="stat-label">Evals. Pendientes</span>
                     </div>
-                    <Sparkline data={sparklineData.evaluations} color="#818CF8" />
                 </div>
 
                 <div className="card stat-card animate-in stagger-4">
                     <div className="stat-header">
                         <div className="stat-icon-wrap icon-emerald"><Users size={20} /></div>
-                        <TrendBadge {...statsTrends.attendance} />
                     </div>
                     <div className="stat-body">
                         <span className="stat-value">{attendanceCount}%</span>
                         <span className="stat-label">Asistencia Prom.</span>
                     </div>
-                    <Sparkline data={sparklineData.attendance} color="#10D981" />
                 </div>
             </div>
 
@@ -255,12 +191,12 @@ function TeacherDashboardContent() {
                                 </div>
                             </div>
                             <div className="next-class-actions">
-                                <button className="btn btn-primary">
+                                <button className="btn btn-primary" onClick={() => navigate('/ia-lab')}>
                                     <Sparkles size={16} />
                                     Preparar con IA
                                 </button>
-                                <button className="btn btn-outline btn-light">
-                                    Tomar asistencia
+                                <button className="btn btn-outline btn-light" onClick={() => navigate('/actividad-rapida')}>
+                                    Actividad rápida
                                     <ArrowRight size={16} />
                                 </button>
                             </div>
@@ -271,7 +207,9 @@ function TeacherDashboardContent() {
                     <section className="card widget animate-in stagger-6">
                         <div className="widget-header">
                             <h3 className="widget-title">Semana</h3>
-                            <button className="btn btn-ghost text-sm">Ver agenda <ArrowRight size={14} /></button>
+                            <button className="btn btn-ghost text-sm" onClick={() => navigate('/agenda')}>
+                                Ver agenda <ArrowRight size={14} />
+                            </button>
                         </div>
                         <div className="weekly-calendar">
                             {weekCalendar.map((day, idx) => (
@@ -301,7 +239,7 @@ function TeacherDashboardContent() {
                                             <h4>{cls.subjectName}</h4>
                                             <p>{cls.courseName} · {cls.room}</p>
                                         </div>
-                                        <button className="btn btn-ghost text-sm">
+                                        <button className="btn btn-ghost text-sm" onClick={() => navigate('/agenda')}>
                                             <ArrowRight size={16} />
                                         </button>
                                     </div>
@@ -381,23 +319,31 @@ function TeacherDashboardContent() {
                         </div>
                     </section>
 
-                    {/* Activity */}
+                    {/* Actividad reciente (real: últimas actividades publicadas) */}
                     <section className="card widget animate-in stagger-8">
                         <div className="widget-header">
                             <h3 className="widget-title">Actividad</h3>
+                            {recentActivities.length > 0 && (
+                                <button className="btn btn-ghost text-sm" onClick={() => navigate('/actividades')}>
+                                    Ver todas <ArrowRight size={14} />
+                                </button>
+                            )}
                         </div>
                         <div className="activity-list">
-                            {recentActivity.map(act => (
+                            {recentActivities.length === 0 && (
+                                <p className="text-secondary text-sm">Todavía no publicaste actividades.</p>
+                            )}
+                            {recentActivities.map(act => (
                                 <div key={act.id} className="activity-item">
-                                    <div className={`activity-dot dot-${act.type}`}>
-                                        {act.type === 'ia' && <Sparkles size={12} />}
-                                        {act.type === 'eval' && <BookOpen size={12} />}
-                                        {act.type === 'material' && <Activity size={12} />}
+                                    <div className={`activity-dot dot-${act.sourceTool ? 'ia' : 'material'}`}>
+                                        {act.sourceTool ? <Sparkles size={12} /> : <Activity size={12} />}
                                     </div>
                                     <div className="activity-content">
-                                        <p className="activity-action">{act.action}</p>
-                                        <p className="activity-subject">{act.subject}</p>
-                                        <span className="activity-time">{act.time}</span>
+                                        <p className="activity-action">Publicó actividad</p>
+                                        <p className="activity-subject">{act.title}</p>
+                                        <span className="activity-time">
+                                            {act.subjectName ? `${act.subjectName} · ` : ''}{formatRelative(act.createdAt)}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
@@ -415,6 +361,7 @@ function TeacherDashboardContent() {
 
 function DirectorDashboardContent() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [dirStats, setDirStats] = useState<DirectorStats>({ totalTeachers: 0, activeClasses: 0, totalAlerts: 0, avgAttendance: 0, totalStudents: 0 });
     const [teachers, setTeachers] = useState<UserType[]>([]);
     const [schoolAlerts, setSchoolAlerts] = useState<AlertType[]>([]);
@@ -427,7 +374,7 @@ function DirectorDashboardContent() {
 
         Promise.all([
             getDirectorStats(schoolId),
-            getTeacherUsers(),
+            getTeacherUsers(schoolId),
             getAlertsBySchool(schoolId),
             getCommunicationsBySchool(schoolId),
         ]).then(([stats, t, alerts, comms]) => {
@@ -455,8 +402,8 @@ function DirectorDashboardContent() {
     const teacherActivity = teachers.map(t => ({
         name: `${t.firstName} ${t.lastName.charAt(0)}.`,
         classes: teacherWeeklyClasses[t.id] ?? 0,
-        max: 10,
     }));
+    const maxWeeklyClasses = Math.max(...teacherActivity.map(t => t.classes), 1);
 
     return (
         <div className="dashboard-container">
@@ -464,12 +411,12 @@ function DirectorDashboardContent() {
             <div className="kpi-grid">
                 <div className="card kpi-card border-left-primary animate-in stagger-1">
                     <div className="kpi-header">
-                        <span className="kpi-title">Docentes Activos</span>
+                        <span className="kpi-title">Docentes</span>
                         <Users size={20} className="text-primary" />
                     </div>
                     <div className="kpi-value-row">
                         <h3 className="kpi-value">{teachersCount}</h3>
-                        <span className="kpi-trend text-success"><TrendingUp size={14} /> Activos</span>
+                        <span className="kpi-trend text-secondary">En la escuela</span>
                     </div>
                 </div>
 
@@ -480,7 +427,7 @@ function DirectorDashboardContent() {
                     </div>
                     <div className="kpi-value-row">
                         <h3 className="kpi-value">{classesCount}</h3>
-                        <span className="kpi-trend text-secondary">En curso</span>
+                        <span className="kpi-trend text-secondary">Programadas</span>
                     </div>
                 </div>
 
@@ -502,16 +449,16 @@ function DirectorDashboardContent() {
                     </div>
                     <div className="kpi-value-row">
                         <h3 className="kpi-value">{attendanceCount}%</h3>
-                        <span className="kpi-trend text-success"><TrendingUp size={14} /> +1.2%</span>
+                        <span className="kpi-trend text-secondary">Según fichas</span>
                     </div>
                 </div>
             </div>
 
             <div className="director-main-grid">
-                {/* Left: Teacher Activity */}
+                {/* Left: Weekly teaching load (real: schedule_blocks per teacher) */}
                 <div className="card padding-xl animate-in stagger-5">
-                    <h3 className="mb-4 text-lg font-semibold">Actividad por Docente</h3>
-                    <p className="text-sm text-secondary mb-6">Clases programadas por semana por cada docente.</p>
+                    <h3 className="mb-4 text-lg font-semibold">Carga Horaria Semanal</h3>
+                    <p className="text-sm text-secondary mb-6">Bloques de clase programados por semana por cada docente.</p>
 
                     <div className="chart-wrapper">
                         {teacherActivity.map(ta => (
@@ -520,7 +467,7 @@ function DirectorDashboardContent() {
                                 <div className="bar-track">
                                     <div
                                         className="bar-fill bg-primary"
-                                        style={{ width: `${Math.min((ta.classes / ta.max) * 100, 100)}%` }}
+                                        style={{ width: `${(ta.classes / maxWeeklyClasses) * 100}%` }}
                                     />
                                 </div>
                                 <span className="bar-value">{ta.classes}</span>
@@ -561,7 +508,9 @@ function DirectorDashboardContent() {
                                 <MessageSquare size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                                 Últimos Comunicados
                             </h3>
-                            <button className="btn btn-ghost text-sm">Ver todos <ArrowRight size={14} /></button>
+                            <button className="btn btn-ghost text-sm" onClick={() => navigate('/comunicaciones')}>
+                                Ver todos <ArrowRight size={14} />
+                            </button>
                         </div>
                         <div className="comms-widget-list">
                             {recentComms.map(comm => (

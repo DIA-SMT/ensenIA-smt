@@ -1,30 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, X, Calendar, BookOpen, Users, Activity } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { getTeacherUsers } from '../services/profiles.service';
 import { getScheduleByTeacher, getTodaySchedule } from '../services/schedule.service';
 import { getSubjects } from '../services/subjects.service';
 import { getAllStudents } from '../services/students.service';
+import { getSchoolActivitiesLight, type SchoolActivityLight } from '../services/activities.service';
+import { logAccess } from '../services/audit.service';
+import { formatRelative, daysSince } from '../lib/format';
 import type { User, Subject, Student, ScheduleBlock } from '../types';
 import './Docentes.css';
 
+/** Chip honesto: cuándo fue la última actividad publicada por el docente. */
+function LastActivityBadge({ lastAt }: { lastAt: string | undefined }) {
+  if (!lastAt) return <span className="badge badge-neutral">Sin actividades</span>;
+  const days = daysSince(lastAt);
+  const cls = days <= 7 ? 'badge-success' : days <= 21 ? 'badge-warning' : 'badge-neutral';
+  return <span className={`badge ${cls}`}>{formatRelative(lastAt)}</span>;
+}
+
 export default function Docentes() {
+  const { user } = useAuth();
   const [selectedTeacher, setSelectedTeacher] = useState<User | null>(null);
   const [teachers, setTeachers] = useState<User[]>([]);
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
   const [studentsList, setStudentsList] = useState<Student[]>([]);
+  const [schoolActivities, setSchoolActivities] = useState<SchoolActivityLight[]>([]);
   const [teacherTodayClasses, setTeacherTodayClasses] = useState<Record<string, ScheduleBlock[]>>({});
   const [teacherWeeklyClasses, setTeacherWeeklyClasses] = useState<Record<string, number>>({});
+  const [search, setSearch] = useState('');
   const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
 
   useEffect(() => {
+    if (!user) return;
     Promise.all([
-      getTeacherUsers(),
-      getSubjects(),
-      getAllStudents(),
-    ]).then(([t, s, st]) => {
+      getTeacherUsers(user.schoolId),
+      getSubjects(user.schoolId),
+      getAllStudents(user.schoolId),
+      getSchoolActivitiesLight(user.schoolId),
+    ]).then(([t, s, st, acts]) => {
       setTeachers(t);
       setSubjectsList(s);
       setStudentsList(st);
+      setSchoolActivities(acts);
 
       // Load today's classes for each teacher
       Promise.all(t.map(teacher =>
@@ -44,7 +62,35 @@ export default function Docentes() {
         setTeacherWeeklyClasses(map);
       });
     }).catch(console.error);
-  }, []);
+  }, [user]);
+
+  // Bitácora: queda registrado cada acceso al perfil de un docente.
+  // Deps primitivas: la identidad del objeto user cambia en cada refresh
+  // de sesión y duplicaría filas.
+  useEffect(() => {
+    if (!user || !selectedTeacher) return;
+    logAccess({
+      userId: user.id,
+      userLabel: `${user.firstName} ${user.lastName} (${user.role})`,
+      schoolId: user.schoolId,
+      action: 'view_teacher_profile',
+      entityType: 'teacher',
+      entityId: selectedTeacher.id,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, selectedTeacher?.id]);
+
+  // La actividad viene ordenada desc por fecha: el primer match es la última publicación.
+  const lastActivityByTeacher = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of schoolActivities) {
+      if (!map[a.teacherId]) map[a.teacherId] = a.createdAt;
+    }
+    return map;
+  }, [schoolActivities]);
+
+  const recentActivitiesOf = (teacherId: string) =>
+    schoolActivities.filter(a => a.teacherId === teacherId).slice(0, 3);
 
   function getTeacherSubjectNames(teacher: User): string {
     if (!teacher.subjects) return '-';
@@ -60,6 +106,16 @@ export default function Docentes() {
 
   const todayClassesForTeacher = (teacherId: string) => teacherTodayClasses[teacherId] ?? [];
 
+  const filteredTeachers = search.trim()
+    ? teachers.filter(t =>
+        `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+        t.email.toLowerCase().includes(search.toLowerCase()) ||
+        getTeacherSubjectNames(t).toLowerCase().includes(search.toLowerCase())
+      )
+    : teachers;
+
+  if (!user) return null;
+
   return (
     <div className="docentes-container">
       <div className={`docentes-main ${selectedTeacher ? 'with-panel' : ''}`}>
@@ -68,7 +124,12 @@ export default function Docentes() {
             <h2>Equipo Docente</h2>
             <div className="search-bar" style={{ width: 280 }}>
               <Search size={16} className="search-icon" />
-              <input className="search-input" placeholder="Buscar docente..." />
+              <input
+                className="search-input"
+                placeholder="Buscar docente..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
           </div>
 
@@ -80,11 +141,11 @@ export default function Docentes() {
                   <th>Materias</th>
                   <th>Clases Hoy</th>
                   <th>Alumnos</th>
-                  <th>Estado</th>
+                  <th>Última Actividad</th>
                 </tr>
               </thead>
               <tbody>
-                {teachers.map(t => {
+                {filteredTeachers.map(t => {
                   const todayClasses = todayClassesForTeacher(t.id);
                   const studentCount = getTeacherStudentCount(t);
                   return (
@@ -106,10 +167,17 @@ export default function Docentes() {
                         <span className="badge badge-cyan">{todayClasses.length}</span>
                       </td>
                       <td>{studentCount}</td>
-                      <td><span className="badge badge-success">Activo</span></td>
+                      <td><LastActivityBadge lastAt={lastActivityByTeacher[t.id]} /></td>
                     </tr>
                   );
                 })}
+                {filteredTeachers.length === 0 && search.trim() !== '' && (
+                  <tr>
+                    <td colSpan={5} className="text-secondary text-sm">
+                      No se encontraron docentes para «{search.trim()}».
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -177,8 +245,14 @@ export default function Docentes() {
 
             <div className="profile-section">
               <h4><Activity size={14} style={{ marginRight: 6 }} /> Actividad Reciente</h4>
-              <p className="text-secondary text-sm">Generó actividad con IA · Hace 2 horas</p>
-              <p className="text-secondary text-sm">Subió material a Biblioteca · Ayer</p>
+              {recentActivitiesOf(selectedTeacher.id).length === 0 && (
+                <p className="text-secondary text-sm">Sin actividades publicadas todavía.</p>
+              )}
+              {recentActivitiesOf(selectedTeacher.id).map((a, i) => (
+                <p key={i} className="text-secondary text-sm">
+                  Publicó «{a.title}» · {formatRelative(a.createdAt)}
+                </p>
+              ))}
             </div>
           </div>
         </aside>

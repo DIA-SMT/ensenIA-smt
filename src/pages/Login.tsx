@@ -70,7 +70,7 @@ export default function Login() {
         <div className="login-header">
           <LogoMark size={48} />
           <h1 className="login-title">ENSEÑIA SMT</h1>
-          <p className="login-subtitle">Escuela Municipal Gabriela Mistral</p>
+          <p className="login-subtitle">Escuelas Municipales · San Miguel de Tucumán</p>
         </div>
 
         {/* Form */}

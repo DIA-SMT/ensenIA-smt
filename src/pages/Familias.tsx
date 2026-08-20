@@ -42,7 +42,7 @@ export default function Familias() {
     if (!user) return;
     load();
     if (isDirector) {
-      getAllStudents().then(setStudents).catch(console.error);
+      getAllStudents(user.schoolId).then(setStudents).catch(console.error);
     } else {
       const courseIds = user.subjects?.map(s => s.courseId) ?? [];
       getStudentsByTeacher(courseIds).then(setStudents).catch(console.error);

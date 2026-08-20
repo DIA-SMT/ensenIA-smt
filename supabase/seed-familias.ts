@@ -19,17 +19,26 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 async function main() {
   console.log('🌱 Seed familias + bienestar...\n');
 
-  const { data: school } = await supabase.from('schools').select('id').limit(1).single();
-  if (!school) throw new Error('No hay escuela; corré el seed principal primero.');
+  // Multiescuela: apuntar SIEMPRE a la Mistral por nombre, nunca a "la primera".
+  const { data: school } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('short_name', 'E.M. Gabriela Mistral')
+    .single();
+  if (!school) throw new Error('No está la E.M. Gabriela Mistral; corré el seed principal primero.');
 
-  const { data: students } = await supabase.from('students').select('id, first_name, last_name, email');
+  const { data: students } = await supabase
+    .from('students')
+    .select('id, first_name, last_name, email')
+    .eq('school_id', school.id);
   const byEmail = new Map((students ?? []).map(s => [s.email, s]));
   const sofia = byEmail.get('sofia.ramirez@estudiante.ensenia.edu.ar');
   const juan = byEmail.get('juan.perez@estudiante.ensenia.edu.ar');
   if (!sofia || !juan) throw new Error('Faltan estudiantes del seed principal.');
 
-  const { data: directora } = await supabase.from('profiles').select('id').eq('role', 'director').limit(1).single();
+  const { data: directora } = await supabase.from('profiles').select('id').eq('email', 'ana.martinez@ensenia.edu.ar').single();
   const { data: marco } = await supabase.from('profiles').select('id').eq('email', 'marco.rossi@ensenia.edu.ar').single();
+  if (!directora || !marco) throw new Error('Faltan los perfiles staff del seed principal.');
 
   // ── Padres/tutores ──
   const parents = [
@@ -83,7 +92,13 @@ async function main() {
   console.log('  ✓ 1 comunicado general + 1 citación');
 
   // ── Bienestar demo: check-ins de Sofía y Nicolás en la actividad ──
-  const { data: activity } = await supabase.from('activities').select('id').limit(1).single();
+  const { data: activity } = await supabase
+    .from('activities')
+    .select('id')
+    .eq('teacher_id', marco.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
   const nicolas = byEmail.get('nicolas.moreno@estudiante.ensenia.edu.ar');
   if (activity && nicolas) {
     const hoursAgo = (h: number) => new Date(Date.now() - h * 3600 * 1000).toISOString();

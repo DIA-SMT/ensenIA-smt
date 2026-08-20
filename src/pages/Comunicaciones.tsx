@@ -35,7 +35,7 @@ export default function Comunicaciones() {
   useEffect(() => {
     if (!user) return;
     getCommunicationsBySchool(user.schoolId).then(setCommunications).catch(console.error);
-    getTeacherUsers().then(setTeachers).catch(console.error);
+    getTeacherUsers(user.schoolId).then(setTeachers).catch(console.error);
   }, [user]);
 
   async function handleSend() {

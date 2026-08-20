@@ -38,11 +38,13 @@ export async function getStudentById(id: string): Promise<Student | undefined> {
   return mapStudent(data);
 }
 
-export async function getAllStudents(): Promise<Student[]> {
+/** Estudiantes de una escuela. El filtro por school_id es explícito además de la RLS. */
+export async function getAllStudents(schoolId: string): Promise<Student[]> {
   const data = unwrap(
     await supabase
       .from('students')
       .select('*, courses(name)')
+      .eq('school_id', schoolId)
       .order('last_name')
   );
 

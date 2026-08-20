@@ -218,6 +218,30 @@ export async function getEnrolledStudents(subjectId: string, courseId: string): 
     .sort((a: any, b: any) => a.lastName.localeCompare(b.lastName));
 }
 
+// ── Director: actividad publicada por los docentes de la escuela ──
+// Solo campos livianos; la RLS "Directors see school activities" (003) habilita la lectura.
+
+export interface SchoolActivityLight {
+  teacherId: string;
+  title: string;
+  createdAt: string;
+}
+
+export async function getSchoolActivitiesLight(schoolId: string): Promise<SchoolActivityLight[]> {
+  const data = unwrap(
+    await supabase
+      .from('activities')
+      .select('teacher_id, title, created_at')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+  );
+  return data.map((r: any) => ({
+    teacherId: r.teacher_id,
+    title: r.title,
+    createdAt: r.created_at,
+  }));
+}
+
 // ── Student: mi vista ──
 
 export async function getStudentByUserId(userId: string): Promise<Student | null> {

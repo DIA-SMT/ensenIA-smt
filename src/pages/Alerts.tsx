@@ -56,7 +56,7 @@ export default function Alerts() {
             : getAlertsByTeacher(user.id);
 
         loadAlerts.then(setAlertsList).catch(console.error);
-        getAllStudents().then(s => setTotalStudents(s.length)).catch(console.error);
+        getAllStudents(user.schoolId).then(s => setTotalStudents(s.length)).catch(console.error);
     }, [user, isDirector]);
 
     if (!user) return null;

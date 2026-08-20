@@ -18,7 +18,7 @@ alumno (cuándo vio, cuánto trabajó, qué respondió).
 | **Docente** | Laboratorio IA (actividades, evaluaciones, resúmenes, presentaciones, rúbricas) · **Importar programa anual (PDF/Word, incluso escaneado) → planificación automática** · Biblioteca digital con archivos reales + resumen IA + compartir con estudiantes · Publicar actividades con cuestionarios autocorregibles · Resultados con huella digital, **"qué les costó" por pregunta**, cómo se sintió cada alumno · **Devoluciones rápidas de un toque** · **Observaciones** (la info que estaba solo en la cabeza del docente) · Señales por estudiante · Citar familias |
 | **Estudiante** | Cuenta propia con ID por materia · Realizar actividades con autoguardado (y offline) · **Check-in emocional al empezar y al terminar** (opcional, sin nota) · Ver notas, reacciones y devoluciones · Biblioteca compartida |
 | **Familia** | Cuenta padre/tutor vinculada a estudiantes · **Comunicados oficiales y citaciones** con confirmación de asistencia · Ficha de sus hijos |
-| **Director/a** | Dashboard institucional · Equipo docente · Comunicaciones internas · **Avisos a familias con acuses de recibo** · Alertas |
+| **Director/a** | Dashboard institucional · Equipo docente con **última actividad real por docente** · Comunicaciones internas · **Avisos a familias con acuses de recibo** · Alertas · Lectura de señal real de su escuela (entregas, huella digital, check-ins, práctica, uso de IA — migración 008) con **bitácora de acceso a fichas** (`audit_log`) |
 
 > La IA corre vía **OpenRouter** (modelos Claude). Secret requerido: `OPENROUTER_API_KEY`.
 
@@ -71,13 +71,19 @@ VITE_SUPABASE_ANON_KEY=<anon key>
 
 ## Cuentas demo (password: `demo123`)
 
+El seed crea **dos escuelas municipales**: E.M. Gabriela Mistral y E.M. Alfonsina Storni
+(cada usuario ve solo su escuela — RLS + filtros explícitos por `school_id`).
+
 | Rol | Email |
 |---|---|
-| Directora | `ana.martinez@ensenia.edu.ar` |
-| Docente | `marco.rossi@ensenia.edu.ar` (Física I 4°A · Historia 2°B · Geografía 5°B) |
-| Estudiante | `sofia.ramirez@estudiante.ensenia.edu.ar` (2°B, entregó la actividad demo) |
-| Estudiante | `nicolas.moreno@estudiante.ensenia.edu.ar` (2°B, actividad en curso) |
-| Estudiante | `martina.silva@estudiante.ensenia.edu.ar` (4°A) |
+| Directora (Mistral) | `ana.martinez@ensenia.edu.ar` |
+| Docente (Mistral) | `marco.rossi@ensenia.edu.ar` (Física I 4°A · Historia 2°B · Geografía 5°B) |
+| Estudiante (Mistral) | `sofia.ramirez@estudiante.ensenia.edu.ar` (2°B, entregó la actividad demo) |
+| Estudiante (Mistral) | `nicolas.moreno@estudiante.ensenia.edu.ar` (2°B, actividad en curso) |
+| Estudiante (Mistral) | `martina.silva@estudiante.ensenia.edu.ar` (4°A) |
+| Directora (Storni) | `silvia.aguirre@ensenia.edu.ar` |
+| Docente (Storni) | `pablo.leiva@ensenia.edu.ar` (Matemática 3°A) |
+| Estudiante (Storni) | `bruno.ledesma@estudiante.ensenia.edu.ar` (3°A) |
 
 ## Flujo demo sugerido
 

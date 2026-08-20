@@ -68,7 +68,7 @@ export default function Biblioteca() {
   useEffect(() => {
     if (!user) return;
     refresh();
-    getSubjects().then(subjects => {
+    getSubjects(user.schoolId).then(subjects => {
       setSubjectsList(subjects);
     }).catch(console.error);
   }, [user]);
