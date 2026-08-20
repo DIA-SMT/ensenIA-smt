@@ -111,33 +111,38 @@ CREATE POLICY "Directors view school ia usage"
 -- Las políticas de 001 no acotaban por escuela: cualquier director
 -- veía los destinatarios/lecturas de comunicados ajenos y podía
 -- insertar destinatarios en comunicados de otra escuela.
+-- OJO: acotar con un subquery directo a communications recursiona
+-- (la política de communications ya consulta communication_recipients),
+-- por eso el helper SECURITY DEFINER, que evalúa sin RLS.
 
-DROP POLICY "Users can see recipient entries" ON communication_recipients;
+CREATE OR REPLACE FUNCTION communication_school_id(comm_id UUID)
+RETURNS UUID
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT school_id FROM communications WHERE id = comm_id
+$$;
+
+DROP POLICY IF EXISTS "Users can see recipient entries" ON communication_recipients;
 CREATE POLICY "Users can see recipient entries"
   ON communication_recipients FOR SELECT
   USING (
     user_id = auth.uid()
-    OR (
-      auth_role() = 'director'
-      AND communication_id IN (SELECT id FROM communications WHERE school_id = auth_school_id())
-    )
+    OR (auth_role() = 'director' AND communication_school_id(communication_id) = auth_school_id())
   );
 
-DROP POLICY "Directors can insert recipients" ON communication_recipients;
+DROP POLICY IF EXISTS "Directors can insert recipients" ON communication_recipients;
 CREATE POLICY "Directors can insert recipients"
   ON communication_recipients FOR INSERT
   WITH CHECK (
     auth_role() = 'director'
-    AND communication_id IN (SELECT id FROM communications WHERE school_id = auth_school_id())
+    AND communication_school_id(communication_id) = auth_school_id()
   );
 
-DROP POLICY "Users can see their own reads" ON communication_reads;
+DROP POLICY IF EXISTS "Users can see their own reads" ON communication_reads;
 CREATE POLICY "Users can see their own reads"
   ON communication_reads FOR SELECT
   USING (
     user_id = auth.uid()
-    OR (
-      auth_role() = 'director'
-      AND communication_id IN (SELECT id FROM communications WHERE school_id = auth_school_id())
-    )
+    OR (auth_role() = 'director' AND communication_school_id(communication_id) = auth_school_id())
   );
