@@ -433,13 +433,63 @@
   color: var(--text-primary);
   line-height: 1;
 }
-.kpi-trend {
-  font-size: 14px;
+.kpi-caption {
+  font-size: 12px;
+  color: var(--text-subtle);
+  line-height: 1.3;
+}
+
+.border-left-violet::before { background-color: #818CF8; }
+.border-left-info::before { background-color: #64748B; }
+
+.kpi-drilldown-toggle {
+  align-self: flex-start;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  font-weight: 500;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--cyan-bright);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: -4px;
 }
+.kpi-drilldown-toggle:hover { text-decoration: underline; }
+
+.kpi-drilldown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.kpi-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.kpi-row:hover { background: var(--bg-hover); }
+.kpi-row-static { cursor: default; }
+.kpi-row-static:hover { background: var(--bg-elevated); }
+.kpi-row span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-row-meta { font-size: 11px; color: var(--text-subtle); white-space: nowrap; flex-shrink: 0; }
+
+.kpi-empty { font-size: 12.5px; color: var(--text-subtle); padding: var(--space-1) 0; }
 
 /* Director main grid */
 .director-main-grid {
@@ -450,30 +500,6 @@
 @media (max-width: 1024px) { .director-main-grid { grid-template-columns: 1fr; } }
 
 .director-right-col { display: flex; flex-direction: column; gap: var(--space-5); }
-
-/* Bar Chart */
-.chart-wrapper { display: flex; flex-direction: column; gap: var(--space-6); }
-.bar-group { display: flex; align-items: center; gap: var(--space-4); }
-.bar-label { width: 100px; font-size: 14px; font-weight: 500; color: var(--text-secondary); }
-.bar-track {
-  flex: 1;
-  height: 12px;
-  background-color: var(--bg-elevated);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-.bar-fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 1s ease-out;
-}
-.bar-value {
-  width: 32px;
-  text-align: right;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
 
 /* Comms Widget */
 .comms-widget-list { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -492,9 +518,6 @@
 .comms-widget-subject { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .comms-widget-to { font-size: 11px; color: var(--text-subtle); }
 .comms-widget-date { font-size: 11px; color: var(--text-subtle); white-space: nowrap; flex-shrink: 0; }
-
-/* ── Utility re-exports ── */
-.bg-primary { background-color: var(--cyan-bright); }
 
 /* ── Reconocimientos del docente ── */
 .awards-widget {

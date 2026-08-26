@@ -12,6 +12,7 @@ import Biblioteca from './pages/Biblioteca';
 import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
 import Docentes from './pages/Docentes';
+import CourseDetail from './pages/CourseDetail';
 import Comunicaciones from './pages/Comunicaciones';
 import Actividades from './pages/Actividades';
 import ActividadDetalle from './pages/ActividadDetalle';
@@ -112,6 +113,9 @@ function App() {
             {/* Director-only */}
             <Route path="docentes" element={
               <ProtectedRoute allowedRoles={['director']}><Docentes /></ProtectedRoute>
+            } />
+            <Route path="cursos/:id" element={
+              <ProtectedRoute allowedRoles={['director']}><CourseDetail /></ProtectedRoute>
             } />
             <Route path="comunicaciones" element={
               <ProtectedRoute allowedRoles={['director']}><Comunicaciones /></ProtectedRoute>

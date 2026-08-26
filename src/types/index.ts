@@ -490,6 +490,130 @@ export interface PlanningClass {
   isComplete: boolean;
 }
 
+// ── Insights directivos (tablero de gestión) ──
+
+export interface RiskSignals {
+  overdueUnsubmitted: boolean;   // actividad vencida sin entregar
+  lowRecentScore: boolean;       // <40% en las últimas 2 entregas
+  negativeCheckins: boolean;     // 2+ check-ins negativos en 7 días
+  noRecentEvents: boolean;       // sin huella digital en 14 días
+  openAlert: boolean;            // alerta sin leer
+}
+
+export interface AtRiskStudent {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  courseId: string;
+  courseName: string;
+  signalCount: number;
+  signals: RiskSignals;
+}
+
+export interface RiskIndexKpi {
+  pct: number;
+  atRiskCount: number;
+  totalStudents: number;
+  atRiskStudents: AtRiskStudent[]; // orden desc por signalCount
+}
+
+/** Celda genérica de mapa de calor: numerator/denominator ya resueltos a pct. */
+export interface HeatmapCell {
+  subjectId: string;
+  subjectName: string;
+  courseId: string;
+  courseName: string;
+  pct: number | null; // null = sin datos
+  numerator: number;
+  denominator: number;
+}
+
+export type HeatmapMetric = 'riesgo' | 'cobertura' | 'entregas';
+
+export interface CurriculumCoverageKpi {
+  pct: number | null;
+  bySubjectCourse: HeatmapCell[];
+}
+
+export interface WellbeingByCourse {
+  courseId: string;
+  courseName: string;
+  positivePct: number;
+  totalCheckins: number;
+}
+
+export interface WellbeingPulseKpi {
+  pct: number | null;
+  totalCheckins: number;
+  byCourse: WellbeingByCourse[];
+}
+
+export interface InactiveTeacher {
+  teacherId: string;
+  firstName: string;
+  lastName: string;
+  lastActiveAt: string | null;
+}
+
+export interface TeacherAdoptionKpi {
+  pct: number;
+  activeCount: number;
+  totalTeachers: number;
+  inactiveTeachers: InactiveTeacher[]; // orden: nunca publicó primero, luego más antiguo
+}
+
+export interface NoticeResponseRow {
+  noticeId: string;
+  title: string;
+  type: 'comunicado' | 'citacion';
+  createdAt: string;
+  audienceSize: number;
+  readCount: number;
+  readPct: number | null;
+  citationConfirmedInTime?: boolean;
+}
+
+export interface FamilyResponseKpi {
+  readPct: number | null;
+  citationConfirmedPct: number | null;
+  totalCitations: number;
+  recentNotices: NoticeResponseRow[]; // peor % de lectura primero
+}
+
+export interface PendingFeedbackRow {
+  submissionId: string;
+  studentName: string;
+  activityTitle: string;
+  subjectName: string;
+  courseId: string;
+  hoursWaiting: number;
+}
+
+export interface FeedbackLatencyKpi {
+  medianHours: number | null;
+  sampleSize: number;
+  pendingReview: PendingFeedbackRow[]; // más tiempo esperando primero
+}
+
+export interface CourseAssignmentInfo {
+  teacherId: string;
+  teacherName: string;
+  subjectId: string;
+  subjectName: string;
+}
+
+export interface DirectorInsights {
+  riskIndex: RiskIndexKpi;
+  curriculumCoverage: CurriculumCoverageKpi;
+  wellbeingPulse: WellbeingPulseKpi;
+  teacherAdoption: TeacherAdoptionKpi;
+  familyResponse: FamilyResponseKpi;
+  feedbackLatency: FeedbackLatencyKpi;
+  heatmap: Record<HeatmapMetric, HeatmapCell[]>;
+  courseAssignments: Record<string, CourseAssignmentInfo[]>; // por courseId
+  courses: Course[];
+}
+
 // ── Stats ──
 export interface TeacherStats {
   totalStudents: number;

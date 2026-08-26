@@ -1,23 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Clock, AlertTriangle, CheckCircle, Info, Users, BookOpen,
     Activity, ArrowRight, Sparkles,
     GraduationCap, ClipboardCheck, CalendarCheck, Bell, MessageSquare,
-    StickyNote, Pin, AlertCircle
+    StickyNote, Pin, AlertCircle, HeartPulse, Megaphone, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getTeacherStats, getDirectorStats } from '../services/stats.service';
+import { getTeacherStats } from '../services/stats.service';
 import { getTodaySchedule, getNextClass, getScheduleByTeacher } from '../services/schedule.service';
 import { getAlertsByTeacher, getAlertsBySchool } from '../services/alerts.service';
 import { getNotificationsForUser } from '../services/notifications.service';
-import { getTeacherUsers } from '../services/profiles.service';
 import { getCommunicationsBySchool } from '../services/communications.service';
 import { getQuickNotes } from '../services/quick-notes.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getTeacherAwards } from '../services/awards.service';
-import { formatRelative } from '../lib/format';
-import { TEACHER_AWARD_META, type TeacherAward, type TeacherStats, type DirectorStats, type ScheduleBlock, type Alert as AlertType, type Notification as NotifType, type Communication, type User as UserType, type QuickNote, type Activity as ActivityType } from '../types';
+import { getDirectorInsights } from '../services/director-insights.service';
+import { formatRelative, formatLatencyHours } from '../lib/format';
+import CourseHeatmap from '../components/CourseHeatmap';
+import {
+    TEACHER_AWARD_META, type TeacherAward, type TeacherStats, type ScheduleBlock,
+    type Alert as AlertType, type Notification as NotifType, type Communication,
+    type QuickNote, type Activity as ActivityType, type DirectorInsights,
+} from '../types';
 import './Dashboard.css';
 
 /* -- Shared hooks / components -- */
@@ -389,121 +394,192 @@ function TeacherDashboardContent() {
    DIRECTOR DASHBOARD
    ======================================== */
 
+/** Tarjeta KPI con drill-down opcional: un clic revela la lista de nombres detrás del número. */
+function KpiCard({
+    borderClass, icon, title, value, caption, drilldownLabel, children,
+}: {
+    borderClass: string;
+    icon: ReactNode;
+    title: string;
+    value: string;
+    caption: string;
+    drilldownLabel?: string;
+    children?: ReactNode;
+}) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <div className={`card kpi-card ${borderClass}`}>
+            <div className="kpi-header">
+                <span className="kpi-title">{title}</span>
+                {icon}
+            </div>
+            <div className="kpi-value-row">
+                <h3 className="kpi-value">{value}</h3>
+            </div>
+            <span className="kpi-caption">{caption}</span>
+            {children && (
+                <>
+                    <button className="kpi-drilldown-toggle" onClick={() => setOpen(o => !o)}>
+                        {open ? 'Ocultar' : (drilldownLabel ?? 'Ver detalle')}
+                        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+                    {open && <div className="kpi-drilldown">{children}</div>}
+                </>
+            )}
+        </div>
+    );
+}
+
 function DirectorDashboardContent() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [dirStats, setDirStats] = useState<DirectorStats>({ totalTeachers: 0, activeClasses: 0, totalAlerts: 0, avgAttendance: 0, totalStudents: 0 });
-    const [teachers, setTeachers] = useState<UserType[]>([]);
+    const [insights, setInsights] = useState<DirectorInsights | null>(null);
     const [schoolAlerts, setSchoolAlerts] = useState<AlertType[]>([]);
     const [recentComms, setRecentComms] = useState<Communication[]>([]);
-    const [teacherWeeklyClasses, setTeacherWeeklyClasses] = useState<Record<string, number>>({});
 
     useEffect(() => {
         if (!user) return;
         const schoolId = user.schoolId;
 
         Promise.all([
-            getDirectorStats(schoolId),
-            getTeacherUsers(schoolId),
+            getDirectorInsights(schoolId),
             getAlertsBySchool(schoolId),
             getCommunicationsBySchool(schoolId),
-        ]).then(([stats, t, alerts, comms]) => {
-            setDirStats(stats);
-            setTeachers(t);
+        ]).then(([ins, alerts, comms]) => {
+            setInsights(ins);
             setSchoolAlerts(alerts.filter(a => !a.isRead).slice(0, 4));
             setRecentComms(comms.slice(0, 3));
-
-            // Load weekly class counts per teacher
-            Promise.all(t.map(teacher =>
-                getScheduleByTeacher(teacher.id).then(blocks => ({ id: teacher.id, count: blocks.length }))
-            )).then(results => {
-                const map: Record<string, number> = {};
-                results.forEach(r => { map[r.id] = r.count; });
-                setTeacherWeeklyClasses(map);
-            });
         }).catch(console.error);
     }, [user]);
 
-    const teachersCount = useCounter(dirStats.totalTeachers, 800);
-    const classesCount = useCounter(dirStats.activeClasses, 900);
-    const alertsCount = useCounter(dirStats.totalAlerts, 1000);
-    const attendanceCount = useCounter(dirStats.avgAttendance, 1400, 1);
+    if (!insights) {
+        return (
+            <div className="dashboard-container">
+                <p className="text-secondary">Cargando tablero…</p>
+            </div>
+        );
+    }
 
-    const teacherActivity = teachers.map(t => ({
-        name: `${t.firstName} ${t.lastName.charAt(0)}.`,
-        classes: teacherWeeklyClasses[t.id] ?? 0,
-    }));
-    const maxWeeklyClasses = Math.max(...teacherActivity.map(t => t.classes), 1);
+    const { riskIndex, curriculumCoverage, wellbeingPulse, teacherAdoption, familyResponse, feedbackLatency, heatmap } = insights;
+    const worstCoverage = [...curriculumCoverage.bySubjectCourse].sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
 
     return (
         <div className="dashboard-container">
             {/* KPI Row */}
             <div className="kpi-grid">
-                <div className="card kpi-card border-left-primary animate-in stagger-1">
-                    <div className="kpi-header">
-                        <span className="kpi-title">Docentes</span>
-                        <Users size={20} className="text-primary" />
-                    </div>
-                    <div className="kpi-value-row">
-                        <h3 className="kpi-value">{teachersCount}</h3>
-                        <span className="kpi-trend text-secondary">En la escuela</span>
-                    </div>
-                </div>
+                <KpiCard
+                    borderClass="border-left-danger"
+                    icon={<AlertCircle size={20} className="text-danger" />}
+                    title="En Riesgo"
+                    value={`${riskIndex.pct}%`}
+                    caption={`${riskIndex.atRiskCount} de ${riskIndex.totalStudents} estudiantes con 2+ señales`}
+                >
+                    {riskIndex.atRiskStudents.length === 0
+                        ? <p className="kpi-empty">Nadie con 2 o más señales activas.</p>
+                        : riskIndex.atRiskStudents.slice(0, 8).map(s => (
+                            <button key={s.studentId} className="kpi-row" onClick={() => navigate(`/cursos/${s.courseId}`)}>
+                                <span>{s.firstName} {s.lastName}</span>
+                                <span className="kpi-row-meta">{s.courseName} · {s.signalCount} señales</span>
+                            </button>
+                        ))}
+                </KpiCard>
 
-                <div className="card kpi-card border-left-success animate-in stagger-2">
-                    <div className="kpi-header">
-                        <span className="kpi-title">Clases Hoy</span>
-                        <BookOpen size={20} className="text-success" />
-                    </div>
-                    <div className="kpi-value-row">
-                        <h3 className="kpi-value">{classesCount}</h3>
-                        <span className="kpi-trend text-secondary">Programadas</span>
-                    </div>
-                </div>
+                <KpiCard
+                    borderClass="border-left-primary"
+                    icon={<BookOpen size={20} className="text-primary" />}
+                    title="Cobertura Curricular"
+                    value={curriculumCoverage.pct !== null ? `${curriculumCoverage.pct}%` : '—'}
+                    caption="clases dictadas del programa"
+                >
+                    {worstCoverage.length === 0
+                        ? <p className="kpi-empty">Sin planificación cargada todavía.</p>
+                        : worstCoverage.slice(0, 8).map(c => (
+                            <button key={`${c.subjectId}-${c.courseId}`} className="kpi-row" onClick={() => navigate(`/cursos/${c.courseId}`)}>
+                                <span>{c.subjectName} · {c.courseName}</span>
+                                <span className="kpi-row-meta">{c.numerator}/{c.denominator} clases</span>
+                            </button>
+                        ))}
+                </KpiCard>
 
-                <div className="card kpi-card border-left-danger animate-in stagger-3">
-                    <div className="kpi-header">
-                        <span className="kpi-title">Alertas Activas</span>
-                        <AlertCircle size={20} className="text-danger" />
-                    </div>
-                    <div className="kpi-value-row">
-                        <h3 className="kpi-value">{alertsCount}</h3>
-                        <span className="kpi-trend text-danger">Pendientes</span>
-                    </div>
-                </div>
+                <KpiCard
+                    borderClass="border-left-success"
+                    icon={<HeartPulse size={20} className="text-success" />}
+                    title="Pulso de Bienestar"
+                    value={wellbeingPulse.pct !== null ? `${wellbeingPulse.pct}%` : '—'}
+                    caption={`${wellbeingPulse.totalCheckins} check-ins esta semana`}
+                >
+                    {wellbeingPulse.byCourse.length === 0
+                        ? <p className="kpi-empty">Sin check-ins esta semana.</p>
+                        : wellbeingPulse.byCourse.slice(0, 8).map(c => (
+                            <button key={c.courseId} className="kpi-row" onClick={() => navigate(`/cursos/${c.courseId}`)}>
+                                <span>{c.courseName}</span>
+                                <span className="kpi-row-meta">{c.positivePct}% positivos · {c.totalCheckins}</span>
+                            </button>
+                        ))}
+                </KpiCard>
 
-                <div className="card kpi-card border-left-warning animate-in stagger-4">
-                    <div className="kpi-header">
-                        <span className="kpi-title">Asistencia General</span>
-                        <Users size={20} className="text-warning" />
-                    </div>
-                    <div className="kpi-value-row">
-                        <h3 className="kpi-value">{attendanceCount}%</h3>
-                        <span className="kpi-trend text-secondary">Según fichas</span>
-                    </div>
-                </div>
+                <KpiCard
+                    borderClass="border-left-warning"
+                    icon={<Users size={20} className="text-warning" />}
+                    title="Adopción Docente"
+                    value={`${teacherAdoption.pct}%`}
+                    caption={`${teacherAdoption.activeCount} de ${teacherAdoption.totalTeachers} activos (14 días)`}
+                    drilldownLabel="Ver quién necesita acompañamiento"
+                >
+                    {teacherAdoption.inactiveTeachers.length === 0
+                        ? <p className="kpi-empty">Todo el equipo activo.</p>
+                        : teacherAdoption.inactiveTeachers.slice(0, 8).map(t => (
+                            <div key={t.teacherId} className="kpi-row kpi-row-static">
+                                <span>{t.firstName} {t.lastName}</span>
+                                <span className="kpi-row-meta">{t.lastActiveAt ? formatRelative(t.lastActiveAt) : 'Nunca publicó'}</span>
+                            </div>
+                        ))}
+                </KpiCard>
+
+                <KpiCard
+                    borderClass="border-left-violet"
+                    icon={<Megaphone size={20} style={{ color: '#818CF8' }} />}
+                    title="Respuesta de Familias"
+                    value={familyResponse.readPct !== null ? `${familyResponse.readPct}%` : '—'}
+                    caption={familyResponse.citationConfirmedPct !== null
+                        ? `${familyResponse.citationConfirmedPct}% de citaciones respondidas a 72h`
+                        : 'sin citaciones recientes'}
+                >
+                    {familyResponse.recentNotices.length === 0
+                        ? <p className="kpi-empty">Sin comunicados recientes.</p>
+                        : familyResponse.recentNotices.map(n => (
+                            <div key={n.noticeId} className="kpi-row kpi-row-static">
+                                <span>{n.title}</span>
+                                <span className="kpi-row-meta">{n.readPct !== null ? `${n.readCount}/${n.audienceSize} leídos` : 'sin destinatarios'}</span>
+                            </div>
+                        ))}
+                </KpiCard>
+
+                <KpiCard
+                    borderClass="border-left-info"
+                    icon={<Clock size={20} className="text-subtle" />}
+                    title="Latencia de Devolución"
+                    value={feedbackLatency.medianHours !== null ? formatLatencyHours(feedbackLatency.medianHours) : '—'}
+                    caption={`mediana sobre ${feedbackLatency.sampleSize} entregas corregidas (30 días)`}
+                >
+                    {feedbackLatency.pendingReview.length === 0
+                        ? <p className="kpi-empty">Nada esperando devolución.</p>
+                        : feedbackLatency.pendingReview.map(p => (
+                            <div key={p.submissionId} className="kpi-row kpi-row-static">
+                                <span>{p.studentName} · {p.activityTitle}</span>
+                                <span className="kpi-row-meta">{formatLatencyHours(p.hoursWaiting)} esperando</span>
+                            </div>
+                        ))}
+                </KpiCard>
             </div>
 
             <div className="director-main-grid">
-                {/* Left: Weekly teaching load (real: schedule_blocks per teacher) */}
+                {/* Left: Mapa institucional curso × materia */}
                 <div className="card padding-xl animate-in stagger-5">
-                    <h3 className="mb-4 text-lg font-semibold">Carga Horaria Semanal</h3>
-                    <p className="text-sm text-secondary mb-6">Bloques de clase programados por semana por cada docente.</p>
-
-                    <div className="chart-wrapper">
-                        {teacherActivity.map(ta => (
-                            <div key={ta.name} className="bar-group">
-                                <span className="bar-label">{ta.name}</span>
-                                <div className="bar-track">
-                                    <div
-                                        className="bar-fill bg-primary"
-                                        style={{ width: `${(ta.classes / maxWeeklyClasses) * 100}%` }}
-                                    />
-                                </div>
-                                <span className="bar-value">{ta.classes}</span>
-                            </div>
-                        ))}
-                    </div>
+                    <h3 className="mb-1 text-lg font-semibold">Mapa Institucional</h3>
+                    <p className="text-sm text-secondary mb-6">Curso × materia. Un clic en una celda o en el curso abre su ficha.</p>
+                    <CourseHeatmap cellsByMetric={heatmap} />
                 </div>
 
                 {/* Right: Alerts Summary + Recent Comms */}
