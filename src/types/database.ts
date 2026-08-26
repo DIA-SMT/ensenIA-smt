@@ -1301,6 +1301,58 @@ export type Database = {
         }
         Relationships: []
       }
+      student_awards: {
+        Row: {
+          badge_code: string
+          created_at: string | null
+          id: string
+          message: string | null
+          student_id: string
+          subject_id: string | null
+          teacher_id: string
+        }
+        Insert: {
+          badge_code: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          student_id: string
+          subject_id?: string | null
+          teacher_id: string
+        }
+        Update: {
+          badge_code?: string
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          student_id?: string
+          subject_id?: string | null
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_awards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_awards_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_awards_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_badges: {
         Row: {
           badge_code: string
@@ -1683,6 +1735,48 @@ export type Database = {
           },
           {
             foreignKeyName: "teacher_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_awards: {
+        Row: {
+          badge_code: string
+          created_at: string | null
+          director_id: string
+          id: string
+          message: string | null
+          teacher_id: string
+        }
+        Insert: {
+          badge_code: string
+          created_at?: string | null
+          director_id: string
+          id?: string
+          message?: string | null
+          teacher_id: string
+        }
+        Update: {
+          badge_code?: string
+          created_at?: string | null
+          director_id?: string
+          id?: string
+          message?: string | null
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_awards_director_id_fkey"
+            columns: ["director_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_awards_teacher_id_fkey"
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"

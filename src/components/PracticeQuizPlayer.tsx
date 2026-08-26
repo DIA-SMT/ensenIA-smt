@@ -37,7 +37,7 @@ export default function PracticeQuizPlayer({
   const [saving, setSaving] = useState(false);
   const [attempt, setAttempt] = useState<PracticeAttempt | null>(null);
   const [queued, setQueued] = useState(false);
-  const [newBadges, setNewBadges] = useState<BadgeCode[]>([]);
+  const [newBadges, setNewBadges] = useState<string[]>([]);
 
   const q = questions[index];
   const answered = selected !== null;
@@ -61,7 +61,7 @@ export default function PracticeQuizPlayer({
     setSaving(true);
     const score = correctCount; // ya incluye esta pregunta (pick sumó antes)
     try {
-      let before: BadgeCode[] = [];
+      let before: string[] = [];
       try {
         before = (await getStudentBadges(studentId)).map(b => b.code);
       } catch { /* offline: sin diff de logros */ }
@@ -116,15 +116,21 @@ export default function PracticeQuizPlayer({
           {newBadges.length > 0 && (
             <div className="pq-badges animate-in">
               <h4><Trophy size={15} /> ¡Logro{newBadges.length > 1 ? 's' : ''} desbloqueado{newBadges.length > 1 ? 's' : ''}!</h4>
-              {newBadges.map(code => (
-                <div key={code} className="pq-badge-row">
-                  <span className="pq-badge-emoji">{BADGE_META[code].emoji}</span>
-                  <div>
-                    <strong>{BADGE_META[code].label}</strong>
-                    <p className="text-xs text-secondary">{BADGE_META[code].description}</p>
+              {newBadges.map(code => {
+                // medallas de materia ('crack:<subjectId>') vs. catálogo fijo
+                const meta = code.startsWith('crack:')
+                  ? { emoji: '🏆', label: '¡Medalla de materia!', description: 'Te consagraste practicando esta materia' }
+                  : BADGE_META[code as BadgeCode] ?? { emoji: '🏅', label: code, description: '' };
+                return (
+                  <div key={code} className="pq-badge-row">
+                    <span className="pq-badge-emoji">{meta.emoji}</span>
+                    <div>
+                      <strong>{meta.label}</strong>
+                      <p className="text-xs text-secondary">{meta.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

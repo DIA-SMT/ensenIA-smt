@@ -107,3 +107,61 @@
   gap: 2px;
   flex-shrink: 0;
 }
+
+/* ── Nivel y progreso ── */
+.est-level {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: var(--space-3);
+  max-width: 420px;
+}
+.est-level-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.est-level-name { font-size: 14px; font-weight: 700; color: var(--cyan-bright); }
+.est-level-xp { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); }
+.est-level-track {
+  height: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.est-level-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-bright), var(--accent-ia));
+  border-radius: var(--radius-full);
+  transition: width 0.6s var(--ease-spring);
+}
+
+/* ── Medallas (de docentes + de materia) ── */
+.est-medal-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+.est-medal {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.est-medal-auto {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: linear-gradient(135deg, var(--bg-panel) 70%, rgba(251, 191, 36, 0.08));
+}
+.est-medal-emoji { font-size: 28px; line-height: 1.1; }
+.est-medal-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.est-medal-body strong { font-size: 14.5px; }
+.est-medal-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.4;
+}
+.est-badge-subject { border-color: var(--warning); background: var(--warning-light); }

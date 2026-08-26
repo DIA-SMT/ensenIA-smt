@@ -129,8 +129,11 @@
 }
 .sp-content ul, .sp-content ol { padding-left: 22px; margin: 8px 0; }
 .sp-content h1, .sp-content h2, .sp-content h3 { margin: 10px 0 6px; }
-.sp-content table { border-collapse: collapse; margin: 10px 0; }
+/* Tablas de markdown: scroll propio para no desbordar en el celular */
+.sp-content table { border-collapse: collapse; margin: 10px 0; display: block; max-width: 100%; overflow-x: auto; }
 .sp-content th, .sp-content td { border: 1px solid var(--border-color); padding: 6px 10px; }
+.sp-content { overflow-wrap: break-word; }
+.sp-content pre { max-width: 100%; overflow-x: auto; }
 
 .sp-notice {
   background: var(--warning-light);

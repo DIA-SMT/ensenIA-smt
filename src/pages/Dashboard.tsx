@@ -15,8 +15,9 @@ import { getTeacherUsers } from '../services/profiles.service';
 import { getCommunicationsBySchool } from '../services/communications.service';
 import { getQuickNotes } from '../services/quick-notes.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
+import { getTeacherAwards } from '../services/awards.service';
 import { formatRelative } from '../lib/format';
-import type { TeacherStats, DirectorStats, ScheduleBlock, Alert as AlertType, Notification as NotifType, Communication, User as UserType, QuickNote, Activity as ActivityType } from '../types';
+import { TEACHER_AWARD_META, type TeacherAward, type TeacherStats, type DirectorStats, type ScheduleBlock, type Alert as AlertType, type Notification as NotifType, type Communication, type User as UserType, type QuickNote, type Activity as ActivityType } from '../types';
 import './Dashboard.css';
 
 /* -- Shared hooks / components -- */
@@ -84,6 +85,7 @@ function TeacherDashboardContent() {
     const [myNotifs, setMyNotifs] = useState<NotifType[]>([]);
     const [notes, setNotes] = useState<QuickNote[]>([]);
     const [recentActivities, setRecentActivities] = useState<ActivityType[]>([]);
+    const [myAwards, setMyAwards] = useState<TeacherAward[]>([]);
 
     useEffect(() => {
         if (!user) return;
@@ -99,7 +101,8 @@ function TeacherDashboardContent() {
             getNotificationsForUser(user.id),
             getQuickNotes(user.id),
             getActivitiesByTeacher(user.id),
-        ]).then(([stats, today, next, week, alerts, notifs, qn, acts]) => {
+            getTeacherAwards(user.id).catch(() => [] as TeacherAward[]),
+        ]).then(([stats, today, next, week, alerts, notifs, qn, acts, awds]) => {
             setTeacherStats(stats);
             setTodayClasses(today);
             setNextClassBlock(next ?? today[0] ?? null);
@@ -108,6 +111,7 @@ function TeacherDashboardContent() {
             setMyNotifs(notifs.slice(0, 3));
             setNotes(qn);
             setRecentActivities(acts.slice(0, 3));
+            setMyAwards(awds.slice(0, 4));
         }).catch(console.error);
     }, [user]);
 
@@ -251,6 +255,32 @@ function TeacherDashboardContent() {
 
                 {/* Right Column */}
                 <div className="dashboard-col-right">
+                    {/* Reconocimientos de la dirección */}
+                    {myAwards.length > 0 && (
+                        <section className="card widget animate-in stagger-4 awards-widget">
+                            <div className="widget-header">
+                                <h3 className="widget-title">🏅 Tus reconocimientos</h3>
+                            </div>
+                            <div className="awards-widget-list">
+                                {myAwards.map(a => {
+                                    const meta = TEACHER_AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode, description: '' };
+                                    return (
+                                        <div key={a.id} className="awards-widget-item">
+                                            <span className="awards-widget-emoji">{meta.emoji}</span>
+                                            <div>
+                                                <span className="text-sm font-medium">{meta.label}</span>
+                                                {a.message && <p className="text-xs text-secondary italic">"{a.message}"</p>}
+                                                <span className="text-xs text-subtle">
+                                                    {a.directorName ? `De ${a.directorName} · ` : ''}{formatRelative(a.createdAt)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
                     {/* Notifications from Director */}
                     {myNotifs.length > 0 && (
                         <section className="card widget animate-in stagger-5">

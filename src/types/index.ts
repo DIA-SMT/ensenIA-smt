@@ -353,7 +353,8 @@ export interface StudentProgress {
 export type BadgeCode = 'primer_quiz' | 'quiz_perfecto' | 'racha_5' | 'diez_practicas';
 
 export interface StudentBadge {
-  code: BadgeCode;
+  /** Código del catálogo BADGE_META, o dinámico 'crack:<subjectId>' (medalla de materia). */
+  code: string;
   earnedAt: string;
 }
 
@@ -363,6 +364,92 @@ export const BADGE_META: Record<BadgeCode, { emoji: string; label: string; descr
   racha_5: { emoji: '🔥', label: 'Racha de 5 días', description: 'Practicaste 5 días seguidos' },
   diez_practicas: { emoji: '🏅', label: '10 prácticas', description: 'Completaste 10 prácticas' },
 };
+
+// ── Niveles (derivados del XP, sin tabla) ──
+export interface Level {
+  n: number;
+  name: string;
+  minXp: number;
+}
+
+export const LEVELS: Level[] = [
+  { n: 1, name: 'Recién llegado/a', minXp: 0 },
+  { n: 2, name: 'En marcha', minXp: 100 },
+  { n: 3, name: 'Estudioso/a', minXp: 250 },
+  { n: 4, name: 'Capo/a', minXp: 450 },
+  { n: 5, name: 'Crack', minXp: 700 },
+  { n: 6, name: 'Ídolo/a', minXp: 1000 },
+  { n: 7, name: 'Leyenda', minXp: 1400 },
+  { n: 8, name: 'Aura máxima', minXp: 1900 },
+];
+
+/** Nivel actual + progreso hacia el próximo (0..1; 1 si es el último). */
+export function levelForXp(xp: number): { level: Level; next: Level | null; progress: number } {
+  let level = LEVELS[0];
+  for (const l of LEVELS) if (xp >= l.minXp) level = l;
+  const next = LEVELS[LEVELS.indexOf(level) + 1] ?? null;
+  const progress = next ? Math.min(1, (xp - level.minXp) / (next.minXp - level.minXp)) : 1;
+  return { level, next, progress };
+}
+
+// ── Medallas otorgadas por personas ──
+
+/** Medalla de docente a estudiante. */
+export interface StudentAward {
+  id: string;
+  studentId: string;
+  teacherId: string;
+  subjectId: string | null;
+  badgeCode: string;
+  message: string | null;
+  createdAt: string;
+  teacherName?: string;
+  subjectName?: string;
+}
+
+/** Medalla de directivo a docente. */
+export interface TeacherAward {
+  id: string;
+  teacherId: string;
+  directorId: string;
+  badgeCode: string;
+  message: string | null;
+  createdAt: string;
+  directorName?: string;
+  teacherName?: string;
+}
+
+/** Catálogo de medallas docente → estudiante (mitad clásicas, mitad bien argentas). */
+export const AWARD_META: Record<string, { emoji: string; label: string; description: string }> = {
+  crack: { emoji: '🌟', label: '¡Crack!', description: 'Te la re bancaste' },
+  aura: { emoji: '✨', label: 'Aura +1', description: 'Subiste tu aura con esta' },
+  genio: { emoji: '🧠', label: '¡Qué genio!', description: 'Una respuesta brillante' },
+  esfuerzo: { emoji: '💪', label: 'Esfuerzo total', description: 'Se nota cuánto le pusiste' },
+  imparable: { emoji: '📈', label: 'Imparable', description: 'Mejoraste un montón' },
+  companerismo: { emoji: '🤝', label: 'Gran compañero/a', description: 'Ayudaste a otros a aprender' },
+  participacion: { emoji: '🙋', label: 'Siempre presente', description: 'Participación destacada en clase' },
+  creatividad: { emoji: '🎨', label: 'Idea grosa', description: 'Creatividad fuera de serie' },
+};
+
+/** Catálogo de medallas directivo → docente. */
+export const TEACHER_AWARD_META: Record<string, { emoji: string; label: string; description: string }> = {
+  presente_total: { emoji: '🗓️', label: 'Presente total', description: 'Por no faltar nunca' },
+  fabrica_actividades: { emoji: '🏭', label: 'Fábrica de actividades', description: 'Por crear actividades en la plataforma' },
+  siempre_ahi: { emoji: '💬', label: 'Siempre ahí', description: 'Por comunicarse con los chicos en la plataforma' },
+  crack_docente: { emoji: '🌟', label: '¡Crack!', description: 'Reconocimiento de la dirección' },
+  aura_docente: { emoji: '✨', label: 'Aura +1', description: 'Subiste el aura de la escuela' },
+  innovacion: { emoji: '🚀', label: 'Innovador/a', description: 'Por animarse a probar cosas nuevas' },
+};
+
+/** Etiqueta de la medalla automática de materia: 'crack:<subjectId>' → frase lunfarda. */
+export function subjectBadgeLabel(subjectName: string): string {
+  const templates = [
+    `El crack de ${subjectName}`,
+    `${subjectName} es lo mío`,
+    `Yo sé de ${subjectName}`,
+  ];
+  return templates[subjectName.length % templates.length];
+}
 
 export interface StudentNote {
   id: string;

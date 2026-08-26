@@ -1,0 +1,54 @@
+/* ═══ Modal de medallas (docente→estudiante / directivo→docente) ═══ */
+
+.award-modal { max-width: 560px; }
+
+.award-for { margin-bottom: var(--space-3); }
+
+.award-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.award-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.award-option:hover { border-color: var(--warning); transform: translateY(-1px); }
+.award-option.selected {
+  border-color: var(--warning);
+  background: var(--warning-light);
+  box-shadow: 0 0 0 1px var(--warning);
+}
+
+.award-emoji { font-size: 26px; line-height: 1.2; }
+.award-label { font-size: 13px; font-weight: 700; }
+.award-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
+
+.award-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-4);
+}
+
+.award-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+.award-done-emoji { font-size: 48px; line-height: 1; }

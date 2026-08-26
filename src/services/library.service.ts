@@ -52,6 +52,9 @@ export async function createMaterial(material: {
   teacherId: string;
   schoolId: string;
   tags: string[];
+  /** Contenido en texto (ej. generado por IA): habilita resumen, placas y quiz sin archivo. */
+  extractedText?: string;
+  aiSummary?: string;
 }): Promise<LibraryMaterial> {
   const row = unwrap(
     await supabase
@@ -68,6 +71,8 @@ export async function createMaterial(material: {
         teacher_id: material.teacherId,
         school_id: material.schoolId,
         tags: material.tags,
+        extracted_text: material.extractedText ?? null,
+        ai_summary: material.aiSummary ?? null,
       })
       .select()
       .single()

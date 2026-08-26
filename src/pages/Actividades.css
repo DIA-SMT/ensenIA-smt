@@ -73,6 +73,7 @@
 .acts-card-stats {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-5);
 }
 
@@ -86,7 +87,7 @@
 }
 .acts-stat-label { font-size: 11px; color: var(--text-subtle); }
 
-.acts-card-actions { display: flex; align-items: center; gap: 6px; }
+.acts-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
 /* ── Detalle ── */
 

@@ -13,12 +13,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Rocket, Flame, Sparkles, Trophy, CalendarDays, Clock, BookOpen, Layers,
-  GraduationCap, Play, StickyNote, Plus, Pin, Trash2, ChevronRight, Lightbulb,
+  GraduationCap, Play, StickyNote, Plus, Pin, Trash2, ChevronRight, Lightbulb, Medal,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId, getActivitiesForStudent, getMySubmissions } from '../services/activities.service';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import { getStudentProgress, getStudentBadges, getPracticeAttempts } from '../services/practice.service';
+import { getStudentAwards } from '../services/awards.service';
 import {
   getStudentNotes, createStudentNote, toggleNoteDone, toggleNotePin, deleteStudentNote,
 } from '../services/student-notes.service';
@@ -27,10 +28,10 @@ import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import {
-  BADGE_META,
+  BADGE_META, AWARD_META, levelForXp, subjectBadgeLabel,
   type Activity, type ActivitySubmission, type BadgeCode, type LibraryMaterial,
-  type PracticeAttempt, type PracticeQuestion, type Student, type StudentBadge,
-  type StudentNote, type StudentProgress,
+  type PracticeAttempt, type PracticeQuestion, type Student, type StudentAward,
+  type StudentBadge, type StudentNote, type StudentProgress,
 } from '../types';
 import './StudentPortal.css';
 import './Estudiar.css';
@@ -54,6 +55,7 @@ export default function Estudiar() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([]);
   const [notes, setNotes] = useState<StudentNote[]>([]);
+  const [awards, setAwards] = useState<StudentAward[]>([]);
   const [loading, setLoading] = useState(true);
 
   // interacción
@@ -66,14 +68,16 @@ export default function Estudiar() {
 
   const refreshProgress = useCallback(async (studentId: string) => {
     try {
-      const [prog, bdgs, atts] = await Promise.all([
+      const [prog, bdgs, atts, awds] = await Promise.all([
         getStudentProgress(studentId),
         getStudentBadges(studentId),
         getPracticeAttempts(studentId),
+        getStudentAwards(studentId).catch(() => [] as StudentAward[]),
       ]);
       setProgress(prog);
       setBadges(bdgs);
       setAttempts(atts);
+      setAwards(awds);
     } catch (err) {
       console.error(err);
     }
@@ -126,6 +130,20 @@ export default function Estudiar() {
   const streakActive = progress?.lastPracticeDate != null &&
     (progress.lastPracticeDate === todayAR() || progress.lastPracticeDate === yesterdayAR());
   const earnedCodes = badges.map(b => b.code);
+
+  // Nivel derivado del XP (catálogo LEVELS)
+  const xp = progress?.xp ?? 0;
+  const { level, next, progress: levelPct } = levelForXp(xp);
+
+  // Medallas de materia ganadas ('crack:<subjectId>') con nombre de la materia
+  const subjectNames = new Map<string, string>();
+  materials.forEach(m => subjectNames.set(m.subjectId, m.subjectName));
+  const subjectBadges = badges
+    .filter(b => b.code.startsWith('crack:'))
+    .map(b => {
+      const name = subjectNames.get(b.code.slice(6)) ?? 'la materia';
+      return { code: b.code, label: subjectBadgeLabel(name) };
+    });
 
   // Mi semana: entregas próximas (7 días) sin entregar
   const now = new Date();
@@ -241,6 +259,25 @@ export default function Estudiar() {
                 : 'Practicá un rato hoy y sumá a tu racha.'
               : 'Hacé tu primera práctica y empezá a sumar XP.'}
           </p>
+
+          {/* Nivel + progreso al próximo */}
+          <div className="est-level">
+            <div className="est-level-row">
+              <span className="est-level-name">Nivel {level.n} · {level.name}</span>
+              <span className="est-level-xp">
+                {next ? `${xp} / ${next.minXp} XP` : `${xp} XP · nivel máximo 👑`}
+              </span>
+            </div>
+            <div className="est-level-track">
+              <div className="est-level-fill" style={{ width: `${Math.round(levelPct * 100)}%` }} />
+            </div>
+            {next && (
+              <span className="text-xs text-subtle">
+                Te faltan {next.minXp - xp} XP para ser <strong>{next.name}</strong>
+              </span>
+            )}
+          </div>
+
           <div className="est-badge-row">
             {(Object.keys(BADGE_META) as BadgeCode[]).map(code => {
               const earned = earnedCodes.includes(code);
@@ -254,6 +291,11 @@ export default function Estudiar() {
                 </span>
               );
             })}
+            {subjectBadges.map(sb => (
+              <span key={sb.code} className="est-badge earned est-badge-subject" title={sb.label}>
+                🏆
+              </span>
+            ))}
           </div>
         </div>
         <div className="sp-hero-stats">
@@ -273,6 +315,45 @@ export default function Estudiar() {
           </div>
         </div>
       </div>
+
+      {/* ── Mis medallas (de docentes + de materia) ── */}
+      <h3 className="sp-section-title"><Medal size={17} /> Mis medallas</h3>
+      {awards.length === 0 && subjectBadges.length === 0 ? (
+        <p className="text-secondary text-sm">
+          Todavía no tenés medallas. Se ganan practicando y participando: tus docentes también pueden darte
+          reconocimientos como <strong>¡Crack!</strong> o <strong>Aura +1</strong> ✨
+        </p>
+      ) : (
+        <div className="est-medal-list">
+          {subjectBadges.map(sb => (
+            <div key={sb.code} className="card est-medal est-medal-auto">
+              <span className="est-medal-emoji">🏆</span>
+              <div className="est-medal-body">
+                <strong>{sb.label}</strong>
+                <span className="text-xs text-secondary">Te la ganaste practicando · medalla de materia</span>
+              </div>
+            </div>
+          ))}
+          {awards.map(a => {
+            const meta = AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode, description: '' };
+            return (
+              <div key={a.id} className="card est-medal">
+                <span className="est-medal-emoji">{meta.emoji}</span>
+                <div className="est-medal-body">
+                  <strong>{meta.label}</strong>
+                  {a.message && <p className="est-medal-msg">“{a.message}”</p>}
+                  <span className="text-xs text-secondary">
+                    {a.teacherName ? `De ${a.teacherName}` : 'De tu docente'}
+                    {a.subjectName ? ` · ${a.subjectName}` : ''}
+                    {' · '}{new Date(a.createdAt).toLocaleDateString('es-AR')}
+                    {' · '}<span className="text-ia-accent">+25 XP</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Mi semana ── */}
       <h3 className="sp-section-title"><CalendarDays size={17} /> Mi semana</h3>

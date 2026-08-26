@@ -645,11 +645,12 @@
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  min-height: 36px;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
 .hint-chip:hover {
@@ -977,4 +978,153 @@
   .lab-sidebar { order: 1; max-height: 300px; }
   .lab-main { order: 2; min-height: 65vh; }
   .lab-config { order: 3; max-height: none; }
+}
+
+/* ═══ Brief guiado (preguntas mínimas antes de generar) ═══ */
+
+.brief-wrapper {
+  padding: var(--space-4) var(--space-5);
+  max-height: 46vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.brief-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.brief-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brief-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14.5px;
+}
+
+.brief-sub {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: -6px;
+}
+
+.brief-field { display: flex; flex-direction: column; gap: 6px; }
+.brief-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.brief-hint { font-weight: 400; color: var(--text-subtle); }
+.brief-hint-row { font-size: 12.5px; color: var(--text-secondary); }
+
+.brief-input {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  width: 100%;
+}
+.brief-input:focus { outline: none; border-color: var(--cyan-bright); }
+
+.brief-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.brief-pill {
+  font-size: 12.5px;
+  padding: 7px 13px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+.brief-pill:hover { border-color: var(--accent-ia); color: var(--text-primary); }
+.brief-pill.selected {
+  border-color: var(--accent-ia);
+  background: var(--indigo-glow);
+  color: #C7D2FE;
+  font-weight: 600;
+}
+
+.brief-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+/* ═══ Modal de revisión antes de consolidar ═══ */
+
+.refine-modal { max-width: 760px; }
+
+.refine-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.refine-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.refine-textarea {
+  width: 100%;
+  min-height: 320px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.refine-preview {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  max-height: 46vh;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.refine-preview ul, .refine-preview ol { padding-left: 20px; }
+.refine-preview table { max-width: 100%; display: block; overflow-x: auto; border-collapse: collapse; }
+.refine-preview th, .refine-preview td { border: 1px solid var(--border-color); padding: 5px 9px; }
+
+.refine-adjust {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.refine-title-row { display: flex; flex-direction: column; gap: 6px; }
+
+.refine-footer { flex-wrap: wrap; }
+
+.refine-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+.refine-done-emoji { font-size: 42px; line-height: 1; }
+
+@media (max-width: 640px) {
+  .brief-wrapper { padding: var(--space-3); max-height: 52vh; }
+  .refine-footer .btn { flex: 1; justify-content: center; }
 }

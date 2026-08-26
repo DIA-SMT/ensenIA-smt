@@ -70,6 +70,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  min-width: 0; /* evita que el min-content de los hijos desborde la grilla en móvil */
 }
 
 /* ── Next Class Card ── */
@@ -110,6 +111,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   margin-bottom: var(--space-4);
 }
 .next-class-badge {
@@ -135,6 +138,7 @@
 .next-class-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   font-size: 14px;
   opacity: 0.7;
   font-weight: 500;
@@ -143,6 +147,7 @@
 
 .next-class-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   position: relative;
   z-index: 1;
@@ -490,3 +495,26 @@
 
 /* ── Utility re-exports ── */
 .bg-primary { background-color: var(--cyan-bright); }
+
+/* ── Reconocimientos del docente ── */
+.awards-widget {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: linear-gradient(135deg, var(--bg-panel) 75%, rgba(251, 191, 36, 0.07));
+}
+.awards-widget-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.awards-widget-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.awards-widget-emoji { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+
+/* ── Móvil ── */
+@media (max-width: 480px) {
+  .weekly-calendar { gap: 4px; }
+  .calendar-day { padding: var(--space-2) 2px; }
+  .cal-day-number { font-size: 17px; }
+  .bar-label { width: 76px; font-size: 12.5px; }
+  .next-class-card { padding: var(--space-5); }
+  .next-class-subject { font-size: 19px; }
+}

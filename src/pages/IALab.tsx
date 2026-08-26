@@ -4,13 +4,13 @@ import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
-    MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine,
-    Paperclip, X, ClipboardList
+    MessageSquare, PenLine, Copy, Trash2, Square,
+    Paperclip, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
-import { getMaterialsByTeacher } from '../services/library.service';
+import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
 import {
     getOrCreateSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
@@ -19,6 +19,8 @@ import { streamChat } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
+import ToolBriefForm from '../components/ToolBriefForm';
+import RefineResultModal from '../components/RefineResultModal';
 import type {
     PlanningUnit, PlanningClass, SubjectAssignment, Subject,
     ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
@@ -78,19 +80,6 @@ function getSuggestions(tool: IAToolType, classTitle?: string): string[] {
     }
 }
 
-/* -- Tool-specific pre-fill prompts -- */
-function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
-    const ctx = classTitle ? ` para la clase "${classTitle}"` : '';
-    switch (toolId) {
-        case 'act': return `Generá una actividad didáctica${ctx}. Incluií objetivos, materiales, duración y desarrollo paso a paso.`;
-        case 'eval': return `Creá una evaluación${ctx}. Incluií consignas variadas, rúbrica y criterios de calificación.`;
-        case 'sum': return `Resumí el siguiente texto de forma clara y estructurada:\n\n[Pegá tu texto acá]`;
-        case 'pres': return `Creá una presentación en diapositivas${ctx}. Máximo 10-12 slides con notas para el docente.`;
-        case 'oral': return `Diseñá una rúbrica para evaluar la exposición oral${ctx}. Incluií dimensiones, escala y preguntas disparadoras.`;
-        default: return '';
-    }
-}
-
 export default function IALab() {
     const { user } = useAuth();
 
@@ -137,8 +126,12 @@ export default function IALab() {
     const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
     const [attachedDoc, setAttachedDoc] = useState<LibraryMaterial | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
-    const [publishSource, setPublishSource] = useState<ChatMessage | null>(null);
+    const [publishSource, setPublishSource] = useState<{ content: string; toolUsed: IAToolType | null; title?: string } | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // ── Flujo guiado: brief antes de generar + revisión antes de consolidar ──
+    const [briefTool, setBriefTool] = useState<IAToolType | null>(null);
+    const [refineSource, setRefineSource] = useState<ChatMessage | null>(null);
 
     /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
     const assignments = user?.subjects ?? [];
@@ -357,12 +350,15 @@ export default function IALab() {
         }
     };
 
-    // ── Tool click → pre-fill prompt ──
+    // ── Tool click → brief guiado (preguntas mínimas antes de generar) ──
     const handleToolClick = (toolId: IAToolType) => {
         setActiveTool(toolId);
         setCenterMode('chat');
         if (toolId !== 'free') {
-            setChatInput(getToolPrompt(toolId, selectedClass?.title));
+            setBriefTool(toolId);
+            setChatInput('');
+        } else {
+            setBriefTool(null);
         }
 
         // Ensure session exists
@@ -380,7 +376,11 @@ export default function IALab() {
 
     // ── Send message ──
     const handleSend = async () => {
-        const text = chatInput.trim();
+        await sendMessage(chatInput);
+    };
+
+    const sendMessage = async (rawText: string) => {
+        const text = rawText.trim();
         if (!text || isStreaming) return;
 
         // Validate summary input length
@@ -545,22 +545,42 @@ export default function IALab() {
         });
     };
 
-    // ── Insert from chat into editor ──
-    const handleInsertFromChat = async (msg: ChatMessage) => {
+    // ── Consolidar: insertar contenido (revisado) en la clase ──
+    const handleInsertContent = async (content: string) => {
         if (!selectedClass) return;
         const newContent = selectedClass.content
-            ? selectedClass.content + '\n\n' + msg.content
-            : msg.content;
-        try {
-            await updateClass(selectedClass.id, { content: newContent });
-            // Update local state
-            setSelectedClass({ ...selectedClass, content: newContent });
-            // Refresh planning
-            const units = await getPlanningByTeacher(user.id);
-            setAllUnits(units);
-        } catch (err) {
-            console.error('Error inserting content:', err);
-        }
+            ? selectedClass.content + '\n\n' + content
+            : content;
+        await updateClass(selectedClass.id, { content: newContent });
+        setSelectedClass({ ...selectedClass, content: newContent });
+        const units = await getPlanningByTeacher(user.id);
+        setAllUnits(units);
+    };
+
+    // ── Consolidar: guardar contenido (revisado) como material de Biblioteca ──
+    const handleSaveAsMaterial = async (content: string, title: string) => {
+        if (!currentAssignment) throw new Error('Elegí una materia primero.');
+        await createMaterial({
+            title,
+            description: 'Generado con el Laboratorio IA',
+            fileType: 'doc',
+            fileName: '',
+            fileSize: '—',
+            subjectId: currentAssignment.subjectId,
+            subjectName: subjectName || 'Materia',
+            unitName: selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined,
+            teacherId: user.id,
+            schoolId: user.schoolId,
+            tags: ['IA'],
+            extractedText: content,
+        });
+        getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
+    };
+
+    // ── Pedir un ajuste rápido a la IA sobre la última respuesta ──
+    const handleAskAdjust = (instruction: string) => {
+        setRefineSource(null);
+        sendMessage(`Ajustá tu última respuesta: ${instruction.toLowerCase()}. Mantené todo lo demás igual y devolvé la versión completa corregida.`);
     };
 
     // ── Enter key handler ──
@@ -794,22 +814,13 @@ export default function IALab() {
                                                             : <><Copy size={13} /> Copiar</>
                                                         }
                                                     </button>
-                                                    {selectedClass && (
-                                                        <button
-                                                            className="msg-action-btn btn-insert-chat"
-                                                            onClick={() => handleInsertFromChat(msg)}
-                                                            title="Insertar en editor"
-                                                        >
-                                                            <ArrowDownToLine size={13} /> Insertar en clase
-                                                        </button>
-                                                    )}
-                                                    {currentAssignment && (
+                                                    {currentAssignment && !msg.content.startsWith('⚠️') && (
                                                         <button
                                                             className="msg-action-btn btn-publish-chat"
-                                                            onClick={() => setPublishSource(msg)}
-                                                            title="Publicar como actividad para estudiantes"
+                                                            onClick={() => setRefineSource(msg)}
+                                                            title="Revisá y editá el resultado antes de usarlo en clase, material o actividad"
                                                         >
-                                                            <ClipboardList size={13} /> Publicar actividad
+                                                            <PenLine size={13} /> Revisar y usar
                                                         </button>
                                                     )}
                                                 </div>
@@ -843,6 +854,18 @@ export default function IALab() {
 
                             <div ref={chatEndRef} />
                         </div>
+
+                        {briefTool && briefTool !== 'free' && !isStreaming && (
+                            <div className="brief-wrapper border-top">
+                                <ToolBriefForm
+                                    tool={briefTool}
+                                    classTitle={selectedClass?.title}
+                                    hasAttachedDoc={!!attachedDoc}
+                                    onGenerate={prompt => { setBriefTool(null); sendMessage(prompt); }}
+                                    onSkip={() => setBriefTool(null)}
+                                />
+                            </div>
+                        )}
 
                         <div className="lab-input-wrapper border-top">
                             {isStreaming && (
@@ -1149,6 +1172,28 @@ export default function IALab() {
                     }}
                 />
             )}
+            {refineSource && currentAssignment && (
+                <RefineResultModal
+                    initialContent={refineSource.content}
+                    defaultTitle={
+                        selectedClass
+                            ? `${refineSource.toolUsed === 'eval' ? 'Evaluación' : 'Actividad'}: ${selectedClass.title}`
+                            : refineSource.toolUsed
+                                ? `${tools.find(t => t.id === refineSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
+                                : `Actividad de ${subjectName}`
+                    }
+                    canInsertInClass={!!selectedClass}
+                    className={selectedClass?.title}
+                    onClose={() => setRefineSource(null)}
+                    onInsertInClass={handleInsertContent}
+                    onSaveAsMaterial={handleSaveAsMaterial}
+                    onPublish={(content) => {
+                        setPublishSource({ content, toolUsed: refineSource.toolUsed });
+                        setRefineSource(null);
+                    }}
+                    onAskAdjust={handleAskAdjust}
+                />
+            )}
             {publishSource && currentAssignment && (
                 <PublishActivityModal
                     contentMd={publishSource.content}
@@ -1162,11 +1207,12 @@ export default function IALab() {
                     unitId={selectedUnitId}
                     classId={selectedClass?.id ?? null}
                     defaultTitle={
-                        selectedClass
-                            ? `Actividad: ${selectedClass.title}`
-                            : publishSource.toolUsed
-                                ? `${tools.find(t => t.id === publishSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
-                                : `Actividad de ${subjectName}`
+                        publishSource.title
+                            ?? (selectedClass
+                                ? `Actividad: ${selectedClass.title}`
+                                : publishSource.toolUsed
+                                    ? `${tools.find(t => t.id === publishSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
+                                    : `Actividad de ${subjectName}`)
                     }
                     onClose={() => setPublishSource(null)}
                     onPublished={() => { /* la actividad ya quedó publicada */ }}

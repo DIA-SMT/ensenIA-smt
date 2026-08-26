@@ -119,6 +119,8 @@
   font-size: 13px;
   color: var(--text-subtle);
   text-decoration: underline;
+  padding: 10px 14px;
+  min-height: 40px;
 }
 .ar-manual-link:hover { color: var(--cyan-bright); }
 

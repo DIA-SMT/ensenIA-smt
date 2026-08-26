@@ -8,12 +8,20 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-bottom: var(--space-8);
 }
 
 .alerts-actions {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .alerts-header { margin-bottom: var(--space-5); }
+  .warnings-grid { grid-template-columns: 1fr; gap: var(--space-4); }
 }
 
 .warnings-grid {

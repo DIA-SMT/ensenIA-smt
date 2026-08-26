@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Search, MoreHorizontal, AlertTriangle, X, HeartPulse, PencilLine,
-    Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy,
+    Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByTeacher } from '../services/students.service';
@@ -9,11 +9,14 @@ import { logAccess } from '../services/audit.service';
 import { getCheckinsByStudent, getObservationsByStudent, addObservation } from '../services/wellbeing.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
 import { summarizeStudent } from '../services/documents.service';
+import { getStudentProgress } from '../services/practice.service';
+import { getStudentAwards, giveStudentAward } from '../services/awards.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import AwardPickerModal from '../components/AwardPickerModal';
 import {
-    FEELING_META, OBSERVATION_META,
+    FEELING_META, OBSERVATION_META, AWARD_META, levelForXp,
     type Student, type StudentCheckin, type StudentObservation,
-    type GuardianLink, type ObservationCategory,
+    type GuardianLink, type ObservationCategory, type StudentAward, type StudentProgress,
 } from '../types';
 import './Students.css';
 import '../components/Modals.css';
@@ -28,6 +31,9 @@ export default function Students() {
     const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
     const [observations, setObservations] = useState<StudentObservation[]>([]);
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
+    const [awards, setAwards] = useState<StudentAward[]>([]);
+    const [studentProgress, setStudentProgress] = useState<StudentProgress | null>(null);
+    const [showAwardModal, setShowAwardModal] = useState(false);
 
     // Observación rápida
     const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
@@ -61,9 +67,13 @@ export default function Students() {
         setCheckins([]);
         setObservations([]);
         setGuardians([]);
+        setAwards([]);
+        setStudentProgress(null);
         getCheckinsByStudent(selectedStudent.id, 8).then(setCheckins).catch(console.error);
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
+        getStudentAwards(selectedStudent.id).then(setAwards).catch(console.error);
+        getStudentProgress(selectedStudent.id).then(setStudentProgress).catch(console.error);
         // Bitácora: queda registrado cada acceso a la ficha del estudiante.
         if (user) {
             logAccess({
@@ -278,7 +288,44 @@ export default function Students() {
                                     <span className="metric-label">Promedio</span>
                                     <span className="metric-val">{selectedStudent.average}</span>
                                 </div>
+                                {studentProgress && (
+                                    <>
+                                        <div className="metric-box">
+                                            <span className="metric-label">Nivel de estudio</span>
+                                            <span className="metric-val">
+                                                {levelForXp(studentProgress.xp).level.n} · {levelForXp(studentProgress.xp).level.name}
+                                            </span>
+                                        </div>
+                                        <div className="metric-box">
+                                            <span className="metric-label">Racha</span>
+                                            <span className="metric-val"><Flame size={14} className="text-warning inline" /> {studentProgress.streakDays} días</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
+                        </div>
+
+                        {/* ── Medallas / reconocimientos ── */}
+                        <div className="profile-section">
+                            <div className="flex items-center justify-between">
+                                <h4><Medal size={14} className="text-warning inline ml-1" /> Medallas</h4>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowAwardModal(true)} title="Reconocé el esfuerzo: la medalla aparece en el perfil del estudiante y suma XP">
+                                    <Medal size={13} /> Dar medalla
+                                </button>
+                            </div>
+                            {awards.length === 0
+                                ? <p className="text-sm text-secondary italic">Todavía sin medallas. ¡Un "¡Crack!" a tiempo motiva un montón!</p>
+                                : awards.slice(0, 5).map(a => {
+                                    const meta = AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode };
+                                    return (
+                                        <div key={a.id} className="acts-obs-item">
+                                            <p className="acts-obs-note">{meta.emoji} <strong>{meta.label}</strong>{a.message ? ` — "${a.message}"` : ''}</p>
+                                            <span className="acts-obs-meta">
+                                                {a.teacherName ?? 'Docente'} · {new Date(a.createdAt).toLocaleDateString('es-AR')}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                         </div>
 
                         {/* ── Señales: cómo se viene sintiendo ── */}
@@ -372,6 +419,27 @@ export default function Students() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* ── Modal dar medalla ── */}
+            {showAwardModal && selectedStudent && (
+                <AwardPickerModal
+                    title="Dar medalla"
+                    recipientName={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
+                    catalog={AWARD_META}
+                    onClose={() => setShowAwardModal(false)}
+                    onGive={async (badgeCode, message) => {
+                        const subjectId = user.subjects?.find(s => s.courseId === selectedStudent.courseId)?.subjectId ?? null;
+                        await giveStudentAward({
+                            studentId: selectedStudent.id,
+                            teacherId: user.id,
+                            subjectId,
+                            badgeCode,
+                            message,
+                        });
+                        getStudentAwards(selectedStudent.id).then(setAwards).catch(console.error);
+                    }}
+                />
             )}
 
             {/* ── Modal resumen IA ── */}

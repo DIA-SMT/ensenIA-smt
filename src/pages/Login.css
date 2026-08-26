@@ -126,11 +126,15 @@
 
 .login-eye-btn {
   position: absolute;
-  right: var(--space-3);
+  right: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-subtle);
-  padding: var(--space-1);
+  padding: var(--space-2);
+  min-width: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
   display: flex;
   transition: color var(--transition-fast);
 }

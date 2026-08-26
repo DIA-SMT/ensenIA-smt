@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Calendar, BookOpen, Users, Activity } from 'lucide-react';
+import { Search, X, Calendar, BookOpen, Users, Activity, Medal } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherUsers } from '../services/profiles.service';
 import { getScheduleByTeacher, getTodaySchedule } from '../services/schedule.service';
 import { getSubjects } from '../services/subjects.service';
 import { getAllStudents } from '../services/students.service';
 import { getSchoolActivitiesLight, type SchoolActivityLight } from '../services/activities.service';
+import { getTeacherAwards, giveTeacherAward } from '../services/awards.service';
 import { logAccess } from '../services/audit.service';
 import { formatRelative, daysSince } from '../lib/format';
-import type { User, Subject, Student, ScheduleBlock } from '../types';
+import AwardPickerModal from '../components/AwardPickerModal';
+import { TEACHER_AWARD_META, type TeacherAward, type User, type Subject, type Student, type ScheduleBlock } from '../types';
 import './Docentes.css';
 
 /** Chip honesto: cuándo fue la última actividad publicada por el docente. */
@@ -29,6 +31,8 @@ export default function Docentes() {
   const [teacherTodayClasses, setTeacherTodayClasses] = useState<Record<string, ScheduleBlock[]>>({});
   const [teacherWeeklyClasses, setTeacherWeeklyClasses] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
+  const [teacherAwards, setTeacherAwards] = useState<TeacherAward[]>([]);
+  const [showAwardModal, setShowAwardModal] = useState(false);
   const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
 
   useEffect(() => {
@@ -67,6 +71,12 @@ export default function Docentes() {
   // Bitácora: queda registrado cada acceso al perfil de un docente.
   // Deps primitivas: la identidad del objeto user cambia en cada refresh
   // de sesión y duplicaría filas.
+  useEffect(() => {
+    if (!selectedTeacher) return;
+    setTeacherAwards([]);
+    getTeacherAwards(selectedTeacher.id).then(setTeacherAwards).catch(console.error);
+  }, [selectedTeacher?.id]);
+
   useEffect(() => {
     if (!user || !selectedTeacher) return;
     logAccess({
@@ -254,8 +264,51 @@ export default function Docentes() {
                 </p>
               ))}
             </div>
+
+            {/* ── Reconocimientos de la dirección ── */}
+            <div className="profile-section">
+              <div className="flex items-center justify-between">
+                <h4><Medal size={14} style={{ marginRight: 6 }} className="text-warning" /> Reconocimientos</h4>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowAwardModal(true)}
+                  title="El reconocimiento aparece en el panel del docente"
+                >
+                  <Medal size={13} /> Dar medalla
+                </button>
+              </div>
+              {teacherAwards.length === 0
+                ? <p className="text-secondary text-sm italic">Todavía sin reconocimientos. ¡Un "Presente total" motiva!</p>
+                : teacherAwards.slice(0, 5).map(a => {
+                    const meta = TEACHER_AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode };
+                    return (
+                      <p key={a.id} className="text-secondary text-sm">
+                        {meta.emoji} <strong>{meta.label}</strong>{a.message ? ` — "${a.message}"` : ''} · {formatRelative(a.createdAt)}
+                      </p>
+                    );
+                  })}
+            </div>
           </div>
         </aside>
+      )}
+
+      {/* ── Modal dar medalla a docente ── */}
+      {showAwardModal && selectedTeacher && (
+        <AwardPickerModal
+          title="Reconocer al docente"
+          recipientName={`${selectedTeacher.firstName} ${selectedTeacher.lastName}`}
+          catalog={TEACHER_AWARD_META}
+          onClose={() => setShowAwardModal(false)}
+          onGive={async (badgeCode, message) => {
+            await giveTeacherAward({
+              teacherId: selectedTeacher.id,
+              directorId: user.id,
+              badgeCode,
+              message,
+            });
+            getTeacherAwards(selectedTeacher.id).then(setTeacherAwards).catch(console.error);
+          }}
+        />
       )}
     </div>
   );

@@ -19,6 +19,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .students-header h2 {
@@ -30,7 +32,15 @@
 .students-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-4);
+}
+
+/* ── Móvil: tabla más compacta (scrollea dentro de .table-responsive) ── */
+@media (max-width: 640px) {
+  .students-header { padding: var(--space-4); }
+  .modern-table th { padding: var(--space-3) var(--space-4); font-size: 11px; }
+  .modern-table td { padding: var(--space-3) var(--space-4); font-size: 13px; }
 }
 
 /* Table */
