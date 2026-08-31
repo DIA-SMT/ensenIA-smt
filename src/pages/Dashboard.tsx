@@ -5,6 +5,7 @@ import {
     Activity, ArrowRight, Sparkles,
     GraduationCap, ClipboardCheck, CalendarCheck, Bell, MessageSquare,
     StickyNote, Pin, AlertCircle, HeartPulse, Megaphone, ChevronDown, ChevronUp,
+    Sunrise, ArrowUpRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherStats } from '../services/stats.service';
@@ -16,12 +17,16 @@ import { getQuickNotes } from '../services/quick-notes.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getTeacherAwards } from '../services/awards.service';
 import { getDirectorInsights } from '../services/director-insights.service';
+import { computeDailyBrief, briefToPrompt } from '../services/director-brief.service';
+import { getOrCreateSession, getSessionsByTeacher } from '../services/chat-history.service';
+import { streamChat } from '../services/ia-chat.service';
 import { formatRelative, formatLatencyHours } from '../lib/format';
 import CourseHeatmap from '../components/CourseHeatmap';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
     TEACHER_AWARD_META, type TeacherAward, type TeacherStats, type ScheduleBlock,
     type Alert as AlertType, type Notification as NotifType, type Communication,
-    type QuickNote, type Activity as ActivityType, type DirectorInsights,
+    type QuickNote, type Activity as ActivityType, type DirectorInsights, type DailyBrief,
 } from '../types';
 import './Dashboard.css';
 
@@ -112,7 +117,7 @@ function TeacherDashboardContent() {
             setTodayClasses(today);
             setNextClassBlock(next ?? today[0] ?? null);
             setWeekSchedule(week);
-            setMyAlerts(alerts.slice(0, 3));
+            setMyAlerts(alerts.filter(a => a.status !== 'cerrada').slice(0, 3));
             setMyNotifs(notifs.slice(0, 3));
             setNotes(qn);
             setRecentActivities(acts.slice(0, 3));
@@ -431,27 +436,163 @@ function KpiCard({
     );
 }
 
+/** Parte del Día: hechos de las últimas 24 h + redacción IA opcional. */
+function DailyBriefWidget({ brief }: { brief: DailyBrief }) {
+    const { user, school } = useAuth();
+    const [aiText, setAiText] = useState('');
+    const [aiStreaming, setAiStreaming] = useState(false);
+    const [aiError, setAiError] = useState('');
+    const abortRef = useRef<AbortController | null>(null);
+    // Una sola sesión de chat por directora: getOrCreateSession con
+    // classId null siempre crea, así que la buscamos por título primero.
+    const sessionIdRef = useRef<string | null>(null);
+
+    useEffect(() => () => abortRef.current?.abort(), []);
+
+    const resolveSessionId = async (userId: string): Promise<string> => {
+        if (sessionIdRef.current) return sessionIdRef.current;
+        const existing = (await getSessionsByTeacher(userId)).find(s => s.title === 'Parte del día');
+        const session = existing ?? await getOrCreateSession(userId, null, { title: 'Parte del día' });
+        sessionIdRef.current = session.id;
+        return session.id;
+    };
+
+    const handleRedact = async () => {
+        if (!user || aiStreaming) return;
+        // El controller nace ANTES del primer await: un desmonte temprano
+        // también tiene que poder abortar la preparación del stream.
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setAiStreaming(true);
+        setAiError('');
+        setAiText('');
+        try {
+            const sessionId = await resolveSessionId(user.id);
+            if (controller.signal.aborted) return;
+            const prompt = briefToPrompt(brief, school?.name ?? 'la escuela');
+            await streamChat(
+                [{ role: 'user', content: prompt }],
+                { subjectName: 'Gestión institucional', courseName: school?.shortName ?? '' },
+                { sessionId },
+                {
+                    onToken: t => setAiText(prev => prev + t),
+                    onDone: () => setAiStreaming(false),
+                    onError: e => { setAiError(e.message); setAiStreaming(false); },
+                },
+                controller.signal,
+            );
+        } catch {
+            setAiError('No se pudo generar el parte. Probá de nuevo.');
+        } finally {
+            // streamChat puede resolver sin emitir 'done' ni 'error' (stream
+            // cortado limpio o abort): nunca dejar el botón clavado.
+            setAiStreaming(false);
+        }
+    };
+
+    const counts = [
+        { n: brief.escalatedAlerts, label: 'escaladas' },
+        { n: brief.newAlerts, label: 'alertas nuevas' },
+        { n: brief.negativeCheckins, label: 'check-ins negativos' },
+        { n: brief.pendingCitations, label: 'citaciones sin confirmar' },
+        { n: brief.newSubmissions, label: 'entregas' },
+        { n: brief.newActivities, label: 'actividades' },
+    ];
+
+    return (
+        <section className="card widget brief-widget animate-in stagger-1">
+            <div className="widget-header">
+                <h3 className="widget-title">
+                    <Sunrise size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                    Parte del Día
+                </h3>
+                <button className="btn btn-outline btn-sm" onClick={handleRedact} disabled={aiStreaming}>
+                    <Sparkles size={14} />
+                    {aiStreaming ? 'Redactando…' : 'Redactar con IA'}
+                </button>
+            </div>
+
+            <div className="brief-counts">
+                {counts.filter(c => c.n > 0).map(c => (
+                    <span key={c.label} className="brief-count">
+                        <b>{c.n}</b> {c.label}
+                    </span>
+                ))}
+                {counts.every(c => c.n === 0) && (
+                    <span className="brief-count quiet">Sin novedades en las últimas 24 horas.</span>
+                )}
+            </div>
+
+            {brief.items.length > 0 && (
+                <ul className="brief-items">
+                    {brief.items.slice(0, 8).map((item, i) => (
+                        <li key={i} className={`brief-item brief-${item.kind}`}>{item.text}</li>
+                    ))}
+                    {brief.items.length > 8 && (
+                        <li className="brief-item quiet">+ {brief.items.length - 8} novedades más</li>
+                    )}
+                </ul>
+            )}
+
+            {(aiText || aiError) && (
+                <div className="brief-ai">
+                    {aiError
+                        ? <p className="text-danger text-sm">{aiError}</p>
+                        : <MarkdownRenderer content={aiText} />}
+                </div>
+            )}
+        </section>
+    );
+}
+
 function DirectorDashboardContent() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [insights, setInsights] = useState<DirectorInsights | null>(null);
+    const [brief, setBrief] = useState<DailyBrief | null>(null);
     const [schoolAlerts, setSchoolAlerts] = useState<AlertType[]>([]);
+    const [openAlertCount, setOpenAlertCount] = useState(0);
     const [recentComms, setRecentComms] = useState<Communication[]>([]);
+    const [loadError, setLoadError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         if (!user) return;
         const schoolId = user.schoolId;
+        setLoadError(false);
 
         Promise.all([
             getDirectorInsights(schoolId),
+            computeDailyBrief(schoolId),
             getAlertsBySchool(schoolId),
             getCommunicationsBySchool(schoolId),
-        ]).then(([ins, alerts, comms]) => {
+        ]).then(([ins, db, alerts, comms]) => {
             setInsights(ins);
-            setSchoolAlerts(alerts.filter(a => !a.isRead).slice(0, 4));
+            setBrief(db);
+            const open = alerts.filter(a => a.status !== 'cerrada');
+            setOpenAlertCount(open.length);
+            setSchoolAlerts(open.slice(0, 4));
             setRecentComms(comms.slice(0, 3));
-        }).catch(console.error);
-    }, [user]);
+        }).catch(err => {
+            console.error(err);
+            setLoadError(true);
+        });
+    }, [user, reloadKey]);
+
+    if (loadError) {
+        return (
+            <div className="dashboard-container">
+                <div className="card padding-xl" style={{ textAlign: 'center' }}>
+                    <p className="text-secondary" style={{ marginBottom: 12 }}>
+                        No se pudo cargar el tablero. Revisá la conexión.
+                    </p>
+                    <button className="btn btn-primary" onClick={() => setReloadKey(k => k + 1)}>
+                        Reintentar
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (!insights) {
         return (
@@ -466,6 +607,9 @@ function DirectorDashboardContent() {
 
     return (
         <div className="dashboard-container">
+            {/* Parte del Día */}
+            {brief && <DailyBriefWidget brief={brief} />}
+
             {/* KPI Row */}
             <div className="kpi-grid">
                 <KpiCard
@@ -588,7 +732,7 @@ function DirectorDashboardContent() {
                     <section className="card widget animate-in stagger-6">
                         <div className="widget-header">
                             <h3 className="widget-title">Alertas Pendientes</h3>
-                            <span className="badge badge-danger">{schoolAlerts.length}</span>
+                            <span className="badge badge-danger">{openAlertCount}</span>
                         </div>
                         <div className="alerts-list">
                             {schoolAlerts.map(alert => (
@@ -599,7 +743,14 @@ function DirectorDashboardContent() {
                                         {alert.type === 'success' && <CheckCircle size={16} />}
                                     </div>
                                     <div className="alert-content">
-                                        <p className="alert-msg">{alert.message}</p>
+                                        <p className="alert-msg">
+                                            {alert.escalatedAt && (
+                                                <span className="badge badge-escalada" style={{ marginRight: 6 }}>
+                                                    <ArrowUpRight size={11} /> Escalada
+                                                </span>
+                                            )}
+                                            {alert.message}
+                                        </p>
                                         <span className="alert-date">{alert.date}</span>
                                     </div>
                                 </div>

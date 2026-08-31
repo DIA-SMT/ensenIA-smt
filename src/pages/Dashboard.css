@@ -519,6 +519,58 @@
 .comms-widget-to { font-size: 11px; color: var(--text-subtle); }
 .comms-widget-date { font-size: 11px; color: var(--text-subtle); white-space: nowrap; flex-shrink: 0; }
 
+/* ── Parte del Día (director) ── */
+.brief-widget { gap: var(--space-3); }
+
+.brief-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.brief-count {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+}
+.brief-count b { color: var(--text-primary); }
+.brief-count.quiet { border-style: dashed; color: var(--text-subtle); }
+
+.brief-items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.brief-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding: 7px 10px 7px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--border-color);
+}
+.brief-item.brief-escalada { border-left-color: #818CF8; color: var(--text-primary); }
+.brief-item.brief-alerta { border-left-color: var(--danger); }
+.brief-item.brief-bienestar { border-left-color: var(--warning); }
+.brief-item.brief-citacion { border-left-color: var(--warning); }
+.brief-item.brief-actividad { border-left-color: var(--cyan-bright); }
+.brief-item.brief-entrega { border-left-color: var(--success); }
+.brief-item.quiet { border-left-style: dashed; color: var(--text-subtle); }
+
+.brief-ai {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  font-size: 14px;
+}
+
 /* ── Reconocimientos del docente ── */
 .awards-widget {
   border-color: rgba(251, 191, 36, 0.3);

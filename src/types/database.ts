@@ -261,44 +261,113 @@ export type Database = {
           },
         ]
       }
+      alert_thresholds: {
+        Row: {
+          escalation_hours: number
+          inactivity_days: number
+          low_score_pct: number
+          negative_checkins_count: number
+          negative_checkins_days: number
+          school_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          escalation_hours?: number
+          inactivity_days?: number
+          low_score_pct?: number
+          negative_checkins_count?: number
+          negative_checkins_days?: number
+          school_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          escalation_hours?: number
+          inactivity_days?: number
+          low_score_pct?: number
+          negative_checkins_count?: number
+          negative_checkins_days?: number
+          school_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_thresholds_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alerts: {
         Row: {
           category: Database["public"]["Enums"]["alert_category"]
+          closed_at: string | null
+          closed_outcome: string | null
           created_at: string | null
           date_label: string | null
+          escalated_at: string | null
           id: string
+          intervention_at: string | null
+          intervention_by: string | null
+          intervention_note: string | null
           is_read: boolean
           message: string
           school_id: string
+          status: string
           teacher_id: string | null
           title: string
           type: Database["public"]["Enums"]["alert_level"]
         }
         Insert: {
           category: Database["public"]["Enums"]["alert_category"]
+          closed_at?: string | null
+          closed_outcome?: string | null
           created_at?: string | null
           date_label?: string | null
+          escalated_at?: string | null
           id?: string
+          intervention_at?: string | null
+          intervention_by?: string | null
+          intervention_note?: string | null
           is_read?: boolean
           message: string
           school_id: string
+          status?: string
           teacher_id?: string | null
           title: string
           type: Database["public"]["Enums"]["alert_level"]
         }
         Update: {
           category?: Database["public"]["Enums"]["alert_category"]
+          closed_at?: string | null
+          closed_outcome?: string | null
           created_at?: string | null
           date_label?: string | null
+          escalated_at?: string | null
           id?: string
+          intervention_at?: string | null
+          intervention_by?: string | null
+          intervention_note?: string | null
           is_read?: boolean
           message?: string
           school_id?: string
+          status?: string
           teacher_id?: string | null
           title?: string
           type?: Database["public"]["Enums"]["alert_level"]
         }
         Relationships: [
+          {
+            foreignKeyName: "alerts_intervention_by_fkey"
+            columns: ["intervention_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alerts_school_id_fkey"
             columns: ["school_id"]

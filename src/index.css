@@ -219,6 +219,7 @@ input, select, textarea {
 .badge-ia { background: var(--indigo-glow); color: #818CF8; }
 .badge-neutral { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); }
 .badge-cyan { background: var(--cyan-glow); color: var(--cyan-bright); }
+.badge-escalada { background: var(--indigo-glow); color: #818CF8; }
 
 
 /* ══════════════════════════════

@@ -22,6 +22,7 @@ import {
 } from './activities.service';
 import { getAlertsBySchool } from './alerts.service';
 import { getNoticesForStaff } from './guardians.service';
+import { getThresholds } from './thresholds.service';
 import { daysAgoIso, median } from '../lib/format';
 import type {
   DirectorInsights, RiskIndexKpi, AtRiskStudent, RiskSignals, HeatmapCell, HeatmapMetric,
@@ -97,13 +98,35 @@ async function fetchGuardianLinks(studentIds: string[]): Promise<RawGuardianLink
   ) as unknown as RawGuardianLink[];
 }
 
+async function fetchStudentIdsWithRecentPractice(studentIds: string[], sinceIso: string): Promise<Set<string>> {
+  if (studentIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from('practice_attempts')
+    .select('student_id')
+    .in('student_id', studentIds)
+    .gte('created_at', sinceIso);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r.student_id as string));
+}
+
 // ── Agregador principal ──
 
 export async function getDirectorInsights(schoolId: string): Promise<DirectorInsights> {
+  // Los mismos umbrales que usan los triggers (010): el tablero y las
+  // alertas automáticas nunca deben contradecirse.
+  const th = await getThresholds(schoolId);
+
   const since7d = daysAgoIso(7);
   const since14d = daysAgoIso(14);
   const since14dDateStr = since14d.slice(0, 10);
   const since30d = daysAgoIso(30);
+  const sinceInactivity = daysAgoIso(th.inactivityDays);
+  // Los check-ins se piden con la ventana más amplia entre el pulso
+  // semanal (7 d) y la señal de bienestar configurada, y se filtran por uso.
+  const checkinWindowDays = Math.max(7, th.negativeCheckinsDays);
+  const sinceCheckinWindow = daysAgoIso(checkinWindowDays);
+  const sinceNegCheckins = daysAgoIso(th.negativeCheckinsDays);
+  const lowScoreRatio = th.lowScorePct / 100;
 
   const [students, courses, subjects, teachers, activities, enrollments, notices] = await Promise.all([
     getAllStudents(schoolId),
@@ -120,12 +143,13 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
   const activityIds = activities.map(a => a.id);
 
   const [
-    submissions, recentEventStudentIds, recentCheckins, planning,
+    submissions, recentEventStudentIds, recentPracticeStudentIds, allCheckins, planning,
     recentIaUsage, recentMaterials, assignments, alerts, guardianLinksRaw,
   ] = await Promise.all([
     getSubmissionsByActivityIds(activityIds),
-    getStudentIdsWithRecentEvents(activityIds, since14d),
-    fetchRecentCheckins(studentIds, since7d),
+    getStudentIdsWithRecentEvents(activityIds, sinceInactivity),
+    fetchStudentIdsWithRecentPractice(studentIds, sinceInactivity),
+    fetchRecentCheckins(studentIds, sinceCheckinWindow),
     fetchPlanning(teacherIds),
     fetchRecentIaUsage(teacherIds, since14dDateStr),
     fetchRecentMaterials(schoolId, since14d),
@@ -133,6 +157,20 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
     getAlertsBySchool(schoolId),
     fetchGuardianLinks(studentIds),
   ]);
+
+  // Pulso de bienestar: siempre la última semana. Señal de riesgo:
+  // la ventana configurada por la escuela.
+  const recentCheckins = allCheckins.filter(c => c.created_at >= since7d);
+  const negWindowCheckins = allCheckins.filter(c => c.created_at >= sinceNegCheckins);
+
+  // "Activo" con la MISMA definición que detect_silent_students() (010):
+  // huella digital, entregas o práctica. Si el tablero mirara solo la
+  // huella, contradiría las alertas de abandono del cron.
+  const activeStudentIds = new Set<string>([...recentEventStudentIds, ...recentPracticeStudentIds]);
+  for (const s of submissions) {
+    const ts = [s.submittedAt, s.gradedAt, s.startedAt].filter(Boolean) as string[];
+    if (ts.some(t => t >= sinceInactivity)) activeStudentIds.add(s.studentId);
+  }
 
   // ── Índices de búsqueda ──
   const studentsById = new Map(students.map(s => [s.id, s]));
@@ -176,15 +214,16 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
   }
 
   const negativeCheckinCountByStudent = new Map<string, number>();
-  for (const c of recentCheckins) {
+  for (const c of negWindowCheckins) {
     if (c.feeling === 'frustrado' || c.feeling === 'confundido') {
       negativeCheckinCountByStudent.set(c.student_id, (negativeCheckinCountByStudent.get(c.student_id) ?? 0) + 1);
     }
   }
 
+  // "Alerta abierta" ahora significa sin cerrar en el ciclo de vida (010).
   const studentsWithOpenAlert = new Set<string>();
   for (const a of alerts) {
-    if (!a.isRead) (a.studentIds ?? []).forEach(id => studentsWithOpenAlert.add(id));
+    if (a.status !== 'cerrada') (a.studentIds ?? []).forEach(id => studentsWithOpenAlert.add(id));
   }
 
   // ── Señales (compartidas entre índice escolar y mapa de calor) ──
@@ -213,7 +252,7 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
       const act = activitiesById.get(s.activityId);
       const score = s.autoScore ?? s.score;
       if (!act?.points || score == null) return false;
-      return score / act.points < 0.4;
+      return score / act.points <= lowScoreRatio;
     });
   }
 
@@ -232,7 +271,7 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
       const act = activitiesById.get(s.activityId);
       const score = s.autoScore ?? s.score;
       if (!act?.points || score == null) return false;
-      return score / act.points < 0.4;
+      return score / act.points <= lowScoreRatio;
     });
   }
 
@@ -242,8 +281,8 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
       const signals: RiskSignals = {
         overdueUnsubmitted: studentOverdueUnsubmitted(s.id),
         lowRecentScore: studentLowRecentScore(s.id),
-        negativeCheckins: (negativeCheckinCountByStudent.get(s.id) ?? 0) >= 2,
-        noRecentEvents: !recentEventStudentIds.has(s.id),
+        negativeCheckins: (negativeCheckinCountByStudent.get(s.id) ?? 0) >= th.negativeCheckinsCount,
+        noRecentEvents: !activeStudentIds.has(s.id),
         openAlert: studentsWithOpenAlert.has(s.id),
       };
       const signalCount = Object.values(signals).filter(Boolean).length;

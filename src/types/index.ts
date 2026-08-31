@@ -261,6 +261,9 @@ export interface ScheduleBlock {
 }
 
 // ── Alert ──
+export type AlertStatus = 'abierta' | 'en_seguimiento' | 'cerrada';
+export type AlertOutcome = 'resuelta' | 'derivada' | 'sin_cambio';
+
 export interface Alert {
   id: string;
   type: AlertLevel;
@@ -273,6 +276,36 @@ export interface Alert {
   schoolId: string;
   isRead: boolean;
   createdAt: string;
+  // Ciclo de vida (010)
+  status: AlertStatus;
+  interventionNote?: string | null;
+  interventionBy?: string | null;
+  interventionAt?: string | null;
+  closedOutcome?: AlertOutcome | null;
+  closedAt?: string | null;
+  escalatedAt?: string | null;
+}
+
+export const ALERT_STATUS_META: Record<AlertStatus, { label: string; badgeClass: string }> = {
+  abierta: { label: 'Abierta', badgeClass: 'badge-danger' },
+  en_seguimiento: { label: 'En seguimiento', badgeClass: 'badge-warning' },
+  cerrada: { label: 'Cerrada', badgeClass: 'badge-neutral' },
+};
+
+export const ALERT_OUTCOME_META: Record<AlertOutcome, string> = {
+  resuelta: 'Resuelta',
+  derivada: 'Derivada (equipo externo / supervisión)',
+  sin_cambio: 'Cerrada sin cambios',
+};
+
+/** Umbrales de alertas configurables por escuela (defaults de la 010). */
+export interface AlertThresholds {
+  schoolId: string;
+  negativeCheckinsCount: number;
+  negativeCheckinsDays: number;
+  lowScorePct: number;
+  inactivityDays: number;
+  escalationHours: number;
 }
 
 // ── Notification (Director → Teacher) ──
@@ -612,6 +645,25 @@ export interface DirectorInsights {
   heatmap: Record<HeatmapMetric, HeatmapCell[]>;
   courseAssignments: Record<string, CourseAssignmentInfo[]>; // por courseId
   courses: Course[];
+}
+
+// ── Parte del Día (Fase 2) ──
+
+export interface DailyBriefItem {
+  kind: 'alerta' | 'escalada' | 'entrega' | 'actividad' | 'bienestar' | 'citacion';
+  text: string;
+  courseId?: string;
+}
+
+export interface DailyBrief {
+  generatedAt: string;
+  newAlerts: number;
+  escalatedAlerts: number;
+  newSubmissions: number;
+  newActivities: number;
+  negativeCheckins: number;
+  pendingCitations: number;
+  items: DailyBriefItem[]; // orden: lo más urgente primero
 }
 
 // ── Stats ──
