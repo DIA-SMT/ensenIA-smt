@@ -38,23 +38,30 @@ function ThresholdsModal({ initial, onSave, onClose }: {
     const set = (key: keyof AlertThresholds, value: number) =>
         setT(prev => ({ ...prev, [key]: value }));
 
-    const fields: { key: keyof AlertThresholds; label: string; help: string; min: number; max: number }[] = [
+    const fields: { key: keyof AlertThresholds; label: string; help: string; min: number; max: number; decimal?: boolean }[] = [
         { key: 'negativeCheckinsCount', label: 'Check-ins negativos para alertar', help: 'Cantidad de check-ins "confundido/frustrado" que dispara la alerta de bienestar.', min: 1, max: 10 },
         { key: 'negativeCheckinsDays', label: 'Ventana de check-ins (días)', help: 'En cuántos días se cuentan esos check-ins.', min: 1, max: 30 },
         { key: 'lowScorePct', label: 'Umbral de bajo desempeño (%)', help: 'Entregas con puntaje igual o menor a este porcentaje generan alerta.', min: 10, max: 90 },
         { key: 'inactivityDays', label: 'Días sin actividad (abandono)', help: 'Días sin huella digital, entregas ni práctica para marcar posible abandono.', min: 3, max: 60 },
         { key: 'escalationHours', label: 'Horas para escalar a dirección', help: 'Alertas críticas sin intervención pasan a dirección después de estas horas.', min: 12, max: 336 },
+        { key: 'gradeRiskMax', label: 'Nota de riesgo (aviso a la familia)', help: 'Al publicar el trimestre, esta nota o menos avisa a la familia: todavía es recuperable.', min: 1, max: 10, decimal: true },
+        { key: 'gradeFailMax', label: 'Nota que se lleva a diciembre', help: 'Esta nota o menos marca la materia como "se lleva a diciembre" y avisa a la familia.', min: 1, max: 10, decimal: true },
     ];
 
     const handleSave = async () => {
         // Los min/max del input son solo visuales: validar acá con mensaje
-        // por campo, espejando los CHECK de la migración 010.
+        // por campo, espejando los CHECK de las migraciones 010 y 011.
         for (const f of fields) {
             const v = t[f.key] as number;
-            if (!Number.isInteger(v) || v < f.min || v > f.max) {
-                setError(`«${f.label}» debe ser un entero entre ${f.min} y ${f.max}.`);
+            const okTipo = f.decimal ? Number.isFinite(v) : Number.isInteger(v);
+            if (!okTipo || v < f.min || v > f.max) {
+                setError(`«${f.label}» debe ser ${f.decimal ? 'un número' : 'un entero'} entre ${f.min} y ${f.max}.`);
                 return;
             }
+        }
+        if (t.gradeFailMax > t.gradeRiskMax) {
+            setError('La nota que se lleva a diciembre no puede ser mayor que la nota de riesgo.');
+            return;
         }
         setSaving(true);
         setError('');
@@ -87,6 +94,7 @@ function ThresholdsModal({ initial, onSave, onClose }: {
                                 type="number"
                                 min={f.min}
                                 max={f.max}
+                                step={f.decimal ? 0.5 : 1}
                                 value={t[f.key] as number}
                                 onChange={e => set(f.key, Number(e.target.value))}
                             />

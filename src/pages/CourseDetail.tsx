@@ -9,18 +9,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Users, BookOpen, HeartPulse, Clock, AlertTriangle, Info, CheckCircle,
+  ArrowLeft, Users, BookOpen, HeartPulse, Clock, AlertTriangle, Info, CheckCircle, BookMarked,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getCourseById } from '../services/subjects.service';
 import { getStudentsByCourse } from '../services/students.service';
 import { getDirectorInsights } from '../services/director-insights.service';
 import { getAlertsBySchool } from '../services/alerts.service';
+import { getTerms, pickCurrentTerm, getPublishedGradesBySchool } from '../services/gradebook.service';
 import { formatLatencyHours } from '../lib/format';
 import type {
-  Course, Student, DirectorInsights, Alert as AlertType,
+  Course, Student, DirectorInsights, Alert as AlertType, TermGrade, AcademicTerm,
 } from '../types';
 import './CourseDetail.css';
+import './Libreta.css';
 
 const STATUS_META: Record<Student['status'], { label: string; cls: string }> = {
   excellent: { label: 'Excelente', cls: 'badge-success' },
@@ -38,6 +40,8 @@ export default function CourseDetail() {
   const [roster, setRoster] = useState<Student[]>([]);
   const [insights, setInsights] = useState<DirectorInsights | null>(null);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
+  const [termGrades, setTermGrades] = useState<TermGrade[]>([]);
+  const [currentTerm, setCurrentTerm] = useState<AcademicTerm | null>(null);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -46,11 +50,17 @@ export default function CourseDetail() {
       getStudentsByCourse(id),
       getDirectorInsights(user.schoolId),
       getAlertsBySchool(user.schoolId),
-    ]).then(([c, students, ins, al]) => {
+      getTerms(user.schoolId, new Date().getFullYear()),
+    ]).then(async ([c, students, ins, al, terms]) => {
       setCourse(c ?? null);
       setRoster(students);
       setInsights(ins);
       setAlerts(al);
+      const term = pickCurrentTerm(terms);
+      setCurrentTerm(term);
+      if (term) {
+        setTermGrades(await getPublishedGradesBySchool(user.schoolId, term.id));
+      }
     }).catch(console.error);
   }, [user, id]);
 
@@ -83,6 +93,11 @@ export default function CourseDetail() {
   const assignments = insights.courseAssignments[course.id] ?? [];
   const openAlerts = alerts.filter(a => !a.isRead && (a.studentIds ?? []).some(sid => rosterIds.has(sid)));
   const atRiskInCourse = [...signalsByStudent.values()].filter(n => n >= 2).length;
+
+  // Notas publicadas del trimestre en curso, solo de este curso.
+  const gradesHere = termGrades.filter(g => g.courseId === course.id);
+  const aDiciembre = gradesHere.filter(g => g.carriesToDecember);
+  const studentsById = new Map(roster.map(s => [s.id, s]));
 
   return (
     <div className="dashboard-container">
@@ -195,6 +210,50 @@ export default function CourseDetail() {
         </div>
 
         <div className="course-detail-col-right">
+          {/* Libreta del trimestre (solo lo publicado) */}
+          <section className="card widget">
+            <div className="widget-header">
+              <h3 className="widget-title">
+                <BookMarked size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                Notas del trimestre
+              </h3>
+              {aDiciembre.length > 0 && (
+                <span className="badge badge-danger">{aDiciembre.length} a diciembre</span>
+              )}
+            </div>
+            {!currentTerm && <p className="text-secondary text-sm">Sin trimestres cargados para este año.</p>}
+            {currentTerm && gradesHere.length === 0 && (
+              <p className="text-secondary text-sm">
+                Todavía no hay notas publicadas del {currentTerm.name}.
+              </p>
+            )}
+            {gradesHere.length > 0 && (
+              <div className="grades-list">
+                {gradesHere.map(g => {
+                  const st = studentsById.get(g.studentId);
+                  return (
+                    <div key={g.id} className="grade-row">
+                      <div className="grade-row-main">
+                        <span className="grade-row-subject">
+                          {st ? `${st.firstName} ${st.lastName}` : 'Estudiante'}
+                        </span>
+                        <span className="grade-row-term">
+                          {g.subjectName ?? 'Materia'}
+                          {g.carriesToDecember && ' · se lleva a diciembre'}
+                        </span>
+                      </div>
+                      {g.grade !== null && (
+                        <span className={`grade-pill ${g.carriesToDecember ? 'grade-fail' : 'grade-ok'}`}>
+                          {Number.isInteger(g.grade) ? g.grade : g.grade.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           {/* Entregas sin corregir */}
           <section className="card widget">
             <div className="widget-header">

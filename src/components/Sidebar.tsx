@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Rocket
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Rocket, BookMarked
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
@@ -19,6 +19,7 @@ const teacherNavItems: NavItem[] = [
     { label: 'Mi Agenda', path: '/agenda', icon: Calendar },
     { label: 'Laboratorio IA', path: '/ia-lab', icon: FlaskConical, isIA: true },
     { label: 'Actividades', path: '/actividades', icon: ClipboardList },
+    { label: 'Libreta', path: '/libreta', icon: BookMarked },
     { label: 'Estudiantes', path: '/students', icon: Users },
     { label: 'Biblioteca Docente', path: '/biblioteca', icon: BookOpen },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },

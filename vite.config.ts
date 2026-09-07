@@ -59,5 +59,8 @@ export default defineConfig({
   ],
   server: {
     host: '0.0.0.0',
+    // Respetar PORT si viene del entorno: permite levantar el dev server
+    // en otro puerto cuando el 5173 está ocupado.
+    ...(process.env.PORT ? { port: Number(process.env.PORT) } : {}),
   },
 })

@@ -261,9 +261,145 @@ export type Database = {
           },
         ]
       }
+      academic_terms: {
+        Row: {
+          created_at: string | null
+          ends_on: string
+          id: string
+          name: string
+          number: number
+          school_id: string
+          starts_on: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          ends_on: string
+          id?: string
+          name: string
+          number: number
+          school_id: string
+          starts_on: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          ends_on?: string
+          id?: string
+          name?: string
+          number?: number
+          school_id?: string
+          starts_on?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_terms_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      term_grades: {
+        Row: {
+          carries_to_december: boolean
+          course_id: string
+          grade: number | null
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          notified_category: string | null
+          school_id: string
+          status: string
+          student_id: string
+          subject_id: string
+          suggested_from: number
+          suggested_grade: number | null
+          teacher_note: string | null
+          term_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          carries_to_december?: boolean
+          course_id: string
+          grade?: number | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          notified_category?: string | null
+          school_id: string
+          status?: string
+          student_id: string
+          subject_id: string
+          suggested_from?: number
+          suggested_grade?: number | null
+          teacher_note?: string | null
+          term_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          carries_to_december?: boolean
+          course_id?: string
+          grade?: number | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          notified_category?: string | null
+          school_id?: string
+          status?: string
+          student_id?: string
+          subject_id?: string
+          suggested_from?: number
+          suggested_grade?: number | null
+          teacher_note?: string | null
+          term_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "term_grades_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_grades_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_grades_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_grades_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_thresholds: {
         Row: {
           escalation_hours: number
+          grade_fail_max: number
+          grade_risk_max: number
           inactivity_days: number
           low_score_pct: number
           negative_checkins_count: number
@@ -274,6 +410,8 @@ export type Database = {
         }
         Insert: {
           escalation_hours?: number
+          grade_fail_max?: number
+          grade_risk_max?: number
           inactivity_days?: number
           low_score_pct?: number
           negative_checkins_count?: number
@@ -284,6 +422,8 @@ export type Database = {
         }
         Update: {
           escalation_hours?: number
+          grade_fail_max?: number
+          grade_risk_max?: number
           inactivity_days?: number
           low_score_pct?: number
           negative_checkins_count?: number
@@ -1858,6 +1998,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_academic_terms: {
+        Args: { p_school_id: string; p_year: number }
+        Returns: Database["public"]["Tables"]["academic_terms"]["Row"][]
+      }
       auth_guardian_student_ids: { Args: never; Returns: string[] }
       auth_role: {
         Args: never

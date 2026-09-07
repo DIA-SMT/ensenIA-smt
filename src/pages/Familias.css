@@ -156,6 +156,11 @@
   gap: var(--space-3);
 }
 
+.fam-child-grades {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-4);
+}
+
 @media (max-width: 900px) {
   .fam-grid { grid-template-columns: 1fr; }
   .fam-form { position: static; }

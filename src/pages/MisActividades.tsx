@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Clock, CheckCircle, ChevronRight, GraduationCap } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, ChevronRight, GraduationCap, BookMarked } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getStudentByUserId, getEnrollmentsByStudent, getActivitiesForStudent, getMySubmissions,
 } from '../services/activities.service';
 import { hasPendingSubmit } from '../services/offline-queue.service';
-import type { Activity, ActivitySubmission, Enrollment, Student } from '../types';
+import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
+import GradesPanel from '../components/GradesPanel';
+import type { Activity, ActivitySubmission, Enrollment, Student, AlertThresholds } from '../types';
 import './StudentPortal.css';
+import './Libreta.css';
 
 export default function MisActividades() {
   const { user } = useAuth();
@@ -15,10 +18,12 @@ export default function MisActividades() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([]);
+  const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
+    getThresholds(user.schoolId).then(setThresholds).catch(console.error);
     (async () => {
       try {
         const st = await getStudentByUserId(user.id);
@@ -108,6 +113,13 @@ export default function MisActividades() {
             <span className="sp-hero-label">entregadas</span>
           </div>
         </div>
+      </div>
+
+      <h3 className="sp-section-title"><BookMarked size={17} /> Mis notas</h3>
+      <div className="card" style={{ padding: 'var(--space-4)' }}>
+        {/* Umbrales reales de la escuela (011): la nota se pinta con la
+            misma regla que le comunican a su familia. */}
+        <GradesPanel studentId={student.id} thresholds={thresholds ?? DEFAULT_THRESHOLDS} voice="propia" />
       </div>
 
       <h3 className="sp-section-title"><ClipboardList size={17} /> Mis actividades</h3>

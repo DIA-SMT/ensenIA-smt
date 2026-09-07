@@ -12,6 +12,7 @@ import Biblioteca from './pages/Biblioteca';
 import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
 import Docentes from './pages/Docentes';
+import Libreta from './pages/Libreta';
 import CourseDetail from './pages/CourseDetail';
 import Comunicaciones from './pages/Comunicaciones';
 import Actividades from './pages/Actividades';
@@ -81,6 +82,9 @@ function App() {
             } />
             <Route path="actividades/:id" element={
               <ProtectedRoute allowedRoles={['docente']}><ActividadDetalle /></ProtectedRoute>
+            } />
+            <Route path="libreta" element={
+              <ProtectedRoute allowedRoles={['docente']}><Libreta /></ProtectedRoute>
             } />
 
             {/* Staff: comunicación con familias */}

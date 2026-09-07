@@ -15,6 +15,8 @@ export const DEFAULT_THRESHOLDS: Omit<AlertThresholds, 'schoolId'> = {
   lowScorePct: 40,
   inactivityDays: 14,
   escalationHours: 72,
+  gradeRiskMax: 5,
+  gradeFailMax: 4,
 };
 
 export async function getThresholds(schoolId: string): Promise<AlertThresholds> {
@@ -32,6 +34,8 @@ export async function getThresholds(schoolId: string): Promise<AlertThresholds> 
     lowScorePct: data.low_score_pct,
     inactivityDays: data.inactivity_days,
     escalationHours: data.escalation_hours,
+    gradeRiskMax: Number(data.grade_risk_max),
+    gradeFailMax: Number(data.grade_fail_max),
   };
 }
 
@@ -44,6 +48,8 @@ export async function saveThresholds(t: AlertThresholds): Promise<void> {
     low_score_pct: t.lowScorePct,
     inactivity_days: t.inactivityDays,
     escalation_hours: t.escalationHours,
+    grade_risk_max: t.gradeRiskMax,
+    grade_fail_max: t.gradeFailMax,
   });
   if (error) throw error;
 }

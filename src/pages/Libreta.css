@@ -1,0 +1,156 @@
+.libreta-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.libreta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.libreta-header h2 { font-size: 22px; font-weight: 700; }
+
+/* ── Barra de selección ── */
+.libreta-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.libreta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+  flex: 1;
+}
+.libreta-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.libreta-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+/* ── Tabla ── */
+.libreta-table td { vertical-align: middle; }
+
+.libreta-suggested {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #818CF8;
+  font-variant-numeric: tabular-nums;
+}
+
+.libreta-input {
+  width: 86px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  outline: none;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+.libreta-input:focus {
+  border-color: var(--cyan-bright);
+  box-shadow: 0 0 0 3px var(--cyan-glow);
+}
+.libreta-input.grade-ok { color: var(--success); border-color: rgba(16, 217, 129, 0.35); }
+.libreta-input.grade-risk { color: var(--warning); border-color: rgba(251, 191, 36, 0.45); }
+.libreta-input.grade-fail { color: var(--danger); border-color: rgba(239, 68, 68, 0.5); }
+
+/* ── Acciones ── */
+.libreta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-color);
+}
+.libreta-actions-right { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.libreta-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-subtle);
+  line-height: 1.5;
+  padding: 0 var(--space-5) var(--space-4);
+}
+.libreta-rule svg { flex-shrink: 0; margin-top: 2px; }
+.libreta-rule b { color: var(--text-secondary); }
+
+.libreta-ok {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--success-light);
+  color: var(--success);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+/* ── Notas publicadas (estudiante / familia) ── */
+.grades-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.grade-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+.grade-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.grade-row-subject { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.grade-row-term { font-size: 12px; color: var(--text-subtle); }
+
+.grade-pill {
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+}
+.grade-pill.grade-ok { background: var(--success-light); color: var(--success); }
+.grade-pill.grade-risk { background: var(--warning-light); color: var(--warning); }
+.grade-pill.grade-fail { background: var(--danger-light); color: var(--danger); }
+
+@media (max-width: 640px) {
+  .libreta-toolbar { flex-direction: column; align-items: stretch; }
+  .libreta-actions { flex-direction: column; align-items: stretch; }
+  .libreta-actions-right { flex-direction: column; }
+}

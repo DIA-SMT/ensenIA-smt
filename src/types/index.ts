@@ -298,7 +298,7 @@ export const ALERT_OUTCOME_META: Record<AlertOutcome, string> = {
   sin_cambio: 'Cerrada sin cambios',
 };
 
-/** Umbrales de alertas configurables por escuela (defaults de la 010). */
+/** Umbrales configurables por escuela (defaults de las migraciones 010 y 011). */
 export interface AlertThresholds {
   schoolId: string;
   negativeCheckinsCount: number;
@@ -306,6 +306,60 @@ export interface AlertThresholds {
   lowScorePct: number;
   inactivityDays: number;
   escalationHours: number;
+  /** Nota ≤ este valor (y > gradeFailMax) → aviso de riesgo a la familia. */
+  gradeRiskMax: number;
+  /** Nota ≤ este valor → la materia se lleva a diciembre. */
+  gradeFailMax: number;
+}
+
+// ── Libreta de calificaciones (011) ──
+
+export interface AcademicTerm {
+  id: string;
+  schoolId: string;
+  year: number;
+  number: 1 | 2 | 3;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+}
+
+export type TermGradeStatus = 'borrador' | 'publicada';
+
+export interface TermGrade {
+  id: string;
+  studentId: string;
+  subjectId: string;
+  courseId: string;
+  termId: string;
+  schoolId: string;
+  grade: number | null;
+  suggestedGrade: number | null;
+  suggestedFrom: number;
+  status: TermGradeStatus;
+  carriesToDecember: boolean;
+  teacherNote?: string | null;
+  gradedAt?: string | null;
+  /** Enriquecidos por el servicio para las vistas de lectura. */
+  subjectName?: string;
+  termName?: string;
+  termNumber?: number;
+}
+
+/** Fila de la libreta que ve el docente: estudiante + nota + sugerencia. */
+export interface GradebookRow {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  avatarInitials: string;
+  gradeId: string | null;
+  grade: number | null;
+  status: TermGradeStatus;
+  carriesToDecember: boolean;
+  teacherNote?: string | null;
+  /** Sugerencia recalculada ahora, a partir del trabajo del trimestre. */
+  suggestedGrade: number | null;
+  suggestedFrom: number;
 }
 
 // ── Notification (Director → Teacher) ──

@@ -1,19 +1,33 @@
 import { useState, useEffect } from 'react';
-import { GraduationCap, HeartPulse } from 'lucide-react';
+import { GraduationCap, HeartPulse, BookMarked } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMyChildren } from '../services/guardians.service';
-import type { Student } from '../types';
+import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
+import GradesPanel from '../components/GradesPanel';
+import type { Student, AlertThresholds } from '../types';
 import './Familias.css';
 import './StudentPortal.css';
+import './Libreta.css';
 
 export default function MisHijos() {
   const { user, school } = useAuth();
   const [children, setChildren] = useState<(Student & { relationship: string })[]>([]);
+  const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     getMyChildren().then(setChildren).catch(console.error).finally(() => setLoading(false));
+    // La familia lee los umbrales de su escuela (011): el color de la nota
+    // tiene que coincidir con la regla del aviso que recibió, no con un
+    // default nuestro. Si la escuela no configuró umbrales, getThresholds
+    // ya devuelve los mismos defaults que aplica el servidor.
+    getThresholds(user.schoolId)
+      .then(setThresholds)
+      .catch(err => {
+        console.error(err);
+        setThresholds({ schoolId: user.schoolId, ...DEFAULT_THRESHOLDS });
+      });
   }, [user]);
 
   if (!user) return null;
@@ -63,6 +77,17 @@ export default function MisHijos() {
               <span className="metric-val">{c.progress}%</span>
             </div>
           </div>
+          <div className="fam-child-grades">
+            <h5 className="text-sm font-medium flex items-center gap-1" style={{ marginBottom: 8 }}>
+              <BookMarked size={13} /> Notas del año
+            </h5>
+            <GradesPanel
+              studentId={c.id}
+              thresholds={thresholds ?? DEFAULT_THRESHOLDS}
+              voice="familia"
+            />
+          </div>
+
           <p className="text-xs text-subtle flex items-center gap-1">
             <HeartPulse size={12} /> Ante cualquier duda sobre su acompañamiento, respondé la citación o acercate a la escuela.
           </p>
