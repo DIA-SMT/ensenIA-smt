@@ -356,3 +356,11 @@
 }
 
 .hoy-stat-action:hover { background: var(--bg-hover); }
+
+/* Dos accesos de creación en el encabezado (added) */
+.hoy-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .hoy-header-actions { width: 100%; }
+  .hoy-header-actions .btn { flex: 1; justify-content: center; }
+}

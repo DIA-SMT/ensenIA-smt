@@ -40,7 +40,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     const home = user.role === 'estudiante' ? '/mis-actividades'
       : user.role === 'padre' ? '/comunicados-familia'
       : user.role === 'docente' ? '/hoy'
-      : '/dashboard';
+      : '/panel';
     return <Navigate to={home} replace />;
   }
 

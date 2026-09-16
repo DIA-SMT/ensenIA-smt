@@ -70,3 +70,67 @@ export async function getDirectorStats(schoolId: string): Promise<DirectorStats>
     totalStudents: studentList.length,
   };
 }
+
+// ── Visión de dirección ──
+
+export interface TeacherPulse {
+  teacherId: string;
+  teacherName: string;
+  materials: number;
+  activities: number;
+  liveClasses: number;
+  attendanceTaken: number;
+  graded: number;
+  pendingGrading: number;
+  lastActive: string | null;
+}
+
+export interface CourseClimateRow {
+  courseId: string;
+  courseName: string;
+  checkins: number;
+  mood: number | null;
+  studentsAtRisk: number;
+}
+
+/** Qué viene haciendo cada docente de la escuela (solo dirección). */
+export async function getTeacherPulse(days = 30): Promise<TeacherPulse[]> {
+  const { data, error } = await supabase.rpc('get_teacher_pulse', { p_days: days });
+  if (error) throw error;
+  return ((data as any[]) ?? []).map(r => ({
+    teacherId: r.teacher_id,
+    teacherName: r.teacher_name,
+    materials: r.materials ?? 0,
+    activities: r.activities ?? 0,
+    liveClasses: r.live_classes ?? 0,
+    attendanceTaken: r.attendance_taken ?? 0,
+    graded: r.graded ?? 0,
+    pendingGrading: r.pending_grading ?? 0,
+    lastActive: r.last_active,
+  }));
+}
+
+/** Clima emocional de cada curso de la escuela (solo dirección). */
+export async function getSchoolClimate(days = 30): Promise<CourseClimateRow[]> {
+  const { data, error } = await supabase.rpc('get_school_climate', { p_days: days });
+  if (error) throw error;
+  return ((data as any[]) ?? []).map(r => ({
+    courseId: r.course_id,
+    courseName: r.course_name,
+    checkins: r.checkins ?? 0,
+    mood: r.mood != null ? Number(r.mood) : null,
+    studentsAtRisk: r.students_at_risk ?? 0,
+  }));
+}
+
+/** Clases que están ocurriendo ahora mismo en la escuela. */
+export async function getLiveNow(): Promise<{ id: string; title: string; teacherId: string; createdAt: string }[]> {
+  const { data } = await supabase
+    .from('live_sessions')
+    .select('id, title, teacher_id, created_at')
+    .eq('status', 'live')
+    .order('created_at', { ascending: false });
+  return ((data as any[]) ?? []).map(r => ({
+    id: r.id, title: r.title, teacherId: r.teacher_id, createdAt: r.created_at,
+  }));
+}

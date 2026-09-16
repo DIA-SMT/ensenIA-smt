@@ -199,6 +199,9 @@ export default function Biblioteca() {
     if (!window.confirm(`¿Eliminar "${mat.title}" de la biblioteca?`)) return;
     try {
       if (mat.storagePath) await removeFile(mat.storagePath);
+      // El podcast vive aparte del archivo original: si no se borra acá,
+      // el MP3 queda huérfano en Storage para siempre.
+      if (mat.podcastPath) await removeFile(mat.podcastPath).catch(console.error);
       await deleteMaterial(mat.id);
       refresh();
     } catch (err) {

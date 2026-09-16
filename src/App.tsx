@@ -25,6 +25,8 @@ import Hoy from './pages/Hoy';
 import MisClases from './pages/MisClases';
 import Asistencia from './pages/Asistencia';
 import Corregir from './pages/Corregir';
+import ArmarModulo from './pages/ArmarModulo';
+import PanelDireccion from './pages/PanelDireccion';
 import Familias from './pages/Familias';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
@@ -36,7 +38,7 @@ function HomeRedirect() {
   const home = user?.role === 'estudiante' ? '/mis-actividades'
     : user?.role === 'padre' ? '/comunicados-familia'
     : user?.role === 'docente' ? '/hoy'
-    : '/dashboard';
+    : '/panel';
   return <Navigate to={home} replace />;
 }
 
@@ -78,6 +80,9 @@ function App() {
             } />
             <Route path="corregir" element={
               <ProtectedRoute allowedRoles={['docente']}><Corregir /></ProtectedRoute>
+            } />
+            <Route path="modulo" element={
+              <ProtectedRoute allowedRoles={['docente']}><ArmarModulo /></ProtectedRoute>
             } />
             <Route path="crear" element={
               <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>
@@ -138,6 +143,9 @@ function App() {
             } />
 
             {/* Director-only */}
+            <Route path="panel" element={
+              <ProtectedRoute allowedRoles={['director']}><PanelDireccion /></ProtectedRoute>
+            } />
             <Route path="docentes" element={
               <ProtectedRoute allowedRoles={['director']}><Docentes /></ProtectedRoute>
             } />

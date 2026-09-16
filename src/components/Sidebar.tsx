@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun, Boxes, Activity
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnreadAlertCount } from '../services/alerts.service';
@@ -23,6 +23,7 @@ interface NavItem {
 // no items de menú: el docente llega a ellos desde su clase del día.
 const teacherNavItems: NavItem[] = [
     { label: 'Hoy', path: '/hoy', icon: Sun },
+    { label: 'Armar módulo', path: '/modulo', icon: Boxes, isIA: true },
     { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
     { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
@@ -30,7 +31,8 @@ const teacherNavItems: NavItem[] = [
 ];
 
 const directorNavItems: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Qué está pasando', path: '/panel', icon: Activity },
+    { label: 'Resumen', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Docentes', path: '/docentes', icon: Users },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
     { label: 'Alertas', path: '/alerts', icon: Bell },

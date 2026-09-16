@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════════
+   SMT EstudIA — Panel de dirección
+   ═══════════════════════════════════════════════ */
+
+.pd-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 980px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pd-header h1 { font-size: 24px; font-weight: 700; color: var(--text-primary); }
+
+.pd-ranges { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.pd-range {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 5px 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pd-range:hover { color: var(--text-primary); }
+.pd-range.active {
+  color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  font-weight: 600;
+}
+
+.pd-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #F87171;
+  font-size: 13px;
+}
+
+/* ── Resumen ── */
+.pd-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pd-sum-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: var(--space-4);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  border-left-width: 3px;
+  color: var(--text-secondary);
+}
+
+.pd-sum-val {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.pd-sum-label { font-size: 11.5px; color: var(--text-subtle); }
+
+.mood-great { border-left-color: var(--success); }
+.mood-great .pd-sum-val, .mood-great .pd-course-mood { color: var(--success); }
+.mood-good { border-left-color: var(--cyan-bright); }
+.mood-good .pd-sum-val, .mood-good .pd-course-mood { color: var(--cyan-bright); }
+.mood-mid { border-left-color: var(--warning); }
+.mood-mid .pd-sum-val, .mood-mid .pd-course-mood { color: var(--warning); }
+.mood-low { border-left-color: var(--danger); }
+.mood-low .pd-sum-val, .mood-low .pd-course-mood { color: var(--danger); }
+.mood-none { border-left-color: var(--border-color); }
+.mood-none .pd-course-mood { color: var(--text-subtle); font-size: 12px; }
+
+/* ── Secciones ── */
+.pd-section {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pd-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ── En vivo ── */
+.pd-live { border-color: rgba(239, 68, 68, 0.4) !important; }
+
+.pd-live-list { display: flex; flex-direction: column; gap: 7px; }
+
+.pd-live-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 13px;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.pd-live-item > div { display: flex; flex-direction: column; min-width: 0; }
+.pd-live-item strong { font-size: 13.5px; color: var(--text-primary); }
+.pd-live-item span { font-size: 11.5px; color: var(--text-subtle); }
+
+.pd-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #EF4444;
+  flex-shrink: 0;
+  animation: cv-pulse 1.6s infinite;
+}
+
+/* ── Cursos ── */
+.pd-courses {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pd-course {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  border-left-width: 3px;
+}
+
+.pd-course-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pd-course-head strong { font-size: 15px; color: var(--text-primary); }
+.pd-course-mood { font-size: 17px; font-weight: 800; }
+
+.pd-course-bar {
+  height: 6px;
+  background: var(--bg-panel);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.pd-course-fill {
+  height: 100%;
+  background: currentColor;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.mood-great .pd-course-fill { background: var(--success); }
+.mood-good .pd-course-fill { background: var(--cyan-bright); }
+.mood-mid .pd-course-fill { background: var(--warning); }
+.mood-low .pd-course-fill { background: var(--danger); }
+
+.pd-course-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-subtle);
+  flex-wrap: wrap;
+}
+
+.pd-course-risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* ── Docentes ── */
+.pd-teachers { display: flex; flex-direction: column; gap: 7px; }
+
+.pd-teacher {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.pd-teacher.quiet { opacity: 0.68; border-style: dashed; }
+
+.pd-teacher-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pd-teacher-head strong { font-size: 14px; color: var(--text-primary); }
+
+.pd-last { font-size: 11.5px; color: var(--text-subtle); }
+.pd-last.never { color: var(--warning); font-weight: 600; }
+
+.pd-teacher-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pd-teacher-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pd-teacher-pending {
+  color: #A5B4FC !important;
+  font-weight: 600;
+  background: var(--indigo-glow);
+  border-radius: var(--radius-full);
+  padding: 1px 9px;
+}
+
+.pd-more { align-self: flex-start; }
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .pd-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pd-courses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .pd-courses { grid-template-columns: 1fr; }
+  .pd-header h1 { font-size: 20px; }
+  .pd-teacher-stats { gap: 9px; font-size: 11.5px; }
+}

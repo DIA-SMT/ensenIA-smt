@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
-    Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket,
+    Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTodaySchedule } from '../services/schedule.service';
@@ -91,9 +91,14 @@ export default function Hoy() {
                         {todayClasses.length > 0 && ` · ${todayClasses.length} clase${todayClasses.length !== 1 ? 's' : ''} hoy`}
                     </p>
                 </div>
-                <button className="btn btn-primary hoy-create-btn" onClick={() => navigate('/crear')}>
-                    <Sparkles size={16} /> Crear actividad
-                </button>
+                <div className="hoy-header-actions">
+                    <button className="btn btn-primary hoy-create-btn" onClick={() => navigate('/modulo')}>
+                        <Boxes size={16} /> Armar módulo
+                    </button>
+                    <button className="btn btn-outline hoy-create-btn" onClick={() => navigate('/crear')}>
+                        <Sparkles size={16} /> Actividad rápida
+                    </button>
+                </div>
             </header>
 
             {/* Primer uso */}
@@ -115,12 +120,12 @@ export default function Hoy() {
                                 <span>Un PDF o Word que ya uses en clase</span>
                             </div>
                         </Link>
-                        <Link to="/crear" className="hoy-onb-step">
+                        <Link to="/modulo" className="hoy-onb-step">
                             <span className="hoy-onb-num">2</span>
-                            <span className="hoy-onb-icon"><Sparkles size={17} /></span>
+                            <span className="hoy-onb-icon"><Boxes size={17} /></span>
                             <div>
-                                <strong>Creá tu primera actividad</strong>
-                                <span>Escribís el tema y la app la arma</span>
+                                <strong>Armá tu primer módulo</strong>
+                                <span>Un tema, y salen placas, podcast y actividad</span>
                             </div>
                         </Link>
                         <Link to="/clase-en-vivo" className="hoy-onb-step">

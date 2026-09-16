@@ -10,6 +10,8 @@ const routeNames: Record<string, string> = {
     '/crear': 'Crear actividad',
     '/asistencia': 'Asistencia',
     '/corregir': 'Para corregir',
+    '/modulo': 'Armar módulo',
+    '/panel': 'Qué está pasando',
     '/clase-en-vivo': 'Clase en vivo',
     '/dashboard': 'Dashboard',
     '/agenda': 'Mi horario',
