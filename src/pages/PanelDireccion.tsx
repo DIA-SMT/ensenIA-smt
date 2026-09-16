@@ -210,11 +210,21 @@ export default function PanelDireccion() {
                                             </span>
                                         </div>
                                         <div className="pd-teacher-stats">
-                                            <span title="Materiales subidos o generados"><Layers size={12} /> {t.materials}</span>
-                                            <span title="Actividades creadas"><ClipboardList size={12} /> {t.activities}</span>
-                                            <span title="Clases en vivo dadas"><Radio size={12} /> {t.liveClasses}</span>
-                                            <span title="Veces que pasó lista"><CheckSquare size={12} /> {t.attendanceTaken}</span>
-                                            <span title="Entregas corregidas"><ClipboardCheck size={12} /> {t.graded}</span>
+                                            <span title="Materiales subidos o generados">
+                                                <Layers size={12} /> {t.materials} <em>materiales</em>
+                                            </span>
+                                            <span title="Actividades creadas">
+                                                <ClipboardList size={12} /> {t.activities} <em>actividades</em>
+                                            </span>
+                                            <span title="Clases en vivo dadas">
+                                                <Radio size={12} /> {t.liveClasses} <em>en vivo</em>
+                                            </span>
+                                            <span title="Veces que pasó lista">
+                                                <CheckSquare size={12} /> {t.attendanceTaken} <em>listas</em>
+                                            </span>
+                                            <span title="Entregas corregidas">
+                                                <ClipboardCheck size={12} /> {t.graded} <em>corregidas</em>
+                                            </span>
                                             {t.pendingGrading > 0 && (
                                                 <span className="pd-teacher-pending" title="Entregas esperando corrección">
                                                     {t.pendingGrading} sin corregir

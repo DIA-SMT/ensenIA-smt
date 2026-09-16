@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
     MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine,
-    Paperclip, X, ClipboardList, Play
+    Paperclip, X, ClipboardList, Play, Boxes
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
@@ -99,6 +99,7 @@ function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
 
 export default function IALab() {
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     // ── Planning state ──
     const [allUnits, setAllUnits] = useState<PlanningUnit[]>([]);
@@ -273,7 +274,7 @@ export default function IALab() {
     };
 
     const handleDeleteUnit = async (unit: PlanningUnit) => {
-        const ok = window.confirm(`¿Eliminar la unidad "${unit.title}" y sus ${unit.classes.length} clases?`);
+        const ok = window.confirm(`¿Eliminar el módulo "${unit.title}" y sus ${unit.classes.length} temas?`);
         if (!ok) return;
         try {
             await deleteUnit(unit.id);
@@ -604,7 +605,7 @@ export default function IALab() {
             <div className="lab-sidebar card">
                 <div className="lab-panel-header">
                     <Folder size={18} className="text-ia-accent" />
-                    <h3>Planificación</h3>
+                    <h3>Mis módulos</h3>
                 </div>
 
                 {/* Subject/Course Selector */}
@@ -636,7 +637,7 @@ export default function IALab() {
                 <div className="units-tree">
                     {filteredUnits.length === 0 && (
                         <div className="tree-empty">
-                            <p className="text-sm text-secondary">Sin unidades aún.</p>
+                            <p className="text-sm text-secondary">Todavía no tenés módulos. Importá tu programa o creá uno.</p>
                         </div>
                     )}
                     {filteredUnits.map(unit => {
@@ -649,7 +650,7 @@ export default function IALab() {
                                     <span className="unit-title">{unit.title}</span>
                                     <button
                                         className="unit-delete-btn"
-                                        title="Eliminar unidad"
+                                        title="Eliminar este módulo y sus temas"
                                         onClick={e => { e.stopPropagation(); handleDeleteUnit(unit); }}
                                     >
                                         <Trash2 size={12} />
@@ -678,7 +679,7 @@ export default function IALab() {
                                                 <input
                                                     autoFocus
                                                     value={classInput}
-                                                    placeholder="Título de la clase..."
+                                                    placeholder="Título del tema..."
                                                     onChange={e => setClassInput(e.target.value)}
                                                     onKeyDown={e => {
                                                         if (e.key === 'Enter') handleCreateClass(unit.id);
@@ -690,7 +691,7 @@ export default function IALab() {
                                             </div>
                                         ) : (
                                             <button className="add-class-btn" onClick={() => { setAddingClassUnitId(unit.id); setClassInput(''); }}>
-                                                <Plus size={13} /> Añadir clase
+                                                <Plus size={13} /> Añadir tema
                                             </button>
                                         )}
                                     </div>
@@ -706,7 +707,7 @@ export default function IALab() {
                             <input
                                 autoFocus
                                 value={unitInput}
-                                placeholder="Título de la unidad..."
+                                placeholder="Título del módulo..."
                                 onChange={e => setUnitInput(e.target.value)}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter') handleCreateUnit();
@@ -722,7 +723,7 @@ export default function IALab() {
                             onClick={() => setCreatingUnit(true)}
                             disabled={!currentAssignment}
                         >
-                            <Plus size={15} /> Nueva Unidad
+                            <Plus size={15} /> Nuevo módulo
                         </button>
                     )}
                     <button
@@ -752,10 +753,10 @@ export default function IALab() {
                             className={`mode-tab ${centerMode === 'editor' ? 'active' : ''}`}
                             onClick={() => selectedClass && setCenterMode('editor')}
                             disabled={!selectedClass}
-                            title={selectedClass ? undefined : 'Elegí una clase en Planificación para ver su contenido'}
+                            title={selectedClass ? undefined : 'Elegí un tema de la izquierda para ver su contenido'}
                         >
                             <PenLine size={15} />
-                            <span>Mi clase</span>
+                            <span>El tema</span>
                         </button>
                     </div>
                     <div className="header-right">
@@ -801,8 +802,9 @@ export default function IALab() {
                                         </button>
                                     </div>
                                     <p className="welcome-tip">
-                                        💡 Si elegís una clase en <strong>Planificación</strong> (a la izquierda), voy a conocer
-                                        el tema y los objetivos, y el contenido sale a medida.
+                                        💡 Elegí un <strong>tema</strong> de la izquierda y voy a conocer sus objetivos.
+                                        Para que salga todo de una (placas, podcast, actividad), usá
+                                        <strong> Armar módulo</strong>.
                                     </p>
                                 </div>
                             )}
@@ -971,18 +973,26 @@ export default function IALab() {
                                     key={selectedClass.id}
                                     className="editor-title"
                                     defaultValue={selectedClass.title}
-                                    placeholder="Título de la clase..."
+                                    placeholder="Título del tema..."
                                     onBlur={e => handleSaveTitle(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                 />
                                 <div className="editor-meta">
+                                    {/* La salida al material: de este tema salen placas, podcast y actividad */}
+                                    <button
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => navigate(`/modulo?tema=${selectedClass.id}`)}
+                                        title="Generar placas, podcast y actividad a partir de este tema"
+                                    >
+                                        <Boxes size={14} /> Armar el material
+                                    </button>
                                     <button
                                         className={`badge ${selectedClass.isComplete ? 'badge-success' : 'badge-warning'}`}
                                         style={{ cursor: 'pointer', border: 'none' }}
                                         title={selectedClass.isComplete ? 'Marcar como borrador' : 'Marcar como completa'}
                                         onClick={handleToggleComplete}
                                     >
-                                        {selectedClass.isComplete ? '✓ Completa' : 'Borrador'}
+                                        {selectedClass.isComplete ? '✓ Completo' : 'Borrador'}
                                     </button>
                                 </div>
                             </header>

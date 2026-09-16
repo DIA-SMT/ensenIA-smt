@@ -267,3 +267,15 @@
   .pd-header h1 { font-size: 20px; }
   .pd-teacher-stats { gap: 9px; font-size: 11.5px; }
 }
+
+/* Los números del docente dicen qué son (added) */
+.pd-teacher-stats em {
+  font-style: normal;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+@media (max-width: 620px) {
+  /* En pantalla angosta quedan los iconos y el número */
+  .pd-teacher-stats em { display: none; }
+}

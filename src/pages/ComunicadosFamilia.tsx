@@ -74,7 +74,7 @@ export default function ComunicadosFamilia() {
                   <span className={`badge ${n.type === 'citacion' ? 'badge-warning' : 'badge-cyan'}`}>
                     {n.type === 'citacion' ? '📅 Citación' : '📢 Comunicado'}
                   </span>
-                  {n.studentName && <span className="badge badge-neutral">Por {n.studentName}</span>}
+                  {n.studentName && <span className="badge badge-neutral">Sobre {n.studentName}</span>}
                   <span className="text-xs text-subtle">{new Date(n.createdAt).toLocaleDateString('es-AR')}</span>
                 </div>
                 <ChevronDown size={16} className={`fam-chevron ${openId === n.id ? 'open' : ''}`} />

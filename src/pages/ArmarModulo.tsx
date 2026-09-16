@@ -11,16 +11,18 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Boxes, Sparkles, Layers, Headphones, ClipboardList, Radio,
     Check, Loader2, ArrowRight, Share2, Eye, AlertCircle, Square,
+    BookOpen, PenLine, FolderTree,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getOrCreateSession, saveUserMessage } from '../services/chat-history.service';
 import { streamChat } from '../services/ia-chat.service';
-import { createMaterial } from '../services/library.service';
+import { createMaterial, getMaterialsByTeacher } from '../services/library.service';
+import { getPlanningByTeacher } from '../services/planning.service';
 import {
     updateMaterial, generateStudyCards, generatePodcast, extractQuestions,
 } from '../services/documents.service';
@@ -29,7 +31,7 @@ import { startLiveSession, launchActivity, getMyLiveSession } from '../services/
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
-import type { Subject, StudyCard, ActivityQuestion } from '../types';
+import type { Subject, StudyCard, ActivityQuestion, LibraryMaterial, PlanningClass } from '../types';
 import './ArmarModulo.css';
 
 type PieceKey = 'placas' | 'podcast' | 'actividad' | 'vivo';
@@ -50,6 +52,15 @@ export default function ArmarModulo() {
     const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
     const [assignmentIdx, setAssignmentIdx] = useState(0);
     const [topic, setTopic] = useState('');
+
+    // De dónde sale el módulo. Con material o con un tema de la planificación
+    // el contenido es REAL: sale de lo que el docente ya tiene, no de lo que
+    // la IA imagine sobre el título.
+    const [origen, setOrigen] = useState<'material' | 'tema' | 'nuevo'>('nuevo');
+    const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
+    const [temas, setTemas] = useState<(PlanningClass & { unitTitle: string })[]>([]);
+    const [baseMaterialId, setBaseMaterialId] = useState('');
+    const [temaId, setTemaId] = useState('');
 
     // Generación del módulo
     const [content, setContent] = useState('');
@@ -79,6 +90,27 @@ export default function ArmarModulo() {
     const assignment = assignments[assignmentIdx];
     const subjectName = assignment ? (subjectsMap[assignment.subjectId]?.name ?? 'Materia') : '';
 
+    const [searchParams] = useSearchParams();
+
+    useEffect(() => {
+        if (!user) return;
+        getMaterialsByTeacher(user.id)
+            .then(list => setMaterials(list.filter(m => m.extractedText)))
+            .catch(console.error);
+        getPlanningByTeacher(user.id)
+            .then(units => setTemas(units.flatMap(u => u.classes.map(c => ({ ...c, unitTitle: u.title })))))
+            .catch(console.error);
+    }, [user]);
+
+    // Llegado desde la planificación con ?tema=<id>
+    useEffect(() => {
+        const t = searchParams.get('tema');
+        if (t && temas.some(x => x.id === t)) {
+            setTemaId(t);
+            setOrigen('tema');
+        }
+    }, [searchParams, temas]);
+
     useEffect(() => {
         getSubjects().then(list => {
             const map: Record<string, Subject> = {};
@@ -101,9 +133,23 @@ export default function ArmarModulo() {
         });
     };
 
+    const baseMaterial = materials.find(m => m.id === baseMaterialId) ?? null;
+    const baseTema = temas.find(t => t.id === temaId) ?? null;
+
+    /** Título del módulo según de dónde salga. */
+    const moduleName = origen === 'material' && baseMaterial ? (topic.trim() || baseMaterial.title)
+        : origen === 'tema' && baseTema ? (topic.trim() || baseTema.title)
+        : topic.trim();
+
+    const canGenerate = Boolean(assignment) && (
+        origen === 'material' ? Boolean(baseMaterial)
+            : origen === 'tema' ? Boolean(baseTema)
+            : Boolean(topic.trim())
+    );
+
     // ── Paso 1 → 2: la IA arma el módulo ──
     const handleGenerate = async () => {
-        if (!topic.trim() || !assignment || generating) return;
+        if (!canGenerate || !assignment || generating) return;
         setGenerating(true);
         setError('');
         setContent('');
@@ -115,15 +161,41 @@ export default function ArmarModulo() {
                 courseId: assignment.courseId,
                 title: 'Armar módulo',
             });
-            const prompt =
-                `Armá un MÓDULO DE CLASE sobre "${topic.trim()}" para ${assignment.courseName}.\n\n` +
+            const estructura =
                 `Incluí, en este orden y con encabezados claros:\n` +
                 `1. Objetivos de aprendizaje (3 a 4, empezando con verbo en infinitivo)\n` +
-                `2. Desarrollo del tema: los conceptos centrales explicados con claridad, ` +
-                `con ejemplos concretos de la vida real argentina\n` +
+                `2. Desarrollo, dividido en 2 a 4 TEMAS dictables. Cada tema con su título ` +
+                `como "### Tema N: <título>" y su desarrollo debajo, con ejemplos concretos ` +
+                `de la vida real argentina\n` +
                 `3. Ideas clave para recordar\n` +
                 `4. Preguntas para pensar en clase\n\n` +
-                `Que alcance para una o dos clases. Lenguaje de secundaria, español rioplatense.`;
+                `Lenguaje de secundaria, español rioplatense.`;
+
+            // Con material o con un tema de la planificación, el módulo se apoya en
+            // contenido real del docente en vez de en lo que la IA suponga del título.
+            let prompt: string;
+            if (origen === 'material' && baseMaterial) {
+                const fuente = (baseMaterial.extractedText ?? '').slice(0, 18000);
+                prompt =
+                    `Armá un MÓDULO DE CLASE para ${assignment.courseName} A PARTIR DEL MATERIAL de abajo.\n\n` +
+                    (topic.trim() ? `Enfocate en: "${topic.trim()}".\n\n` : '') +
+                    estructura + '\n\n' +
+                    `REGLA IMPORTANTE: basate en este material, no en lo que vos sepas del tema. ` +
+                    `No agregues contenido que no esté acá. Si algo está incompleto, decilo en ` +
+                    `vez de inventarlo.\n\nMATERIAL: "${baseMaterial.title}"\n---\n${fuente}\n---`;
+            } else if (origen === 'tema' && baseTema) {
+                const objetivos = baseTema.objectives?.length
+                    ? `\nObjetivos que ya definiste: ${baseTema.objectives.join('; ')}.` : '';
+                const previo = baseTema.content
+                    ? `\n\nContenido que ya escribiste para este tema (respetalo y ampliá sobre eso):\n---\n${baseTema.content.slice(0, 8000)}\n---`
+                    : '';
+                prompt =
+                    `Armá un MÓDULO DE CLASE para ${assignment.courseName} sobre el tema ` +
+                    `"${baseTema.title}", que forma parte de "${baseTema.unitTitle}".${objetivos}${previo}\n\n` +
+                    estructura;
+            } else {
+                prompt = `Armá un MÓDULO DE CLASE sobre "${moduleName}" para ${assignment.courseName}.\n\n${estructura}`;
+            }
             saveUserMessage(session.id, prompt, 'act').catch(() => {});
 
             const controller = new AbortController();
@@ -160,7 +232,7 @@ export default function ArmarModulo() {
         setError('');
         setStep(3);
 
-        const moduleTitle = `Módulo: ${topic.trim()}`;
+        const moduleTitle = `Módulo: ${moduleName}`;
 
         try {
             // El módulo queda como material de la biblioteca: de ahí salen las demás piezas
@@ -305,9 +377,8 @@ export default function ArmarModulo() {
                     <div className="mod-hero-icon"><Boxes size={26} /></div>
                     <h2>Armá un módulo completo</h2>
                     <p className="text-secondary">
-                        Escribí el tema. La IA arma el módulo y después vos elegís qué sale de ahí:
-                        placas para repasar, un podcast, una actividad para entregar o una pregunta
-                        para lanzar en vivo. Todo junto, en un minuto.
+                        De un módulo salen sus temas, y de ahí las placas, el podcast, la actividad
+                        y las preguntas para el aula. Todo junto, en un minuto.
                     </p>
 
                     <div className="mod-form">
@@ -324,11 +395,72 @@ export default function ArmarModulo() {
                             ))}
                         </select>
 
-                        <label className="mod-label">¿Sobre qué tema?</label>
+                        <label className="mod-label">¿De dónde sale el contenido?</label>
+                        <div className="mod-origenes">
+                            {materials.length > 0 && (
+                                <button
+                                    className={`mod-origen ${origen === 'material' ? 'on' : ''}`}
+                                    onClick={() => setOrigen('material')}
+                                >
+                                    <BookOpen size={16} />
+                                    <span><strong>De mi biblioteca</strong>
+                                        <em>Usa tu material tal cual: el módulo sale real</em></span>
+                                </button>
+                            )}
+                            {temas.length > 0 && (
+                                <button
+                                    className={`mod-origen ${origen === 'tema' ? 'on' : ''}`}
+                                    onClick={() => setOrigen('tema')}
+                                >
+                                    <FolderTree size={16} />
+                                    <span><strong>De un tema de mi planificación</strong>
+                                        <em>Respeta los objetivos que ya escribiste</em></span>
+                                </button>
+                            )}
+                            <button
+                                className={`mod-origen ${origen === 'nuevo' ? 'on' : ''}`}
+                                onClick={() => setOrigen('nuevo')}
+                            >
+                                <PenLine size={16} />
+                                <span><strong>De un tema nuevo</strong>
+                                    <em>Lo escribís vos y la IA lo desarrolla</em></span>
+                            </button>
+                        </div>
+
+                        {origen === 'material' && (
+                            <select
+                                className="form-select"
+                                value={baseMaterialId}
+                                onChange={e => setBaseMaterialId(e.target.value)}
+                            >
+                                <option value="">Elegí un material...</option>
+                                {materials.map(m => (
+                                    <option key={m.id} value={m.id}>{m.subjectName}: {m.title}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {origen === 'tema' && (
+                            <select
+                                className="form-select"
+                                value={temaId}
+                                onChange={e => setTemaId(e.target.value)}
+                            >
+                                <option value="">Elegí un tema...</option>
+                                {temas.map(t => (
+                                    <option key={t.id} value={t.id}>{t.unitTitle} → {t.title}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        <label className="mod-label">
+                            {origen === 'nuevo' ? '¿Sobre qué tema?' : 'Enfoque (opcional)'}
+                        </label>
                         <input
                             className="mod-input"
-                            autoFocus
-                            placeholder="Ej: La Revolución de Mayo y sus causas"
+                            placeholder={origen === 'nuevo'
+                                ? 'Ej: La Revolución de Mayo y sus causas'
+                                : 'Dejalo vacío para cubrir todo, o acotá el enfoque'}
                             value={topic}
                             maxLength={120}
                             onChange={e => setTopic(e.target.value)}
@@ -338,7 +470,7 @@ export default function ArmarModulo() {
                         <button
                             className="btn btn-primary mod-cta"
                             onClick={handleGenerate}
-                            disabled={!topic.trim() || assignments.length === 0}
+                            disabled={!canGenerate}
                         >
                             <Sparkles size={17} /> Armar el módulo
                         </button>

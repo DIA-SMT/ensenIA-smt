@@ -1207,3 +1207,12 @@
   .lab-config { display: flex !important; order: 3; max-height: none; }
   .kbd-hint { display: none; }
 }
+
+/* El encabezado del tema tiene la acción principal (added) */
+.editor-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
