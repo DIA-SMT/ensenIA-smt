@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Radio, Square, Plus, X, Eye, Lock, CheckCircle, Users,
+    Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,7 +18,7 @@ import { getSubjects } from '../services/subjects.service';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, LIVE_KIND_META, LIVE_REACTIONS,
+    getRecentReactions, LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption,
 } from '../services/live.service';
@@ -27,9 +27,6 @@ import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
 
-function optionLabel(activity: LiveActivity, id: string): string {
-    return activity.config.options?.find(o => o.id === id)?.label ?? id;
-}
 
 export default function ClaseEnVivo() {
     const { user } = useAuth();

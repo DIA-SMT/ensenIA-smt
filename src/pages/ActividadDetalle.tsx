@@ -15,7 +15,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
   FEELING_META, OBSERVATION_META,
   type Activity, type ActivitySubmission, type ActivityEvent, type Student,
-  type StudentCheckin, type ObservationCategory, type StudentObservation,
+  type StudentCheckin, type CheckinMoment, type ObservationCategory, type StudentObservation,
 } from '../types';
 import './Actividades.css';
 
@@ -108,7 +108,9 @@ export default function ActividadDetalle() {
   }, [events]);
 
   const checkinsByStudent = useMemo(() => {
-    const map = new Map<string, { inicio?: StudentCheckin; fin?: StudentCheckin }>();
+    // 'libre' (el check-in del día) no corresponde a una actividad: acá
+    // solo interesan el de inicio y el de fin.
+    const map = new Map<string, Partial<Record<CheckinMoment, StudentCheckin>>>();
     checkins.forEach(c => {
       const entry = map.get(c.studentId) ?? {};
       entry[c.moment] = c; // el último pisa

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     AlertTriangle, CheckCircle, Info, Users, BookOpen,
-    GraduationCap, Bell, MessageSquare, AlertCircle,
+    MessageSquare, AlertCircle, TrendingUp, ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getDirectorStats } from '../services/stats.service';
@@ -40,6 +41,7 @@ function useCounter(target: number, duration = 1200, decimals = 0) {
 
 function DirectorDashboardContent() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [dirStats, setDirStats] = useState<DirectorStats>({ totalTeachers: 0, activeClasses: 0, totalAlerts: 0, avgAttendance: 0, totalStudents: 0 });
     const [teachers, setTeachers] = useState<UserType[]>([]);
     const [schoolAlerts, setSchoolAlerts] = useState<AlertType[]>([]);

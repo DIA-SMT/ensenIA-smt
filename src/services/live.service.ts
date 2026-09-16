@@ -216,7 +216,7 @@ export async function launchActivity(
   const data = unwrap(
     await supabase
       .from('live_activities')
-      .insert({ session_id: sessionId, kind, config })
+      .insert({ session_id: sessionId, kind, config: config as never })
       .select('*')
   );
   return mapActivity((data as any[])[0]);
@@ -246,7 +246,7 @@ export async function upsertLiveResponse(
   const { error } = await supabase
     .from('live_responses')
     .upsert(
-      { activity_id: activityId, session_id: sessionId, student_id: studentId, payload },
+      { activity_id: activityId, session_id: sessionId, student_id: studentId, payload: payload as never },
       { onConflict: 'activity_id,student_id' },
     );
   if (error) throw error;
