@@ -120,16 +120,49 @@ Deno.serve(async (req: Request) => {
   // Use service role client for DB operations (bypasses RLS for ia_usage writes)
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // ── 3. Get teacher profile ──
+  // ── 3. Perfil y ROL real del usuario ──
+  // El rol se resuelve en el servidor: lo que mande el cliente no decide nada.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name')
+    .select('first_name, last_name, role')
     .eq('id', user.id)
     .single();
 
   const teacherName = profile
     ? `${profile.first_name} ${profile.last_name}`
     : 'Docente';
+  const isStudent = profile?.role === 'estudiante';
+
+  // ── 3b. Un estudiante solo puede usar los modos de estudio ──
+  // Sin esto, bastaba con mandar tool:'act' para tener el asistente
+  // completo del docente y pedirle la tarea resuelta.
+  let effectiveTool = tool;
+  let studentSubjects: string[] = [];
+
+  if (isStudent) {
+    if (tool !== 'guide' && tool !== 'simplify') {
+      effectiveTool = 'guide';
+    }
+
+    // De qué puede preguntar: sus materias reales, según su inscripción.
+    const { data: studentRow } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (studentRow) {
+      const { data: enrolled } = await supabase
+        .from('enrollments')
+        .select('subjects(name)')
+        .eq('student_id', studentRow.id);
+      studentSubjects = [...new Set(
+        ((enrolled ?? []) as { subjects?: { name?: string } }[])
+          .map((e) => e.subjects?.name)
+          .filter((n): n is string => Boolean(n)),
+      )];
+    }
+  }
 
   // ── 4. Check daily quota ──
   const today = new Date().toISOString().split('T')[0];
@@ -151,7 +184,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 5. Validate summary input length ──
-  if (tool === 'sum') {
+  if (effectiveTool === 'sum') {
     const lastUserMsg = messages[messages.length - 1];
     if (lastUserMsg && lastUserMsg.content.length > SUMMARY_INPUT_LIMIT) {
       return new Response(
@@ -166,6 +199,8 @@ Deno.serve(async (req: Request) => {
 
   // ── 6. Build system prompt ──
   const promptCtx: PromptContext = {
+    audience: isStudent ? 'estudiante' : 'docente',
+    studentSubjects,
     teacherName,
     subjectName: context.subjectName,
     courseName: context.courseName,
@@ -175,7 +210,7 @@ Deno.serve(async (req: Request) => {
     classContent: context.classContent,
     difficulty: context.difficulty,
     educationLevel: context.educationLevel,
-    tool: tool ?? undefined,
+    tool: effectiveTool ?? undefined,
     documentTitle: context.documentTitle,
     documentText: context.documentText,
   };
@@ -183,7 +218,7 @@ Deno.serve(async (req: Request) => {
 
   // ── 7. Determine model ──
   // Resúmenes y simplificación de lenguaje van al modelo rápido.
-  const useFastModel = tool === 'sum' || tool === 'simplify';
+  const useFastModel = effectiveTool === 'sum' || effectiveTool === 'simplify';
   const modelId = useFastModel ? MODEL_HAIKU : MODEL_SONNET;
   const modelLabel = useFastModel ? 'haiku' : 'sonnet';
 
@@ -288,7 +323,7 @@ Deno.serve(async (req: Request) => {
           session_id: sessionId,
           role: 'assistant',
           content: fullContent,
-          tool_used: tool ?? 'free',
+          tool_used: effectiveTool ?? 'free',
           model_used: modelLabel,
           token_count: tokensOut,
         }).select('id').single();

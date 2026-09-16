@@ -47,13 +47,6 @@ const MODES: Record<GuideMode, {
   },
 };
 
-// Mientras la edge function no conozca estos modos, la instrucción
-// viaja adosada al primer mensaje (invisible en la UI).
-const MODE_PRIMER: Record<GuideMode, string> = {
-  guide: '[Modo guía de estudio: sos la compañera de estudio de un/a estudiante de secundaria. Hacele UNA pregunta por vez sobre el tema que quiere repasar, corregí sus respuestas con cariño y seguí. NUNCA resuelvas tarea ni escribas trabajos para entregar.]\n\n',
-  simplify: '[Modo lenguaje fácil: sos la ayudante de un/a estudiante de secundaria. Explicá el material o texto con frases cortas, palabras simples y un ejemplo argentino concreto. Cerrá con las 3 ideas para recordar. NUNCA resuelvas tarea para entregar.]\n\n',
-};
-
 const DAILY_QUOTA = 50;
 
 export default function MiGuia() {
@@ -147,10 +140,12 @@ export default function MiGuia() {
     setMessages(prev => [...prev, userMsg]);
     saveUserMessage(session.id, text, mode).catch(console.error);
 
-    // Historia para la API: el primer mensaje lleva el primer del modo.
-    const history = [...messages, userMsg].map((m, i) => ({
+    // El modo, el límite de tema y el "no te hago la tarea" los impone el
+    // servidor según el rol real del usuario: acá no viaja ninguna instrucción,
+    // así que no hay nada que el estudiante pueda editar para saltearlo.
+    const history = [...messages, userMsg].map(m => ({
       role: m.role as 'user' | 'assistant',
-      content: i === 0 && m.role === 'user' ? MODE_PRIMER[mode] + m.content : m.content,
+      content: m.content,
     }));
 
     setIsStreaming(true);
