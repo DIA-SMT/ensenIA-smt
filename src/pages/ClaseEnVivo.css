@@ -609,3 +609,68 @@
   .cv-kinds { grid-template-columns: 1fr; }
   .cv-feeling-btn { min-width: 60px; padding: 8px 6px; }
 }
+
+/* ── Puerta de entrada de invitados, dentro del panel ──
+   Con la notebook espejada al proyector, este panel es lo que ve la sala:
+   el QR tiene que estar acá y no atrás de un modal. */
+
+.cv-join {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-5);
+}
+
+.cv-join-qr {
+    width: 168px;
+    height: 168px;
+    padding: 8px;
+    background: #fff;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform var(--transition-fast);
+}
+
+.cv-join-qr:hover { transform: scale(1.03); }
+
+.cv-join-kicker {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Se dicta en voz alta y se tipea a mano cuando la cámara no engancha. */
+.cv-join-code {
+    margin: 4px 0 0;
+    font-family: var(--font-mono);
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0.14em;
+    color: var(--cyan-bright);
+}
+
+.cv-join-meta {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+}
+
+/* Con una actividad corriendo, los resultados mandan: el QR se corre a un
+   costado y queda del tamaño justo para que alguien lo escanee de cerca. */
+.cv-join.compact {
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+}
+
+.cv-join.compact .cv-join-qr { width: 76px; height: 76px; padding: 5px; }
+.cv-join.compact .cv-join-kicker { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+.cv-join.compact .cv-join-code { font-size: 1.3rem; margin-top: 2px; }
+.cv-join.compact .cv-join-meta { font-size: 0.78rem; }
+
+@media (max-width: 560px) {
+    .cv-join { flex-direction: column; text-align: center; gap: var(--space-4); }
+    .cv-join.compact { flex-direction: row; text-align: left; }
+}

@@ -22,6 +22,7 @@ import {
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption,
 } from '../services/live.service';
+import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
 import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
@@ -55,6 +56,7 @@ export default function ClaseEnVivo() {
     const [showQr, setShowQr] = useState(false);
     const [projecting, setProjecting] = useState(false);
     const [connected, setConnected] = useState(0);
+    const [joinQr, setJoinQr] = useState('');
 
     const pollRef = useRef<number | null>(null);
 
@@ -103,6 +105,20 @@ export default function ClaseEnVivo() {
         pollRef.current = window.setInterval(poll, POLL_MS);
         return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
     }, [session?.id, session?.status, poll]);
+
+    // El QR vive en el panel, no en un modal: con la notebook espejada al
+    // proyector, esta pantalla es la que ve la sala. Un modal que hay que
+    // abrir y cerrar tapa justo los resultados que la gente está mirando.
+    const joinCode = session && session !== undefined ? session.joinCode : null;
+    useEffect(() => {
+        if (!joinCode) { setJoinQr(''); return; }
+        QRCode.toDataURL(`${window.location.origin}/vivo/${joinCode}`, {
+            width: 600,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#0F1419', light: '#FFFFFF' },
+        }).then(setJoinQr).catch(() => setJoinQr(''));
+    }, [joinCode]);
 
     if (!user) return null;
 
@@ -165,7 +181,6 @@ export default function ClaseEnVivo() {
         setSession({ ...session, guestsEnabled: next });
         try {
             await setGuestsEnabled(session.id, next);
-            if (next) setShowQr(true); // al abrirla, lo que querés es proyectar el QR
         } catch (err) {
             console.error(err);
             setSession({ ...session, guestsEnabled: !next });
@@ -327,6 +342,33 @@ export default function ClaseEnVivo() {
                     </button>
                 </div>
             </div>
+
+            {/* Puerta de entrada. Grande mientras no hay actividad —que es
+                cuando la gente está entrando— y compacta cuando sí la hay,
+                para no competir con los resultados pero que el que llega
+                tarde siga teniendo por dónde entrar. */}
+            {session.guestsEnabled && session.joinCode && (
+                <div className={`card cv-join ${activity && activity.status !== 'closed' ? 'compact' : ''}`}>
+                    {joinQr && (
+                        <img
+                            className="cv-join-qr"
+                            src={joinQr}
+                            alt={`Código QR para entrar a la sala ${session.joinCode}`}
+                            onClick={() => setShowQr(true)}
+                            title="Ampliar"
+                        />
+                    )}
+                    <div className="cv-join-info">
+                        <p className="cv-join-kicker">Escaneá para entrar</p>
+                        <p className="cv-join-code">{session.joinCode}</p>
+                        <p className="cv-join-meta">
+                            {connected > 0
+                                ? `${connected} ${connected === 1 ? 'conectado' : 'conectados'}`
+                                : 'Sin cuenta, sin instalar nada'}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Reacciones entrantes */}
             {session.reactionsEnabled && reactions.length > 0 && (
