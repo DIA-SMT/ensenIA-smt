@@ -228,3 +228,28 @@
     justify-content: center;
     flex-shrink: 0;
 }
+
+/* Punto de "hay una clase en vivo abierta". Late, igual que el de la
+   pantalla proyectada y el del panel del docente: es el mismo estado. */
+.nav-live-dot {
+    margin-left: auto;
+    width: 9px;
+    height: 9px;
+    border-radius: var(--radius-full);
+    background: var(--danger);
+    flex-shrink: 0;
+    animation: nav-live-pulse 1.8s ease-in-out infinite;
+}
+
+/* Colapsada no hay lugar para el punto al costado: va sobre el ícono. */
+.sidebar.collapsed .nav-live-dot {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    margin-left: 0;
+}
+
+@keyframes nav-live-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.25; }
+}

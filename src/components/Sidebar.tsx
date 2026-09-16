@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnreadAlertCount } from '../services/alerts.service';
+import { getMyLiveSession } from '../services/live.service';
 import './Sidebar.css';
 
 interface NavItem {
@@ -16,13 +17,21 @@ interface NavItem {
     isIA?: boolean;
     /** Muestra el contador de alertas sin abrir (Alertas dejó de ser sección). */
     showAlerts?: boolean;
+    /** Muestra el punto rojo cuando hay una clase en vivo abierta. */
+    showLive?: boolean;
 }
 
-// Cinco destinos, con nombres de aula y no de sistema. Preparar clase,
-// clase en vivo y crear actividad son botones de acción (viven en Hoy),
-// no items de menú: el docente llega a ellos desde su clase del día.
+// Destinos con nombres de aula y no de sistema. Preparar clase y crear
+// actividad siguen siendo botones de acción que viven en Hoy: el docente
+// llega a ellos desde su clase del día.
+//
+// Clase en vivo es la excepción y tiene su item: colgaba de la tarjeta de
+// la clase de hoy, y esa tarjeta se atenúa cuando pasó el horario. Para
+// una jornada, una presentación o cualquier momento que no sea tu clase
+// de las 8, había que ir a buscarlo a un botón que parecía apagado.
 const teacherNavItems: NavItem[] = [
     { label: 'Hoy', path: '/hoy', icon: Sun },
+    { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio, showLive: true },
     { label: 'Armar módulo', path: '/modulo', icon: Boxes, isIA: true },
     { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
     { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
@@ -79,9 +88,28 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const [alertCount, setAlertCount] = useState(0);
 
     const isDocente = user?.role === 'docente';
+    const [liveNow, setLiveNow] = useState(false);
+
     useEffect(() => {
         if (!user || !isDocente) return;
         getUnreadAlertCount(user.id).then(setAlertCount).catch(() => {});
+    }, [user?.id, isDocente]);
+
+    // Una sesión abierta y olvidada bloquea al curso (hay un único índice
+    // de "una clase viva por curso"), así que el punto rojo no es adorno:
+    // es cómo te enterás de que la dejaste prendida. Cada 30s alcanza —
+    // el que está dando la clase ya tiene el panel polleando cada 2,5s.
+    useEffect(() => {
+        if (!user || !isDocente) return;
+        let alive = true;
+        const check = () => {
+            getMyLiveSession(user.id)
+                .then(s => { if (alive) setLiveNow(!!s); })
+                .catch(() => {});
+        };
+        check();
+        const id = window.setInterval(check, 30_000);
+        return () => { alive = false; window.clearInterval(id); };
     }, [user?.id, isDocente]);
 
     const navItems = isDirector ? directorNavItems
@@ -124,6 +152,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             <span className="nav-alert-badge" title={`${alertCount} alertas sin ver`}>
                                 {alertCount}
                             </span>
+                        )}
+                        {item.showLive && liveNow && (
+                            <span className="nav-live-dot" title="Tenés una clase en vivo abierta" />
                         )}
                     </NavLink>
                 ))}
