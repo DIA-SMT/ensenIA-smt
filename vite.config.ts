@@ -8,7 +8,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'inline',
+      // Lo registramos a mano en main.tsx: el que entra por el QR de una
+      // clase en vivo no tiene que llevarse un service worker ni 2,5 MB
+      // de precache. Ver el comentario ahí.
+      injectRegister: null,
       includeAssets: ['vite.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'SMT EstudIA — Aula Municipal',
@@ -39,8 +42,18 @@ export default defineConfig({
         // Los datos ya vistos quedan disponibles sin conexión:
         runtimeCaching: [
           {
-            // Datos (PostgREST): red primero, caché si no hay conexión
-            urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co') && url.pathname.startsWith('/rest/v1/'),
+            // Datos (PostgREST): red primero, caché si no hay conexión.
+            //
+            // Las tablas live_* quedan afuera a propósito: son la clase en
+            // vivo, y ahí una respuesta cacheada es peor que ninguna. Con el
+            // wifi flojo, el timeout de 5s devolvía el conteo viejo y los
+            // números quedaban clavados en la pantalla proyectada mientras
+            // la sala seguía votando. Sin regla que matchee, van derecho a
+            // la red y si no hay conexión fallan, que es lo correcto acá.
+            urlPattern: ({ url }) =>
+              url.hostname.endsWith('.supabase.co')
+              && url.pathname.startsWith('/rest/v1/')
+              && !url.pathname.startsWith('/rest/v1/live_'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-rest',
