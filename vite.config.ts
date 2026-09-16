@@ -11,8 +11,8 @@ export default defineConfig({
       injectRegister: 'inline',
       includeAssets: ['vite.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
-        name: 'ENSEÑIA SMT — Aula Municipal',
-        short_name: 'ENSEÑIA',
+        name: 'SMT EstudIA — Aula Municipal',
+        short_name: 'SMT EstudIA',
         description: 'Plataforma educativa con IA de la Escuela Municipal Gabriela Mistral. Funciona sin conexión.',
         lang: 'es-AR',
         start_url: '/',
