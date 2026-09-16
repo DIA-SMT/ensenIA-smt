@@ -484,7 +484,7 @@ export default function Students() {
                     <div className="profile-header border-bottom">
                         <div className="profile-title-row">
                             <h3>Perfil del Estudiante</h3>
-                            <button className="btn-icon" onClick={() => setSelectedStudent(null)}><X size={18} /></button>
+                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedStudent(null)}><X size={18} /></button>
                         </div>
                     </div>
 
@@ -762,7 +762,7 @@ export default function Students() {
                     <div className="em-modal em-modal-lg">
                         <div className="em-modal-header">
                             <h3><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {selectedStudent.firstName} {selectedStudent.lastName}</h3>
-                            <button className="btn-icon" onClick={() => setShowSummary(false)}><X size={18} /></button>
+                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowSummary(false)}><X size={18} /></button>
                         </div>
                         <div className="em-modal-body">
                             {summaryLoading && (
@@ -805,7 +805,7 @@ export default function Students() {
                     <div className="em-modal">
                         <div className="em-modal-header">
                             <h3><CalendarPlus size={17} className="text-cyan" /> Citar a la familia de {selectedStudent.firstName}</h3>
-                            <button className="btn-icon" onClick={() => setShowCite(false)}><X size={18} /></button>
+                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowCite(false)}><X size={18} /></button>
                         </div>
                         <div className="em-modal-body">
                             {citeDone ? (

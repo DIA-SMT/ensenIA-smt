@@ -165,7 +165,7 @@ export default function MiBiblioteca() {
           <div className="em-modal em-modal-lg">
             <div className="em-modal-header">
               <h3><Sparkles size={17} className="text-ia-accent" /> Resumen — {summaryFor.title}</h3>
-              <button className="btn-icon" onClick={() => setSummaryFor(null)}><X size={18} /></button>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setSummaryFor(null)}><X size={18} /></button>
             </div>
             <div className="em-modal-body">
               <div className="summary-markdown">

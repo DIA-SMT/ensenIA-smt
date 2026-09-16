@@ -1028,6 +1028,7 @@ export type Database = {
       library_materials: {
         Row: {
           ai_summary: string | null
+          class_id: string | null
           description: string | null
           extracted_text: string | null
           file_name: string | null
@@ -1053,6 +1054,7 @@ export type Database = {
         }
         Insert: {
           ai_summary?: string | null
+          class_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1078,6 +1080,7 @@ export type Database = {
         }
         Update: {
           ai_summary?: string | null
+          class_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1102,6 +1105,13 @@ export type Database = {
           uploaded_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "library_materials_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "planning_classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "library_materials_school_id_fkey"
             columns: ["school_id"]
@@ -1199,25 +1209,35 @@ export type Database = {
         Row: {
           created_at: string | null
           emoji: string
+          guest_id: string | null
           id: string
           session_id: string
-          student_id: string
+          student_id: string | null
         }
         Insert: {
           created_at?: string | null
           emoji: string
+          guest_id?: string | null
           id?: string
           session_id: string
-          student_id: string
+          student_id?: string | null
         }
         Update: {
           created_at?: string | null
           emoji?: string
+          guest_id?: string | null
           id?: string
           session_id?: string
-          student_id?: string
+          student_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "live_reactions_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "live_guests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "live_reactions_session_id_fkey"
             columns: ["session_id"]
@@ -1271,6 +1291,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "live_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_responses_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "live_guests"
             referencedColumns: ["id"]
           },
           {
@@ -2464,6 +2491,7 @@ export type Database = {
       }
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
+      gen_join_code: { Args: never; Returns: string }
       get_alert_thresholds: {
         Args: { p_school_id: string }
         Returns: {
@@ -2516,9 +2544,19 @@ export type Database = {
           teacher_name: string
         }[]
       }
-      join_live_session: { Args: { p_code: string; p_name: string }; Returns: Json }
+      join_live_session: {
+        Args: { p_code: string; p_name: string }
+        Returns: Json
+      }
       live_guest_state: { Args: { p_token: string }; Returns: Json }
-      send_live_guest_reaction: { Args: { p_emoji: string; p_token: string }; Returns: undefined }
+      live_results_json: {
+        Args: { p_activity: string; p_include_names: boolean }
+        Returns: Json
+      }
+      send_live_guest_reaction: {
+        Args: { p_emoji: string; p_token: string }
+        Returns: undefined
+      }
       submit_live_guest_response: {
         Args: { p_activity: string; p_payload: Json; p_token: string }
         Returns: undefined

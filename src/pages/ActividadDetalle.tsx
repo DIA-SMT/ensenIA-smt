@@ -360,7 +360,7 @@ export default function ActividadDetalle() {
                   <span className="text-xs text-secondary">{selected.enrollmentCode}</span>
                 </div>
               </div>
-              <button className="btn-icon" onClick={() => setSelected(null)}><X size={18} /></button>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
 
             <div className="acts-side-body">

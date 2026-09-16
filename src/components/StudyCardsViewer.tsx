@@ -64,7 +64,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
                 🎯 {quizOk}/{quizDone}
               </span>
             )}
-            <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+            <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
           </div>
         </div>
 

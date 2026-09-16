@@ -452,7 +452,7 @@ export default function Biblioteca() {
           <div className="em-modal">
             <div className="em-modal-header">
               <h3><Upload size={17} className="text-cyan" /> Subir material</h3>
-              <button className="btn-icon" onClick={() => setShowUpload(false)}><X size={18} /></button>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowUpload(false)}><X size={18} /></button>
             </div>
             <div className="em-modal-body">
               {uplError && <div className="em-error"><AlertCircle size={15} /> {uplError}</div>}
@@ -529,7 +529,7 @@ export default function Biblioteca() {
           <div className="em-modal em-modal-lg">
             <div className="em-modal-header">
               <h3><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {summaryFor.title}</h3>
-              <button className="btn-icon" onClick={() => setSummaryFor(null)}><X size={18} /></button>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setSummaryFor(null)}><X size={18} /></button>
             </div>
             <div className="em-modal-body">
               {summaryLoading && (

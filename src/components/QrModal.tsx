@@ -59,7 +59,7 @@ export default function QrModal({ path, title, subtitle, onClose }: Props) {
       <div className="em-modal qr-modal">
         <div className="em-modal-header">
           <h3><QrCode size={17} className="text-cyan" /> {title}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="em-modal-body qr-body">
           {error && <div className="em-error">{error}</div>}

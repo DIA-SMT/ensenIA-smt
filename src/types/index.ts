@@ -342,6 +342,8 @@ export interface LibraryMaterial {
   studyCards?: StudyCard[] | null;
   podcastPath?: string | null;
   podcastStatus?: 'none' | 'generating' | 'ready' | 'error';
+  /** Tema de la planificación del que salió (si lo generó Armar módulo). */
+  classId?: string | null;
 }
 
 // ── Placas de estudio ──

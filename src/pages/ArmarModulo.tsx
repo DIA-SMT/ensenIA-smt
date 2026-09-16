@@ -135,11 +135,16 @@ export default function ArmarModulo() {
 
     const baseMaterial = materials.find(m => m.id === baseMaterialId) ?? null;
     const baseTema = temas.find(t => t.id === temaId) ?? null;
+    // Si este tema ya tiene material generado, se muestra antes de gastar otra generación
+    const existing = origen === 'tema' && baseTema
+        ? materials.find(m => m.classId === baseTema.id) ?? null
+        : null;
 
-    /** Título del módulo según de dónde salga. */
-    const moduleName = origen === 'material' && baseMaterial ? (topic.trim() || baseMaterial.title)
+    /** Título del módulo según de dónde salga. Si parte de otro módulo, no se
+     *  arrastra el prefijo (evita "Módulo: Módulo: ..."). */
+    const moduleName = (origen === 'material' && baseMaterial ? (topic.trim() || baseMaterial.title)
         : origen === 'tema' && baseTema ? (topic.trim() || baseTema.title)
-        : topic.trim();
+        : topic.trim()).replace(/^Módulo:\s*/i, '');
 
     const canGenerate = Boolean(assignment) && (
         origen === 'material' ? Boolean(baseMaterial)
@@ -247,6 +252,7 @@ export default function ArmarModulo() {
                 teacherId: user.id,
                 schoolId: user.schoolId,
                 tags: ['módulo', topic.trim().slice(0, 24)],
+                classId: origen === 'tema' && baseTema ? baseTema.id : null,
             });
             await updateMaterial(mat.id, { extractedText: content });
             setMaterialId(mat.id);
@@ -467,12 +473,39 @@ export default function ArmarModulo() {
                             onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
                         />
 
+                        {existing && (
+                            <div className="mod-existing" role="status">
+                                <div className="mod-existing-head">
+                                    <Check size={16} />
+                                    <div>
+                                        <strong>Este tema ya tiene su material</strong>
+                                        <em>Se generó una vez y quedó guardado. Usalo directo, no hace falta rehacerlo.</em>
+                                    </div>
+                                </div>
+                                <div className="mod-existing-actions">
+                                    {existing.studyCards && existing.studyCards.length > 0 && (
+                                        <button className="btn btn-primary btn-sm" onClick={() => { setCards(existing.studyCards!); setShowCards(true); }}>
+                                            <Layers size={14} /> Ver las {existing.studyCards.length} placas
+                                        </button>
+                                    )}
+                                    {existing.podcastStatus === 'ready' && existing.podcastPath && (
+                                        <button className="btn btn-primary btn-sm" onClick={() => { setPodcastPath(existing.podcastPath!); setShowPodcast(true); }}>
+                                            <Headphones size={14} /> Escuchar el podcast
+                                        </button>
+                                    )}
+                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/mis-clases?tab=materiales')}>
+                                        <BookOpen size={14} /> Abrir en mis materiales
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <button
-                            className="btn btn-primary mod-cta"
+                            className={`btn ${existing ? 'btn-outline' : 'btn-primary'} mod-cta`}
                             onClick={handleGenerate}
                             disabled={!canGenerate}
                         >
-                            <Sparkles size={17} /> Armar el módulo
+                            <Sparkles size={17} /> {existing ? 'Volver a generarlo de todos modos' : 'Armar el módulo'}
                         </button>
                     </div>
                 </section>

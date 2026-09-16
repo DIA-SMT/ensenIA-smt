@@ -978,14 +978,33 @@ export default function IALab() {
                                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                 />
                                 <div className="editor-meta">
-                                    {/* La salida al material: de este tema salen placas, podcast y actividad */}
-                                    <button
-                                        className="btn btn-primary btn-sm"
-                                        onClick={() => navigate(`/modulo?tema=${selectedClass.id}`)}
-                                        title="Generar placas, podcast y actividad a partir de este tema"
-                                    >
-                                        <Boxes size={14} /> Armar el material
-                                    </button>
+                                    {/* La salida al material: de este tema salen placas, podcast y actividad.
+                                        Si ya se generó, se muestra lo que hay en vez de invitar a rehacerlo. */}
+                                    {(() => {
+                                        const mat = materials.find(m => m.classId === selectedClass.id);
+                                        if (!mat) return (
+                                            <button
+                                                className="btn btn-primary btn-sm"
+                                                onClick={() => navigate(`/modulo?tema=${selectedClass.id}`)}
+                                                title="Generar placas, podcast y actividad a partir de este tema"
+                                            >
+                                                <Boxes size={14} /> Armar el material
+                                            </button>
+                                        );
+                                        const piezas = [
+                                            mat.studyCards?.length ? `${mat.studyCards.length} placas` : null,
+                                            mat.podcastStatus === 'ready' ? 'podcast' : null,
+                                        ].filter(Boolean).join(' · ');
+                                        return (
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() => navigate(`/modulo?tema=${selectedClass.id}`)}
+                                                title={piezas ? `Ya tiene: ${piezas}` : 'Ya tiene material generado'}
+                                            >
+                                                <CheckCircle size={14} className="text-success" /> Material listo{piezas ? ` · ${piezas}` : ''}
+                                            </button>
+                                        );
+                                    })()}
                                     <button
                                         className={`badge ${selectedClass.isComplete ? 'badge-success' : 'badge-warning'}`}
                                         style={{ cursor: 'pointer', border: 'none' }}

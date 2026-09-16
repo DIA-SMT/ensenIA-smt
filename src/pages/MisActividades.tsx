@@ -18,6 +18,30 @@ import './StudentPortal.css';
 
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
 
+/**
+ * Días de clase seguidos con check-in. Sábado y domingo no cuentan ni cortan
+ * la racha: si el viernes y el lunes tienen check-in, la racha sigue.
+ */
+function computeStreak(checkins: { moment: string; createdAt: string }[]): number {
+  const days = new Set(
+    checkins.filter(c => c.moment === 'libre').map(c => new Date(c.createdAt).toDateString()),
+  );
+  if (days.size === 0) return 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  // Si hoy todavía no hizo el check-in, la racha se cuenta desde ayer
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  for (let i = 0; i < 90; i++) {
+    const dow = cursor.getDay();
+    if (dow === 0 || dow === 6) { cursor.setDate(cursor.getDate() - 1); continue; }
+    if (!days.has(cursor.toDateString())) break;
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 export default function MisActividades() {
   const { user } = useAuth();
   const [student, setStudent] = useState<Student | null>(null);
@@ -33,6 +57,7 @@ export default function MisActividades() {
   const [achievements, setAchievements] = useState<StudentAchievement[]>([]);
   const [todayFeeling, setTodayFeeling] = useState<CheckinFeeling | null>(null);
   const [checkinDone, setCheckinDone] = useState(false);
+  const [streak, setStreak] = useState(0);
   const [pickedFeeling, setPickedFeeling] = useState<CheckinFeeling | null>(null);
   const [feelingComment, setFeelingComment] = useState('');
   const [savingCheckin, setSavingCheckin] = useState(false);
@@ -56,9 +81,10 @@ export default function MisActividades() {
           // No bloquean la carga principal
           getLiveSessionForCourse(st.courseId).then(setLiveSession).catch(console.error);
           getAchievementsByStudent(st.id).then(setAchievements).catch(console.error);
-          getCheckinsByStudent(st.id, 5).then(chks => {
+          getCheckinsByStudent(st.id, 60).then(chks => {
             const today = chks.find(c => c.moment === 'libre' && isToday(c.createdAt));
             if (today) { setCheckinDone(true); setTodayFeeling(today.feeling); }
+            setStreak(computeStreak(chks));
           }).catch(console.error);
         }
       } catch (err) {
@@ -90,6 +116,7 @@ export default function MisActividades() {
       });
       setCheckinDone(true);
       setTodayFeeling(pickedFeeling);
+      setStreak(v => v + 1);
     } catch (err) {
       console.error('Error guardando check-in:', err);
       alert('No se pudo guardar. Probá de nuevo en un ratito.');
@@ -168,6 +195,12 @@ export default function MisActividades() {
             <span className="sp-hero-num text-warning">{totalPoints(achievements)}</span>
             <span className="sp-hero-label">⭐ puntos</span>
           </div>
+          {streak >= 2 && (
+            <div className="sp-hero-stat" title="Días de clase seguidos contando cómo te sentís">
+              <span className="sp-hero-num">🔥{streak}</span>
+              <span className="sp-hero-label">días seguidos</span>
+            </div>
+          )}
         </div>
       </div>
 

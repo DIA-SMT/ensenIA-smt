@@ -29,7 +29,7 @@ export default function PodcastPlayer({ path, title, onClose }: Props) {
       <div className="em-modal">
         <div className="em-modal-header">
           <h3><Headphones size={17} className="text-ia-accent" /> Podcast — {title}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="em-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {error && <p className="text-sm text-danger">{error}</p>}

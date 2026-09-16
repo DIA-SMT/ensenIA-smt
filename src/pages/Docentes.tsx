@@ -122,7 +122,7 @@ export default function Docentes() {
           <div className="profile-header">
             <div className="profile-title-row">
               <h3>Perfil Docente</h3>
-              <button className="btn-icon" onClick={() => setSelectedTeacher(null)}>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedTeacher(null)}>
                 <X size={18} />
               </button>
             </div>

@@ -122,7 +122,7 @@ export default function Agenda() {
                     <div className="modal-content card" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>Detalle de Clase</h3>
-                            <button className="btn-icon" onClick={() => setSelectedBlock(null)}><X size={20} /></button>
+                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedBlock(null)}><X size={20} /></button>
                         </div>
 
                         <div className={`modal-banner ${blockColors[selectedBlock.colorClass] || 'block-blue'}`}>

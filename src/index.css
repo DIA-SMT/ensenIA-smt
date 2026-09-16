@@ -534,3 +534,48 @@ input, select, textarea {
 /* Height utilities for chart bars */
 .h-30 { height: 30%; } .h-45 { height: 45%; } .h-60 { height: 60%; }
 .h-75 { height: 75%; } .h-90 { height: 90%; } .h-100 { height: 100%; }
+
+/* ═══════════════════════════════════════════════
+   Accesibilidad base (added)
+   ═══════════════════════════════════════════════ */
+
+/* Foco visible para quien navega con teclado: sin esto, un docente que usa
+   Tab no sabe dónde está parado. Solo con :focus-visible, así el mouse no
+   deja anillos por todos lados. */
+:focus-visible {
+  outline: 2px solid var(--cyan-bright);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--cyan-bright);
+  outline-offset: 3px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--cyan-bright);
+  outline-offset: 0;
+}
+
+/* Quien pidió menos movimiento en su sistema lo tiene: las animaciones se
+   reducen a un parpadeo y los pulsos se apagan. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Área táctil mínima en pantallas chicas: 44px es lo que recomienda la
+   WCAG para no errar el dedo. */
+@media (max-width: 640px) {
+  .btn-icon { min-width: 44px; min-height: 44px; }
+  .btn-sm { min-height: 40px; }
+}

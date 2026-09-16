@@ -52,6 +52,7 @@ export async function createMaterial(material: {
   teacherId: string;
   schoolId: string;
   tags: string[];
+  classId?: string | null;
 }): Promise<LibraryMaterial> {
   const row = unwrap(
     await supabase
@@ -59,6 +60,7 @@ export async function createMaterial(material: {
       .insert({
         title: material.title,
         description: material.description,
+        class_id: material.classId ?? null,
         file_type: material.fileType as any,
         file_name: material.fileName,
         file_size: material.fileSize,
@@ -116,5 +118,18 @@ function mapMaterial(row: any): LibraryMaterial {
     studyCards: row.study_cards ?? null,
     podcastPath: row.podcast_path ?? null,
     podcastStatus: row.podcast_status ?? 'none',
+    classId: row.class_id ?? null,
   };
+}
+
+/** El material que ya se generó para un tema, si existe. Se genera una vez y queda. */
+export async function getMaterialByClass(classId: string): Promise<LibraryMaterial | null> {
+  const { data } = await supabase
+    .from('library_materials')
+    .select('*')
+    .eq('class_id', classId)
+    .order('uploaded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? mapMaterial(data) : null;
 }

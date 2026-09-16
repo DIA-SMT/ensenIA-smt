@@ -88,7 +88,7 @@ export default function PublishActivityModal(props: Props) {
       <div className="em-modal">
         <div className="em-modal-header">
           <h3><Send size={17} className="text-cyan" /> Publicar actividad</h3>
-          <button className="btn-icon" onClick={props.onClose}><X size={18} /></button>
+          <button className="btn-icon" aria-label="Cerrar" onClick={props.onClose}><X size={18} /></button>
         </div>
 
         <div className="em-modal-body">
