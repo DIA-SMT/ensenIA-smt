@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 import './Modals.css';
@@ -49,7 +50,11 @@ export default function QrModal({ path, title, subtitle, onClose }: Props) {
     }
   };
 
-  return (
+  // Portal al body: varias páginas que abren este modal usan .animate-in,
+  // que deja un transform aplicado, y eso hace que el overlay se posicione
+  // contra el contenedor en vez de contra la pantalla — el QR queda corrido
+  // y tapado por la topbar justo cuando lo estás proyectando.
+  return createPortal(
     <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="em-modal qr-modal">
         <div className="em-modal-header">
@@ -73,6 +78,7 @@ export default function QrModal({ path, title, subtitle, onClose }: Props) {
           <button className="btn btn-primary btn-sm" onClick={onClose}>Listo</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,0 +1,321 @@
+/**
+ * Modo proyección.
+ *
+ * Todo se dimensiona en vw/vh en vez de px: la misma pantalla tiene que
+ * leerse en un proyector viejo de 1024×768 y en un televisor 4K, y en
+ * los dos casos desde el fondo de la sala. Nada acá se mide en rem.
+ */
+
+.pv-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-main);
+    color: var(--text-primary);
+}
+
+/* ── Barra superior ── */
+
+.pv-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.6vh 2.2vw;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.pv-title {
+    display: flex;
+    align-items: center;
+    gap: 0.9vw;
+    font-size: 1.9vw;
+    font-weight: 600;
+}
+
+.pv-dot {
+    width: 1vw;
+    height: 1vw;
+    max-width: 14px;
+    max-height: 14px;
+    border-radius: 50%;
+    background: var(--danger);
+    animation: pv-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pv-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+}
+
+.pv-top-right {
+    display: flex;
+    align-items: center;
+    gap: 1.4vw;
+}
+
+.pv-connected {
+    display: flex;
+    align-items: center;
+    gap: 0.6vw;
+    font-size: 1.5vw;
+    color: var(--cyan-bright);
+}
+
+.pv-close {
+    display: flex;
+    padding: 0.7vh 0.7vw;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.pv-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+}
+
+/* ── Cuerpo ── */
+
+.pv-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 3vh 4vw;
+    min-height: 0;
+}
+
+.pv-center {
+    align-items: center;
+    justify-content: center;
+}
+
+.pv-question {
+    font-size: 3.4vw;
+    line-height: 1.2;
+    margin: 0 0 4vh;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.pv-waiting {
+    margin: auto;
+    font-size: 2.2vw;
+    color: var(--text-subtle);
+}
+
+.pv-dots::after {
+    content: '...';
+    animation: pv-dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes pv-dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+}
+
+/* ── Pantalla de ingreso (mientras la gente entra) ── */
+
+.pv-join {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5vw;
+}
+
+.pv-join-qr img {
+    display: block;
+    width: 38vh;
+    height: 38vh;
+    min-width: 260px;
+    min-height: 260px;
+    padding: 1.6vh;
+    background: #fff;
+    border-radius: 1.4vh;
+}
+
+.pv-join-side {
+    max-width: 40vw;
+}
+
+.pv-join-kicker {
+    margin: 0;
+    font-size: 2.4vw;
+    font-weight: 600;
+}
+
+.pv-join-or {
+    margin: 2.2vh 0 0.6vh;
+    font-size: 1.3vw;
+    color: var(--text-subtle);
+}
+
+.pv-join-url {
+    margin: 0;
+    font-size: 1.9vw;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+/* El código se dicta en voz alta: separado y en monoespaciado para que
+   nadie confunda un carácter desde quince metros. */
+.pv-join-code {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 5.2vw;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--cyan-bright);
+}
+
+.pv-join-foot {
+    margin: 3vh 0 0;
+    font-size: 1.35vw;
+    color: var(--text-subtle);
+}
+
+/* ── Barras de resultados ── */
+
+.pv-bars {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2.2vh;
+    flex: 1;
+    min-height: 0;
+}
+
+.pv-bar-row {
+    display: grid;
+    grid-template-columns: 22vw 1fr 6vw;
+    align-items: center;
+    gap: 1.6vw;
+}
+
+.pv-bar-label {
+    font-size: 1.9vw;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pv-bar-track {
+    height: 5.2vh;
+    background: var(--bg-surface);
+    border-radius: 1vh;
+    overflow: hidden;
+}
+
+.pv-bar-fill {
+    height: 100%;
+    border-radius: 1vh;
+    background: linear-gradient(90deg, var(--indigo), var(--cyan-bright));
+    /* La barra tiene que crecer a la vista de la sala, no aparecer ya hecha */
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pv-bar-row.correct .pv-bar-fill {
+    background: linear-gradient(90deg, var(--mint-dim), var(--mint));
+}
+
+.pv-bar-n {
+    font-size: 2.6vw;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Nube de palabras ── */
+
+.pv-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    gap: 0.6em 1.2em;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.pv-word {
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--cyan-bright);
+    transition: font-size 0.5s ease;
+}
+
+/* ── Respuestas libres ── */
+
+.pv-texts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(24vw, 1fr));
+    align-content: center;
+    gap: 1.6vh 1.4vw;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.pv-text-card {
+    padding: 1.8vh 1.4vw;
+    font-size: 1.5vw;
+    line-height: 1.4;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--cyan-bright);
+    border-radius: 1vh;
+}
+
+/* ── Pie: contador y QR chico para los que llegan tarde ── */
+
+.pv-bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-top: 3vh;
+    flex-shrink: 0;
+}
+
+.pv-count {
+    font-size: 3.2vw;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--cyan-bright);
+}
+
+.pv-count-total {
+    font-size: 1.8vw;
+    font-weight: 500;
+    color: var(--text-subtle);
+}
+
+.pv-mini-join {
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+}
+
+.pv-mini-qr {
+    width: 9vh;
+    height: 9vh;
+    min-width: 64px;
+    min-height: 64px;
+    padding: 0.5vh;
+    background: #fff;
+    border-radius: 0.6vh;
+}
+
+.pv-mini-code {
+    font-family: var(--font-mono);
+    font-size: 1.6vw;
+    letter-spacing: 0.14em;
+    color: var(--text-secondary);
+}

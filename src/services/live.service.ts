@@ -332,3 +332,21 @@ export async function deleteLiveResponse(id: string): Promise<void> {
   const { error } = await supabase.from('live_responses').delete().eq('id', id);
   if (error) throw error;
 }
+
+/**
+ * Cuántos invitados están realmente en la sala ahora.
+ *
+ * Cuenta los vistos en los últimos 2 minutos, no los que alguna vez
+ * entraron: en la pantalla proyectada el número tiene que ser el de la
+ * gente que está, no un acumulado que solo sube.
+ */
+export async function getConnectedGuests(sessionId: string): Promise<number> {
+  const since = new Date(Date.now() - 120_000).toISOString();
+  const { count, error } = await supabase
+    .from('live_guests')
+    .select('id', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
+    .gt('last_seen_at', since);
+  if (error) throw error;
+  return count ?? 0;
+}

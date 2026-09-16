@@ -1160,6 +1160,41 @@ export type Database = {
           },
         ]
       }
+      live_guests: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          id: string
+          last_seen_at: string | null
+          session_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          id?: string
+          last_seen_at?: string | null
+          session_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          last_seen_at?: string | null
+          session_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_guests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_reactions: {
         Row: {
           created_at: string | null

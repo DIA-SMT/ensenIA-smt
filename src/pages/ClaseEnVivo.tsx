@@ -11,18 +11,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
-    Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus,
+    Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, setGuestsEnabled, LIVE_KIND_META,
+    getRecentReactions, setGuestsEnabled, getConnectedGuests, LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption,
 } from '../services/live.service';
 import QrModal from '../components/QrModal';
+import ProyectarVivo from '../components/ProyectarVivo';
 import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
 import './ClaseEnVivo.css';
 
@@ -52,6 +53,8 @@ export default function ClaseEnVivo() {
     const [correctId, setCorrectId] = useState<string>('');
     const [launching, setLaunching] = useState(false);
     const [showQr, setShowQr] = useState(false);
+    const [projecting, setProjecting] = useState(false);
+    const [connected, setConnected] = useState(0);
 
     const pollRef = useRef<number | null>(null);
 
@@ -85,6 +88,9 @@ export default function ClaseEnVivo() {
             if (state.session.reactionsEnabled) {
                 const since = new Date(Date.now() - 60_000).toISOString();
                 getRecentReactions(session.id, since).then(setReactions).catch(console.error);
+            }
+            if (state.session.guestsEnabled) {
+                getConnectedGuests(session.id).then(setConnected).catch(console.error);
             }
         } catch (err) {
             console.error('poll error:', err);
@@ -299,6 +305,13 @@ export default function ClaseEnVivo() {
                         </button>
                     )}
                     <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setProjecting(true)}
+                        title="Pantalla completa para el proyector"
+                    >
+                        <MonitorPlay size={13} /> Proyectar
+                    </button>
+                    <button
                         className={`cv-toggle ${session.reactionsEnabled ? 'on' : ''}`}
                         onClick={handleToggleReactions}
                         title={session.reactionsEnabled
@@ -457,6 +470,16 @@ export default function ClaseEnVivo() {
                     </div>
                 )}
             </div>
+
+            {projecting && (
+                <ProyectarVivo
+                    session={session}
+                    activity={activity}
+                    results={results}
+                    connected={connected}
+                    onClose={() => setProjecting(false)}
+                />
+            )}
 
             {showQr && session.joinCode && (
                 <QrModal
