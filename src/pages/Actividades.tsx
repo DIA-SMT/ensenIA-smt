@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardList, Users, CheckCircle, Clock, ChevronRight, Sparkles,
-  CircleDot, Lock, Unlock, Trash2, QrCode,
+  CircleDot, Lock, Unlock, Trash2, QrCode, Search,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -22,6 +22,8 @@ export default function Actividades() {
   const [activities, setActivities] = useState<ActivityWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrFor, setQrFor] = useState<Activity | null>(null);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'todas' | 'abiertas' | 'pendientes' | 'cerradas'>('todas');
 
   const load = async () => {
     if (!user) return;
@@ -53,6 +55,24 @@ export default function Actividades() {
 
   useEffect(() => { load(); }, [user]);
 
+  // Con muchas actividades la lista se volvía inmanejable: buscar por
+  // título/materia/curso, y filtrar por lo que el docente suele buscar.
+  const filtered = useMemo(() => {
+    let list = activities;
+    if (filter === 'abiertas') list = list.filter(a => a.status !== 'closed');
+    else if (filter === 'cerradas') list = list.filter(a => a.status === 'closed');
+    else if (filter === 'pendientes') list = list.filter(a => a.submitted > 0);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        (a.subjectName ?? '').toLowerCase().includes(q) ||
+        (a.courseName ?? '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [activities, filter, search]);
+
   if (!user) return null;
 
   const handleToggleStatus = async (a: Activity) => {
@@ -80,6 +100,37 @@ export default function Actividades() {
         </Link>
       </div>
 
+      {activities.length > 3 && (
+        <div className="acts-toolbar">
+          <div className="search-bar acts-search">
+            <Search size={15} className="search-icon" />
+            <input
+              className="search-input"
+              placeholder="Buscar por título, materia o curso..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="acts-filters">
+            {([
+              ['todas', 'Todas'],
+              ['abiertas', 'Abiertas'],
+              ['pendientes', 'Con entregas'],
+              ['cerradas', 'Cerradas'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                className={`acts-filter-chip ${filter === key ? 'selected' : ''}`}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+            <span className="acts-count">{filtered.length} de {activities.length}</span>
+          </div>
+        </div>
+      )}
+
       {loading && <p className="text-secondary p-6">Cargando actividades...</p>}
 
       {!loading && activities.length === 0 && (
@@ -97,7 +148,12 @@ export default function Actividades() {
       )}
 
       <div className="acts-list">
-        {activities.map(a => (
+        {!loading && activities.length > 0 && filtered.length === 0 && (
+          <div className="card acts-empty">
+            <p className="text-secondary text-sm">Ninguna actividad coincide con la búsqueda.</p>
+          </div>
+        )}
+        {filtered.map(a => (
           <div key={a.id} className={`card acts-card ${a.status === 'closed' ? 'closed' : ''}`}>
             <div className="acts-card-main">
               <Link to={`/actividades/${a.id}`} className="acts-card-title">

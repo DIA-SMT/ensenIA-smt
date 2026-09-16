@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Search, ChevronRight, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy,
@@ -39,6 +40,7 @@ const WORK_STATUS_META: Record<StudentWork['status'], { label: string; cls: stri
 
 export default function Students() {
     const { user } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [search, setSearch] = useState('');
@@ -92,6 +94,16 @@ export default function Students() {
         const courseIds = user.subjects?.map(s => s.courseId) ?? [];
         getStudentsByTeacher(courseIds).then(setAllStudents).catch(console.error);
     }, [user]);
+
+    // Llegado desde una alerta (/students?student=<id>): abre esa ficha sola
+    useEffect(() => {
+        const wanted = searchParams.get('student');
+        if (!wanted || allStudents.length === 0) return;
+        const found = allStudents.find(s => s.id === wanted);
+        if (found) setSelectedStudent(found);
+        searchParams.delete('student');
+        setSearchParams(searchParams, { replace: true });
+    }, [allStudents, searchParams, setSearchParams]);
 
     useEffect(() => {
         if (!selectedStudent) return;

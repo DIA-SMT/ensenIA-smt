@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, TrendingDown, BookX, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, TrendingDown, BookX, AlertTriangle, UserRound, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAlertsByTeacher, getAlertsBySchool } from '../services/alerts.service';
+import { getAlertsByTeacher, getAlertsBySchool, markAlertRead } from '../services/alerts.service';
 import { getAllStudents } from '../services/students.service';
 import type { Alert } from '../types';
 import './Alerts.css';
@@ -45,6 +46,7 @@ function groupAlerts(alertsList: Alert[], totalStudents: number) {
 
 export default function Alerts() {
     const { user, isDirector } = useAuth();
+    const navigate = useNavigate();
     const [alertsList, setAlertsList] = useState<Alert[]>([]);
     const [totalStudents, setTotalStudents] = useState(0);
 
@@ -58,6 +60,15 @@ export default function Alerts() {
         loadAlerts.then(setAlertsList).catch(console.error);
         getAllStudents().then(s => setTotalStudents(s.length)).catch(console.error);
     }, [user, isDirector]);
+
+    const handleMarkRead = async (id: string) => {
+        setAlertsList(prev => prev.map(a => (a.id === id ? { ...a, isRead: true } : a)));
+        try {
+            await markAlertRead(id);
+        } catch (err) {
+            console.error('No se pudo marcar la alerta:', err);
+        }
+    };
 
     if (!user) return null;
 
@@ -73,12 +84,7 @@ export default function Alerts() {
                     <h2 className="page-title">Sistema de Alertas Tempranas</h2>
                     <p className="text-secondary mt-1">{subtitle}</p>
                 </div>
-                <div className="alerts-actions">
-                    <button className="btn btn-outline text-sm">Exportar Reporte</button>
-                    {isDirector && (
-                        <button className="btn btn-primary text-sm">Configurar Umbrales</button>
-                    )}
-                </div>
+
             </header>
 
             <div className="warnings-grid">
@@ -105,27 +111,49 @@ export default function Alerts() {
                                         <li className="text-subtle">+ {warning.details.length - 3} más</li>
                                     )}
                                 </ul>
-                                <button className={`btn-ghost text-sm mt-3 text-${warning.level} font-medium`}>
-                                    Ver detalle completo →
-                                </button>
+
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Recent Alerts Timeline */}
+            {/* Alertas recientes: cada una lleva a hacer algo */}
             <div className="card mt-6 padding-lg">
                 <h3 className="mb-4 text-lg font-semibold">Alertas Recientes</h3>
+                {alertsList.length === 0 && (
+                    <p className="text-secondary text-sm">No hay alertas activas. 🎉</p>
+                )}
                 <div className="alerts-timeline">
                     {alertsList.map(alert => (
-                        <div key={alert.id} className={`timeline-item timeline-${alert.type}`}>
+                        <div key={alert.id} className={`timeline-item timeline-${alert.type} ${alert.isRead ? 'is-read' : ''}`}>
                             <div className="timeline-dot">
                                 <AlertTriangle size={12} />
                             </div>
                             <div className="timeline-content">
                                 <p className="timeline-msg">{alert.message}</p>
                                 <span className="timeline-date">{alert.date}</span>
+                                <div className="timeline-actions">
+                                    {alert.studentIds?.length ? (
+                                        <button
+                                            className="timeline-action"
+                                            onClick={() => navigate(`/students?student=${alert.studentIds![0]}`)}
+                                            title="Abrir su ficha para registrar una observación o citar a la familia"
+                                        >
+                                            <UserRound size={13} /> Ver ficha
+                                        </button>
+                                    ) : null}
+                                    {!alert.isRead && (
+                                        <button
+                                            className="timeline-action"
+                                            onClick={() => handleMarkRead(alert.id)}
+                                            title="Ya me ocupé de esto"
+                                        >
+                                            <Check size={13} /> Marcar atendida
+                                        </button>
+                                    )}
+                                    {alert.isRead && <span className="timeline-done"><Check size={12} /> Atendida</span>}
+                                </div>
                             </div>
                         </div>
                     ))}

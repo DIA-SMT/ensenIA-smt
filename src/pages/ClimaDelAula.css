@@ -1,0 +1,280 @@
+/* ═══════════════════════════════════════════════
+   SMT EstudIA — Clima del aula
+   ═══════════════════════════════════════════════ */
+
+.clima-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 860px;
+}
+
+.clima-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.clima-controls .form-select { max-width: 220px; }
+
+.clima-ranges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.clima-range {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 5px 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.clima-range:hover { color: var(--text-primary); }
+.clima-range.active {
+  color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  font-weight: 600;
+}
+
+/* ── Pulso general ── */
+.clima-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: var(--space-5);
+  flex-wrap: wrap;
+  border-left-width: 4px !important;
+}
+
+.clima-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.clima-hero h2 { font-size: 18px; font-weight: 700; }
+
+.clima-score {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.clima-great { border-left-color: var(--success) !important; }
+.clima-great .clima-score { color: var(--success); }
+.clima-good { border-left-color: var(--cyan-bright) !important; }
+.clima-good .clima-score { color: var(--cyan-bright); }
+.clima-mid { border-left-color: var(--warning) !important; }
+.clima-mid .clima-score { color: var(--warning); }
+.clima-low { border-left-color: var(--danger) !important; }
+.clima-low .clima-score { color: var(--danger); }
+
+.clima-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  padding: 5px 13px;
+  white-space: nowrap;
+}
+
+.clima-trend.up { color: var(--success); background: rgba(52, 211, 153, 0.12); }
+.clima-trend.down { color: var(--danger); background: var(--danger-light); }
+.clima-trend.flat { color: var(--text-secondary); background: var(--bg-elevated); }
+
+/* ── Secciones ── */
+.clima-section {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.clima-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.clima-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-subtle);
+}
+
+/* ── Distribución ── */
+.clima-dist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.clima-dist-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+}
+
+.clima-dist-label { font-size: 13px; color: var(--text-secondary); }
+
+.clima-dist-track {
+  height: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.clima-dist-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+  min-width: 2px;
+}
+
+.f-genial { background: #34D399; }
+.f-bien { background: #00A8FF; }
+.f-neutral { background: #94A3B8; }
+.f-confundido { background: #FBBF24; }
+.f-frustrado { background: #EF4444; }
+
+.clima-dist-n {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* ── Gráfico día a día ── */
+.clima-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.clima-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 38px;
+  flex: 1;
+}
+
+.clima-bar-track {
+  width: 100%;
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.clima-bar {
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  transition: height 0.5s ease;
+  min-height: 3px;
+}
+
+.clima-bar.ok { background: linear-gradient(180deg, #34D399, #059669); }
+.clima-bar.mid { background: linear-gradient(180deg, #FBBF24, #D97706); }
+.clima-bar.low { background: linear-gradient(180deg, #F87171, #DC2626); }
+
+.clima-bar-date { font-size: 9.5px; color: var(--text-subtle); white-space: nowrap; }
+.clima-bar-count { font-size: 10px; font-weight: 700; color: var(--text-secondary); }
+
+/* ── Estudiantes a mirar ── */
+.clima-attention { border-color: rgba(251, 191, 36, 0.35) !important; }
+
+.clima-students {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clima-student {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.clima-student:hover { border-color: var(--warning); transform: translateX(2px); }
+.clima-student > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.clima-student strong { font-size: 13.5px; color: var(--text-primary); }
+.clima-student span:last-child { font-size: 11.5px; color: var(--text-subtle); }
+.clima-student-emoji { font-size: 20px; flex-shrink: 0; }
+
+/* ── Comentarios ── */
+.clima-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.clima-comment {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.clima-comment-emoji { font-size: 18px; flex-shrink: 0; }
+.clima-comment > div { min-width: 0; }
+.clima-comment p { font-size: 13.5px; color: var(--text-primary); line-height: 1.45; font-style: italic; }
+.clima-comment-meta { font-size: 11px; color: var(--text-subtle); }
+
+/* ── Vacío ── */
+.clima-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  text-align: center;
+  padding: var(--space-8) var(--space-5);
+}
+
+.clima-empty h3 { font-size: 17px; }
+.clima-empty p { max-width: 420px; }
+
+@media (max-width: 560px) {
+  .clima-dist-row { grid-template-columns: 104px 1fr 24px; gap: 7px; }
+  .clima-dist-label { font-size: 12px; }
+  .clima-score { font-size: 32px; }
+  .clima-controls .form-select { max-width: 100%; width: 100%; }
+}

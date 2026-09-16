@@ -7,17 +7,19 @@
  */
 
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, ClipboardList, BookOpen } from 'lucide-react';
+import { Calendar, ClipboardList, BookOpen, HeartPulse } from 'lucide-react';
 import Agenda from './Agenda';
 import Actividades from './Actividades';
 import Biblioteca from './Biblioteca';
+import ClimaDelAula from './ClimaDelAula';
 import './MisClases.css';
 
-type Tab = 'agenda' | 'actividades' | 'materiales';
+type Tab = 'agenda' | 'actividades' | 'clima' | 'materiales';
 
 const TABS: { key: Tab; label: string; icon: typeof Calendar }[] = [
     { key: 'agenda', label: 'Mi horario', icon: Calendar },
     { key: 'actividades', label: 'Actividades', icon: ClipboardList },
+    { key: 'clima', label: 'Clima del aula', icon: HeartPulse },
     { key: 'materiales', label: 'Mis materiales', icon: BookOpen },
 ];
 
@@ -49,6 +51,7 @@ export default function MisClases() {
             <div className="mc-panel">
                 {active === 'agenda' && <Agenda />}
                 {active === 'actividades' && <Actividades />}
+                {active === 'clima' && <ClimaDelAula />}
                 {active === 'materiales' && <Biblioteca />}
             </div>
         </div>

@@ -244,7 +244,11 @@ export default function Hoy() {
                 <section className="hoy-alerts">
                     <h2 className="hoy-section-title"><AlertTriangle size={17} /> Necesita tu atención</h2>
                     {alerts.map(a => (
-                        <Link key={a.id} to="/students" className="card hoy-alert">
+                        <Link
+                            key={a.id}
+                            to={a.studentIds?.length ? `/students?student=${a.studentIds[0]}` : '/students'}
+                            className="card hoy-alert"
+                        >
                             <span className={`hoy-alert-dot hoy-alert-${a.type}`} />
                             <p>{a.message}</p>
                             <ChevronRight size={16} className="text-subtle" />
