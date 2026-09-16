@@ -30,6 +30,12 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Sin esto, el service worker viejo sigue sirviendo la app anterior
+        // hasta que el usuario cierra TODAS las pestañas: se publica una
+        // versión nueva y nadie la ve, ni siquiera con Ctrl+Shift+R.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Los datos ya vistos quedan disponibles sin conexión:
         runtimeCaching: [
           {
