@@ -361,7 +361,7 @@ export default function ArmarModulo() {
         <div className="mod-container animate-in">
             {/* Pasos */}
             <div className="mod-steps">
-                {['Tema', 'El módulo', 'El material'].map((label, i) => (
+                {['De dónde sale', 'El módulo', 'El material'].map((label, i) => (
                     <div key={label} className={`mod-step ${step > i ? 'done' : ''} ${step === i + 1 ? 'active' : ''}`}>
                         <span className="mod-step-num">{step > i + 1 ? <Check size={13} /> : i + 1}</span>
                         <span className="mod-step-label">{label}</span>

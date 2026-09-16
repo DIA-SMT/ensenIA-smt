@@ -23,11 +23,11 @@ const routeNames: Record<string, string> = {
     '/docentes': 'Equipo Docente',
     '/comunicaciones': 'Comunicaciones',
     '/actividades': 'Actividades',
-    '/mis-actividades': 'Mis Actividades',
-    '/mi-biblioteca': 'Biblioteca',
+    '/mis-actividades': 'Mi escuela',
+    '/mi-biblioteca': 'Mis materiales',
     '/familias': 'Familias',
     '/comunicados-familia': 'Comunicados',
-    '/mis-hijos': 'Mis Hijos',
+    '/mis-hijos': 'Cómo le va',
     '/actividad-rapida': 'Crear actividad',
 };
 

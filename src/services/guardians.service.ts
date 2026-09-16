@@ -178,3 +178,78 @@ export async function getGuardiansOfStudent(studentId: string): Promise<Guardian
     guardianEmail: r.profiles?.email,
   }));
 }
+
+// ── Lo que una familia necesita saber de su hijo ──
+// La RLS ya les permite leer notas, logros e inasistencias; hasta ahora la
+// app solo les mostraba tres porcentajes sueltos.
+
+export interface ChildGrade {
+  subjectName: string;
+  grade: number | null;
+  status: string;
+  carriesToDecember: boolean;
+  teacherNote?: string | null;
+}
+
+export interface ChildAchievement {
+  emoji: string;
+  title: string;
+  points: number;
+  createdAt: string;
+}
+
+export interface ChildAbsence {
+  date: string;
+  status: string;
+}
+
+export interface ChildSummary {
+  grades: ChildGrade[];
+  achievements: ChildAchievement[];
+  absences: ChildAbsence[];
+  totalPoints: number;
+}
+
+export async function getChildSummary(studentId: string): Promise<ChildSummary> {
+  const [gradesRes, achRes, absRes] = await Promise.all([
+    supabase
+      .from('term_grades')
+      .select('grade, status, carries_to_december, teacher_note, subjects(name)')
+      .eq('student_id', studentId),
+    supabase
+      .from('student_achievements')
+      .select('emoji, title, points, created_at')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('attendance_records')
+      .select('status, attendance_sessions(taken_on)')
+      .eq('student_id', studentId)
+      .neq('status', 'presente')
+      .order('created_at', { ascending: false })
+      .limit(8),
+  ]);
+
+  const achievements: ChildAchievement[] = ((achRes.data ?? []) as any[]).map(a => ({
+    emoji: a.emoji,
+    title: a.title,
+    points: a.points ?? 0,
+    createdAt: a.created_at,
+  }));
+
+  return {
+    grades: ((gradesRes.data ?? []) as any[]).map(g => ({
+      subjectName: g.subjects?.name ?? 'Materia',
+      grade: g.grade != null ? Number(g.grade) : null,
+      status: g.status ?? '',
+      carriesToDecember: Boolean(g.carries_to_december),
+      teacherNote: g.teacher_note,
+    })),
+    achievements,
+    absences: ((absRes.data ?? []) as any[]).map(a => ({
+      date: a.attendance_sessions?.taken_on ?? '',
+      status: a.status,
+    })),
+    totalPoints: achievements.reduce((acc, a) => acc + a.points, 0),
+  };
+}

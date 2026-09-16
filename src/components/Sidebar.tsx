@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, Users, BookOpen,
-    Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
+    Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
     ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun, Boxes, Activity
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,26 +32,24 @@ const teacherNavItems: NavItem[] = [
 
 const directorNavItems: NavItem[] = [
     { label: 'Qué está pasando', path: '/panel', icon: Activity },
-    { label: 'Resumen', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Docentes', path: '/docentes', icon: Users },
+    { label: 'Docentes', path: '/docentes', icon: Users, showAlerts: true },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
-    { label: 'Alertas', path: '/alerts', icon: Bell },
     { label: 'Comunicaciones', path: '/comunicaciones', icon: MessageSquare },
-    { label: 'Configuración', path: '/settings', icon: Settings },
+    { label: 'Ajustes', path: '/settings', icon: Settings },
 ];
 
 const studentNavItems: NavItem[] = [
-    { label: 'Mis Actividades', path: '/mis-actividades', icon: ClipboardList },
+    { label: 'Mi escuela', path: '/mis-actividades', icon: ClipboardList },
     { label: 'Clase en vivo', path: '/clase', icon: Radio },
     { label: 'Mi guía IA', path: '/mi-guia', icon: Sparkles, isIA: true },
-    { label: 'Biblioteca', path: '/mi-biblioteca', icon: BookOpen },
-    { label: 'Configuración', path: '/settings', icon: Settings },
+    { label: 'Mis materiales', path: '/mi-biblioteca', icon: BookOpen },
+    { label: 'Ajustes', path: '/settings', icon: Settings },
 ];
 
 const guardianNavItems: NavItem[] = [
+    { label: 'Cómo le va', path: '/mis-hijos', icon: GraduationCap },
     { label: 'Comunicados', path: '/comunicados-familia', icon: Megaphone },
-    { label: 'Mis Hijos', path: '/mis-hijos', icon: GraduationCap },
-    { label: 'Configuración', path: '/settings', icon: Settings },
+    { label: 'Ajustes', path: '/settings', icon: Settings },
 ];
 
 function LogoMark({ size = 28 }: { size?: number }) {

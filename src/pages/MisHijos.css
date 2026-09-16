@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════
+   SMT EstudIA — Mis hijos (familia)
+   Cálido y sin jerga: lo lee una madre en el celular.
+   ═══════════════════════════════════════════════ */
+
+.mh-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mh-child {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Quién es ── */
+.mh-child-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mh-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #005FA3 0%, #00A8FF 100%);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mh-child-who h3 { font-size: 19px; font-weight: 700; }
+.mh-child-who span { font-size: 13px; color: var(--text-subtle); }
+
+/* ── Cómo viene, en palabras ── */
+.mh-estado {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 13px 16px;
+  border-radius: var(--radius-lg);
+  border-left: 4px solid;
+}
+
+.mh-estado strong { font-size: 16px; }
+.mh-estado span { font-size: 13.5px; color: var(--text-secondary); line-height: 1.45; }
+
+.mh-bien {
+  background: rgba(52, 211, 153, 0.08);
+  border-left-color: var(--success);
+}
+.mh-bien strong { color: var(--success); }
+
+.mh-atencion {
+  background: rgba(251, 191, 36, 0.08);
+  border-left-color: var(--warning);
+}
+.mh-atencion strong { color: var(--warning); }
+
+.mh-apoyo {
+  background: var(--danger-light);
+  border-left-color: var(--danger);
+}
+.mh-apoyo strong { color: var(--danger); }
+
+/* ── Aviso importante ── */
+.mh-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 15px;
+  background: var(--danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  color: #F87171;
+}
+
+.mh-aviso svg { flex-shrink: 0; margin-top: 2px; }
+.mh-aviso > div { display: flex; flex-direction: column; min-width: 0; }
+.mh-aviso strong { font-size: 14px; }
+.mh-aviso span { font-size: 13px; color: var(--text-secondary); }
+
+/* ── Números ── */
+.mh-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.mh-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 13px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.mh-metric-val { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+.mh-points { color: var(--warning) !important; font-size: 19px !important; }
+.mh-metric-label { font-size: 11.5px; color: var(--text-subtle); }
+
+/* ── Secciones ── */
+.mh-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.mh-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Notas */
+.mh-grades { display: flex; flex-direction: column; gap: 6px; }
+
+.mh-grade {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  border-left-width: 3px;
+  border-left-color: var(--success);
+}
+
+.mh-grade.debe { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+
+.mh-grade-subject { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+.mh-grade-val { font-size: 19px; font-weight: 800; color: var(--text-primary); }
+.mh-grade.debe .mh-grade-val { color: var(--danger); }
+
+.mh-grade-note {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  color: var(--text-subtle);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Logros */
+.mh-awards { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.mh-award {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 11px 14px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--radius-lg);
+  min-width: 88px;
+}
+
+.mh-award-emoji { font-size: 26px; }
+.mh-award-title { font-size: 11.5px; font-weight: 600; color: var(--text-primary); text-align: center; }
+
+/* Faltas */
+.mh-absences { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.mh-absence {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 4px 11px;
+}
+
+.mh-sin-datos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Llamada a la acción ── */
+.mh-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.mh-cta span { flex: 1; }
+.mh-cta:hover { border-color: var(--cyan-bright); color: var(--cyan-bright); }
+
+@media (max-width: 520px) {
+  .mh-child { padding: var(--space-4); gap: var(--space-3); }
+  .mh-child-who h3 { font-size: 17px; }
+  .mh-metric-val { font-size: 19px; }
+}

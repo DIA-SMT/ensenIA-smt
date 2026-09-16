@@ -36,7 +36,7 @@ import MisHijos from './pages/MisHijos';
 function HomeRedirect() {
   const { user } = useAuth();
   const home = user?.role === 'estudiante' ? '/mis-actividades'
-    : user?.role === 'padre' ? '/comunicados-familia'
+    : user?.role === 'padre' ? '/mis-hijos'
     : user?.role === 'docente' ? '/hoy'
     : '/panel';
   return <Navigate to={home} replace />;
