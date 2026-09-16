@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 005: Alertas automáticas
+--  EstudIA — Migration 005: Alertas automáticas
 --  El sistema empieza a "comprender": señales negativas
 --  repetidas y bajo desempeño generan alertas solas.
 -- ═══════════════════════════════════════════════

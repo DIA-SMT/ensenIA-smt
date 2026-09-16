@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Bienestar y observaciones
+ * EstudIA — Bienestar y observaciones
  *
  * Check-ins emocionales de estudiantes y observaciones del docente:
  * la información "que no se ve" y que mejora la experiencia educativa.

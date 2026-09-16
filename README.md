@@ -1,4 +1,4 @@
-# ENSEÑIA SMT — Aula Municipal
+# SMT EstudIA — Aula Municipal
 
 Plataforma educativa con IA para escuelas municipales de San Miguel de Tucumán.
 Los docentes generan contenido con IA a partir de sus programas reales, lo publican

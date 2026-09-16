@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   ENSEÑIA SMT — Actividades (docente)
+   EstudIA — Actividades (docente)
    ═══════════════════════════════════════════════ */
 
 .acts-container {
@@ -330,6 +330,7 @@
   background: var(--cyan-glow);
   color: var(--text-primary);
 }
+.acts-obs-history { margin-top: 12px; }
 .acts-obs-item {
   border-left: 2px solid var(--border-color);
   padding: 4px 0 4px 12px;

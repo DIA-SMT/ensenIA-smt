@@ -326,3 +326,265 @@
 .signal-feed { display: flex; flex-direction: column; gap: 8px; }
 .signal-item { display: flex; gap: 10px; align-items: flex-start; }
 .signal-emoji { font-size: 20px; line-height: 1.2; flex-shrink: 0; }
+
+/* ── Filtros de la lista (added) ── */
+.stu-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px var(--space-5);
+}
+
+.stu-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stu-filter-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.stu-filter-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--cyan-bright);
+}
+
+.stu-filter-chip.selected {
+  color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  font-weight: 600;
+}
+
+.stu-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-subtle);
+  white-space: nowrap;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.th-sortable:hover { color: var(--text-primary); }
+.th-sortable svg { vertical-align: -1px; margin-left: 2px; }
+.th-sortable svg.flip { transform: scaleY(-1); }
+
+.stu-empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4) !important;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+/* ── Trabajo académico (added) ── */
+.stu-work-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stu-work-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.stu-work-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stu-work-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stu-work-meta {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.stu-work-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.stu-work-score {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Observaciones con borrado (added) ── */
+.stu-obs-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stu-obs-body { min-width: 0; }
+
+.stu-obs-delete {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  flex-shrink: 0;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.stu-obs-item:hover .stu-obs-delete { display: inline-flex; }
+.stu-obs-delete:hover { color: var(--danger); background: var(--danger-light); }
+
+/* ── Logros / gamificación (added) ── */
+.stu-points-badge {
+  margin-left: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-full);
+  padding: 2px 9px;
+  vertical-align: 1px;
+}
+
+.stu-grant-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  margin: 8px 0 10px;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.stu-preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stu-preset-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.stu-preset-chip:hover:not(:disabled) {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  transform: translateY(-1px);
+}
+
+.stu-preset-chip:disabled { opacity: 0.5; cursor: wait; }
+
+.stu-custom-grant {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.stu-custom-emoji {
+  width: 44px;
+  text-align: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 15px;
+  padding: 6px 4px;
+  outline: none;
+}
+
+.stu-custom-title {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+}
+
+.stu-custom-title:focus, .stu-custom-emoji:focus { border-color: var(--warning); }
+
+.stu-achievements {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stu-achievement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.stu-achievement-emoji { font-size: 20px; flex-shrink: 0; }
+
+.stu-achievement-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.stu-achievement-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stu-achievement-meta {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.text-warning { color: var(--warning); }

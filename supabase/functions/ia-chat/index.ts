@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — IA Chat Edge Function
+ * EstudIA — IA Chat Edge Function
  *
  * POST /functions/v1/ia-chat
  *
@@ -29,7 +29,7 @@ const SUMMARY_INPUT_LIMIT = 8000; // chars
 interface IAChatRequest {
   sessionId: string;
   messages: { role: 'user' | 'assistant'; content: string }[];
-  tool?: 'act' | 'eval' | 'sum' | 'pres' | 'oral';
+  tool?: 'act' | 'eval' | 'sum' | 'pres' | 'oral' | 'guide' | 'simplify';
   context: {
     subjectName: string;
     courseName: string;
@@ -182,8 +182,10 @@ Deno.serve(async (req: Request) => {
   const systemPrompt = buildSystemPrompt(promptCtx);
 
   // ── 7. Determine model ──
-  const modelId = tool === 'sum' ? MODEL_HAIKU : MODEL_SONNET;
-  const modelLabel = tool === 'sum' ? 'haiku' : 'sonnet';
+  // Resúmenes y simplificación de lenguaje van al modelo rápido.
+  const useFastModel = tool === 'sum' || tool === 'simplify';
+  const modelId = useFastModel ? MODEL_HAIKU : MODEL_SONNET;
+  const modelLabel = useFastModel ? 'haiku' : 'sonnet';
 
   // ── 8. Call OpenRouter (Claude) with streaming ──
   const orBody = {
@@ -205,7 +207,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://ensenia-aula.vercel.app',
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'EstudIA',
       },
       body: JSON.stringify(orBody),
     });

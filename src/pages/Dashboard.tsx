@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Clock, AlertTriangle, CheckCircle, Info, Users, BookOpen,
     Activity, TrendingUp, TrendingDown, ArrowRight, Sparkles,
     GraduationCap, ClipboardCheck, CalendarCheck, Bell, MessageSquare,
-    StickyNote, Pin, AlertCircle
+    StickyNote, Pin, AlertCircle, Radio
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherStats, getDirectorStats } from '../services/stats.service';
@@ -128,6 +129,7 @@ function getWeeklyCalendar(schedule: ScheduleBlock[]) {
 
 function TeacherDashboardContent() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [teacherStats, setTeacherStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, avgAttendance: 0 });
     const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
     const [nextClassBlock, setNextClassBlock] = useState<ScheduleBlock | null>(null);
@@ -255,13 +257,13 @@ function TeacherDashboardContent() {
                                 </div>
                             </div>
                             <div className="next-class-actions">
-                                <button className="btn btn-primary">
+                                <button className="btn btn-primary" onClick={() => navigate('/ia-lab')}>
                                     <Sparkles size={16} />
                                     Preparar con IA
                                 </button>
-                                <button className="btn btn-outline btn-light">
-                                    Tomar asistencia
-                                    <ArrowRight size={16} />
+                                <button className="btn btn-outline btn-light" onClick={() => navigate('/clase-en-vivo')}>
+                                    <Radio size={16} />
+                                    Clase en vivo
                                 </button>
                             </div>
                         </section>

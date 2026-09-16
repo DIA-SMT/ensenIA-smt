@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Cola offline
+ * EstudIA — Cola offline
  *
  * Los chicos muchas veces no tienen datos: trabajan offline y la app
  * sincroniza sola cuando aparece wifi. Cada operación de escritura del

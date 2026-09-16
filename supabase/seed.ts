@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Database Seed Script
+ * EstudIA — Database Seed Script
  *
  * Run with:
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx supabase/seed.ts
@@ -36,7 +36,7 @@ function slugEmail(first: string, last: string, domain: string): string {
 }
 
 async function main() {
-  console.log('🌱 Seeding ENSEÑIA SMT (EstudIA) database...\n');
+  console.log('🌱 Seeding SMT EstudIA database...\n');
 
   // ═══ 1. School ═══
   console.log('📍 Creating school...');
@@ -454,7 +454,7 @@ async function main() {
   await supabase.from('notifications').insert({
     from_user_id: ids.user_director,
     to_user_id: null,
-    title: 'Bienvenidos a ENSEÑIA',
+    title: 'Bienvenidos a EstudIA',
     message: 'Ya está disponible la nueva plataforma con biblioteca digital, generación de contenido con IA y actividades para estudiantes.',
     priority: 'medium',
     school_id: ids.school,

@@ -18,6 +18,9 @@ import ActividadDetalle from './pages/ActividadDetalle';
 import MisActividades from './pages/MisActividades';
 import RealizarActividad from './pages/RealizarActividad';
 import MiBiblioteca from './pages/MiBiblioteca';
+import MiGuia from './pages/MiGuia';
+import ClaseEnVivo from './pages/ClaseEnVivo';
+import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
 import Familias from './pages/Familias';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
@@ -65,6 +68,9 @@ function App() {
             <Route path="ia-lab" element={
               <ProtectedRoute allowedRoles={['docente']}><IALab /></ProtectedRoute>
             } />
+            <Route path="clase-en-vivo" element={
+              <ProtectedRoute allowedRoles={['docente']}><ClaseEnVivo /></ProtectedRoute>
+            } />
             <Route path="actividad-rapida" element={
               <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>
             } />
@@ -103,6 +109,12 @@ function App() {
             } />
             <Route path="mi-biblioteca" element={
               <ProtectedRoute allowedRoles={['estudiante']}><MiBiblioteca /></ProtectedRoute>
+            } />
+            <Route path="mi-guia" element={
+              <ProtectedRoute allowedRoles={['estudiante']}><MiGuia /></ProtectedRoute>
+            } />
+            <Route path="clase" element={
+              <ProtectedRoute allowedRoles={['estudiante']}><ClaseEnVivoAlumno /></ProtectedRoute>
             } />
 
             {/* Director-only */}

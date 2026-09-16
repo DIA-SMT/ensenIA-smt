@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Chat History Service
+ * EstudIA — Chat History Service
  *
  * CRUD for chat sessions and messages stored in Supabase.
  * Follows the same patterns as planning.service.ts.

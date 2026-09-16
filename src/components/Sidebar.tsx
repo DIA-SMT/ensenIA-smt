@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
@@ -18,6 +18,7 @@ const teacherNavItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Mi Agenda', path: '/agenda', icon: Calendar },
     { label: 'Laboratorio IA', path: '/ia-lab', icon: FlaskConical, isIA: true },
+    { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio },
     { label: 'Actividades', path: '/actividades', icon: ClipboardList },
     { label: 'Estudiantes', path: '/students', icon: Users },
     { label: 'Biblioteca Docente', path: '/biblioteca', icon: BookOpen },
@@ -37,6 +38,8 @@ const directorNavItems: NavItem[] = [
 
 const studentNavItems: NavItem[] = [
     { label: 'Mis Actividades', path: '/mis-actividades', icon: ClipboardList },
+    { label: 'Clase en vivo', path: '/clase', icon: Radio },
+    { label: 'Mi guía IA', path: '/mi-guia', icon: Sparkles, isIA: true },
     { label: 'Biblioteca', path: '/mi-biblioteca', icon: BookOpen },
     { label: 'Configuración', path: '/settings', icon: Settings },
 ];
@@ -87,7 +90,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <LogoMark size={collapsed ? 22 : 28} />
                 {!collapsed && (
                     <div className="logo-text">
-                        <span className="logo-title">ENSEÑIA SMT</span>
+                        <span className="logo-title">SMT EstudIA</span>
                         <span className="logo-subtitle">{school?.shortName ?? 'Escuela Municipal'}</span>
                     </div>
                 )}

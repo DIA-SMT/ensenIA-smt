@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Document Processing Edge Function
+ * EstudIA — Document Processing Edge Function
  *
  * POST /functions/v1/process-document
  *
@@ -94,11 +94,18 @@ const STUDY_CARDS_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['emoji', 'title', 'body'],
+        required: ['type', 'emoji', 'tag', 'title', 'body', 'question', 'answer', 'options', 'correct_index', 'explanation'],
         properties: {
-          emoji: { type: 'string', description: 'Un solo emoji representativo del concepto' },
-          title: { type: 'string', description: 'Título corto y potente (máx. 6 palabras)' },
-          body: { type: 'string', description: 'Explicación clara en 2-4 oraciones cortas, lenguaje de secundaria' },
+          type: { type: 'string', enum: ['concept', 'flashcard', 'quiz'], description: 'Tipo de placa' },
+          emoji: { type: 'string', description: 'Un solo emoji representativo' },
+          tag: { type: 'string', description: 'Eje temático (2-4 palabras); usar 3-5 tags distintos en total' },
+          title: { type: 'string', description: "concept: título corto y potente (máx. 6 palabras). Otros tipos: ''" },
+          body: { type: 'string', description: "concept: explicación en 2-4 oraciones simples. Otros tipos: ''" },
+          question: { type: 'string', description: "flashcard/quiz: la pregunta. concept: ''" },
+          answer: { type: 'string', description: "flashcard: respuesta en 1-3 oraciones. Otros: ''" },
+          options: { type: 'array', items: { type: 'string' }, description: 'quiz: exactamente 4 opciones plausibles. Otros: []' },
+          correct_index: { type: 'integer', description: 'quiz: índice 0-3 de la correcta (variá la posición). Otros: 0' },
+          explanation: { type: 'string', description: "quiz: por qué es correcta y por qué no las otras. Otros: ''" },
         },
       },
     },
@@ -143,7 +150,7 @@ Reglas:
 - Conservá títulos, listas y estructura con Markdown simple.
 - Si hay partes ilegibles, marcalas como [ilegible].`,
 
-  summarize: `Sos ENSEÑIA, asistente pedagógico para docentes de secundaria argentina.
+  summarize: `Sos EstudIA, asistente pedagógico para docentes de secundaria argentina.
 Creá un resumen pedagógico claro y visual del documento en Markdown:
 
 **Ideas principales** (viñetas, máximo 5-7)
@@ -165,16 +172,22 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
 - Mantené el idioma y la terminología del documento.
 - Si el documento NO es un programa educativo, devolvé units como array vacío.`,
 
-  study_cards: `Sos ENSEÑIA, asistente pedagógico. Convertí el material de estudio en PLACAS: tarjetas visuales tipo "slides" para que estudiantes de secundaria repasen desde el celular.
+  study_cards: `Sos EstudIA, asistente pedagógico. Convertí el material de estudio en PLACAS INTERACTIVAS: tarjetas que estudiantes de secundaria recorren desde el celular para repasar de verdad, no solo leer.
+
+Generá entre 10 y 14 placas MEZCLADAS (no agrupadas por tipo):
+- "concept" (2 a 4): la primera presenta el tema; las demás explican UNA idea central cada una. Título corto y potente + explicación en 2-4 oraciones simples.
+- "flashcard" (4 a 5): pregunta concreta al frente, respuesta de 1-3 oraciones al dorso. Para autoevaluarse tapando la respuesta.
+- "quiz" (4 a 5): pregunta con 4 opciones plausibles y de largo parecido, UNA correcta (variá su posición). La explicación dice por qué es correcta y por qué las otras no.
 
 Reglas:
-- Entre 6 y 10 placas. La primera presenta el tema; la última es un mini-repaso o dato para recordar.
-- Cada placa = UN concepto. Título corto y potente + explicación en 2-4 oraciones simples.
+- "tag": el eje temático de cada placa (2-4 palabras). Usá entre 3 y 5 tags distintos en total, repetidos con coherencia.
 - Lenguaje claro de secundaria, español rioplatense. Ejemplos concretos cuando ayuden.
-- Un emoji distinto y representativo por placa.
-- Fiel al material: no inventes contenido que no esté.`,
+- Un emoji representativo por placa.
+- Cubrí lo más importante del material: conceptos, causas, excepciones, ejemplos. Nada trivial ni anecdótico.
+- Fiel al material: no inventes contenido que no esté.
+- Los campos que no correspondan al tipo van vacíos ('' o [] o 0).`,
 
-  student_summary: `Sos ENSEÑIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
+  student_summary: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
 
 Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) en Markdown:
 
@@ -321,7 +334,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://ensenia-aula.vercel.app',
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'EstudIA',
       },
       body: JSON.stringify(orBody),
     });

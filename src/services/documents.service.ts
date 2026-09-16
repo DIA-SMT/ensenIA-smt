@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Documents Service
+ * EstudIA — Documents Service
  *
  * Subida real de archivos a Supabase Storage, extracción de texto
  * (edge function process-document con visión para PDFs, mammoth para DOCX),
@@ -82,6 +82,23 @@ async function callProcessDocument<T>(body: Record<string, unknown>): Promise<T>
     throw new Error(json.message || `Error del servidor de IA (${resp.status}).`);
   }
   return json as T;
+}
+
+/** Genera el mini podcast de un material (guion con IA + voz). Tarda ~30-60s. */
+export async function generatePodcast(materialId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('No hay sesión activa.');
+
+  const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-podcast`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ materialId }),
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.error || `No se pudo generar el podcast (${resp.status}).`);
 }
 
 export async function extractPdfText(pdfBase64: string, title?: string): Promise<string> {

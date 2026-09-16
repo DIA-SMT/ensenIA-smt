@@ -23,11 +23,34 @@ function stripEmoji(s: string): string {
 function footer(doc: jsPDF, w: number, h: number, subjectName?: string) {
   doc.setFontSize(9);
   doc.setTextColor(...SUBTLE);
-  doc.text(`ENSEÑIA · E.M. Gabriela Mistral${subjectName ? ` · ${subjectName}` : ''}`, w / 2, h - 18, { align: 'center' });
+  doc.text(`SMT EstudIA · E.M. Gabriela Mistral${subjectName ? ` · ${subjectName}` : ''}`, w / 2, h - 18, { align: 'center' });
+}
+
+/** Aplana una placa v2 (concept/flashcard/quiz) a título + cuerpo imprimibles. */
+function flattenCard(card: StudyCard): { emoji: string; title: string; body: string } {
+  const kind = card.type ?? 'concept';
+  if (kind === 'flashcard') {
+    return {
+      emoji: card.emoji ?? '🃏',
+      title: card.question ?? '',
+      body: `Respuesta: ${card.answer ?? ''}`,
+    };
+  }
+  if (kind === 'quiz') {
+    const opts = (card.options ?? []).map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n');
+    const correcta = String.fromCharCode(65 + (card.correct_index ?? 0));
+    return {
+      emoji: card.emoji ?? '❓',
+      title: card.question ?? '',
+      body: `${opts}\n\nCorrecta: ${correcta}. ${card.explanation ?? ''}`,
+    };
+  }
+  return { emoji: card.emoji ?? '💡', title: card.title ?? '', body: card.body ?? '' };
 }
 
 /** Placas de estudio: una placa por página, formato cuadrado apaisado para leer en el celu. */
-export function studyCardsToPdf(cards: StudyCard[], title: string, subjectName?: string): void {
+export function studyCardsToPdf(rawCards: StudyCard[], title: string, subjectName?: string): void {
+  const cards = rawCards.map(flattenCard);
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [480, 480] });
   const W = 480, H = 480;
 

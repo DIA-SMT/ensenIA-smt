@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — IA Chat Streaming Service
+ * EstudIA — IA Chat Streaming Service
  *
  * Handles SSE communication with the ia-chat Edge Function.
  * Uses raw fetch + ReadableStream to parse server-sent events.

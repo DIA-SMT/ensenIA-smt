@@ -5,7 +5,7 @@ import {
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
     MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine,
-    Paperclip, X, ClipboardList
+    Paperclip, X, ClipboardList, Play
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
@@ -19,6 +19,8 @@ import { streamChat } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
+import PresentationViewer from '../components/PresentationViewer';
+import { parsePresentation, type ParsedPresentation } from '../lib/presentation';
 import type {
     PlanningUnit, PlanningClass, SubjectAssignment, Subject,
     ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
@@ -28,12 +30,16 @@ import './IALab.css';
 
 /* -- Tool definitions -- */
 const tools = [
-    { id: 'act' as IAToolType, label: 'Generar actividad', icon: FileText },
-    { id: 'eval' as IAToolType, label: 'Generar evaluación', icon: ListChecks },
-    { id: 'sum' as IAToolType, label: 'Resumir documento', icon: FileInput },
-    { id: 'pres' as IAToolType, label: 'Crear presentación', icon: Presentation },
-    { id: 'oral' as IAToolType, label: 'Evaluar oral', icon: Mic },
+    { id: 'act' as IAToolType, label: 'Crear una actividad', desc: 'Consigna lista para dar en clase', icon: FileText },
+    { id: 'eval' as IAToolType, label: 'Armar una evaluación', desc: 'Con rúbrica y criterios de corrección', icon: ListChecks },
+    { id: 'sum' as IAToolType, label: 'Resumir un texto', desc: 'Pegá un documento largo y lo sintetiza', icon: FileInput },
+    { id: 'pres' as IAToolType, label: 'Preparar diapositivas', desc: 'Presentación con notas para vos', icon: Presentation },
+    { id: 'oral' as IAToolType, label: 'Evaluar exposiciones', desc: 'Rúbricas para orales y debates', icon: Mic },
 ];
+
+const LEVEL_LABELS: Record<string, string> = {
+    '1ro': '1er Año', '2do': '2do Año', '3ro': '3er Año', '4to': '4to Año', '5to': '5to Año',
+};
 
 const DAILY_QUOTA = 50;
 const SUMMARY_INPUT_LIMIT = 8000;
@@ -85,7 +91,7 @@ function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
         case 'act': return `Generá una actividad didáctica${ctx}. Incluií objetivos, materiales, duración y desarrollo paso a paso.`;
         case 'eval': return `Creá una evaluación${ctx}. Incluií consignas variadas, rúbrica y criterios de calificación.`;
         case 'sum': return `Resumí el siguiente texto de forma clara y estructurada:\n\n[Pegá tu texto acá]`;
-        case 'pres': return `Creá una presentación en diapositivas${ctx}. Máximo 10-12 slides con notas para el docente.`;
+        case 'pres': return `Creá una presentación en diapositivas${ctx}, de 8 a 12 diapositivas. Usá EXACTAMENTE este formato para cada una:\n\n## Diapositiva N: [título corto]\n- [punto 1]\n- [punto 2]\n\n> Nota para el docente: [cómo presentarla, 1-2 frases]\n\nIncluí 1 o 2 diapositivas de "🙋 Pregunta al grupo" con opciones A) B) C) D) para hacerla interactiva.`;
         case 'oral': return `Diseñá una rúbrica para evaluar la exposición oral${ctx}. Incluií dimensiones, escala y preguntas disparadoras.`;
         default: return '';
     }
@@ -138,6 +144,7 @@ export default function IALab() {
     const [attachedDoc, setAttachedDoc] = useState<LibraryMaterial | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [publishSource, setPublishSource] = useState<ChatMessage | null>(null);
+    const [activePresentation, setActivePresentation] = useState<ParsedPresentation | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
 
     /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
@@ -193,8 +200,8 @@ export default function IALab() {
     const getSubjectName = (subjectId: string) => subjectsMap[subjectId]?.name ?? (subjectsLoaded ? '' : 'Cargando...');
     const subjectName = currentAssignment ? getSubjectName(currentAssignment.subjectId) : '';
 
-    const currentModelLabel = activeTool === 'sum' ? 'Haiku' : 'Sonnet';
     const usageCount = todayUsage?.messageCount ?? 0;
+    const usesLeft = Math.max(0, DAILY_QUOTA - usageCount);
 
     const toggleUnit = (unitId: string) => {
         setExpandedUnits(prev => {
@@ -545,6 +552,19 @@ export default function IALab() {
         });
     };
 
+    // ── Presentation: detect + open viewer ──
+    const looksLikePresentation = (msg: ChatMessage) =>
+        msg.role === 'assistant' && (msg.toolUsed === 'pres' || /diapositiva\s*\d+/i.test(msg.content));
+
+    const handlePresent = (msg: ChatMessage) => {
+        const parsed = parsePresentation(msg.content);
+        if (!parsed) {
+            alert('No pude leer el formato de diapositivas de este mensaje. Volvé a generarla con la herramienta "Preparar diapositivas".');
+            return;
+        }
+        setActivePresentation(parsed);
+    };
+
     // ── Insert from chat into editor ──
     const handleInsertFromChat = async (msg: ChatMessage) => {
         if (!selectedClass) return;
@@ -726,21 +746,24 @@ export default function IALab() {
                             onClick={handleSwitchToChat}
                         >
                             <MessageSquare size={15} />
-                            <span>Chat IA</span>
+                            <span>Asistente</span>
                         </button>
                         <button
                             className={`mode-tab ${centerMode === 'editor' ? 'active' : ''}`}
                             onClick={() => selectedClass && setCenterMode('editor')}
                             disabled={!selectedClass}
+                            title={selectedClass ? undefined : 'Elegí una clase en Planificación para ver su contenido'}
                         >
                             <PenLine size={15} />
-                            <span>Editor</span>
+                            <span>Mi clase</span>
                         </button>
                     </div>
                     <div className="header-right">
-                        <span className="badge badge-ia model-badge">{currentModelLabel}</span>
-                        <span className="quota-badge" title="Mensajes usados hoy">
-                            {usageCount}/{DAILY_QUOTA}
+                        <span
+                            className={`quota-badge ${usesLeft <= 5 ? 'quota-low' : ''}`}
+                            title={`Cada día tenés ${DAILY_QUOTA} generaciones con IA. Hoy usaste ${usageCount}.`}
+                        >
+                            <Sparkles size={12} /> {usesLeft} usos hoy
                         </span>
                         {centerMode === 'chat' && messages.length > 0 && (
                             <button className="btn btn-outline text-sm" onClick={handleClearChat}>
@@ -755,16 +778,32 @@ export default function IALab() {
                 {centerMode === 'chat' && (
                     <>
                         <div className="lab-chat-area">
-                            {/* Welcome message (when no messages) */}
+                            {/* Welcome: guided quick-start (when no messages) */}
                             {messages.length === 0 && !isStreaming && (
-                                <div className="lab-msg bot-msg">
-                                    <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
-                                    <div className="msg-content">
-                                        <p>¡Hola {user.firstName}! Soy tu asistente pedagógico para <strong>{subjectName || 'tu materia'}</strong>
-                                            {currentAssignment ? ` en ${currentAssignment.courseName}` : ''}.</p>
-                                        <br />
-                                        <p>Seleccioná una herramienta a la derecha, o describí lo que necesitás. También podés elegir una clase del árbol para trabajar con contexto.</p>
+                                <div className="lab-welcome">
+                                    <div className="welcome-icon bg-ia-gradient"><Sparkles size={22} className="text-white" /></div>
+                                    <h3>¡Hola {user.firstName}! ¿Qué preparamos hoy?</h3>
+                                    <p className="welcome-sub">
+                                        Elegí una opción y contame el tema. Yo armo un borrador; vos lo revisás y ajustás.
+                                    </p>
+                                    <div className="welcome-grid">
+                                        {tools.map(t => (
+                                            <button key={t.id} className="welcome-card" onClick={() => handleToolClick(t.id)}>
+                                                <t.icon size={18} className="text-ia-accent" />
+                                                <span className="welcome-card-title">{t.label}</span>
+                                                <span className="welcome-card-desc">{t.desc}</span>
+                                            </button>
+                                        ))}
+                                        <button className="welcome-card" onClick={() => handleToolClick('free')}>
+                                            <MessageSquare size={18} className="text-ia-accent" />
+                                            <span className="welcome-card-title">Pregunta libre</span>
+                                            <span className="welcome-card-desc">Consultá cualquier duda pedagógica</span>
+                                        </button>
                                     </div>
+                                    <p className="welcome-tip">
+                                        💡 Si elegís una clase en <strong>Planificación</strong> (a la izquierda), voy a conocer
+                                        el tema y los objetivos, y el contenido sale a medida.
+                                    </p>
                                 </div>
                             )}
 
@@ -784,6 +823,15 @@ export default function IALab() {
                                                 )}
                                                 <MarkdownRenderer content={msg.content} />
                                                 <div className="msg-actions">
+                                                    {looksLikePresentation(msg) && (
+                                                        <button
+                                                            className="msg-action-btn btn-present"
+                                                            onClick={() => handlePresent(msg)}
+                                                            title="Ver como diapositivas y descargar PowerPoint"
+                                                        >
+                                                            <Play size={13} /> Presentar
+                                                        </button>
+                                                    )}
                                                     <button
                                                         className="msg-action-btn"
                                                         onClick={() => handleCopyMessage(msg)}
@@ -850,6 +898,16 @@ export default function IALab() {
                                     <Square size={14} /> Detener generación
                                 </button>
                             )}
+                            <div className="context-strip" title="Esto es lo que la IA tiene en cuenta al generar contenido">
+                                <span className="ctx-label">Preparando para:</span>
+                                <span className="ctx-chip">
+                                    <BookOpen size={11} /> {subjectName || 'Materia'}{currentAssignment ? ` · ${currentAssignment.courseName}` : ''}
+                                </span>
+                                <span className="ctx-chip"><Users size={11} /> {LEVEL_LABELS[educationLevel] ?? educationLevel}</span>
+                                {selectedClass && (
+                                    <span className="ctx-chip ctx-class"><FileText size={11} /> {selectedClass.title}</span>
+                                )}
+                            </div>
                             {attachedDoc && (
                                 <div className="attached-doc-chip">
                                     <Paperclip size={13} />
@@ -892,12 +950,13 @@ export default function IALab() {
                                 </div>
                             )}
                             <div className="lab-input-hints">
-                                <span>Sugerencias:</span>
+                                <span>Probá con:</span>
                                 {suggestions.map((s, i) => (
                                     <button key={i} className="hint-chip" onClick={() => handleSuggestionClick(s)}>
                                         {s}
                                     </button>
                                 ))}
+                                <span className="kbd-hint">Enter envía · Shift+Enter, renglón nuevo</span>
                             </div>
                         </div>
                     </>
@@ -952,7 +1011,7 @@ export default function IALab() {
                                     <div className="block-drag"><GripVertical size={16} /></div>
                                     <div className="block-body">
                                         <div className="flex items-center justify-between">
-                                            <h4>Desarrollo / Texto</h4>
+                                            <h4>Contenido de la clase</h4>
                                             {!editingContent ? (
                                                 <button
                                                     className="btn btn-outline btn-sm"
@@ -981,7 +1040,8 @@ export default function IALab() {
                                             </div>
                                         ) : (
                                             <p className="editor-text placeholder-text">
-                                                Usá "Editar" para escribir, o generá contenido con el chat IA e insertalo acá...
+                                                Esta clase todavía no tiene contenido. Pedíselo a la IA acá abajo,
+                                                o usá "Editar" para escribirlo vos.
                                             </p>
                                         )}
                                     </div>
@@ -994,7 +1054,7 @@ export default function IALab() {
                             <div className="lab-input-box">
                                 <textarea
                                     aria-label="Mensaje rápido para la IA"
-                                    placeholder={`Pedile a la IA que complete "${selectedClass.title}"...`}
+                                    placeholder="Pedile a la IA algo para esta clase..."
                                     value={chatInput}
                                     onChange={(e) => setChatInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
@@ -1010,9 +1070,10 @@ export default function IALab() {
                                 </button>
                             </div>
                             <div className="lab-input-hints">
-                                <span>Sugerencias:</span>
-                                <button className="hint-chip" onClick={() => handleSuggestionClick('Generar contenido completo')}>Generar contenido completo</button>
-                                <button className="hint-chip" onClick={() => handleSuggestionClick('Crear actividad práctica')}>Crear actividad práctica</button>
+                                <span>Probá con:</span>
+                                <button className="hint-chip" onClick={() => handleSuggestionClick('Desarrollá el contenido completo de esta clase')}>Desarrollar la clase completa</button>
+                                <button className="hint-chip" onClick={() => handleSuggestionClick('Creá una actividad práctica para esta clase')}>Crear actividad práctica</button>
+                                <span className="kbd-hint">La respuesta aparece en <strong>Asistente</strong> · después usá «Insertar en clase»</span>
                             </div>
                         </div>
                     </>
@@ -1024,7 +1085,7 @@ export default function IALab() {
                 {/* Tools Section */}
                 <div className="lab-panel-header">
                     <Sparkles size={18} className="text-ia-accent" />
-                    <h3>Herramientas IA</h3>
+                    <h3>¿Qué querés crear?</h3>
                 </div>
                 <div className="tools-list">
                     {tools.map(t => (
@@ -1034,8 +1095,10 @@ export default function IALab() {
                             onClick={() => handleToolClick(t.id)}
                         >
                             <t.icon size={16} className={activeTool === t.id ? 'text-ia-accent' : 'text-secondary'} />
-                            <span>{t.label}</span>
-                            {t.id === 'sum' && <span className="tool-model-tag">Haiku</span>}
+                            <span className="tool-item-text">
+                                <span>{t.label}</span>
+                                <span className="tool-item-desc">{t.desc}</span>
+                            </span>
                         </div>
                     ))}
                     {/* Free chat option */}
@@ -1044,7 +1107,10 @@ export default function IALab() {
                         onClick={() => handleToolClick('free')}
                     >
                         <MessageSquare size={16} className={activeTool === 'free' ? 'text-ia-accent' : 'text-secondary'} />
-                        <span>Chat libre</span>
+                        <span className="tool-item-text">
+                            <span>Pregunta libre</span>
+                            <span className="tool-item-desc">Consultá cualquier duda pedagógica</span>
+                        </span>
                     </div>
                 </div>
 
@@ -1052,7 +1118,7 @@ export default function IALab() {
                 <div className="config-divider"></div>
                 <div className="config-section-header">
                     <Settings2 size={16} className="text-secondary" />
-                    <span>Contexto y Parámetros</span>
+                    <span>La IA tiene en cuenta</span>
                 </div>
 
                 <div className="config-form">
@@ -1170,6 +1236,15 @@ export default function IALab() {
                     }
                     onClose={() => setPublishSource(null)}
                     onPublished={() => { /* la actividad ya quedó publicada */ }}
+                />
+            )}
+            {activePresentation && (
+                <PresentationViewer
+                    presentation={activePresentation}
+                    subjectName={subjectName || undefined}
+                    courseName={currentAssignment?.courseName}
+                    teacherName={`${user.firstName} ${user.lastName}`}
+                    onClose={() => setActivePresentation(null)}
                 />
             )}
         </div>

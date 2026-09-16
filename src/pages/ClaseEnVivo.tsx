@@ -1,0 +1,493 @@
+/**
+ * SMT EstudIA — Clase en vivo (panel del docente)
+ *
+ * Pensado para el aula real: la clase arranca tradicional y, cuando el
+ * docente quiere, lanza una actividad desde el celu, la tablet o la compu.
+ * Mientras no hay actividad activa, los celulares de los estudiantes
+ * quedan en un lobby tranquilo. La botonera de emojis se prende y apaga
+ * (no siempre suma). Todo responsive: mismo panel en cualquier pantalla.
+ */
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+    Radio, Square, Plus, X, Eye, Lock, CheckCircle, Users,
+    Smile, Trash2, ChevronLeft, Loader2,
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getSubjects } from '../services/subjects.service';
+import {
+    getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
+    getSessionState, launchActivity, setActivityStatus, getLiveResults,
+    getRecentReactions, LIVE_KIND_META, LIVE_REACTIONS,
+    type LiveSession, type LiveActivity, type LiveActivityKind,
+    type LiveResults, type LiveOption,
+} from '../services/live.service';
+import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
+import './ClaseEnVivo.css';
+
+const POLL_MS = 2500;
+
+function optionLabel(activity: LiveActivity, id: string): string {
+    return activity.config.options?.find(o => o.id === id)?.label ?? id;
+}
+
+export default function ClaseEnVivo() {
+    const { user } = useAuth();
+
+    const [session, setSession] = useState<LiveSession | null | undefined>(undefined);
+    const [activity, setActivity] = useState<LiveActivity | null>(null);
+    const [results, setResults] = useState<LiveResults | null>(null);
+    const [reactions, setReactions] = useState<{ emoji: string; createdAt: string }[]>([]);
+    const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
+
+    // Inicio de sesión
+    const [assignmentIdx, setAssignmentIdx] = useState(0);
+    const [starting, setStarting] = useState(false);
+    const [startError, setStartError] = useState('');
+
+    // Lanzador de actividades
+    const [pickedKind, setPickedKind] = useState<LiveActivityKind | null>(null);
+    const [question, setQuestion] = useState('');
+    const [options, setOptions] = useState<LiveOption[]>([
+        { id: 'a', label: '' }, { id: 'b', label: '' },
+    ]);
+    const [correctId, setCorrectId] = useState<string>('');
+    const [launching, setLaunching] = useState(false);
+
+    const pollRef = useRef<number | null>(null);
+
+    const assignments = user?.subjects ?? [];
+
+    useEffect(() => {
+        getSubjects().then(subjects => {
+            const map: Record<string, Subject> = {};
+            subjects.forEach(s => { map[s.id] = s; });
+            setSubjectsMap(map);
+        }).catch(console.error);
+    }, []);
+
+    // Sesión viva existente (si recarga la página, la retoma)
+    useEffect(() => {
+        if (!user) return;
+        getMyLiveSession(user.id).then(setSession).catch(() => setSession(null));
+    }, [user]);
+
+    // ── Poll del estado + resultados + reacciones ──
+    const poll = useCallback(async () => {
+        if (!session) return;
+        try {
+            const state = await getSessionState(session.id);
+            if (!state) return;
+            setSession(state.session);
+            setActivity(state.activity);
+            if (state.activity && state.activity.status !== 'closed') {
+                getLiveResults(state.activity.id).then(setResults).catch(console.error);
+            }
+            if (state.session.reactionsEnabled) {
+                const since = new Date(Date.now() - 60_000).toISOString();
+                getRecentReactions(session.id, since).then(setReactions).catch(console.error);
+            }
+        } catch (err) {
+            console.error('poll error:', err);
+        }
+    }, [session?.id, session?.reactionsEnabled]);
+
+    useEffect(() => {
+        if (!session || session.status !== 'live') return;
+        poll();
+        pollRef.current = window.setInterval(poll, POLL_MS);
+        return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
+    }, [session?.id, session?.status, poll]);
+
+    if (!user) return null;
+
+    const subjectName = (id: string) => subjectsMap[id]?.name ?? 'Materia';
+
+    // ── Handlers ──
+
+    const handleStart = async () => {
+        const a = assignments[assignmentIdx];
+        if (!a || starting) return;
+        setStarting(true);
+        setStartError('');
+        try {
+            const s = await startLiveSession({
+                teacherId: user.id,
+                schoolId: user.schoolId,
+                subjectId: a.subjectId,
+                courseId: a.courseId,
+                title: `${subjectName(a.subjectId)} · ${a.courseName}`,
+            });
+            setSession(s);
+        } catch (err) {
+            setStartError(err instanceof Error ? err.message : 'No se pudo iniciar la clase.');
+        } finally {
+            setStarting(false);
+        }
+    };
+
+    const handleEnd = async () => {
+        if (!session) return;
+        if (!window.confirm('¿Terminar la clase en vivo? Los estudiantes vuelven a su pantalla normal.')) return;
+        try {
+            await endLiveSession(session.id);
+            setSession(null);
+            setActivity(null);
+            setResults(null);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleToggleReactions = async () => {
+        if (!session) return;
+        const next = !session.reactionsEnabled;
+        setSession({ ...session, reactionsEnabled: next }); // optimista
+        try {
+            await setReactionsEnabled(session.id, next);
+        } catch (err) {
+            console.error(err);
+            setSession({ ...session, reactionsEnabled: !next });
+        }
+    };
+
+    const resetLauncher = () => {
+        setPickedKind(null);
+        setQuestion('');
+        setOptions([{ id: 'a', label: '' }, { id: 'b', label: '' }]);
+        setCorrectId('');
+    };
+
+    const needsOptions = pickedKind === 'quiz' || pickedKind === 'encuesta' || pickedKind === 'chips';
+    const validOptions = options.filter(o => o.label.trim());
+    const canLaunch = pickedKind === 'checkin'
+        || (pickedKind === 'nube' && question.trim())
+        || (pickedKind === 'texto' && question.trim())
+        || (needsOptions && question.trim() && validOptions.length >= 2 && (pickedKind !== 'quiz' || correctId));
+
+    const handleLaunch = async () => {
+        if (!session || !pickedKind || !canLaunch || launching) return;
+        setLaunching(true);
+        try {
+            const config = pickedKind === 'checkin'
+                ? { question: '¿Cómo venís con la clase de hoy?' }
+                : needsOptions
+                    ? { question: question.trim(), options: validOptions, ...(pickedKind === 'quiz' ? { correctId } : {}) }
+                    : { question: question.trim() };
+            const act = await launchActivity(session.id, pickedKind, config);
+            setActivity(act);
+            setResults(null);
+            resetLauncher();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'No se pudo lanzar la actividad.');
+        } finally {
+            setLaunching(false);
+        }
+    };
+
+    const handleReveal = async () => {
+        if (!activity) return;
+        await setActivityStatus(activity.id, 'revealed').catch(console.error);
+        setActivity({ ...activity, status: 'revealed' });
+    };
+
+    const handleCloseActivity = async () => {
+        if (!activity) return;
+        await setActivityStatus(activity.id, 'closed').catch(console.error);
+        setActivity({ ...activity, status: 'closed' });
+    };
+
+    // ── Render: cargando ──
+    if (session === undefined) {
+        return <div className="cv-container"><p className="text-secondary">Cargando...</p></div>;
+    }
+
+    // ── Render: sin clase en vivo → iniciar ──
+    if (!session || session.status !== 'live') {
+        return (
+            <div className="cv-container cv-start animate-in">
+                <div className="card cv-start-card">
+                    <div className="cv-start-icon"><Radio size={26} /></div>
+                    <h2>Clase en vivo</h2>
+                    <p className="text-secondary">
+                        Dictás tu clase como siempre y, cuando lo necesitás, lanzás una actividad:
+                        los celulares de tus estudiantes se convierten en su forma de participar.
+                        Vos ves los resultados crecer en vivo, desde cualquier dispositivo.
+                    </p>
+                    <div className="cv-start-form">
+                        <label className="text-sm text-secondary">¿Para qué curso?</label>
+                        <select
+                            className="form-select"
+                            value={assignmentIdx}
+                            onChange={e => setAssignmentIdx(Number(e.target.value))}
+                        >
+                            {assignments.map((a, i) => (
+                                <option key={i} value={i}>
+                                    {subjectName(a.subjectId)} — {a.courseName}
+                                </option>
+                            ))}
+                        </select>
+                        <button className="btn btn-primary w-full" onClick={handleStart} disabled={starting || assignments.length === 0}>
+                            {starting ? <Loader2 size={16} className="spin" /> : <Radio size={16} />}
+                            {starting ? 'Iniciando...' : 'Iniciar clase en vivo'}
+                        </button>
+                        {startError && <p className="text-sm text-danger">{startError}</p>}
+                        <p className="text-xs text-subtle">
+                            Tus estudiantes van a ver un aviso en su pantalla para entrar. Sin códigos, sin instalar nada.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Render: clase en vivo activa ──
+    const alertCounts = reactions.reduce<Record<string, number>>((acc, r) => {
+        acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
+        return acc;
+    }, {});
+
+    return (
+        <div className="cv-container animate-in">
+            {/* Header de sesión */}
+            <div className="card cv-header">
+                <div className="cv-header-info">
+                    <span className="cv-live-dot" />
+                    <div>
+                        <h3>{session.title}</h3>
+                        <p className="text-xs text-subtle">Los estudiantes participan desde su celular</p>
+                    </div>
+                </div>
+                <div className="cv-header-actions">
+                    <button
+                        className={`cv-toggle ${session.reactionsEnabled ? 'on' : ''}`}
+                        onClick={handleToggleReactions}
+                        title={session.reactionsEnabled
+                            ? 'Los estudiantes pueden mandar emojis. Tocá para apagar la botonera.'
+                            : 'Botonera de emojis apagada. Tocá para prenderla.'}
+                    >
+                        <Smile size={15} />
+                        <span>Emojis</span>
+                        <span className={`cv-toggle-pill ${session.reactionsEnabled ? 'on' : ''}`} />
+                    </button>
+                    <button className="btn btn-outline btn-sm cv-end-btn" onClick={handleEnd}>
+                        <Square size={13} /> Terminar
+                    </button>
+                </div>
+            </div>
+
+            {/* Reacciones entrantes */}
+            {session.reactionsEnabled && reactions.length > 0 && (
+                <div className="cv-reactions-strip card">
+                    <div className="cv-reactions-flow">
+                        {reactions.slice(0, 24).map((r, i) => (
+                            <span key={`${r.createdAt}-${i}`} className="cv-reaction-float">{r.emoji}</span>
+                        ))}
+                    </div>
+                    {(alertCounts['🐢'] || alertCounts['❓']) && (
+                        <div className="cv-reaction-alerts">
+                            {alertCounts['🐢'] > 0 && <span className="cv-alert-chip">🐢 {alertCounts['🐢']} piden ir más despacio</span>}
+                            {alertCounts['❓'] > 0 && <span className="cv-alert-chip">❓ {alertCounts['❓']} no están entendiendo</span>}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Actividad activa + resultados */}
+            {activity && activity.status !== 'closed' ? (
+                <div className="card cv-activity">
+                    <div className="cv-activity-head">
+                        <span className="badge badge-ia">
+                            {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
+                        </span>
+                        {results && (
+                            <span className="cv-responded" title="Respondieron / total del curso">
+                                <Users size={13} /> {results.responded}/{results.courseTotal}
+                            </span>
+                        )}
+                    </div>
+                    {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
+
+                    <LiveResultsView activity={activity} results={results} isTeacher />
+
+                    <div className="cv-activity-actions">
+                        {activity.kind === 'quiz' && activity.status === 'active' && (
+                            <button className="btn btn-primary btn-sm" onClick={handleReveal}>
+                                <Eye size={14} /> Revelar respuesta
+                            </button>
+                        )}
+                        <button className="btn btn-outline btn-sm" onClick={handleCloseActivity}>
+                            <Lock size={14} /> Cerrar actividad
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="card cv-idle">
+                    <p className="text-secondary">
+                        {activity ? 'Actividad cerrada. ' : ''}Seguí con tu clase tranquilo —
+                        los celulares están en pausa. Lanzá una actividad cuando quieras.
+                    </p>
+                </div>
+            )}
+
+            {/* Lanzador */}
+            <div className="card cv-launcher">
+                {!pickedKind ? (
+                    <>
+                        <h4 className="cv-launcher-title"><Plus size={15} /> Lanzar actividad</h4>
+                        <div className="cv-kinds">
+                            {(Object.entries(LIVE_KIND_META) as [LiveActivityKind, typeof LIVE_KIND_META[LiveActivityKind]][]).map(([kind, meta]) => (
+                                <button key={kind} className="cv-kind-card" onClick={() => setPickedKind(kind)}>
+                                    <span className="cv-kind-emoji">{meta.emoji}</span>
+                                    <span className="cv-kind-label">{meta.label}</span>
+                                    <span className="cv-kind-desc">{meta.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <div className="cv-config">
+                        <div className="cv-config-head">
+                            <button className="btn-icon" onClick={resetLauncher} title="Volver">
+                                <ChevronLeft size={16} />
+                            </button>
+                            <h4>{LIVE_KIND_META[pickedKind].emoji} {LIVE_KIND_META[pickedKind].label}</h4>
+                        </div>
+
+                        {pickedKind === 'checkin' ? (
+                            <p className="text-sm text-secondary">
+                                Cada estudiante marca cómo viene ({Object.values(FEELING_META).map(f => f.emoji).join(' ')}).
+                                Vos ves el clima del aula en vivo y queda en sus señales de bienestar.
+                            </p>
+                        ) : (
+                            <input
+                                className="cv-input"
+                                autoFocus
+                                placeholder={pickedKind === 'nube' ? 'Ej: ¿Con qué palabra resumís lo de hoy?' : 'Escribí la pregunta...'}
+                                value={question}
+                                maxLength={200}
+                                onChange={e => setQuestion(e.target.value)}
+                            />
+                        )}
+
+                        {needsOptions && (
+                            <div className="cv-options-builder">
+                                {options.map((opt, i) => (
+                                    <div key={opt.id} className="cv-option-row">
+                                        {pickedKind === 'quiz' && (
+                                            <button
+                                                className={`cv-correct-pick ${correctId === opt.id ? 'on' : ''}`}
+                                                title="Marcar como correcta"
+                                                onClick={() => setCorrectId(opt.id)}
+                                            >
+                                                <CheckCircle size={15} />
+                                            </button>
+                                        )}
+                                        <input
+                                            className="cv-input"
+                                            placeholder={`Opción ${String.fromCharCode(65 + i)}`}
+                                            value={opt.label}
+                                            maxLength={80}
+                                            onChange={e => setOptions(prev => prev.map(o => o.id === opt.id ? { ...o, label: e.target.value } : o))}
+                                        />
+                                        {options.length > 2 && (
+                                            <button className="btn-icon" onClick={() => setOptions(prev => prev.filter(o => o.id !== opt.id))}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                {options.length < 6 && (
+                                    <button
+                                        className="cv-add-option"
+                                        onClick={() => setOptions(prev => [...prev, { id: `${Date.now()}`, label: '' }])}
+                                    >
+                                        <Plus size={13} /> Agregar opción
+                                    </button>
+                                )}
+                                {pickedKind === 'quiz' && !correctId && (
+                                    <p className="text-xs text-subtle">Tocá el círculo de la opción correcta.</p>
+                                )}
+                            </div>
+                        )}
+
+                        <button className="btn btn-primary w-full" onClick={handleLaunch} disabled={!canLaunch || launching}>
+                            {launching ? <Loader2 size={15} className="spin" /> : <Radio size={15} />}
+                            {launching ? 'Lanzando...' : 'Lanzar al curso'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/* ── Resultados en vivo (compartido docente/estudiante) ── */
+export function LiveResultsView({ activity, results, isTeacher = false }: {
+    activity: LiveActivity;
+    results: LiveResults | null;
+    isTeacher?: boolean;
+}) {
+    if (!results || results.responded === 0) {
+        return <p className="cv-waiting">Esperando respuestas<span className="cv-ellipsis" />​</p>;
+    }
+
+    const revealed = activity.status === 'revealed';
+
+    // Barras para opciones / checkin
+    if (activity.kind === 'quiz' || activity.kind === 'encuesta' || activity.kind === 'chips' || activity.kind === 'checkin') {
+        const entries: { id: string; label: string; n: number; correct?: boolean }[] =
+            activity.kind === 'checkin'
+                ? (Object.entries(FEELING_META) as [CheckinFeeling, typeof FEELING_META[CheckinFeeling]][]).map(([key, meta]) => ({
+                    id: key, label: `${meta.emoji} ${meta.label}`, n: results.counts[key] ?? 0,
+                }))
+                : (activity.config.options ?? []).map(o => ({
+                    id: o.id, label: o.label, n: results.counts[o.id] ?? 0,
+                    correct: activity.config.correctId === o.id,
+                }));
+
+        const max = Math.max(1, ...entries.map(e => e.n));
+        return (
+            <div className="cv-bars">
+                {entries.map(e => (
+                    <div key={e.id} className={`cv-bar-row ${revealed && e.correct ? 'correct' : ''} ${revealed && activity.kind === 'quiz' && !e.correct ? 'dim' : ''}`}>
+                        <span className="cv-bar-label">
+                            {e.label} {revealed && e.correct && '✅'}
+                        </span>
+                        <div className="cv-bar-track">
+                            <div className="cv-bar-fill" style={{ width: `${(e.n / max) * 100}%` }} />
+                            <span className="cv-bar-n">{e.n}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    if (activity.kind === 'nube') {
+        const maxN = Math.max(1, ...results.words.map(w => w.n));
+        return (
+            <div className="cv-cloud">
+                {results.words.map(w => (
+                    <span
+                        key={w.word}
+                        className="cv-cloud-word"
+                        style={{ fontSize: `${13 + (w.n / maxN) * 17}px`, opacity: 0.55 + (w.n / maxN) * 0.45 }}
+                    >
+                        {w.word}
+                    </span>
+                ))}
+            </div>
+        );
+    }
+
+    // texto libre
+    return (
+        <div className="cv-texts">
+            {results.texts.slice(-30).map((t, i) => (
+                <div key={i} className="cv-text-item">
+                    {isTeacher && t.name && <span className="cv-text-name">{t.name}</span>}
+                    <p>{t.text}</p>
+                </div>
+            ))}
+        </div>
+    );
+}

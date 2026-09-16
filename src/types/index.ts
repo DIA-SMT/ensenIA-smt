@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   ENSEÑIA SMT — Domain Types (Supabase-ready)
+   EstudIA — Domain Types (Supabase-ready)
    ═══════════════════════════════════════════════ */
 
 // ── Enums ──
@@ -13,7 +13,8 @@ export type FileType = 'pdf' | 'doc' | 'image' | 'link';
 
 // ── IA Chat ──
 export type ChatRole = 'user' | 'assistant' | 'system';
-export type IAToolType = 'act' | 'eval' | 'sum' | 'pres' | 'oral' | 'free';
+// 'guide' y 'simplify' son los modos del estudiante (guía de estudio y lenguaje fácil).
+export type IAToolType = 'act' | 'eval' | 'sum' | 'pres' | 'oral' | 'free' | 'guide' | 'simplify';
 export type IAModel = 'haiku' | 'sonnet';
 
 // ── School ──
@@ -147,7 +148,8 @@ export interface ActivitySubmission {
 }
 
 // ── Bienestar: check-in emocional ──
-export type CheckinMoment = 'inicio' | 'fin';
+// 'libre' = check-in del día, sin actividad de por medio.
+export type CheckinMoment = 'inicio' | 'fin' | 'libre';
 export type CheckinFeeling = 'genial' | 'bien' | 'neutral' | 'confundido' | 'frustrado';
 
 export interface StudentCheckin {
@@ -190,6 +192,34 @@ export const OBSERVATION_META: Record<ObservationCategory, { emoji: string; labe
   familia: { emoji: '👨‍👩‍👧', label: 'Familia' },
   otro: { emoji: '📝', label: 'Otro' },
 };
+
+// ── Gamificación: logros del estudiante ──
+export interface StudentAchievement {
+  id: string;
+  studentId: string;
+  grantedBy?: string | null;
+  kind: 'docente' | 'auto';
+  emoji: string;
+  title: string;
+  reason?: string | null;
+  points: number;
+  createdAt: string;
+  grantedByName?: string;
+}
+
+/** Presets creativos para que el docente otorgue con un click. */
+export const ACHIEVEMENT_PRESETS: { emoji: string; title: string; points: number }[] = [
+  { emoji: '⚡', title: 'Six-Seven', points: 10 },
+  { emoji: '✨', title: 'Aura', points: 10 },
+  { emoji: '🔥', title: 'En racha', points: 15 },
+  { emoji: '🧠', title: 'Cerebrito', points: 15 },
+  { emoji: '🎤', title: 'Gran exposición', points: 15 },
+  { emoji: '🤝', title: 'Buen compañero', points: 10 },
+  { emoji: '📈', title: 'Superación total', points: 20 },
+  { emoji: '🕐', title: 'Siempre puntual', points: 10 },
+];
+
+export type MaterialReactionType = 'like' | 'dislike';
 
 // ── Familias ──
 export interface GuardianLink {
@@ -310,13 +340,24 @@ export interface LibraryMaterial {
   aiSummary?: string | null;
   isSharedWithStudents: boolean;
   studyCards?: StudyCard[] | null;
+  podcastPath?: string | null;
+  podcastStatus?: 'none' | 'generating' | 'ready' | 'error';
 }
 
 // ── Placas de estudio ──
+// v2: mezcla de conceptos, flashcards (dar vuelta) y quiz (tocar opción).
+// Las placas viejas no traen `type` y se tratan como 'concept'.
 export interface StudyCard {
-  emoji: string;
-  title: string;
-  body: string;
+  type?: 'concept' | 'flashcard' | 'quiz';
+  emoji?: string;
+  tag?: string;
+  title?: string;
+  body?: string;
+  question?: string;
+  answer?: string;
+  options?: string[];
+  correct_index?: number;
+  explanation?: string;
 }
 
 // ── Programa importado (respuesta de process-document) ──

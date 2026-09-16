@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers,
+  Headphones,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial } from '../services/library.service';
@@ -10,11 +11,12 @@ import { getSubjects } from '../services/subjects.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, extractDocxText,
   extractPdfText, summarizeDocument, updateMaterial, formatFileSize,
-  generateStudyCards,
+  generateStudyCards, generatePodcast,
 } from '../services/documents.service';
 import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PodcastPlayer from '../components/PodcastPlayer';
 import type { LibraryMaterial, Subject } from '../types';
 import './Biblioteca.css';
 import '../components/Modals.css';
@@ -59,6 +61,10 @@ export default function Biblioteca() {
   // Placas de estudio
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
   const [cardsGeneratingId, setCardsGeneratingId] = useState<string | null>(null);
+
+  // Podcast
+  const [podcastFor, setPodcastFor] = useState<LibraryMaterial | null>(null);
+  const [podcastGeneratingId, setPodcastGeneratingId] = useState<string | null>(null);
 
   const refresh = () => {
     if (!user) return;
@@ -229,6 +235,26 @@ export default function Biblioteca() {
     }
   };
 
+  const handlePodcast = async (mat: LibraryMaterial) => {
+    if (mat.podcastStatus === 'ready' && mat.podcastPath) {
+      setPodcastFor(mat);
+      return;
+    }
+    if (!mat.extractedText) return;
+    setPodcastGeneratingId(mat.id);
+    try {
+      await generatePodcast(mat.id);
+      const updated = { ...mat, podcastPath: `podcasts/${mat.id}.mp3`, podcastStatus: 'ready' as const };
+      setPodcastFor(updated);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error generando el podcast.');
+      refresh();
+    } finally {
+      setPodcastGeneratingId(null);
+    }
+  };
+
   const handleSummary = async (mat: LibraryMaterial) => {
     setSummaryFor(mat);
     setSummaryError('');
@@ -373,6 +399,18 @@ export default function Biblioteca() {
                     {mat.extractedText && (
                       <button
                         className="mat-action-btn"
+                        title="Resumen en audio de 2-3 min para que repasen con auriculares"
+                        onClick={() => handlePodcast(mat)}
+                        disabled={podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'}
+                      >
+                        {podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'
+                          ? <><Loader2 size={14} className="spin" /> Grabando...</>
+                          : <><Headphones size={14} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
+                      </button>
+                    )}
+                    {mat.extractedText && (
+                      <button
+                        className="mat-action-btn"
                         title="Usar como contexto en el Laboratorio IA"
                         onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
                       >
@@ -465,6 +503,14 @@ export default function Biblioteca() {
       )}
 
       {/* ── Visor de placas ── */}
+      {podcastFor?.podcastPath && (
+        <PodcastPlayer
+          path={podcastFor.podcastPath}
+          title={podcastFor.title}
+          onClose={() => setPodcastFor(null)}
+        />
+      )}
+
       {cardsFor?.studyCards && (
         <StudyCardsViewer
           cards={cardsFor.studyCards}

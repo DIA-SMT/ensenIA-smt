@@ -10,12 +10,12 @@ import {
   getActivityById, getSubmissionsByActivity, getEventsByActivity,
   getEnrolledStudents, gradeSubmission, setSubmissionReaction,
 } from '../services/activities.service';
-import { getCheckinsByActivity, addObservation } from '../services/wellbeing.service';
+import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
   FEELING_META, OBSERVATION_META,
   type Activity, type ActivitySubmission, type ActivityEvent, type Student,
-  type StudentCheckin, type ObservationCategory,
+  type StudentCheckin, type ObservationCategory, type StudentObservation,
 } from '../types';
 import './Actividades.css';
 
@@ -60,6 +60,9 @@ export default function ActividadDetalle() {
   const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
   const [obsNote, setObsNote] = useState('');
   const [obsSaved, setObsSaved] = useState(false);
+  const [obsSaving, setObsSaving] = useState(false);
+  const [obsError, setObsError] = useState('');
+  const [obsHistory, setObsHistory] = useState<StudentObservation[]>([]);
 
   const load = async () => {
     if (!id) return;
@@ -162,6 +165,9 @@ export default function ActividadDetalle() {
     setFeedbackInput(sub?.feedback ?? '');
     setObsNote('');
     setObsSaved(false);
+    setObsError('');
+    setObsHistory([]);
+    getObservationsByStudent(st.id).then(setObsHistory).catch(console.error);
   };
 
   const handleReaction = async (reaction: string) => {
@@ -173,17 +179,37 @@ export default function ActividadDetalle() {
   };
 
   const handleAddObservation = async () => {
-    if (!selected || !user || !obsNote.trim() || !activity) return;
-    await addObservation({
-      studentId: selected.id,
-      teacherId: user.id,
-      subjectId: activity.subjectId,
-      category: obsCategory,
-      note: obsNote,
-    });
-    setObsNote('');
-    setObsSaved(true);
-    setTimeout(() => setObsSaved(false), 2500);
+    if (!selected || !user || !obsNote.trim() || !activity || obsSaving) return;
+    setObsSaving(true);
+    setObsError('');
+    try {
+      await addObservation({
+        studentId: selected.id,
+        teacherId: user.id,
+        subjectId: activity.subjectId,
+        category: obsCategory,
+        note: obsNote,
+      });
+      // La huella aparece al instante en la lista de abajo
+      setObsHistory(prev => [{
+        id: `local-${Date.now()}`,
+        studentId: selected.id,
+        teacherId: user.id,
+        subjectId: activity.subjectId,
+        category: obsCategory,
+        note: obsNote.trim(),
+        createdAt: new Date().toISOString(),
+        teacherName: `${user.firstName} ${user.lastName}`,
+      }, ...prev]);
+      setObsNote('');
+      setObsSaved(true);
+      setTimeout(() => setObsSaved(false), 2500);
+    } catch (err) {
+      console.error('Error guardando observación:', err);
+      setObsError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+    } finally {
+      setObsSaving(false);
+    }
   };
 
   const handleGrade = async () => {
@@ -447,13 +473,37 @@ export default function ActividadDetalle() {
                     value={obsNote}
                     onChange={e => setObsNote(e.target.value)}
                   />
-                  <button className="btn btn-secondary btn-sm" onClick={handleAddObservation} disabled={!obsNote.trim()}>
-                    {obsSaved ? '✓ Guardada' : 'Guardar observación'}
+                  <button
+                    className={`btn btn-sm ${obsSaved ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={handleAddObservation}
+                    disabled={!obsNote.trim() || obsSaving}
+                  >
+                    {obsSaving ? 'Guardando...' : obsSaved ? '✓ Guardada' : 'Guardar observación'}
                   </button>
+                  {obsError && (
+                    <p className="text-xs text-danger">{obsError}</p>
+                  )}
                   <p className="text-xs text-subtle">
-                    Queda en la ficha del estudiante y alimenta sus señales.
+                    Queda en la ficha del estudiante (sección Estudiantes) y alimenta sus señales.
                   </p>
                 </div>
+                {obsHistory.length > 0 && (
+                  <div className="acts-obs-history">
+                    <p className="text-xs text-subtle" style={{ marginBottom: 6 }}>
+                      Últimas observaciones de {selected.firstName}:
+                    </p>
+                    {obsHistory.slice(0, 4).map(o => (
+                      <div key={o.id} className="acts-obs-item">
+                        <p className="acts-obs-note">
+                          {OBSERVATION_META[o.category].emoji} {o.note}
+                        </p>
+                        <span className="acts-obs-meta">
+                          {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* Huella digital */}

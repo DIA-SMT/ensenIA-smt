@@ -1,21 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Search, MoreHorizontal, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy,
+    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getStudentsByTeacher } from '../services/students.service';
-import { getCheckinsByStudent, getObservationsByStudent, addObservation } from '../services/wellbeing.service';
+import { getStudentsByTeacher, getWorkByStudent, type StudentWork } from '../services/students.service';
+import { getCheckinsByStudent, getObservationsByStudent, addObservation, deleteObservation } from '../services/wellbeing.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
+import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
 import { summarizeStudent } from '../services/documents.service';
+import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
-    FEELING_META, OBSERVATION_META,
+    FEELING_META, OBSERVATION_META, ACHIEVEMENT_PRESETS,
     type Student, type StudentCheckin, type StudentObservation,
-    type GuardianLink, type ObservationCategory,
+    type GuardianLink, type ObservationCategory, type StudentAchievement,
 } from '../types';
 import './Students.css';
 import '../components/Modals.css';
+
+type StatusFilter = 'all' | 'ok' | 'warning' | 'critical';
+type SortKey = 'name' | 'progress';
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+    { key: 'all', label: 'Todos' },
+    { key: 'ok', label: '🟢 Bien' },
+    { key: 'warning', label: '🟡 En observación' },
+    { key: 'critical', label: '🔴 Riesgo' },
+];
+
+const WORK_STATUS_META: Record<StudentWork['status'], { label: string; cls: string }> = {
+    in_progress: { label: 'En curso', cls: 'badge-warning' },
+    submitted: { label: 'Entregada', cls: 'badge-cyan' },
+    graded: { label: 'Calificada', cls: 'badge-success' },
+};
 
 export default function Students() {
     const { user } = useAuth();
@@ -23,14 +42,31 @@ export default function Students() {
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [search, setSearch] = useState('');
 
+    // Filtros y orden de la lista
+    const [courseFilter, setCourseFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+    const [sortKey, setSortKey] = useState<SortKey>('name');
+    const [sortAsc, setSortAsc] = useState(true);
+
     // Datos del panel
     const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
     const [observations, setObservations] = useState<StudentObservation[]>([]);
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
+    const [work, setWork] = useState<StudentWork[]>([]);
+
+    // Logros
+    const [achievements, setAchievements] = useState<StudentAchievement[]>([]);
+    const [showGrantForm, setShowGrantForm] = useState(false);
+    const [customTitle, setCustomTitle] = useState('');
+    const [customEmoji, setCustomEmoji] = useState('🏅');
+    const [granting, setGranting] = useState(false);
 
     // Observación rápida
     const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
     const [obsNote, setObsNote] = useState('');
+    const [obsSaving, setObsSaving] = useState(false);
+    const [obsSaved, setObsSaved] = useState(false);
+    const [obsError, setObsError] = useState('');
 
     // Resumen IA
     const [showSummary, setShowSummary] = useState(false);
@@ -60,19 +96,50 @@ export default function Students() {
         setCheckins([]);
         setObservations([]);
         setGuardians([]);
+        setWork([]);
+        setAchievements([]);
+        setShowGrantForm(false);
+        setCustomTitle('');
+        setObsNote('');
+        setObsError('');
+        setObsSaved(false);
         getCheckinsByStudent(selectedStudent.id, 8).then(setCheckins).catch(console.error);
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
+        getWorkByStudent(selectedStudent.id).then(setWork).catch(console.error);
+        getAchievementsByStudent(selectedStudent.id).then(setAchievements).catch(console.error);
     }, [selectedStudent?.id]);
+
+    const courseNames = useMemo(
+        () => Array.from(new Set(allStudents.map(s => s.courseName))).sort(),
+        [allStudents],
+    );
+
+    const filteredStudents = useMemo(() => {
+        let list = allStudents;
+        if (courseFilter !== 'all') list = list.filter(s => s.courseName === courseFilter);
+        if (statusFilter === 'ok') list = list.filter(s => s.status === 'excellent' || s.status === 'good');
+        else if (statusFilter !== 'all') list = list.filter(s => s.status === statusFilter);
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            list = list.filter(s =>
+                `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
+                s.courseName.toLowerCase().includes(q)
+            );
+        }
+        const dir = sortAsc ? 1 : -1;
+        return [...list].sort((a, b) => {
+            if (sortKey === 'progress') return (a.progress - b.progress) * dir;
+            return `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`) * dir;
+        });
+    }, [allStudents, courseFilter, statusFilter, search, sortKey, sortAsc]);
 
     if (!user) return null;
 
-    const filteredStudents = search.trim()
-        ? allStudents.filter(s =>
-            `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-            s.courseName.toLowerCase().includes(search.toLowerCase())
-        )
-        : allStudents;
+    const toggleSort = (key: SortKey) => {
+        if (sortKey === key) setSortAsc(v => !v);
+        else { setSortKey(key); setSortAsc(true); }
+    };
 
     const getStatusBadge = (status: Student['status']) => {
         switch (status) {
@@ -84,15 +151,127 @@ export default function Students() {
     };
 
     const handleAddObservation = async () => {
-        if (!selectedStudent || !obsNote.trim()) return;
-        await addObservation({
-            studentId: selectedStudent.id,
-            teacherId: user.id,
-            category: obsCategory,
-            note: obsNote,
-        });
-        setObsNote('');
-        getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+        if (!selectedStudent || !obsNote.trim() || obsSaving) return;
+        setObsSaving(true);
+        setObsError('');
+        try {
+            await addObservation({
+                studentId: selectedStudent.id,
+                teacherId: user.id,
+                category: obsCategory,
+                note: obsNote,
+            });
+            // Mostrar la huella al instante, sin esperar el refetch
+            setObservations(prev => [{
+                id: `local-${Date.now()}`,
+                studentId: selectedStudent.id,
+                teacherId: user.id,
+                subjectId: null,
+                category: obsCategory,
+                note: obsNote.trim(),
+                createdAt: new Date().toISOString(),
+                teacherName: `${user.firstName} ${user.lastName}`,
+            }, ...prev]);
+            setObsNote('');
+            setObsSaved(true);
+            setTimeout(() => setObsSaved(false), 2500);
+            getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+        } catch (err) {
+            console.error('Error guardando observación:', err);
+            setObsError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+        } finally {
+            setObsSaving(false);
+        }
+    };
+
+    const handleGrant = async (emoji: string, title: string, points: number) => {
+        if (!selectedStudent || granting || !title.trim()) return;
+        setGranting(true);
+        try {
+            await grantAchievement({
+                studentId: selectedStudent.id,
+                teacherId: user.id,
+                emoji,
+                title,
+                points,
+            });
+            setCustomTitle('');
+            setShowGrantForm(false);
+            await getAchievementsByStudent(selectedStudent.id).then(setAchievements);
+        } catch (err) {
+            console.error('Error otorgando logro:', err);
+            alert('No se pudo otorgar el logro. ¿Está aplicada la migración 007?');
+        } finally {
+            setGranting(false);
+        }
+    };
+
+    const handleRevoke = async (a: StudentAchievement) => {
+        if (a.grantedBy !== user.id) return;
+        if (!window.confirm(`¿Quitar el logro "${a.title}"?`)) return;
+        try {
+            await revokeAchievement(a.id);
+            setAchievements(prev => prev.filter(x => x.id !== a.id));
+        } catch (err) {
+            console.error('Error quitando logro:', err);
+        }
+    };
+
+    const handleDeleteObservation = async (o: StudentObservation) => {
+        if (o.teacherId !== user.id) return;
+        if (!window.confirm('¿Borrar esta observación?')) return;
+        try {
+            await deleteObservation(o.id);
+            setObservations(prev => prev.filter(x => x.id !== o.id));
+        } catch (err) {
+            console.error('Error borrando observación:', err);
+        }
+    };
+
+    const handleDownloadFicha = () => {
+        if (!selectedStudent) return;
+        const s = selectedStudent;
+        const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-AR');
+        const statusLabel = { excellent: 'Excelente', good: 'Bueno', warning: 'En observación', critical: 'Riesgo' }[s.status];
+        const md = [
+            `Curso: ${s.courseName} — Estado general: ${statusLabel}`,
+            `Generada el ${new Date().toLocaleDateString('es-AR')} por ${user.firstName} ${user.lastName}`,
+            '',
+            '## Métricas generales',
+            `- Asistencia: ${s.attendance}%`,
+            `- Promedio: ${s.average}`,
+            `- Progreso en actividades: ${s.progress}%`,
+            '',
+            '## Señales recientes (check-ins emocionales)',
+            ...(checkins.length
+                ? checkins.slice(0, 8).map(c =>
+                    `- ${FEELING_META[c.feeling].label} (${c.moment === 'inicio' ? 'al empezar' : 'al terminar'})${c.comment ? `: "${c.comment}"` : ''} — ${fmt(c.createdAt)}`)
+                : ['- Sin check-ins registrados.']),
+            '',
+            '## Trabajo académico reciente',
+            ...(work.length
+                ? work.slice(0, 8).map(w => {
+                    const nota = w.score ?? w.autoScore;
+                    return `- ${w.activityTitle} (${w.subjectName}) — ${WORK_STATUS_META[w.status].label}${nota != null ? `, nota ${nota}${w.points ? `/${w.points}` : ''}` : ''} — ${fmt(w.updatedAt)}`;
+                })
+                : ['- Sin entregas registradas.']),
+            '',
+            '## Logros',
+            ...(achievements.length
+                ? [
+                    `Total: ${totalPoints(achievements)} puntos.`,
+                    ...achievements.slice(0, 10).map(a =>
+                        `- ${a.title} (+${a.points} pts) — ${a.kind === 'auto' ? 'automático' : (a.grantedByName ?? 'docente')}, ${fmt(a.createdAt)}`),
+                ]
+                : ['- Sin logros todavía.']),
+            '',
+            '## Observaciones del equipo docente',
+            ...(observations.length
+                ? observations.slice(0, 10).map(o =>
+                    `- [${OBSERVATION_META[o.category].label}] ${o.note} (${o.teacherName ?? 'Docente'}, ${fmt(o.createdAt)})`)
+                : ['- Sin observaciones registradas.']),
+        ].join('\n');
+        textToPdf(md, `Ficha de ${s.firstName} ${s.lastName}`, s.courseName);
     };
 
     const openCite = () => {
@@ -184,19 +363,65 @@ export default function Students() {
                     </div>
                 </div>
 
+                {/* Filtros por curso y estado */}
+                <div className="stu-filters border-bottom">
+                    <div className="stu-filter-group">
+                        <button
+                            className={`stu-filter-chip ${courseFilter === 'all' ? 'selected' : ''}`}
+                            onClick={() => setCourseFilter('all')}
+                        >
+                            Todos los cursos
+                        </button>
+                        {courseNames.map(c => (
+                            <button
+                                key={c}
+                                className={`stu-filter-chip ${courseFilter === c ? 'selected' : ''}`}
+                                onClick={() => setCourseFilter(c)}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="stu-filter-group">
+                        {STATUS_FILTERS.map(f => (
+                            <button
+                                key={f.key}
+                                className={`stu-filter-chip ${statusFilter === f.key ? 'selected' : ''}`}
+                                onClick={() => setStatusFilter(f.key)}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                        <span className="stu-count">
+                            {filteredStudents.length} estudiante{filteredStudents.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
+                </div>
+
                 <div className="table-responsive">
                     <table className="modern-table">
                         <thead>
                             <tr>
-                                <th>Estudiante</th>
+                                <th className="th-sortable" onClick={() => toggleSort('name')} title="Ordenar por apellido">
+                                    Estudiante {sortKey === 'name' && <ArrowUpDown size={11} className={sortAsc ? '' : 'flip'} />}
+                                </th>
                                 <th>Curso</th>
                                 <th>Estado</th>
                                 <th>Alertas</th>
-                                <th>Progreso</th>
+                                <th className="th-sortable" onClick={() => toggleSort('progress')} title="Ordenar por progreso">
+                                    Progreso {sortKey === 'progress' && <ArrowUpDown size={11} className={sortAsc ? '' : 'flip'} />}
+                                </th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
+                            {filteredStudents.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="stu-empty">
+                                        No hay estudiantes que coincidan con la búsqueda o los filtros.
+                                    </td>
+                                </tr>
+                            )}
                             {filteredStudents.map(student => (
                                 <tr
                                     key={student.id}
@@ -253,6 +478,13 @@ export default function Students() {
                             <h2 className="profile-name">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
                             <p className="profile-course">{selectedStudent.courseName}</p>
                             <div className="profile-status mt-2">{getStatusBadge(selectedStudent.status)}</div>
+                            <button
+                                className="btn btn-outline btn-sm mt-2"
+                                onClick={handleDownloadFicha}
+                                title="Descarga la ficha completa en PDF: métricas, señales, trabajo y observaciones. Ideal para reuniones."
+                            >
+                                <FileDown size={14} /> Descargar ficha (PDF)
+                            </button>
                         </div>
 
                         <div className="profile-section">
@@ -267,6 +499,122 @@ export default function Students() {
                                     <span className="metric-val">{selectedStudent.average}</span>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* ── Trabajo académico reciente ── */}
+                        <div className="profile-section">
+                            <h4><BookOpenCheck size={14} className="text-cyan inline ml-1" /> Trabajo académico</h4>
+                            {work.length === 0 ? (
+                                <p className="text-sm text-secondary italic">Sin entregas en tus actividades todavía.</p>
+                            ) : (
+                                <div className="stu-work-list">
+                                    {work.slice(0, 6).map(w => {
+                                        const nota = w.score ?? w.autoScore;
+                                        return (
+                                            <div key={w.id} className="stu-work-item">
+                                                <div className="stu-work-main">
+                                                    <span className="stu-work-title">{w.activityTitle}</span>
+                                                    <span className="stu-work-meta">
+                                                        {w.subjectName} · {new Date(w.updatedAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <div className="stu-work-side">
+                                                    <span className={`badge ${WORK_STATUS_META[w.status].cls}`}>
+                                                        {WORK_STATUS_META[w.status].label}
+                                                    </span>
+                                                    {nota != null && (
+                                                        <span className="stu-work-score">
+                                                            {nota}{w.points ? `/${w.points}` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Logros (gamificación) ── */}
+                        <div className="profile-section">
+                            <div className="flex items-center justify-between">
+                                <h4><Award size={14} className="text-warning inline ml-1" /> Logros
+                                    {achievements.length > 0 && (
+                                        <span className="stu-points-badge">⭐ {totalPoints(achievements)} pts</span>
+                                    )}
+                                </h4>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowGrantForm(v => !v)}>
+                                    <Plus size={13} /> Dar logro
+                                </button>
+                            </div>
+
+                            {showGrantForm && (
+                                <div className="stu-grant-form">
+                                    <p className="text-xs text-subtle">Un toque y se lo lleva:</p>
+                                    <div className="stu-preset-grid">
+                                        {ACHIEVEMENT_PRESETS.map(p => (
+                                            <button
+                                                key={p.title}
+                                                className="stu-preset-chip"
+                                                disabled={granting}
+                                                title={`${p.points} puntos`}
+                                                onClick={() => handleGrant(p.emoji, p.title, p.points)}
+                                            >
+                                                {p.emoji} {p.title}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="stu-custom-grant">
+                                        <input
+                                            type="text"
+                                            className="stu-custom-emoji"
+                                            value={customEmoji}
+                                            maxLength={4}
+                                            onChange={e => setCustomEmoji(e.target.value)}
+                                            aria-label="Emoji del logro"
+                                        />
+                                        <input
+                                            type="text"
+                                            className="stu-custom-title"
+                                            placeholder="Logro personalizado..."
+                                            value={customTitle}
+                                            maxLength={40}
+                                            onChange={e => setCustomTitle(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') handleGrant(customEmoji || '🏅', customTitle, 10); }}
+                                        />
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            disabled={!customTitle.trim() || granting}
+                                            onClick={() => handleGrant(customEmoji || '🏅', customTitle, 10)}
+                                        >
+                                            Dar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {achievements.length === 0
+                                ? <p className="text-sm text-secondary italic">Todavía no tiene logros. ¡Regalale el primero!</p>
+                                : (
+                                    <div className="stu-achievements">
+                                        {achievements.slice(0, 8).map(a => (
+                                            <div key={a.id} className="stu-achievement" title={a.reason ?? undefined}>
+                                                <span className="stu-achievement-emoji">{a.emoji}</span>
+                                                <div className="stu-achievement-body">
+                                                    <span className="stu-achievement-title">{a.title}</span>
+                                                    <span className="stu-achievement-meta">
+                                                        +{a.points} pts · {a.kind === 'auto' ? 'automático' : (a.grantedByName ?? 'docente')} · {new Date(a.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                {a.grantedBy === user.id && (
+                                                    <button className="stu-obs-delete" title="Quitar logro" onClick={() => handleRevoke(a)}>
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                         </div>
 
                         {/* ── Señales: cómo se viene sintiendo ── */}
@@ -326,20 +674,40 @@ export default function Students() {
                                     value={obsNote}
                                     onChange={e => setObsNote(e.target.value)}
                                 />
-                                <button className="btn btn-secondary btn-sm" onClick={handleAddObservation} disabled={!obsNote.trim()}>
-                                    Guardar observación
+                                <button
+                                    className={`btn btn-sm ${obsSaved ? 'btn-primary' : 'btn-secondary'}`}
+                                    onClick={handleAddObservation}
+                                    disabled={!obsNote.trim() || obsSaving}
+                                >
+                                    {obsSaving ? 'Guardando...' : obsSaved ? '✓ Guardada' : 'Guardar observación'}
                                 </button>
+                                {obsError && (
+                                    <p className="text-xs text-danger" style={{ marginTop: 4 }}>
+                                        <AlertTriangle size={12} className="inline" /> {obsError}
+                                    </p>
+                                )}
                             </div>
                             {observations.length === 0
                                 ? <p className="text-sm text-secondary italic">Sin observaciones todavía.</p>
                                 : observations.slice(0, 6).map(o => (
-                                    <div key={o.id} className="acts-obs-item">
-                                        <p className="acts-obs-note">
-                                            {OBSERVATION_META[o.category].emoji} {o.note}
-                                        </p>
-                                        <span className="acts-obs-meta">
-                                            {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
-                                        </span>
+                                    <div key={o.id} className="acts-obs-item stu-obs-item">
+                                        <div className="stu-obs-body">
+                                            <p className="acts-obs-note">
+                                                {OBSERVATION_META[o.category].emoji} {o.note}
+                                            </p>
+                                            <span className="acts-obs-meta">
+                                                {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                                            </span>
+                                        </div>
+                                        {o.teacherId === user.id && !o.id.startsWith('local-') && (
+                                            <button
+                                                className="stu-obs-delete"
+                                                title="Borrar esta observación"
+                                                onClick={() => handleDeleteObservation(o)}
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                         </div>

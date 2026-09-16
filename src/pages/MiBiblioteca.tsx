@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Download, FileText, Sparkles, X, Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Download, FileText, Sparkles, X, Layers, ThumbsUp, ThumbsDown, Wand2, Headphones } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
+import { getStudentByUserId } from '../services/activities.service';
+import { getMyMaterialReactions, setMaterialReaction } from '../services/gamification.service';
 import { getSignedUrl } from '../services/documents.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
-import type { LibraryMaterial } from '../types';
+import PodcastPlayer from '../components/PodcastPlayer';
+import type { LibraryMaterial, MaterialReactionType, Student } from '../types';
 import './StudentPortal.css';
 import '../components/Modals.css';
 
@@ -15,6 +19,9 @@ export default function MiBiblioteca() {
   const [loading, setLoading] = useState(true);
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
+  const [reactions, setReactions] = useState<Record<string, MaterialReactionType>>({});
+  const [podcastFor, setPodcastFor] = useState<LibraryMaterial | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -22,9 +29,37 @@ export default function MiBiblioteca() {
       .then(setMaterials)
       .catch(console.error)
       .finally(() => setLoading(false));
+    getStudentByUserId(user.id).then(st => {
+      setStudent(st);
+      if (st) getMyMaterialReactions(st.id).then(setReactions).catch(console.error);
+    }).catch(console.error);
   }, [user]);
 
   if (!user) return null;
+
+  const handleReaction = async (mat: LibraryMaterial, reaction: MaterialReactionType) => {
+    if (!student) return;
+    const current = reactions[mat.id];
+    const next = current === reaction ? null : reaction;
+    // Optimista: se ve al toque
+    setReactions(prev => {
+      const copy = { ...prev };
+      if (next === null) delete copy[mat.id];
+      else copy[mat.id] = next;
+      return copy;
+    });
+    try {
+      await setMaterialReaction(mat.id, student.id, next);
+    } catch (err) {
+      console.error('Error guardando reacción:', err);
+      setReactions(prev => {
+        const copy = { ...prev };
+        if (current) copy[mat.id] = current;
+        else delete copy[mat.id];
+        return copy;
+      });
+    }
+  };
 
   const handleDownload = async (mat: LibraryMaterial) => {
     if (!mat.storagePath) return;
@@ -74,15 +109,47 @@ export default function MiBiblioteca() {
                   <Sparkles size={14} /> Resumen
                 </button>
               )}
+              {mat.podcastStatus === 'ready' && mat.podcastPath && (
+                <button className="btn btn-primary btn-sm" onClick={() => setPodcastFor(mat)} title="Escuchá el resumen en audio">
+                  <Headphones size={14} /> Podcast
+                </button>
+              )}
+              {mat.extractedText && (
+                <Link to={`/mi-guia?doc=${mat.id}`} className="btn btn-secondary btn-sm" title="La IA te lo explica con palabras simples">
+                  <Wand2 size={14} /> Explicámelo fácil
+                </Link>
+              )}
               {mat.storagePath && (
                 <button className="btn btn-outline btn-sm" onClick={() => handleDownload(mat)}>
                   <Download size={14} /> Descargar
                 </button>
               )}
+              {student && (
+                <div className="sp-reaction-group" title="¿Te sirvió este material? Tu docente lo ve.">
+                  <button
+                    className={`sp-reaction-btn ${reactions[mat.id] === 'like' ? 'active-like' : ''}`}
+                    onClick={() => handleReaction(mat, 'like')}
+                    aria-label="Me sirvió"
+                  >
+                    <ThumbsUp size={14} />
+                  </button>
+                  <button
+                    className={`sp-reaction-btn ${reactions[mat.id] === 'dislike' ? 'active-dislike' : ''}`}
+                    onClick={() => handleReaction(mat, 'dislike')}
+                    aria-label="No me sirvió"
+                  >
+                    <ThumbsDown size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      {podcastFor?.podcastPath && (
+        <PodcastPlayer path={podcastFor.podcastPath} title={podcastFor.title} onClose={() => setPodcastFor(null)} />
+      )}
 
       {cardsFor?.studyCards && (
         <StudyCardsViewer

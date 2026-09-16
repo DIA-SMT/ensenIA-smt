@@ -27,7 +27,7 @@ function titleFor(pathname: string): string {
     if (routeNames[pathname]) return routeNames[pathname];
     if (pathname.startsWith('/actividades/')) return 'Resultados de actividad';
     if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
-    return 'ENSEÑIA';
+    return 'SMT EstudIA';
 }
 
 interface TopbarProps {
