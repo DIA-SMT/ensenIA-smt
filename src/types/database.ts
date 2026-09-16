@@ -1203,28 +1203,31 @@ export type Database = {
         Row: {
           activity_id: string
           created_at: string | null
+          guest_id: string | null
           id: string
           payload: Json
           session_id: string
-          student_id: string
+          student_id: string | null
           updated_at: string | null
         }
         Insert: {
           activity_id: string
           created_at?: string | null
+          guest_id?: string | null
           id?: string
           payload?: Json
           session_id: string
-          student_id: string
+          student_id?: string | null
           updated_at?: string | null
         }
         Update: {
           activity_id?: string
           created_at?: string | null
+          guest_id?: string | null
           id?: string
           payload?: Json
           session_id?: string
-          student_id?: string
+          student_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1256,7 +1259,9 @@ export type Database = {
           course_id: string
           created_at: string | null
           ended_at: string | null
+          guests_enabled: boolean
           id: string
+          join_code: string | null
           reactions_enabled: boolean
           school_id: string
           status: string
@@ -1268,7 +1273,9 @@ export type Database = {
           course_id: string
           created_at?: string | null
           ended_at?: string | null
+          guests_enabled?: boolean
           id?: string
+          join_code?: string | null
           reactions_enabled?: boolean
           school_id: string
           status?: string
@@ -1280,7 +1287,9 @@ export type Database = {
           course_id?: string
           created_at?: string | null
           ended_at?: string | null
+          guests_enabled?: boolean
           id?: string
+          join_code?: string | null
           reactions_enabled?: boolean
           school_id?: string
           status?: string
@@ -2471,6 +2480,13 @@ export type Database = {
           teacher_id: string
           teacher_name: string
         }[]
+      }
+      join_live_session: { Args: { p_code: string; p_name: string }; Returns: Json }
+      live_guest_state: { Args: { p_token: string }; Returns: Json }
+      send_live_guest_reaction: { Args: { p_emoji: string; p_token: string }; Returns: undefined }
+      submit_live_guest_response: {
+        Args: { p_activity: string; p_payload: Json; p_token: string }
+        Returns: undefined
       }
     }
     Enums: {

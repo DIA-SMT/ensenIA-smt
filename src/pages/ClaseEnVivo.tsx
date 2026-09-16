@@ -11,17 +11,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
-    Smile, Trash2, ChevronLeft, Loader2,
+    Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, LIVE_KIND_META,
+    getRecentReactions, setGuestsEnabled, LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption,
 } from '../services/live.service';
+import QrModal from '../components/QrModal';
 import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
 import './ClaseEnVivo.css';
 
@@ -50,6 +51,7 @@ export default function ClaseEnVivo() {
     ]);
     const [correctId, setCorrectId] = useState<string>('');
     const [launching, setLaunching] = useState(false);
+    const [showQr, setShowQr] = useState(false);
 
     const pollRef = useRef<number | null>(null);
 
@@ -143,6 +145,24 @@ export default function ClaseEnVivo() {
         } catch (err) {
             console.error(err);
             setSession({ ...session, reactionsEnabled: !next });
+        }
+    };
+
+    /**
+     * Abre la sala a gente sin cuenta. Apagado por default: en una clase
+     * normal participan los estudiantes del curso y nadie más. Se prende
+     * para una presentación, una jornada o una visita al aula.
+     */
+    const handleToggleGuests = async () => {
+        if (!session) return;
+        const next = !session.guestsEnabled;
+        setSession({ ...session, guestsEnabled: next });
+        try {
+            await setGuestsEnabled(session.id, next);
+            if (next) setShowQr(true); // al abrirla, lo que querés es proyectar el QR
+        } catch (err) {
+            console.error(err);
+            setSession({ ...session, guestsEnabled: !next });
         }
     };
 
@@ -250,10 +270,34 @@ export default function ClaseEnVivo() {
                     <span className="cv-live-dot" />
                     <div>
                         <h3>{session.title}</h3>
-                        <p className="text-xs text-subtle">Los estudiantes participan desde su celular</p>
+                        <p className="text-xs text-subtle">
+                            {session.guestsEnabled
+                                ? `Sala abierta · entran con el QR o el código ${session.joinCode ?? ''}`
+                                : 'Los estudiantes participan desde su celular'}
+                        </p>
                     </div>
                 </div>
                 <div className="cv-header-actions">
+                    <button
+                        className={`cv-toggle ${session.guestsEnabled ? 'on' : ''}`}
+                        onClick={handleToggleGuests}
+                        title={session.guestsEnabled
+                            ? 'Cualquiera con el QR puede participar. Tocá para cerrar la sala.'
+                            : 'Sala cerrada: solo los estudiantes del curso. Tocá para abrirla con QR.'}
+                    >
+                        <UserPlus size={15} />
+                        <span>Invitados</span>
+                        <span className={`cv-toggle-pill ${session.guestsEnabled ? 'on' : ''}`} />
+                    </button>
+                    {session.guestsEnabled && session.joinCode && (
+                        <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => setShowQr(true)}
+                            title="QR y código para proyectar"
+                        >
+                            <QrCode size={13} /> {session.joinCode}
+                        </button>
+                    )}
                     <button
                         className={`cv-toggle ${session.reactionsEnabled ? 'on' : ''}`}
                         onClick={handleToggleReactions}
@@ -413,13 +457,24 @@ export default function ClaseEnVivo() {
                     </div>
                 )}
             </div>
+
+            {showQr && session.joinCode && (
+                <QrModal
+                    path={`/vivo/${session.joinCode}`}
+                    title={`Sala ${session.joinCode}`}
+                    subtitle="Proyectalo: escanean, ponen su nombre y participan desde el celular. No hace falta cuenta. El código también se puede tipear a mano."
+                    onClose={() => setShowQr(false)}
+                />
+            )}
         </div>
     );
 }
 
 /* ── Resultados en vivo (compartido docente/estudiante) ── */
 export function LiveResultsView({ activity, results, isTeacher = false }: {
-    activity: LiveActivity;
+    /* Solo necesita la forma de la actividad: así la reusa también la
+       pantalla de invitados, que recibe una versión recortada. */
+    activity: Pick<LiveActivity, 'kind' | 'config' | 'status'>;
     results: LiveResults | null;
     isTeacher?: boolean;
 }) {

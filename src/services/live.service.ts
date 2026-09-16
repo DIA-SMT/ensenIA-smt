@@ -39,6 +39,10 @@ export interface LiveSession {
   title: string;
   status: 'live' | 'ended';
   reactionsEnabled: boolean;
+  /** Sala abierta a gente sin cuenta (QR de invitados). */
+  guestsEnabled: boolean;
+  /** Código corto de 6 caracteres que se proyecta junto al QR. */
+  joinCode: string | null;
   createdAt: string;
   endedAt?: string | null;
 }
@@ -59,7 +63,7 @@ export interface LiveResults {
   courseTotal: number;
   responded: number;
   counts: Record<string, number>;
-  texts: { name: string | null; text: string }[];
+  texts: { id: string; name: string | null; text: string }[];
   words: { word: string; n: number }[];
 }
 
@@ -94,6 +98,8 @@ function mapSession(row: any): LiveSession {
     title: row.title,
     status: row.status,
     reactionsEnabled: row.reactions_enabled,
+    guestsEnabled: row.guests_enabled,
+    joinCode: row.join_code,
     createdAt: row.created_at,
     endedAt: row.ended_at,
   };
@@ -299,5 +305,30 @@ export async function saveLiveCheckin(studentId: string, feeling: CheckinFeeling
     feeling,
     comment: null,
   });
+  if (error) throw error;
+}
+
+// ── Sala abierta a invitados (migración 012) ──
+
+/**
+ * Abre o cierra la sala a gente sin cuenta. Apagado por default: en una
+ * clase normal los que participan son los estudiantes del curso y nadie
+ * más. Se prende para una presentación, una jornada o una visita.
+ */
+export async function setGuestsEnabled(id: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('live_sessions')
+    .update({ guests_enabled: enabled })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Borra una respuesta suelta. Con invitados anónimos, lo que alguien
+ * escribe en "respuesta libre" o en la nube de palabras queda proyectado
+ * en una pared: el docente tiene que poder sacarlo sin frenar la clase.
+ */
+export async function deleteLiveResponse(id: string): Promise<void> {
+  const { error } = await supabase.from('live_responses').delete().eq('id', id);
   if (error) throw error;
 }

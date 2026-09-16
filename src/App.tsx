@@ -21,6 +21,7 @@ import MiBiblioteca from './pages/MiBiblioteca';
 import MiGuia from './pages/MiGuia';
 import ClaseEnVivo from './pages/ClaseEnVivo';
 import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
+import ClaseEnVivoInvitado from './pages/ClaseEnVivoInvitado';
 import Hoy from './pages/Hoy';
 import MisClases from './pages/MisClases';
 import Asistencia from './pages/Asistencia';
@@ -50,6 +51,10 @@ function App() {
         <Routes>
           {/* Login — outside layout */}
           <Route path="/login" element={<Login />} />
+
+          {/* Invitados por QR — pública a propósito: el que escanea no tiene
+              cuenta y no la va a crear parado en una sala. */}
+          <Route path="/vivo/:codigo" element={<ClaseEnVivoInvitado />} />
 
           {/* Protected — inside layout */}
           <Route path="/" element={
