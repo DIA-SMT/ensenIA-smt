@@ -9,6 +9,7 @@ const routeNames: Record<string, string> = {
     '/mis-clases': 'Mis clases',
     '/crear': 'Crear actividad',
     '/asistencia': 'Asistencia',
+    '/corregir': 'Para corregir',
     '/clase-en-vivo': 'Clase en vivo',
     '/dashboard': 'Dashboard',
     '/agenda': 'Mi horario',

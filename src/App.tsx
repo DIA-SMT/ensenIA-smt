@@ -24,6 +24,7 @@ import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
 import Hoy from './pages/Hoy';
 import MisClases from './pages/MisClases';
 import Asistencia from './pages/Asistencia';
+import Corregir from './pages/Corregir';
 import Familias from './pages/Familias';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
@@ -58,7 +59,7 @@ function App() {
 
             {/* Shared routes (staff) */}
             <Route path="dashboard" element={
-              <ProtectedRoute allowedRoles={['docente', 'director']}><Dashboard /></ProtectedRoute>
+              <ProtectedRoute allowedRoles={['director']}><Dashboard /></ProtectedRoute>
             } />
             <Route path="alerts" element={
               <ProtectedRoute allowedRoles={['docente', 'director']}><Alerts /></ProtectedRoute>
@@ -74,6 +75,9 @@ function App() {
             } />
             <Route path="asistencia" element={
               <ProtectedRoute allowedRoles={['docente']}><Asistencia /></ProtectedRoute>
+            } />
+            <Route path="corregir" element={
+              <ProtectedRoute allowedRoles={['docente']}><Corregir /></ProtectedRoute>
             } />
             <Route path="crear" element={
               <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>

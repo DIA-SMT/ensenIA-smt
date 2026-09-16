@@ -147,6 +147,22 @@ export default function Hoy() {
                 </Link>
             )}
 
+            {/* Hay entregas esperando nota */}
+            {stats.pendingEvaluations > 0 && (
+                <Link to="/corregir" className="card hoy-pending-banner">
+                    <span className="hoy-pending-icon"><ClipboardCheck size={18} /></span>
+                    <div>
+                        <h4>
+                            {stats.pendingEvaluations} entrega{stats.pendingEvaluations !== 1 ? 's' : ''} esperando tu nota
+                        </h4>
+                        <p className="text-sm text-secondary">
+                            Corregilas todas de una, con las respuestas a la vista.
+                        </p>
+                    </div>
+                    <ChevronRight size={18} className="text-subtle" />
+                </Link>
+            )}
+
             {/* Clases de hoy */}
             <section className="hoy-classes">
                 <h2 className="hoy-section-title"><Sun size={17} /> Tus clases de hoy</h2>
@@ -211,7 +227,7 @@ export default function Hoy() {
                                     </button>
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate('/mis-clases?tab=actividades')}
+                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/mis-clases?tab=actividades')}
                                         title="Entregas, notas y cómo trabajaron"
                                     >
                                         <BarChart3 size={15} /> Cómo les fue
@@ -249,11 +265,15 @@ export default function Hoy() {
                     <span className="hoy-stat-val">{stats.classesToday}</span>
                     <span className="hoy-stat-label">clases hoy</span>
                 </div>
-                <div className="hoy-stat">
+                <button
+                    className="hoy-stat hoy-stat-action"
+                    onClick={() => navigate('/corregir')}
+                    title="Ver y corregir todas las entregas pendientes"
+                >
                     <ClipboardCheck size={15} className="text-ia-accent" />
                     <span className="hoy-stat-val">{stats.pendingEvaluations}</span>
                     <span className="hoy-stat-label">por corregir</span>
-                </div>
+                </button>
                 <div className="hoy-stat">
                     <CheckSquare size={15} className="text-success" />
                     <span className="hoy-stat-val">{stats.avgAttendance}%</span>

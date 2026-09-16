@@ -2,9 +2,15 @@ import { supabase } from './_helpers';
 import type { TeacherStats, DirectorStats } from '../types';
 
 export async function getTeacherStats(userId: string, todayDayIndex: number): Promise<TeacherStats> {
-  const [assignmentsRes, todayRes] = await Promise.all([
+  const [assignmentsRes, todayRes, pendingRes] = await Promise.all([
     supabase.from('teacher_assignments').select('course_id').eq('teacher_id', userId),
     supabase.from('schedule_blocks').select('id').eq('teacher_id', userId).eq('day_index', todayDayIndex),
+    // Entregas esperando nota: antes este número estaba fijo en 0.
+    supabase
+      .from('activity_submissions')
+      .select('id, activities!inner(teacher_id)', { count: 'exact', head: true })
+      .eq('activities.teacher_id', userId)
+      .eq('status', 'submitted'),
   ]);
 
   const courseIds = [...new Set((assignmentsRes.data ?? []).map((a: any) => a.course_id))];
@@ -21,7 +27,7 @@ export async function getTeacherStats(userId: string, todayDayIndex: number): Pr
   return {
     totalStudents: studentList.length,
     classesToday: (todayRes.data ?? []).length,
-    pendingEvaluations: 0,
+    pendingEvaluations: pendingRes.count ?? 0,
     avgAttendance: studentList.length > 0
       ? parseFloat(
           (studentList.reduce((sum: number, s: any) => sum + Number(s.attendance), 0) / studentList.length).toFixed(1)

@@ -376,3 +376,65 @@ export async function logActivityEvent(
   });
   if (error) console.error('logActivityEvent:', error.message);
 }
+
+/** Una entrega esperando nota, con todo lo necesario para corregirla sin abrir otra pantalla. */
+export interface PendingGrading {
+  submissionId: string;
+  studentName: string;
+  avatarInitials: string;
+  activityId: string;
+  activityTitle: string;
+  subjectName: string;
+  courseName: string;
+  points: number | null;
+  autoScore: number | null;
+  submittedAt: string | null;
+  answers: Record<string, ActivityAnswer>;
+  responseText?: string | null;
+  questions: ActivityQuestion[];
+}
+
+/**
+ * Todo lo que el docente tiene pendiente de corregir, de todas sus
+ * actividades juntas. Antes había que entrar actividad por actividad.
+ */
+export async function getPendingGrading(teacherId: string): Promise<PendingGrading[]> {
+  const data = unwrap(
+    await supabase
+      .from('activity_submissions')
+      .select(
+        'id, auto_score, submitted_at, answers, response_text,' +
+        ' students(first_name, last_name, avatar_initials),' +
+        ' activities!inner(id, title, points, questions, teacher_id, subjects(name), courses(name))'
+      )
+      .eq('activities.teacher_id', teacherId)
+      .eq('status', 'submitted')
+      .order('submitted_at', { ascending: true })
+  );
+
+  return data.map((r: any) => ({
+    submissionId: r.id,
+    studentName: r.students ? `${r.students.first_name} ${r.students.last_name}` : 'Estudiante',
+    avatarInitials: r.students?.avatar_initials ?? '??',
+    activityId: r.activities?.id ?? '',
+    activityTitle: r.activities?.title ?? 'Actividad',
+    subjectName: r.activities?.subjects?.name ?? '',
+    courseName: r.activities?.courses?.name ?? '',
+    points: r.activities?.points != null ? Number(r.activities.points) : null,
+    autoScore: r.auto_score != null ? Number(r.auto_score) : null,
+    submittedAt: r.submitted_at,
+    answers: r.answers ?? {},
+    responseText: r.response_text,
+    questions: r.activities?.questions ?? [],
+  }));
+}
+
+/** Cuántas entregas esperan nota (para el contador de "por corregir"). */
+export async function getPendingGradingCount(teacherId: string): Promise<number> {
+  const { count } = await supabase
+    .from('activity_submissions')
+    .select('id, activities!inner(teacher_id)', { count: 'exact', head: true })
+    .eq('activities.teacher_id', teacherId)
+    .eq('status', 'submitted');
+  return count ?? 0;
+}

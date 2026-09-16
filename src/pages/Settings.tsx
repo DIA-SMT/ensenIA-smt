@@ -1,4 +1,4 @@
-import { User as UserIcon, Mail, School, Shield, LogOut, Moon, Bell } from 'lucide-react';
+import { User as UserIcon, Mail, School, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Settings.css';
 
@@ -48,38 +48,20 @@ export default function Settings() {
                 </div>
             </section>
 
-            {/* Preferences */}
-            <section className="card settings-section">
-                <h3 className="settings-section-title">Preferencias</h3>
-
-                <div className="settings-pref-list">
-                    <div className="settings-pref-item">
-                        <div className="settings-pref-info">
-                            <Moon size={16} />
-                            <div>
-                                <span className="settings-pref-label">Tema oscuro</span>
-                                <span className="settings-pref-desc">Activado por defecto</span>
-                            </div>
-                        </div>
-                        <div className="settings-toggle active">
-                            <div className="settings-toggle-knob" />
-                        </div>
+            {/* Mis materias */}
+            {user.subjects && user.subjects.length > 0 && (
+                <section className="card settings-section">
+                    <h3 className="settings-section-title">Mis materias</h3>
+                    <p className="settings-session-hint">
+                        Los cursos que tenés asignados. Si falta alguno, pedile a dirección que lo cargue.
+                    </p>
+                    <div className="settings-subjects">
+                        {user.subjects.map((s, i) => (
+                            <span key={i} className="settings-subject-chip">{s.courseName}</span>
+                        ))}
                     </div>
-
-                    <div className="settings-pref-item">
-                        <div className="settings-pref-info">
-                            <Bell size={16} />
-                            <div>
-                                <span className="settings-pref-label">Notificaciones</span>
-                                <span className="settings-pref-desc">Recibir alertas y comunicados</span>
-                            </div>
-                        </div>
-                        <div className="settings-toggle active">
-                            <div className="settings-toggle-knob" />
-                        </div>
-                    </div>
-                </div>
-            </section>
+                </section>
+            )}
 
             {/* Session */}
             <section className="card settings-section">
