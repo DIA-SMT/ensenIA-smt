@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-    Search, MoreHorizontal, AlertTriangle, X, HeartPulse, PencilLine,
+    Search, ChevronRight, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy,
     BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus,
 } from 'lucide-react';
@@ -9,6 +9,7 @@ import { getStudentsByTeacher, getWorkByStudent, type StudentWork } from '../ser
 import { getCheckinsByStudent, getObservationsByStudent, addObservation, deleteObservation } from '../services/wellbeing.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
 import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
+import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
 import { summarizeStudent } from '../services/documents.service';
 import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -53,6 +54,7 @@ export default function Students() {
     const [observations, setObservations] = useState<StudentObservation[]>([]);
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
     const [work, setWork] = useState<StudentWork[]>([]);
+    const [absences, setAbsences] = useState<{ date: string; status: AttendanceStatus }[]>([]);
 
     // Logros
     const [achievements, setAchievements] = useState<StudentAchievement[]>([]);
@@ -97,6 +99,7 @@ export default function Students() {
         setObservations([]);
         setGuardians([]);
         setWork([]);
+        setAbsences([]);
         setAchievements([]);
         setShowGrantForm(false);
         setCustomTitle('');
@@ -107,6 +110,7 @@ export default function Students() {
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
         getWorkByStudent(selectedStudent.id).then(setWork).catch(console.error);
+        getAbsencesByStudent(selectedStudent.id).then(setAbsences).catch(console.error);
         getAchievementsByStudent(selectedStudent.id).then(setAchievements).catch(console.error);
     }, [selectedStudent?.id]);
 
@@ -453,7 +457,7 @@ export default function Students() {
                                         </div>
                                     </td>
                                     <td>
-                                        <button className="btn-icon"><MoreHorizontal size={18} /></button>
+                                        <ChevronRight size={18} className="text-subtle" />
                                     </td>
                                 </tr>
                             ))}
@@ -499,6 +503,16 @@ export default function Students() {
                                     <span className="metric-val">{selectedStudent.average}</span>
                                 </div>
                             </div>
+                            {absences.length > 0 && (
+                                <div className="stu-absences">
+                                    <span className="text-xs text-subtle">Faltas recientes:</span>
+                                    {absences.slice(0, 6).map((a, i) => (
+                                        <span key={i} className="stu-absence-chip" title={ATTENDANCE_META[a.status].label}>
+                                            {ATTENDANCE_META[a.status].emoji} {new Date(a.date + 'T12:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* ── Trabajo académico reciente ── */}

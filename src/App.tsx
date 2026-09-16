@@ -21,6 +21,9 @@ import MiBiblioteca from './pages/MiBiblioteca';
 import MiGuia from './pages/MiGuia';
 import ClaseEnVivo from './pages/ClaseEnVivo';
 import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
+import Hoy from './pages/Hoy';
+import MisClases from './pages/MisClases';
+import Asistencia from './pages/Asistencia';
 import Familias from './pages/Familias';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
@@ -31,6 +34,7 @@ function HomeRedirect() {
   const { user } = useAuth();
   const home = user?.role === 'estudiante' ? '/mis-actividades'
     : user?.role === 'padre' ? '/comunicados-familia'
+    : user?.role === 'docente' ? '/hoy'
     : '/dashboard';
   return <Navigate to={home} replace />;
 }
@@ -62,6 +66,18 @@ function App() {
             <Route path="settings" element={<Settings />} />
 
             {/* Teacher-only */}
+            <Route path="hoy" element={
+              <ProtectedRoute allowedRoles={['docente']}><Hoy /></ProtectedRoute>
+            } />
+            <Route path="mis-clases" element={
+              <ProtectedRoute allowedRoles={['docente']}><MisClases /></ProtectedRoute>
+            } />
+            <Route path="asistencia" element={
+              <ProtectedRoute allowedRoles={['docente']}><Asistencia /></ProtectedRoute>
+            } />
+            <Route path="crear" element={
+              <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>
+            } />
             <Route path="agenda" element={
               <ProtectedRoute allowedRoles={['docente']}><Agenda /></ProtectedRoute>
             } />

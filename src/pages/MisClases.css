@@ -1,0 +1,61 @@
+/* ═══════════════════════════════════════════════
+   SMT EstudIA — Mis clases (pestañas)
+   ═══════════════════════════════════════════════ */
+
+.mc-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 0;
+}
+
+.mc-tabs {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1);
+  align-self: flex-start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.mc-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.mc-tab:hover { color: var(--text-primary); }
+
+.mc-tab.active {
+  background: var(--bg-panel);
+  color: var(--cyan-bright);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* El panel hereda el alto para que la agenda y la biblioteca scrolleen bien */
+.mc-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 560px) {
+  .mc-tabs { width: 100%; align-self: stretch; }
+  .mc-tab { flex: 1; justify-content: center; padding: 8px 10px; }
+  .mc-tab span { font-size: 12.5px; }
+}

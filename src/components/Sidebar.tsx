@@ -1,10 +1,12 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
+    LayoutDashboard, Calendar, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio
+    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getUnreadAlertCount } from '../services/alerts.service';
 import './Sidebar.css';
 
 interface NavItem {
@@ -12,19 +14,19 @@ interface NavItem {
     path: string;
     icon: typeof LayoutDashboard;
     isIA?: boolean;
+    /** Muestra el contador de alertas sin abrir (Alertas dejó de ser sección). */
+    showAlerts?: boolean;
 }
 
+// Cinco destinos, con nombres de aula y no de sistema. Preparar clase,
+// clase en vivo y crear actividad son botones de acción (viven en Hoy),
+// no items de menú: el docente llega a ellos desde su clase del día.
 const teacherNavItems: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Mi Agenda', path: '/agenda', icon: Calendar },
-    { label: 'Laboratorio IA', path: '/ia-lab', icon: FlaskConical, isIA: true },
-    { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio },
-    { label: 'Actividades', path: '/actividades', icon: ClipboardList },
-    { label: 'Estudiantes', path: '/students', icon: Users },
-    { label: 'Biblioteca Docente', path: '/biblioteca', icon: BookOpen },
+    { label: 'Hoy', path: '/hoy', icon: Sun },
+    { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
+    { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
-    { label: 'Alertas', path: '/alerts', icon: Bell },
-    { label: 'Configuración', path: '/settings', icon: Settings },
+    { label: 'Ajustes', path: '/settings', icon: Settings },
 ];
 
 const directorNavItems: NavItem[] = [
@@ -74,6 +76,13 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     const { user, school, isDirector, isEstudiante, logout } = useAuth();
     const isPadre = user?.role === 'padre';
+    const [alertCount, setAlertCount] = useState(0);
+
+    const isDocente = user?.role === 'docente';
+    useEffect(() => {
+        if (!user || !isDocente) return;
+        getUnreadAlertCount(user.id).then(setAlertCount).catch(() => {});
+    }, [user?.id, isDocente]);
 
     const navItems = isDirector ? directorNavItems
         : isEstudiante ? studentNavItems
@@ -111,6 +120,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         </div>
                         {!collapsed && <span className="nav-label">{item.label}</span>}
                         {!collapsed && item.isIA && <span className="ia-tag">IA</span>}
+                        {item.showAlerts && alertCount > 0 && (
+                            <span className="nav-alert-badge" title={`${alertCount} alertas sin ver`}>
+                                {alertCount}
+                            </span>
+                        )}
                     </NavLink>
                 ))}
             </nav>

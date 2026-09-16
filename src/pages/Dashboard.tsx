@@ -273,7 +273,7 @@ function TeacherDashboardContent() {
                     <section className="card widget animate-in stagger-6">
                         <div className="widget-header">
                             <h3 className="widget-title">Semana</h3>
-                            <button className="btn btn-ghost text-sm">Ver agenda <ArrowRight size={14} /></button>
+                            <button className="btn btn-ghost text-sm" onClick={() => navigate('/mis-clases')}>Ver agenda <ArrowRight size={14} /></button>
                         </div>
                         <div className="weekly-calendar">
                             {weekCalendar.map((day, idx) => (
@@ -563,7 +563,7 @@ function DirectorDashboardContent() {
                                 <MessageSquare size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                                 Últimos Comunicados
                             </h3>
-                            <button className="btn btn-ghost text-sm">Ver todos <ArrowRight size={14} /></button>
+                            <button className="btn btn-ghost text-sm" onClick={() => navigate('/alerts')}>Ver todos <ArrowRight size={14} /></button>
                         </div>
                         <div className="comms-widget-list">
                             {recentComms.map(comm => (

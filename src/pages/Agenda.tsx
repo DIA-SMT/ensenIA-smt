@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Users, MapPin, FlaskConical, CheckSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getScheduleByTeacher } from '../services/schedule.service';
@@ -25,6 +26,7 @@ function formatHourLabel(h: number): string {
 
 export default function Agenda() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
     const [myBlocks, setMyBlocks] = useState<ScheduleBlock[]>([]);
 
@@ -146,13 +148,19 @@ export default function Agenda() {
                         </div>
 
                         <div className="modal-actions">
-                            <button className="btn btn-primary w-full">
+                            <button
+                                className="btn btn-primary w-full"
+                                onClick={() => navigate(`/asistencia?curso=${selectedBlock.courseId}&materia=${selectedBlock.subjectId}`)}
+                            >
                                 <CheckSquare size={18} />
-                                Tomar Asistencia
+                                Pasar lista
                             </button>
-                            <button className="btn btn-outline w-full text-primary">
+                            <button
+                                className="btn btn-outline w-full text-primary"
+                                onClick={() => navigate('/ia-lab')}
+                            >
                                 <FlaskConical size={18} />
-                                Abrir Laboratorio IA
+                                Preparar la clase
                             </button>
                         </div>
                     </div>

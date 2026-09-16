@@ -201,11 +201,13 @@ export default function ActividadRapida() {
   return (
     <div className="ar-container animate-in">
       <header className="ar-header">
-        <h2><Zap size={20} className="text-warning" /> Actividad rápida</h2>
+        <h2><Zap size={20} className="text-warning" /> Crear actividad</h2>
         <p className="text-secondary text-sm">
           Elegí el curso, escribí el tema, y en un minuto está publicada.
-          Para planificar en profundidad, usá el <Link to="/ia-lab">Laboratorio IA</Link>.
         </p>
+        <Link to="/ia-lab" className="ar-advanced-link">
+          ¿Necesitás más control? Abrí el modo avanzado
+        </Link>
       </header>
 
       {error && <div className="em-error"><AlertCircle size={15} /> {error}</div>}

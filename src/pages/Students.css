@@ -588,3 +588,22 @@
 }
 
 .text-warning { color: var(--warning); }
+
+/* ── Faltas recientes en el perfil (added) ── */
+.stu-absences {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.stu-absence-chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}

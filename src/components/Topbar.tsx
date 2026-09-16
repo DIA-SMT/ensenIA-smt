@@ -5,13 +5,18 @@ import NotificationDropdown from './NotificationDropdown';
 import './Topbar.css';
 
 const routeNames: Record<string, string> = {
+    '/hoy': 'Hoy',
+    '/mis-clases': 'Mis clases',
+    '/crear': 'Crear actividad',
+    '/asistencia': 'Asistencia',
+    '/clase-en-vivo': 'Clase en vivo',
     '/dashboard': 'Dashboard',
-    '/agenda': 'Mi Agenda',
-    '/ia-lab': 'Laboratorio IA',
+    '/agenda': 'Mi horario',
+    '/ia-lab': 'Preparar clase',
     '/students': 'Estudiantes',
-    '/biblioteca': 'Biblioteca Docente',
+    '/biblioteca': 'Mis materiales',
     '/alerts': 'Alertas',
-    '/settings': 'Configuración',
+    '/settings': 'Ajustes',
     '/docentes': 'Equipo Docente',
     '/comunicaciones': 'Comunicaciones',
     '/actividades': 'Actividades',
@@ -20,7 +25,7 @@ const routeNames: Record<string, string> = {
     '/familias': 'Familias',
     '/comunicados-familia': 'Comunicados',
     '/mis-hijos': 'Mis Hijos',
-    '/actividad-rapida': 'Actividad rápida',
+    '/actividad-rapida': 'Crear actividad',
 };
 
 function titleFor(pathname: string): string {
@@ -81,11 +86,11 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                 {isDocente && (
                     <button
                         className="btn btn-primary nueva-clase-btn"
-                        onClick={() => navigate('/actividad-rapida')}
+                        onClick={() => navigate('/crear')}
                         title="Crear y publicar una actividad en un minuto"
                     >
                         <Zap size={18} />
-                        <span>Actividad rápida</span>
+                        <span>Crear actividad</span>
                     </button>
                 )}
             </div>

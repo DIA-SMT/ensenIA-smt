@@ -72,9 +72,12 @@ export default function Actividades() {
         <div>
           <h2 className="flex items-center gap-2"><ClipboardList size={22} className="text-cyan" /> Actividades</h2>
           <p className="text-secondary text-sm">
-            Publicá contenido desde el <Link to="/ia-lab">Laboratorio IA</Link> y seguí el trabajo de tus estudiantes acá.
+            Acá seguís el trabajo de tus estudiantes: quién entregó, qué nota sacó y cómo trabajó.
           </p>
         </div>
+        <Link to="/crear" className="btn btn-primary btn-sm">
+          <Sparkles size={15} /> Crear actividad
+        </Link>
       </div>
 
       {loading && <p className="text-secondary p-6">Cargando actividades...</p>}
@@ -84,10 +87,12 @@ export default function Actividades() {
           <Sparkles size={36} className="text-ia-accent" />
           <h3>Todavía no publicaste actividades</h3>
           <p className="text-secondary text-sm">
-            Generá una actividad o evaluación en el Laboratorio IA y usá el botón <strong>"Publicar actividad"</strong>:
-            tus estudiantes la reciben al instante y vos ves su huella digital.
+            Escribí el tema y la app arma la actividad: tus estudiantes la reciben al instante
+            y vos ves cómo trabajaron.
           </p>
-          <Link to="/ia-lab" className="btn btn-primary btn-sm">Ir al Laboratorio IA</Link>
+          <Link to="/crear" className="btn btn-primary btn-sm">
+            <Sparkles size={15} /> Crear mi primera actividad
+          </Link>
         </div>
       )}
 
