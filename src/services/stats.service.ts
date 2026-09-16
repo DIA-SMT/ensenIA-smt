@@ -134,3 +134,109 @@ export async function getLiveNow(): Promise<{ id: string; title: string; teacher
     id: r.id, title: r.title, teacherId: r.teacher_id, createdAt: r.created_at,
   }));
 }
+
+// ── Rastro del docente: qué hizo él, de verdad ──
+
+export type TimelineKind = 'material' | 'modulo' | 'actividad' | 'vivo' | 'asistencia' | 'correccion';
+
+export interface TimelineItem {
+  id: string;
+  kind: TimelineKind;
+  title: string;
+  detail?: string;
+  at: string;
+  /** Adónde ir para ver eso que hizo. */
+  link?: string;
+}
+
+/**
+ * Lo que el docente viene haciendo, sacado de sus propias acciones.
+ * Antes el Dashboard mostraba un listado inventado a mano ("Biología
+ * Celular", "Química Orgánica") que no era de nadie: parecía actividad
+ * de otro docente porque, literalmente, no era real.
+ */
+export async function getTeacherTimeline(teacherId: string, limit = 12): Promise<TimelineItem[]> {
+  const [materials, activities, live, attendance, graded] = await Promise.all([
+    supabase.from('library_materials')
+      .select('id, title, uploaded_at, tags, podcast_status, study_cards')
+      .eq('teacher_id', teacherId).order('uploaded_at', { ascending: false }).limit(limit),
+    supabase.from('activities')
+      .select('id, title, created_at, subject_name:subjects(name)')
+      .eq('teacher_id', teacherId).order('created_at', { ascending: false }).limit(limit),
+    supabase.from('live_sessions')
+      .select('id, title, created_at, status')
+      .eq('teacher_id', teacherId).order('created_at', { ascending: false }).limit(limit),
+    supabase.from('attendance_sessions')
+      .select('id, taken_on, created_at, courses(name)')
+      .eq('teacher_id', teacherId).order('created_at', { ascending: false }).limit(limit),
+    supabase.from('activity_submissions')
+      .select('id, graded_at, students(first_name, last_name), activities!inner(title, teacher_id)')
+      .eq('activities.teacher_id', teacherId).eq('status', 'graded')
+      .not('graded_at', 'is', null)
+      .order('graded_at', { ascending: false }).limit(limit),
+  ]);
+
+  const items: TimelineItem[] = [];
+
+  for (const m of (materials.data ?? []) as any[]) {
+    const esModulo = (m.tags ?? []).includes('módulo');
+    const extras: string[] = [];
+    if (m.study_cards?.length) extras.push(`${m.study_cards.length} placas`);
+    if (m.podcast_status === 'ready') extras.push('podcast');
+    items.push({
+      id: `mat-${m.id}`,
+      kind: esModulo ? 'modulo' : 'material',
+      title: m.title,
+      detail: extras.join(' · ') || undefined,
+      at: m.uploaded_at,
+      link: '/mis-clases?tab=materiales',
+    });
+  }
+
+  for (const a of (activities.data ?? []) as any[]) {
+    items.push({
+      id: `act-${a.id}`,
+      kind: 'actividad',
+      title: a.title,
+      detail: a.subject_name?.name,
+      at: a.created_at,
+      link: `/actividades/${a.id}`,
+    });
+  }
+
+  for (const l of (live.data ?? []) as any[]) {
+    items.push({
+      id: `live-${l.id}`,
+      kind: 'vivo',
+      title: l.title,
+      detail: l.status === 'live' ? 'todavía abierta' : undefined,
+      at: l.created_at,
+      link: '/clase-en-vivo',
+    });
+  }
+
+  for (const t of (attendance.data ?? []) as any[]) {
+    items.push({
+      id: `asis-${t.id}`,
+      kind: 'asistencia',
+      title: t.courses?.name ? `Lista de ${t.courses.name}` : 'Pasaste lista',
+      at: t.created_at,
+      link: '/asistencia',
+    });
+  }
+
+  for (const g of (graded.data ?? []) as any[]) {
+    items.push({
+      id: `corr-${g.id}`,
+      kind: 'correccion',
+      title: g.activities?.title ?? 'Actividad',
+      detail: g.students ? `${g.students.first_name} ${g.students.last_name}` : undefined,
+      at: g.graded_at,
+    });
+  }
+
+  return items
+    .filter(i => i.at)
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, limit);
+}

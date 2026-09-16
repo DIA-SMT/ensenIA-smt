@@ -364,3 +364,76 @@
   .hoy-header-actions { width: 100%; }
   .hoy-header-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* ── Rastro del docente: lo que hizo, con dato real (added) ── */
+.hoy-timeline { display: flex; flex-direction: column; }
+
+.hoy-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hoy-trail-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 13px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.hoy-trail-item:not(.is-static):hover {
+  border-color: var(--cyan-bright);
+  transform: translateX(2px);
+}
+
+.hoy-trail-item.is-static { cursor: default; }
+
+.hoy-trail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  color: var(--text-subtle);
+}
+
+.hoy-trail-icon.k-modulo { color: #A5B4FC; background: var(--indigo-glow); }
+.hoy-trail-icon.k-vivo { color: #F87171; background: rgba(239, 68, 68, 0.1); }
+.hoy-trail-icon.k-asistencia { color: var(--success); background: rgba(52, 211, 153, 0.1); }
+.hoy-trail-icon.k-actividad { color: var(--cyan-bright); background: var(--cyan-glow); }
+.hoy-trail-icon.k-correccion { color: var(--warning); background: rgba(251, 191, 36, 0.1); }
+
+.hoy-trail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.hoy-trail-label { font-size: 10.5px; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.3px; }
+
+.hoy-trail-body strong {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hoy-trail-detail { font-size: 11.5px; color: var(--text-subtle); }
+
+.hoy-trail-when {
+  font-size: 11.5px;
+  color: var(--text-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

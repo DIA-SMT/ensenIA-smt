@@ -12,10 +12,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
+    History, ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTodaySchedule } from '../services/schedule.service';
-import { getTeacherStats } from '../services/stats.service';
+import { getTeacherStats, getTeacherTimeline, type TimelineItem, type TimelineKind } from '../services/stats.service';
 import { getAlertsByTeacher } from '../services/alerts.service';
 import { getRecentAttendance, todayISO } from '../services/attendance.service';
 import { getMyLiveSession, type LiveSession } from '../services/live.service';
@@ -23,6 +24,26 @@ import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import type { ScheduleBlock, Alert as AlertType, TeacherStats } from '../types';
 import './Hoy.css';
+
+const TIMELINE_META: Record<TimelineKind, { icon: typeof Boxes; label: string }> = {
+    modulo: { icon: Boxes, label: 'Armaste un módulo' },
+    material: { icon: Upload, label: 'Subiste material' },
+    actividad: { icon: ClipboardList, label: 'Publicaste una actividad' },
+    vivo: { icon: Radio, label: 'Diste una clase en vivo' },
+    asistencia: { icon: CheckSquare, label: 'Pasaste lista' },
+    correccion: { icon: ClipboardCheck, label: 'Corregiste una entrega' },
+};
+
+function timeAgo(iso: string): string {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 60) return mins <= 1 ? 'Recién' : `Hace ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `Hace ${hrs} h`;
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'Ayer';
+    if (days < 30) return `Hace ${days} días`;
+    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+}
 
 function formatHour(h: number): string {
     const hh = Math.floor(h);
@@ -47,6 +68,7 @@ export default function Hoy() {
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
     const [isNew, setIsNew] = useState(false);
+    const [timeline, setTimeline] = useState<TimelineItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -62,7 +84,8 @@ export default function Hoy() {
             getMyLiveSession(user.id).catch(() => null),
             getActivitiesByTeacher(user.id).catch(() => []),
             getMaterialsByTeacher(user.id).catch(() => []),
-        ]).then(([classes, st, al, attendance, live, activities, materials]) => {
+            getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
+        ]).then(([classes, st, al, attendance, live, activities, materials, trail]) => {
             setTodayClasses(classes);
             setStats(st);
             setAlerts(al.filter(a => !a.isRead).slice(0, 3));
@@ -72,6 +95,7 @@ export default function Hoy() {
             ));
             // Primera vez: sin material y sin actividades
             setIsNew(materials.length === 0 && activities.length === 0);
+            setTimeline(trail);
         }).catch(console.error).finally(() => setLoading(false));
     }, [user]);
 
@@ -259,6 +283,33 @@ export default function Hoy() {
                             <ChevronRight size={16} className="text-subtle" />
                         </Link>
                     ))}
+                </section>
+            )}
+
+            {/* Tu rastro: lo que hiciste vos, con dato real */}
+            {timeline.length > 0 && (
+                <section className="hoy-timeline">
+                    <h2 className="hoy-section-title"><History size={17} /> Lo que hiciste</h2>
+                    <div className="hoy-trail">
+                        {timeline.map(item => {
+                            const meta = TIMELINE_META[item.kind];
+                            const Icon = meta.icon;
+                            const content = (
+                                <>
+                                    <span className={`hoy-trail-icon k-${item.kind}`}><Icon size={14} /></span>
+                                    <div className="hoy-trail-body">
+                                        <span className="hoy-trail-label">{meta.label}</span>
+                                        <strong>{item.title}</strong>
+                                        {item.detail && <span className="hoy-trail-detail">{item.detail}</span>}
+                                    </div>
+                                    <span className="hoy-trail-when">{timeAgo(item.at)}</span>
+                                </>
+                            );
+                            return item.link
+                                ? <Link key={item.id} to={item.link} className="hoy-trail-item">{content}</Link>
+                                : <div key={item.id} className="hoy-trail-item is-static">{content}</div>;
+                        })}
+                    </div>
                 </section>
             )}
 
