@@ -12,7 +12,10 @@ export default defineConfig({
       // clase en vivo no tiene que llevarse un service worker ni 2,5 MB
       // de precache. Ver el comentario ahí.
       injectRegister: null,
-      includeAssets: ['vite.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: [
+        'favicon-32.png', 'favicon-96.png', 'apple-touch-icon.png',
+        'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
+      ],
       manifest: {
         name: 'SMT EstudIA — Aula Municipal',
         short_name: 'SMT EstudIA',
@@ -27,7 +30,9 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          // El maskable es su propio archivo: Android recorta los bordes, y
+          // reusar el normal le comía las puntas de las hojas del isologo.
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
