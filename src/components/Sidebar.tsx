@@ -33,6 +33,10 @@ const teacherNavItems: NavItem[] = [
     { label: 'Hoy', path: '/hoy', icon: Sun },
     { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio, showLive: true },
     { label: 'Armar módulo', path: '/modulo', icon: Boxes, isIA: true },
+    // La biblioteca no tenía ningún enlace en toda la app: Armar módulo y el
+    // IA Lab listan los materiales para elegirlos, pero para subir, compartir,
+    // renombrar o borrar había que escribir /biblioteca a mano.
+    { label: 'Mis materiales', path: '/biblioteca', icon: BookOpen },
     { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
     { label: 'Libreta', path: '/libreta', icon: NotebookText },
     { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
