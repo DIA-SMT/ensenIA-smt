@@ -308,6 +308,9 @@ export default function ClaseEnVivo() {
         return acc;
     }, {});
 
+    /** Hay algo en pantalla de los estudiantes ahora mismo. */
+    const hayActiva = !!activity && activity.status !== 'closed';
+
     const studentName = (id: string) => {
         const s = students.find(x => x.id === id);
         return s ? `${s.firstName} ${s.lastName}` : 'un estudiante';
@@ -515,7 +518,20 @@ export default function ClaseEnVivo() {
                 )}
                 {!pickedKind ? (
                     <>
-                        <h4 className="cv-launcher-title"><Plus size={15} /> {targetStudent ? `Elegí qué mandarle a ${targetStudent.firstName}` : 'Lanzar actividad'}</h4>
+                        <h4 className="cv-launcher-title">
+                            <Plus size={15} />
+                            {targetStudent
+                                ? `Elegí qué mandarle a ${targetStudent.firstName}`
+                                : hayActiva ? 'Lanzar la siguiente' : 'Lanzar actividad'}
+                        </h4>
+                        {/* Con una actividad en pantalla, "Cerrar actividad" se lee
+                            como la única salida y no queda claro que la forma de
+                            avanzar es elegir otra de acá abajo. */}
+                        {hayActiva && !targetStudent && (
+                            <p className="cv-launcher-hint">
+                                Elegí la próxima y la actual se cierra sola. No hace falta cerrarla antes.
+                            </p>
+                        )}
                         <div className="cv-kinds">
                             {(Object.entries(LIVE_KIND_META) as [LiveActivityKind, typeof LIVE_KIND_META[LiveActivityKind]][]).map(([kind, meta]) => (
                                 <button key={kind} className="cv-kind-card" onClick={() => setPickedKind(kind)}>

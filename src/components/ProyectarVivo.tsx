@@ -44,12 +44,20 @@ export default function ProyectarVivo({ session, activity, results, connected, o
         }).then(setQr).catch(() => setQr(''));
     }, [joinUrl]);
 
+    // onClose cambia de identidad en cada render del panel, y el panel
+    // re-renderiza cada 2,5s por el poll. Si el efecto de abajo dependiera
+    // de él, se limpiaría y volvería a montar todo el tiempo: cada limpieza
+    // hace exitFullscreen(), eso dispara fullscreenchange, y la proyección
+    // se cierra sola a los dos segundos de abrirla. Por eso va por ref.
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+
     // Pantalla completa de verdad: en un proyector, la barra del navegador
     // se come justo la línea donde está el código.
     useEffect(() => {
         shellRef.current?.requestFullscreen?.().catch(() => { /* el navegador puede negarlo */ });
-        const onFsChange = () => { if (!document.fullscreenElement) onClose(); };
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const onFsChange = () => { if (!document.fullscreenElement) onCloseRef.current(); };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
         document.addEventListener('fullscreenchange', onFsChange);
         document.addEventListener('keydown', onKey);
         return () => {
@@ -57,7 +65,9 @@ export default function ProyectarVivo({ session, activity, results, connected, o
             document.removeEventListener('keydown', onKey);
             if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         };
-    }, [onClose]);
+        // Solo al montar y desmontar: ver el comentario de onCloseRef.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const live = activity && activity.status !== 'closed' ? activity : null;
 

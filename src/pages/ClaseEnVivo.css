@@ -762,3 +762,9 @@
   color: #FCD34D;
   font-weight: 600;
 }
+
+.cv-launcher-hint {
+    margin: -2px 0 var(--space-3);
+    font-size: 0.83rem;
+    color: var(--text-subtle);
+}
