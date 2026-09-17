@@ -58,6 +58,7 @@ export default function MisActividades() {
   const [todayFeeling, setTodayFeeling] = useState<CheckinFeeling | null>(null);
   const [checkinDone, setCheckinDone] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [wantsToTalk, setWantsToTalk] = useState(false);
   const [pickedFeeling, setPickedFeeling] = useState<CheckinFeeling | null>(null);
   const [feelingComment, setFeelingComment] = useState('');
   const [savingCheckin, setSavingCheckin] = useState(false);
@@ -113,6 +114,7 @@ export default function MisActividades() {
         moment: 'libre',
         feeling: pickedFeeling,
         comment: feelingComment.trim() || undefined,
+        wantsToTalk,
       });
       setCheckinDone(true);
       setTodayFeeling(pickedFeeling);
@@ -240,19 +242,29 @@ export default function MisActividades() {
               ))}
             </div>
             {pickedFeeling && (
-              <div className="sp-checkin-extra">
-                <input
-                  type="text"
-                  placeholder="¿Querés contar algo más? (opcional)"
-                  value={feelingComment}
-                  maxLength={200}
-                  onChange={e => setFeelingComment(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveCheckin(); }}
-                />
-                <button className="btn btn-primary btn-sm" onClick={handleSaveCheckin} disabled={savingCheckin}>
-                  {savingCheckin ? 'Guardando...' : 'Enviar'}
-                </button>
-              </div>
+              <>
+                <div className="sp-checkin-extra">
+                  <input
+                    type="text"
+                    placeholder="¿Querés contar algo más? (opcional)"
+                    value={feelingComment}
+                    maxLength={200}
+                    onChange={e => setFeelingComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveCheckin(); }}
+                  />
+                  <button className="btn btn-primary btn-sm" onClick={handleSaveCheckin} disabled={savingCheckin}>
+                    {savingCheckin ? 'Guardando...' : 'Enviar'}
+                  </button>
+                </div>
+                <label className="sp-talk-toggle">
+                  <input
+                    type="checkbox"
+                    checked={wantsToTalk}
+                    onChange={e => setWantsToTalk(e.target.checked)}
+                  />
+                  🤝 Me gustaría hablar con un docente
+                </label>
+              </>
             )}
             <p className="sp-checkin-hint">Es privado entre vos y tus docentes. No es una nota.</p>
           </>

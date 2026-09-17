@@ -13,6 +13,7 @@ import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoi
 import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
 import { summarizeStudent } from '../services/documents.service';
 import { getStudentTrace } from '../services/informes.service';
+import { getWellbeingSignals, weekdayPattern, SIGNAL_META, type WellbeingSignal } from '../services/senales.service';
 import { informeToPdf } from '../lib/pdf';
 import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -103,6 +104,28 @@ export default function Students() {
         }
     };
 
+    // Cierre del círculo: registrar que la conversación pasó
+    const [talkSaving, setTalkSaving] = useState(false);
+    const handleTalked = async () => {
+        if (!selectedStudent || !user || talkSaving) return;
+        setTalkSaving(true);
+        try {
+            await addObservation({
+                studentId: selectedStudent.id,
+                teacherId: user.id,
+                subjectId: null,
+                category: 'otro',
+                note: 'Charla de acompañamiento: hablamos a partir de las señales de bienestar.',
+            });
+            const obs = await getObservationsByStudent(selectedStudent.id);
+            setObservations(obs);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setTalkSaving(false);
+        }
+    };
+
     // Resumen IA
     const [showSummary, setShowSummary] = useState(false);
     const [summaryText, setSummaryText] = useState('');
@@ -120,10 +143,14 @@ export default function Students() {
     const [citeSending, setCiteSending] = useState(false);
     const [citeDone, setCiteDone] = useState(false);
 
+    // Señales tempranas de bienestar (línea base, persistencia, convergencia)
+    const [signals, setSignals] = useState<Map<string, WellbeingSignal>>(new Map());
+
     useEffect(() => {
         if (!user) return;
         const courseIds = user.subjects?.map(s => s.courseId) ?? [];
         getStudentsByTeacher(courseIds).then(setAllStudents).catch(console.error);
+        getWellbeingSignals().then(setSignals).catch(console.error);
     }, [user]);
 
     // Llegado desde una alerta (/students?student=<id>): abre esa ficha sola
@@ -149,7 +176,7 @@ export default function Students() {
         setObsNote('');
         setObsError('');
         setObsSaved(false);
-        getCheckinsByStudent(selectedStudent.id, 8).then(setCheckins).catch(console.error);
+        getCheckinsByStudent(selectedStudent.id, 40).then(setCheckins).catch(console.error);
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
         getWorkByStudent(selectedStudent.id).then(setWork).catch(console.error);
@@ -479,6 +506,15 @@ export default function Students() {
                                         <div className="student-cell">
                                             <div className="student-avatar">{student.avatarInitials}</div>
                                             <span className="font-medium">{student.firstName} {student.lastName}</span>
+                                            {(() => {
+                                                const sig = signals.get(student.id);
+                                                if (!sig || sig.level === 'verde') return null;
+                                                return (
+                                                    <span title={`${SIGNAL_META[sig.level].label}: ${sig.reasons[0] ?? ''}`}>
+                                                        {SIGNAL_META[sig.level].emoji}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                     </td>
                                     <td className="text-secondary">{student.courseName}</td>
@@ -683,6 +719,31 @@ export default function Students() {
                                     </div>
                                 )}
                         </div>
+
+                        {/* ── Alerta temprana: nivel + porqué + primer paso ── */}
+                        {(() => {
+                            const sig = signals.get(selectedStudent.id);
+                            if (!sig || sig.level === 'verde') return null;
+                            const pattern = weekdayPattern(checkins);
+                            return (
+                                <div className={`profile-section senal-card senal-${sig.level}`}>
+                                    <h4>
+                                        {SIGNAL_META[sig.level].emoji} Alerta temprana — {SIGNAL_META[sig.level].label}
+                                    </h4>
+                                    <ul className="senal-reasons">
+                                        {sig.reasons.map((r, i) => <li key={i}>{r}</li>)}
+                                        {pattern && <li>{pattern}</li>}
+                                    </ul>
+                                    {sig.nextStep && <p className="senal-step">👉 {sig.nextStep}</p>}
+                                    <p className="senal-disclaimer">
+                                        Es una señal para conversar, no un diagnóstico. Si algo te preocupa, derivá a dirección o al gabinete.
+                                    </p>
+                                    <button className="btn btn-outline btn-sm" onClick={handleTalked} disabled={talkSaving}>
+                                        {talkSaving ? 'Registrando...' : '✓ Lo hablamos — registrar'}
+                                    </button>
+                                </div>
+                            );
+                        })()}
 
                         {/* ── Señales: cómo se viene sintiendo ── */}
                         <div className="profile-section">

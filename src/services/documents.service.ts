@@ -101,6 +101,20 @@ export async function generatePodcast(materialId: string): Promise<void> {
   if (!resp.ok) throw new Error(json.error || `No se pudo generar el podcast (${resp.status}).`);
 }
 
+/**
+ * Transcripción de un video de YouTube (vía sus subtítulos). Con ella el
+ * video se vuelve material real: alimenta "Explicámelo fácil", la guía
+ * IA, las placas y el podcast. Si el video no tiene subtítulos, falla
+ * con un mensaje claro.
+ */
+export async function transcribeYouTube(videoUrl: string): Promise<string> {
+  const { text } = await callProcessDocument<{ text: string }>({
+    mode: 'youtube_transcript',
+    videoUrl,
+  });
+  return text;
+}
+
 export async function extractPdfText(pdfBase64: string, title?: string): Promise<string> {
   const { text } = await callProcessDocument<{ text: string }>({
     mode: 'extract_text',

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Download, FileText, Sparkles, X, Layers, ThumbsUp, ThumbsDown, Wand2, Headphones } from 'lucide-react';
+import { BookOpen, Download, FileText, Sparkles, X, Layers, ThumbsUp, ThumbsDown, Wand2, Headphones, Youtube } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import { getStudentByUserId } from '../services/activities.service';
@@ -9,6 +9,7 @@ import { getSignedUrl } from '../services/documents.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
+import VideoModal from '../components/VideoModal';
 import type { LibraryMaterial, MaterialReactionType, Student } from '../types';
 import './StudentPortal.css';
 import '../components/Modals.css';
@@ -22,6 +23,7 @@ export default function MiBiblioteca() {
   const [student, setStudent] = useState<Student | null>(null);
   const [reactions, setReactions] = useState<Record<string, MaterialReactionType>>({});
   const [podcastFor, setPodcastFor] = useState<LibraryMaterial | null>(null);
+  const [videoFor, setVideoFor] = useState<LibraryMaterial | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -99,6 +101,11 @@ export default function MiBiblioteca() {
               </div>
             </div>
             <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+              {mat.videoUrl && (
+                <button className="btn btn-primary btn-sm" onClick={() => setVideoFor(mat)} title="Miralo acá, junto a la consigna">
+                  <Youtube size={14} /> Ver video
+                </button>
+              )}
               {mat.studyCards && mat.studyCards.length > 0 && (
                 <button className="btn btn-primary btn-sm" onClick={() => setCardsFor(mat)} title="Repasá con tarjetas visuales">
                   <Layers size={14} /> Placas
@@ -146,6 +153,10 @@ export default function MiBiblioteca() {
           </div>
         ))}
       </div>
+
+      {videoFor?.videoUrl && (
+        <VideoModal url={videoFor.videoUrl} title={videoFor.title} onClose={() => setVideoFor(null)} />
+      )}
 
       {podcastFor?.podcastPath && (
         <PodcastPlayer path={podcastFor.podcastPath} title={podcastFor.title} onClose={() => setPodcastFor(null)} />

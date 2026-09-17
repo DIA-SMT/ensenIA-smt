@@ -53,6 +53,7 @@ export async function createMaterial(material: {
   schoolId: string;
   tags: string[];
   classId?: string | null;
+  videoUrl?: string | null;
 }): Promise<LibraryMaterial> {
   const row = unwrap(
     await supabase
@@ -61,6 +62,7 @@ export async function createMaterial(material: {
         title: material.title,
         description: material.description,
         class_id: material.classId ?? null,
+        video_url: material.videoUrl ?? null,
         file_type: material.fileType as any,
         file_name: material.fileName,
         file_size: material.fileSize,
@@ -127,6 +129,7 @@ function mapMaterial(row: any): LibraryMaterial {
     podcastPath: row.podcast_path ?? null,
     podcastStatus: row.podcast_status ?? 'none',
     classId: row.class_id ?? null,
+    videoUrl: row.video_url ?? null,
   };
 }
 

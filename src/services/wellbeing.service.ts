@@ -31,6 +31,8 @@ export async function saveCheckin(c: {
   moment: CheckinMoment;
   feeling: CheckinFeeling;
   comment?: string;
+  /** "¿Querés que hablemos?": pedido explícito, máxima prioridad para el docente. */
+  wantsToTalk?: boolean;
 }): Promise<void> {
   const { error } = await supabase.from('student_checkins').insert({
     student_id: c.studentId,
@@ -38,6 +40,7 @@ export async function saveCheckin(c: {
     moment: c.moment,
     feeling: c.feeling,
     comment: c.comment?.trim() || null,
+    wants_to_talk: c.wantsToTalk ?? false,
   });
   if (error) throw error;
 }

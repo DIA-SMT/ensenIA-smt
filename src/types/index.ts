@@ -9,7 +9,7 @@ export type AlertCategory = 'academic' | 'attendance' | 'conduct' | 'system';
 export type StudentStatus = 'excellent' | 'good' | 'warning' | 'critical';
 export type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes';
 export type NotificationPriority = 'high' | 'medium' | 'low';
-export type FileType = 'pdf' | 'doc' | 'image' | 'link';
+export type FileType = 'pdf' | 'doc' | 'image' | 'link' | 'video';
 
 // ── IA Chat ──
 export type ChatRole = 'user' | 'assistant' | 'system';
@@ -344,6 +344,8 @@ export interface LibraryMaterial {
   podcastStatus?: 'none' | 'generating' | 'ready' | 'error';
   /** Tema de la planificación del que salió (si lo generó Armar módulo). */
   classId?: string | null;
+  /** Video embebido (YouTube): el disparador con el que arranca la clase. */
+  videoUrl?: string | null;
 }
 
 // ── Placas de estudio ──

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
-  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine,
+  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
   Headphones,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,9 @@ import {
   generateStudyCards, generatePodcast,
 } from '../services/documents.service';
 import { textToPdf } from '../lib/pdf';
+import { parseYouTubeId, youTubeThumbnail } from '../lib/youtube';
+import { transcribeYouTube } from '../services/documents.service';
+import VideoModal from '../components/VideoModal';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
@@ -209,6 +212,73 @@ export default function Biblioteca() {
     }
   };
 
+  // ── Videos de YouTube: el disparador con el que arranca la clase ──
+  const [showVideo, setShowVideo] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDesc, setVideoDesc] = useState('');
+  const [videoSubjectId, setVideoSubjectId] = useState('');
+  const [videoSaving, setVideoSaving] = useState(false);
+  const [videoError, setVideoError] = useState('');
+  const [playing, setPlaying] = useState<LibraryMaterial | null>(null);
+  const [transcribingId, setTranscribingId] = useState<string | null>(null);
+
+  const handleAddVideo = async () => {
+    if (!user || videoSaving) return;
+    const videoId = parseYouTubeId(videoUrl);
+    if (!videoId) {
+      setVideoError('Esa dirección no parece de YouTube. Pegá el link del video (youtube.com o youtu.be).');
+      return;
+    }
+    const subject = subjectsList.find(x => x.id === videoSubjectId);
+    if (!subject || !videoTitle.trim()) {
+      setVideoError('Falta el título o la materia.');
+      return;
+    }
+    setVideoSaving(true);
+    setVideoError('');
+    try {
+      const mat = await createMaterial({
+        title: videoTitle.trim(),
+        description: videoDesc.trim(),
+        fileType: 'video',
+        fileName: '',
+        fileSize: '—',
+        subjectId: subject.id,
+        subjectName: subject.name,
+        teacherId: user.id,
+        schoolId: user.schoolId,
+        tags: ['video'],
+        videoUrl: videoUrl.trim(),
+      });
+      setAllMaterials(prev => [mat, ...prev]);
+      setShowVideo(false);
+      setVideoUrl(''); setVideoTitle(''); setVideoDesc('');
+      // La transcripción arranca sola: con ella el video alimenta a la IA
+      handleTranscribe(mat);
+    } catch (err) {
+      console.error(err);
+      setVideoError('No se pudo guardar el video. Probá de nuevo.');
+    } finally {
+      setVideoSaving(false);
+    }
+  };
+
+  /** Transcribe los subtítulos del video: lo vuelve material real para la IA. */
+  const handleTranscribe = async (mat: LibraryMaterial) => {
+    if (!mat.videoUrl || transcribingId) return;
+    setTranscribingId(mat.id);
+    try {
+      const text = await transcribeYouTube(mat.videoUrl);
+      await updateMaterial(mat.id, { extractedText: text });
+      setAllMaterials(prev => prev.map(m => m.id === mat.id ? { ...m, extractedText: text } : m));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo transcribir el video.');
+    } finally {
+      setTranscribingId(null);
+    }
+  };
+
   // ── Renombrar: lo que creaste es tuyo y lo podés corregir ──
   const [editFor, setEditFor] = useState<LibraryMaterial | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -347,8 +417,15 @@ export default function Biblioteca() {
             <Upload size={16} />
             Subir Material
           </button>
+          <button
+            className="btn btn-secondary w-full mt-2"
+            onClick={() => { setShowVideo(true); setVideoError(''); setVideoSubjectId(mySubjects[0]?.id ?? ''); }}
+          >
+            <Youtube size={16} />
+            Agregar video
+          </button>
           <p className="text-xs text-subtle mt-2" style={{ textAlign: 'center' }}>
-            PDF, Word o imagen · la IA extrae el texto automáticamente
+            PDF, Word, imagen o video de YouTube · la IA lee el texto y los subtítulos
           </p>
         </div>
       </aside>
@@ -377,9 +454,20 @@ export default function Biblioteca() {
             const processing = processingIds.has(mat.id);
             return (
               <div key={mat.id} className="card biblioteca-card">
-                <div className="mat-icon-wrap">
-                  <Icon size={24} />
-                </div>
+                {mat.videoUrl && parseYouTubeId(mat.videoUrl) ? (
+                  <button
+                    className="mat-video-thumb"
+                    title="Ver el video"
+                    onClick={() => setPlaying(mat)}
+                  >
+                    <img src={youTubeThumbnail(parseYouTubeId(mat.videoUrl)!)} alt="" loading="lazy" />
+                    <span className="mat-video-play">▶</span>
+                  </button>
+                ) : (
+                  <div className="mat-icon-wrap">
+                    <Icon size={24} />
+                  </div>
+                )}
                 <div className="mat-info">
                   <h4 className="mat-title">{mat.title}</h4>
                   {mat.description && <p className="mat-desc">{mat.description}</p>}
@@ -403,6 +491,23 @@ export default function Biblioteca() {
                     ))}
                   </div>
                   <div className="mat-actions">
+                    {mat.videoUrl && (
+                      <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
+                        <Youtube size={14} /> Ver video
+                      </button>
+                    )}
+                    {mat.videoUrl && !mat.extractedText && (
+                      <button
+                        className="mat-action-btn"
+                        title="Lee los subtítulos del video: la IA puede resumirlo, hacer placas y responder sobre él"
+                        onClick={() => handleTranscribe(mat)}
+                        disabled={transcribingId === mat.id}
+                      >
+                        {transcribingId === mat.id
+                          ? <><Loader2 size={14} className="spin" /> Transcribiendo...</>
+                          : <><Captions size={14} /> Transcribir</>}
+                      </button>
+                    )}
                     {mat.storagePath && (
                       <button className="mat-action-btn" title="Ver / Descargar" onClick={() => handleDownload(mat)}>
                         <Download size={14} /> Ver
@@ -477,6 +582,78 @@ export default function Biblioteca() {
           )}
         </div>
       </main>
+
+      {/* ── Modal: ver video ── */}
+      {playing?.videoUrl && (
+        <VideoModal url={playing.videoUrl} title={playing.title} onClose={() => setPlaying(null)} />
+      )}
+
+      {/* ── Modal: agregar video de YouTube ── */}
+      {showVideo && (
+        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !videoSaving) setShowVideo(false); }}>
+          <div className="em-modal">
+            <div className="em-modal-header">
+              <h3><Youtube size={17} className="text-cyan" /> Agregar video de YouTube</h3>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowVideo(false)}><X size={18} /></button>
+            </div>
+            <div className="em-modal-body">
+              {videoError && <div className="em-error"><AlertCircle size={15} /> {videoError}</div>}
+              <div className="em-field">
+                <label>Link del video</label>
+                <input
+                  type="text"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={videoUrl}
+                  autoFocus
+                  onChange={e => setVideoUrl(e.target.value)}
+                />
+              </div>
+              {parseYouTubeId(videoUrl) && (
+                <img
+                  className="em-video-preview"
+                  src={youTubeThumbnail(parseYouTubeId(videoUrl)!)}
+                  alt="Vista previa del video"
+                />
+              )}
+              <div className="em-field">
+                <label>Título (cómo lo van a ver tus estudiantes)</label>
+                <input
+                  type="text"
+                  placeholder="Ej: ¿Qué es un vector? (5 min)"
+                  value={videoTitle}
+                  maxLength={120}
+                  onChange={e => setVideoTitle(e.target.value)}
+                />
+              </div>
+              <div className="em-field">
+                <label>Consigna o descripción (opcional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej: Miralo antes de la clase del jueves y anotá dos preguntas."
+                  value={videoDesc}
+                  maxLength={300}
+                  onChange={e => setVideoDesc(e.target.value)}
+                />
+              </div>
+              <div className="em-field">
+                <label>Materia</label>
+                <select className="form-select" value={videoSubjectId} onChange={e => setVideoSubjectId(e.target.value)}>
+                  {mySubjects.map(sj => <option key={sj.id} value={sj.id}>{sj.name}</option>)}
+                </select>
+              </div>
+              <p className="text-xs text-subtle">
+                Al guardarlo se transcribe solo (si el video tiene subtítulos): con eso la IA puede resumirlo, armar placas y responder preguntas sobre él. Acordate de Compartirlo para que lo vean tus estudiantes.
+              </p>
+            </div>
+            <div className="em-modal-footer">
+              <button className="btn btn-outline btn-sm" onClick={() => setShowVideo(false)}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={handleAddVideo} disabled={videoSaving || !videoUrl.trim() || !videoTitle.trim()}>
+                {videoSaving ? 'Guardando...' : 'Agregar video'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal: renombrar material ── */}
       {editFor && (

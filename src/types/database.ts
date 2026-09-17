@@ -1123,6 +1123,7 @@ export type Database = {
           title: string
           unit_name: string | null
           uploaded_at: string | null
+          video_url: string | null
         }
         Insert: {
           ai_summary?: string | null
@@ -1149,6 +1150,7 @@ export type Database = {
           title: string
           unit_name?: string | null
           uploaded_at?: string | null
+          video_url?: string | null
         }
         Update: {
           ai_summary?: string | null
@@ -1175,6 +1177,7 @@ export type Database = {
           title?: string
           unit_name?: string | null
           uploaded_at?: string | null
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -2152,6 +2155,7 @@ export type Database = {
           id: string
           moment: string
           student_id: string
+          wants_to_talk: boolean
         }
         Insert: {
           activity_id?: string | null
@@ -2161,6 +2165,7 @@ export type Database = {
           id?: string
           moment: string
           student_id: string
+          wants_to_talk?: boolean
         }
         Update: {
           activity_id?: string | null
@@ -2170,6 +2175,7 @@ export type Database = {
           id?: string
           moment?: string
           student_id?: string
+          wants_to_talk?: boolean
         }
         Relationships: [
           {
@@ -2730,6 +2736,7 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_wellbeing_signals: { Args: never; Returns: Json }
       join_live_session: {
         Args: { p_code: string; p_name: string }
         Returns: Json
@@ -2754,7 +2761,7 @@ export type Database = {
       alert_level: "danger" | "warning" | "info" | "success"
       chat_role: "user" | "assistant" | "system"
       day_of_week: "lunes" | "martes" | "miercoles" | "jueves" | "viernes"
-      file_type: "pdf" | "doc" | "image" | "link"
+      file_type: "pdf" | "doc" | "image" | "link" | "video"
       ia_model: "haiku" | "sonnet"
       ia_tool_type:
         | "act"
@@ -2901,7 +2908,7 @@ export const Constants = {
       alert_level: ["danger", "warning", "info", "success"],
       chat_role: ["user", "assistant", "system"],
       day_of_week: ["lunes", "martes", "miercoles", "jueves", "viernes"],
-      file_type: ["pdf", "doc", "image", "link"],
+      file_type: ["pdf", "doc", "image", "link", "video"],
       ia_model: ["haiku", "sonnet"],
       ia_tool_type: [
         "act",

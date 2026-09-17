@@ -1,0 +1,18 @@
+.video-modal { max-width: 860px; width: calc(100vw - 32px); }
+
+.video-frame-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.video-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+.video-hint { margin: 10px 4px 2px; }

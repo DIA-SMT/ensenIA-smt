@@ -22,7 +22,7 @@ const DAILY_QUOTA = 50;
 const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
-type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards';
+type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript';
 
 interface ProcessRequest {
   mode: Mode;
@@ -30,6 +30,109 @@ interface ProcessRequest {
   text?: string;
   title?: string;
   context?: { subjectName?: string; courseName?: string };
+  videoUrl?: string;
+}
+
+/**
+ * Transcripción de un video de YouTube vía sus subtítulos (los propios o
+ * los automáticos). Sin LLM: no gasta cupo de IA. Si el video no tiene
+ * subtítulos, error claro para que la UI lo explique.
+ */
+async function fetchYouTubeTranscript(videoUrl: string): Promise<string> {
+  const idMatch = videoUrl.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);
+  if (!idMatch) throw new Error('URL_INVALIDA');
+  const videoId = idMatch[1];
+
+  // API interna del reproductor. Según la IP de salida, YouTube acepta
+  // unos clientes y rechaza otros: se prueban en cascada hasta que uno
+  // devuelva subtítulos. Las keys son las públicas de cada cliente
+  // (vienen embebidas en las apps de YouTube, no son secretos).
+  const clients = [
+    {
+      key: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+      ctx: { clientName: 'WEB', clientVersion: '2.20250101.00.00', hl: 'es' },
+    },
+    {
+      key: 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+      ua: 'com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip',
+      ctx: { clientName: 'ANDROID', clientVersion: '20.10.38', androidSdkVersion: 34, hl: 'es' },
+    },
+    {
+      key: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      ua: 'Mozilla/5.0 (PlayStation; PlayStation 4/12.00) AppleWebKit/605.1.15 (KHTML, like Gecko)',
+      ctx: { clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', clientVersion: '2.0', hl: 'es' },
+    },
+  ];
+
+  let tracks: { baseUrl: string; languageCode?: string; kind?: string }[] | undefined;
+  let lastStatus = '';
+  for (const c of clients) {
+    try {
+      const resp = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${c.key}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': c.ua,
+          'Origin': 'https://www.youtube.com',
+          'Referer': `https://www.youtube.com/watch?v=${videoId}`,
+        },
+        body: JSON.stringify({
+          context: { client: c.ctx },
+          videoId,
+          ...(c.ctx.clientName.includes('EMBEDDED')
+            ? { thirdParty: { embedUrl: 'https://www.youtube.com' } }
+            : {}),
+        }),
+      });
+      if (!resp.ok) { lastStatus = `YT_${resp.status}`; continue; }
+      const player = await resp.json();
+      const found = player?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (found?.length) { tracks = found; break; }
+      lastStatus = `YT_PLAY_${player?.playabilityStatus?.status ?? 'NULL'}`;
+    } catch {
+      lastStatus = 'YT_FETCH';
+    }
+  }
+
+  // Último recurso: la página web con cookie de consentimiento puesta
+  // (a veces pasa donde la API rechaza a la IP).
+  if (!tracks?.length) {
+    try {
+      const page = await (await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=es&has_verified=1`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+          'Accept-Language': 'es-AR,es;q=0.9',
+          'Cookie': 'SOCS=CAI; CONSENT=YES+cb.20240101-01-p0.es+FX+111',
+        },
+      })).text();
+      const m = page.match(/"captionTracks":(\[.*?\])/);
+      if (m) tracks = JSON.parse(m[1]);
+    } catch { /* se informa abajo */ }
+  }
+
+  if (!tracks?.length) {
+    // Si al menos un cliente respondió OK sin pistas, el video no tiene subtítulos
+    throw new Error(lastStatus.startsWith('YT_PLAY_OK') ? 'SIN_SUBTITULOS' : (lastStatus || 'SIN_SUBTITULOS'));
+  }
+
+  // Preferencia: subtítulos en español hechos a mano > español automático > lo que haya
+  const pick = tracks.find(t => t.languageCode?.startsWith('es') && t.kind !== 'asr')
+    ?? tracks.find(t => t.languageCode?.startsWith('es'))
+    ?? tracks[0];
+
+  const capResp = await fetch(`${pick.baseUrl}&fmt=json3`);
+  if (!capResp.ok) throw new Error('SIN_SUBTITULOS');
+  const data = await capResp.json();
+
+  const parts: string[] = [];
+  for (const ev of (data.events ?? []) as { segs?: { utf8?: string }[] }[]) {
+    if (!ev.segs) continue;
+    parts.push(ev.segs.map(sg => sg.utf8 ?? '').join(''));
+  }
+  const text = parts.join(' ').replace(/\s+/g, ' ').trim();
+  if (!text) throw new Error('SIN_SUBTITULOS');
+  return text.slice(0, MAX_TEXT_INPUT);
 }
 
 function corsHeaders(): Record<string, string> {
@@ -231,8 +334,12 @@ Deno.serve(async (req: Request) => {
   }
   const { mode, pdfBase64, text, title, context } = body;
 
-  if (!mode || !PROMPTS[mode]) return json({ error: 'INVALID_MODE' }, 400);
-  if (!pdfBase64 && !text) return json({ error: 'MISSING_INPUT', message: 'Falta pdfBase64 o text.' }, 400);
+  if (!mode || (mode !== 'youtube_transcript' && !PROMPTS[mode])) return json({ error: 'INVALID_MODE' }, 400);
+  if (mode === 'youtube_transcript') {
+    if (!body.videoUrl) return json({ error: 'MISSING_INPUT', message: 'Falta videoUrl.' }, 400);
+  } else if (!pdfBase64 && !text) {
+    return json({ error: 'MISSING_INPUT', message: 'Falta pdfBase64 o text.' }, 400);
+  }
   if (pdfBase64 && pdfBase64.length > MAX_PDF_BASE64) {
     return json({ error: 'FILE_TOO_LARGE', message: 'El PDF supera el tamaño máximo (11 MB).' }, 400);
   }
@@ -249,6 +356,54 @@ Deno.serve(async (req: Request) => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
     return json({ error: 'AUTH_INVALID', message: 'Sesión expirada. Volvé a iniciar sesión.' }, 401);
+  }
+
+  // ── Transcripción de YouTube: subtítulos primero (gratis, sin cupo);
+  //    si YouTube bloquea la IP del servidor, se intenta con Gemini vía
+  //    OpenRouter (entiende videos de YouTube de forma nativa). ──
+  if (mode === 'youtube_transcript') {
+    try {
+      const transcript = await fetchYouTubeTranscript(body.videoUrl!);
+      return json({ text: transcript });
+    } catch (err) {
+      const code = err instanceof Error ? err.message : 'ERROR';
+
+      // Plan B: Gemini con el link del video
+      if (code.startsWith('YT_')) {
+        try {
+          const gemResp = await fetch(OPENROUTER_URL, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              max_tokens: 8000,
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Transcribí el audio de este video en su idioma original, como texto corrido, sin marcas de tiempo ni comentarios tuyos.' },
+                  { type: 'video_url', video_url: { url: body.videoUrl } },
+                ],
+              }],
+            }),
+          });
+          const gem = await gemResp.json().catch(() => ({}));
+          const gtext = gem?.choices?.[0]?.message?.content;
+          if (gemResp.ok && typeof gtext === 'string' && gtext.trim().length > 100) {
+            return json({ text: gtext.trim().slice(0, MAX_TEXT_INPUT) });
+          }
+          console.error('gemini transcript fallback:', gemResp.status, JSON.stringify(gem).slice(0, 400));
+        } catch (gerr) {
+          console.error('gemini transcript fallback error:', gerr);
+        }
+      }
+
+      const message = code === 'SIN_SUBTITULOS'
+        ? 'Este video no tiene subtítulos disponibles, así que no se puede transcribir. El video igual se puede ver y usar en clase.'
+        : code === 'URL_INVALIDA'
+          ? 'Esa dirección no parece ser un video de YouTube.'
+          : 'No se pudo transcribir el video en este momento. Igual queda listo para ver y usar en clase; probá la transcripción más tarde.';
+      return json({ error: code, message }, 422);
+    }
   }
 
   // ── Quota (compartida con el chat IA) ──

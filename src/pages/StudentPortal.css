@@ -657,3 +657,16 @@
   flex-shrink: 0;
   animation: cv-pulse 1.6s infinite;
 }
+
+/* "Me gustaría hablar": el pedido de ayuda explícito, sin dramatismo */
+.sp-talk-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.sp-talk-toggle input { accent-color: var(--cyan-bright); }
+.sp-talk-toggle:hover { color: var(--text-primary); }
