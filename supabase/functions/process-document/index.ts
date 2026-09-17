@@ -422,7 +422,20 @@ Deno.serve(async (req: Request) => {
   // ── Build OpenRouter request ──
   const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
-  const maxTokens = mode === 'extract_text' ? 10000 : mode === 'import_program' ? 12000 : mode === 'student_summary' ? 3000 : 6000;
+  // Los modos estructurados devuelven JSON: si el techo de tokens corta la
+  // respuesta, el JSON queda partido al medio y JSON.parse revienta — el
+  // usuario ve "la IA devolvió un formato inesperado" sin entender por qué.
+  // study_cards es el que más texto genera (14 placas con quizzes y sus
+  // explicaciones) y con 6000 fallaba una de cada dos veces sobre escaneos.
+  const MAX_TOKENS: Partial<Record<Mode, number>> = {
+    extract_text: 10000,
+    import_program: 12000,
+    study_cards: 12000,
+    extract_questions: 8000,
+    student_summary: 3000,
+    summarize: 6000,
+  };
+  const maxTokens = MAX_TOKENS[mode] ?? 6000;
 
   const userContent: unknown[] = [];
   if (pdfBase64) {
