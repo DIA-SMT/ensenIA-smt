@@ -23,7 +23,22 @@ createRoot(document.getElementById('root')!).render(
  */
 if ('serviceWorker' in navigator && !location.pathname.startsWith('/vivo/')) {
   window.addEventListener('load', () => {
+    // Si ya había uno controlando, esta pestaña se está sirviendo del
+    // caché viejo: cuando el nuevo tome el control hay que recargar o
+    // seguís viendo la versión anterior aunque el deploy ya esté hecho.
+    // Es la diferencia entre "lo arreglé" y "lo arreglé pero no lo ves".
+    const habiaViejo = !!navigator.serviceWorker.controller
+    let recargado = false
+
     // En dev no existe /sw.js: falla y no pasa nada.
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // En la primera visita no hay nada viejo que descartar, y recargar
+      // ahí sería un parpadeo gratis.
+      if (!habiaViejo || recargado) return
+      recargado = true
+      location.reload()
+    })
   })
 }

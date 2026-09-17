@@ -52,16 +52,24 @@ export default function ProyectarVivo({ session, activity, results, connected, o
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
 
-    // Pantalla completa de verdad: en un proyector, la barra del navegador
-    // se come justo la línea donde está el código.
+    /**
+     * La pantalla completa es una mejora, no el soporte de la proyección.
+     *
+     * Antes, salir de pantalla completa cerraba la proyección: eran el
+     * mismo estado. Eso la volvía rehén de cualquier cosa que el navegador
+     * decidiera hacer con el modo pantalla completa — y si el navegador la
+     * niega, o la corta, la pared se queda sin nada en el peor momento.
+     *
+     * Ahora el overlay se sostiene solo (position: fixed, inset: 0, tapa
+     * todo igual sin pantalla completa). Se sale por Esc o por la X, y por
+     * nada más. Si requestFullscreen falla, se ve igual, apenas con la
+     * barra del navegador arriba.
+     */
     useEffect(() => {
-        shellRef.current?.requestFullscreen?.().catch(() => { /* el navegador puede negarlo */ });
-        const onFsChange = () => { if (!document.fullscreenElement) onCloseRef.current(); };
+        shellRef.current?.requestFullscreen?.().catch(() => { /* se ve bien igual */ });
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current(); };
-        document.addEventListener('fullscreenchange', onFsChange);
         document.addEventListener('keydown', onKey);
         return () => {
-            document.removeEventListener('fullscreenchange', onFsChange);
             document.removeEventListener('keydown', onKey);
             if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         };
