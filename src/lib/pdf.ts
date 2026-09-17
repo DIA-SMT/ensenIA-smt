@@ -159,3 +159,168 @@ export function textToPdf(markdown: string, title: string, subjectName?: string)
   footer(doc, W, H, subjectName);
   doc.save(`resumen_${title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').slice(0, 50)}.pdf`);
 }
+
+/* ══════════════════════════════════════════════
+   Libreta digital e informes (migración 015)
+   ══════════════════════════════════════════════ */
+
+export interface LibretaRow {
+  student: string;
+  t1: string; c1: string; a1: string;   // nota, conducta, inasistencias por trimestre
+  t2: string; c2: string; a2: string;
+  t3: string; c3: string; a3: string;
+  promedio: string;
+  estado: string;
+}
+
+/**
+ * Libreta del curso en una materia: una fila por estudiante con los tres
+ * trimestres (nota · conducta · inasistencias), promedio y estado anual.
+ */
+export function libretaToPdf(
+  rows: LibretaRow[],
+  opts: { subjectName: string; courseName: string; year: number; teacherName: string },
+): void {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 40;
+
+  doc.setFillColor(...BG);
+  doc.rect(0, 0, W, H, 'F');
+
+  doc.setTextColor(...CYAN);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Libreta de calificaciones ${opts.year}`, M, 46);
+  doc.setTextColor(...TEXT);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${opts.subjectName} · ${opts.courseName} · Docente: ${opts.teacherName}`, M, 64);
+  doc.setTextColor(...SUBTLE);
+  doc.setFontSize(8.5);
+  doc.text('Escala 1-10, se aprueba con 6. Por trimestre: nota · conducta · inasistencias. Documento de demostración.', M, 78);
+
+  const cols = [
+    { key: 'student', label: 'Estudiante', w: 170 },
+    { key: 't1', label: '1ºT', w: 40 }, { key: 'c1', label: 'Cond.', w: 42 }, { key: 'a1', label: 'Inas.', w: 40 },
+    { key: 't2', label: '2ºT', w: 40 }, { key: 'c2', label: 'Cond.', w: 42 }, { key: 'a2', label: 'Inas.', w: 40 },
+    { key: 't3', label: '3ºT', w: 40 }, { key: 'c3', label: 'Cond.', w: 42 }, { key: 'a3', label: 'Inas.', w: 40 },
+    { key: 'promedio', label: 'Prom.', w: 48 },
+    { key: 'estado', label: 'Estado', w: 90 },
+  ] as const;
+
+  let y = 100;
+  const rowH = 24;
+
+  const drawHead = () => {
+    doc.setFillColor(...CARD_BG);
+    doc.rect(M, y, cols.reduce((s, c) => s + c.w, 0), rowH, 'F');
+    doc.setTextColor(...CYAN);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    let x = M + 6;
+    for (const c of cols) { doc.text(c.label, x, y + 16); x += c.w; }
+    y += rowH;
+  };
+
+  drawHead();
+  doc.setFont('helvetica', 'normal');
+  rows.forEach((row, i) => {
+    if (y > H - 60) {
+      footer(doc, W, H, opts.subjectName);
+      doc.addPage('a4', 'landscape');
+      doc.setFillColor(...BG);
+      doc.rect(0, 0, W, H, 'F');
+      y = 50;
+      drawHead();
+      doc.setFont('helvetica', 'normal');
+    }
+    if (i % 2 === 1) {
+      doc.setFillColor(22, 28, 40);
+      doc.rect(M, y, cols.reduce((s, c) => s + c.w, 0), rowH, 'F');
+    }
+    doc.setFontSize(9.5);
+    let x = M + 6;
+    for (const c of cols) {
+      const v = String(row[c.key] ?? '—');
+      doc.setTextColor(...(c.key === 'estado' && v === 'Aprobado' ? [52, 211, 153] as [number, number, number]
+        : c.key === 'estado' && v !== '—' && v !== 'Incompleto' ? [251, 191, 36] as [number, number, number]
+        : TEXT));
+      doc.text(v.slice(0, c.key === 'student' ? 32 : 12), x, y + 16);
+      x += c.w;
+    }
+    y += rowH;
+  });
+
+  footer(doc, W, H, opts.subjectName);
+  doc.save(`libreta-${opts.courseName.replace(/\s+/g, '')}-${opts.subjectName.replace(/\s+/g, '')}-${opts.year}.pdf`);
+}
+
+/**
+ * Informe de actividad de un estudiante: resumen numérico + línea de
+ * tiempo de todo lo que hizo (por materia o global).
+ */
+export function informeToPdf(
+  studentName: string,
+  scope: string,
+  stats: { label: string; value: string }[],
+  timeline: { date: string; label: string; subjectName: string | null }[],
+): void {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 44;
+
+  doc.setFillColor(...BG);
+  doc.rect(0, 0, W, H, 'F');
+
+  doc.setTextColor(...CYAN);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Informe de actividad — ${stripEmoji(studentName)}`, M, 50);
+  doc.setTextColor(...SUBTLE);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${scope} · generado el ${new Date().toLocaleDateString('es-AR')} · Documento de demostración`, M, 66);
+
+  // Resumen en fila de tarjetas
+  let x = M;
+  const cardW = (W - M * 2 - (stats.length - 1) * 8) / stats.length;
+  for (const s of stats) {
+    doc.setFillColor(...CARD_BG);
+    doc.roundedRect(x, 82, cardW, 46, 6, 6, 'F');
+    doc.setTextColor(...CYAN);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text(s.value, x + cardW / 2, 103, { align: 'center' });
+    doc.setTextColor(...SUBTLE);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(stripEmoji(s.label).slice(0, 22), x + cardW / 2, 118, { align: 'center' });
+    x += cardW + 8;
+  }
+
+  let y = 152;
+  doc.setFontSize(9.5);
+  for (const ev of timeline) {
+    if (y > H - 56) {
+      footer(doc, W, H);
+      doc.addPage();
+      doc.setFillColor(...BG);
+      doc.rect(0, 0, W, H, 'F');
+      y = 50;
+    }
+    const d = new Date(ev.date);
+    doc.setTextColor(...SUBTLE);
+    doc.text(d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }), M, y);
+    doc.setTextColor(...TEXT);
+    const label = stripEmoji(`${ev.label}${ev.subjectName ? ` (${ev.subjectName})` : ''}`);
+    const lines = doc.splitTextToSize(label, W - M * 2 - 50);
+    doc.text(lines[0], M + 46, y);
+    y += 15;
+  }
+
+  footer(doc, W, H);
+  doc.save(`informe-${stripEmoji(studentName).replace(/\s+/g, '-').toLowerCase()}.pdf`);
+}

@@ -24,6 +24,7 @@ import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
 import ClaseEnVivoInvitado from './pages/ClaseEnVivoInvitado';
 import Hoy from './pages/Hoy';
 import MisClases from './pages/MisClases';
+import Libreta from './pages/Libreta';
 import Asistencia from './pages/Asistencia';
 import Corregir from './pages/Corregir';
 import ArmarModulo from './pages/ArmarModulo';
@@ -79,6 +80,9 @@ function App() {
             } />
             <Route path="mis-clases" element={
               <ProtectedRoute allowedRoles={['docente']}><MisClases /></ProtectedRoute>
+            } />
+            <Route path="libreta" element={
+              <ProtectedRoute allowedRoles={['docente']}><Libreta /></ProtectedRoute>
             } />
             <Route path="asistencia" element={
               <ProtectedRoute allowedRoles={['docente']}><Asistencia /></ProtectedRoute>

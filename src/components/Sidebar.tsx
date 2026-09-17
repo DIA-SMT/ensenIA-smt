@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Calendar, Users, BookOpen,
     Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
     ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun, Boxes, Activity
-} from 'lucide-react';
+, NotebookText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnreadAlertCount } from '../services/alerts.service';
 import { getMyLiveSession } from '../services/live.service';
@@ -34,6 +34,7 @@ const teacherNavItems: NavItem[] = [
     { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio, showLive: true },
     { label: 'Armar módulo', path: '/modulo', icon: Boxes, isIA: true },
     { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
+    { label: 'Libreta', path: '/libreta', icon: NotebookText },
     { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
     { label: 'Ajustes', path: '/settings', icon: Settings },

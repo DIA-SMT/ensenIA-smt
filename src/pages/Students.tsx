@@ -12,6 +12,8 @@ import { getGuardiansOfStudent, createNotice } from '../services/guardians.servi
 import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
 import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
 import { summarizeStudent } from '../services/documents.service';
+import { getStudentTrace } from '../services/informes.service';
+import { informeToPdf } from '../lib/pdf';
 import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import {
@@ -71,6 +73,35 @@ export default function Students() {
     const [obsSaving, setObsSaving] = useState(false);
     const [obsSaved, setObsSaved] = useState(false);
     const [obsError, setObsError] = useState('');
+
+    // Informe de actividad (trazabilidad completa, PDF)
+    const [informeLoading, setInformeLoading] = useState(false);
+    const handleDownloadInforme = async () => {
+        if (!selectedStudent || informeLoading) return;
+        setInformeLoading(true);
+        try {
+            const trace = await getStudentTrace(selectedStudent.id);
+            informeToPdf(
+                `${selectedStudent.firstName} ${selectedStudent.lastName}`,
+                `Global · ${selectedStudent.courseName}`,
+                [
+                    { label: 'Entregas', value: String(trace.stats.entregas) },
+                    { label: 'Calificadas', value: String(trace.stats.calificadas) },
+                    { label: 'Respuestas en vivo', value: String(trace.stats.respuestasVivo) },
+                    { label: 'Conexiones en vivo', value: String(trace.stats.conexionesVivo) },
+                    { label: 'Check-ins', value: String(trace.stats.checkins) },
+                    { label: 'Logros', value: String(trace.stats.logros) },
+                    { label: 'Inasistencias', value: String(trace.stats.inasistencias) },
+                ],
+                trace.events.slice(0, 80),
+            );
+        } catch (err) {
+            console.error(err);
+            alert('No se pudo generar el informe. Probá de nuevo.');
+        } finally {
+            setInformeLoading(false);
+        }
+    };
 
     // Resumen IA
     const [showSummary, setShowSummary] = useState(false);
@@ -494,13 +525,23 @@ export default function Students() {
                             <h2 className="profile-name">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
                             <p className="profile-course">{selectedStudent.courseName}</p>
                             <div className="profile-status mt-2">{getStatusBadge(selectedStudent.status)}</div>
-                            <button
-                                className="btn btn-outline btn-sm mt-2"
-                                onClick={handleDownloadFicha}
-                                title="Descarga la ficha completa en PDF: métricas, señales, trabajo y observaciones. Ideal para reuniones."
-                            >
-                                <FileDown size={14} /> Descargar ficha (PDF)
-                            </button>
+                            <div className="flex gap-2 mt-2" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <button
+                                    className="btn btn-outline btn-sm"
+                                    onClick={handleDownloadFicha}
+                                    title="Descarga la ficha completa en PDF: métricas, señales, trabajo y observaciones. Ideal para reuniones."
+                                >
+                                    <FileDown size={14} /> Ficha (PDF)
+                                </button>
+                                <button
+                                    className="btn btn-outline btn-sm"
+                                    onClick={handleDownloadInforme}
+                                    disabled={informeLoading}
+                                    title="Todo lo trazado: entregas, clase en vivo, conexiones, check-ins, logros y asistencia."
+                                >
+                                    <FileDown size={14} /> {informeLoading ? 'Generando...' : 'Informe de actividad (PDF)'}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="profile-section">

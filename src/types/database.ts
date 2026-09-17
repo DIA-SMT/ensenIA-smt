@@ -1833,6 +1833,77 @@ export type Database = {
           },
         ]
       }
+      report_grades: {
+        Row: {
+          comment: string | null
+          conduct: string | null
+          course_id: string
+          grade: number | null
+          id: string
+          school_year: number
+          student_id: string
+          subject_id: string
+          teacher_id: string
+          term: number
+          updated_at: string | null
+        }
+        Insert: {
+          comment?: string | null
+          conduct?: string | null
+          course_id: string
+          grade?: number | null
+          id?: string
+          school_year?: number
+          student_id: string
+          subject_id: string
+          teacher_id: string
+          term: number
+          updated_at?: string | null
+        }
+        Update: {
+          comment?: string | null
+          conduct?: string | null
+          course_id?: string
+          grade?: number | null
+          id?: string
+          school_year?: number
+          student_id?: string
+          subject_id?: string
+          teacher_id?: string
+          term?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_grades_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_grades_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_grades_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_blocks: {
         Row: {
           color_class: string

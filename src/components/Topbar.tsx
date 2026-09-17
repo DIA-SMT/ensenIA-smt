@@ -7,6 +7,7 @@ import './Topbar.css';
 const routeNames: Record<string, string> = {
     '/hoy': 'Hoy',
     '/mis-clases': 'Mis clases',
+    '/libreta': 'Libreta',
     '/crear': 'Crear actividad',
     '/asistencia': 'Asistencia',
     '/corregir': 'Para corregir',

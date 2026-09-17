@@ -1,0 +1,150 @@
+/* Libreta digital — grilla que se llena con el teclado */
+
+.lib-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+}
+.lib-header-text h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 3px; }
+.lib-header-text p { margin: 0; }
+.lib-header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lib-header-controls .form-select { min-width: 210px; }
+
+/* Pestañas de trimestre */
+.lib-terms { display: flex; gap: 6px; flex-wrap: wrap; }
+.lib-term {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.lib-term:hover { border-color: var(--cyan-bright); }
+.lib-term.active {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  color: var(--cyan-bright);
+  font-weight: 600;
+}
+.lib-term.apoyo { border-style: dashed; font-size: 12px; }
+
+/* Grilla */
+.lib-table-card { padding: 6px 6px 12px; overflow-x: auto; }
+.lib-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.lib-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-subtle);
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.lib-th-obs { width: 26%; }
+.lib-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+.lib-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+.lib-student {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lib-state { margin-left: 7px; vertical-align: -2px; }
+
+.lib-grade {
+  width: 58px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input, var(--bg-elevated));
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  font-family: inherit;
+}
+.lib-grade.low { border-color: rgba(251, 191, 36, 0.55); color: #FCD34D; }
+.lib-grade::placeholder { color: var(--text-subtle); font-weight: 400; }
+
+.lib-conduct { display: flex; gap: 4px; }
+.lib-conduct-btn {
+  min-width: 32px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-subtle);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lib-conduct-btn:hover { border-color: var(--cyan-bright); color: var(--text-primary); }
+.lib-conduct-btn.on {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-glow);
+  color: var(--cyan-bright);
+}
+
+.lib-comment {
+  width: 100%;
+  min-width: 130px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input, var(--bg-elevated));
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.lib-abs { text-align: center; color: var(--text-secondary); font-size: 13px; }
+
+.lib-year { white-space: nowrap; }
+.lib-year-terms {
+  display: inline-flex;
+  gap: 5px;
+  margin-right: 8px;
+  font-size: 12.5px;
+  color: var(--text-subtle);
+}
+.lib-year-terms em { font-style: normal; min-width: 14px; text-align: center; }
+.lib-year-terms em.now { color: var(--cyan-bright); font-weight: 700; }
+
+.lib-informe { display: flex; align-items: center; gap: 4px; }
+.lib-informe-global {
+  border: none;
+  background: none;
+  color: var(--text-subtle);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px;
+}
+.lib-informe-global:hover { color: var(--cyan-bright); }
+.lib-informe-global:disabled { opacity: 0.4; cursor: default; }
+
+.lib-hint { margin: 10px 12px 0; }
+
+@media (max-width: 640px) {
+  .lib-header { flex-direction: column; align-items: stretch; }
+}
