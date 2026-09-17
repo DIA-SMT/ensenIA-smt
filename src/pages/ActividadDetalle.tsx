@@ -3,12 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
+  PencilLine,
 } from 'lucide-react';
 import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivityById, getSubmissionsByActivity, getEventsByActivity,
-  getEnrolledStudents, gradeSubmission, setSubmissionReaction,
+  getEnrolledStudents, gradeSubmission, setSubmissionReaction, updateActivity,
 } from '../services/activities.service';
 import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -222,6 +223,22 @@ export default function ActividadDetalle() {
     setSelected(null);
   };
 
+  // Renombrar la actividad: lo que el docente creó lo puede corregir
+  const handleRenameActivity = async () => {
+    if (!activity) return;
+    const next = window.prompt('Nuevo nombre de la actividad:', activity.title);
+    if (next === null) return;
+    const title = next.trim();
+    if (!title || title === activity.title) return;
+    try {
+      await updateActivity(activity.id, { title });
+      setActivity({ ...activity, title });
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo renombrar. Probá de nuevo.');
+    }
+  };
+
   const selectedSub = selected ? subByStudent.get(selected.id) : null;
   const selectedEvents = selected ? (eventsByStudent.get(selected.id) ?? []) : [];
 
@@ -232,7 +249,12 @@ export default function ActividadDetalle() {
       <div className="card acts-detail-header">
         <div className="flex items-center justify-between gap-4" style={{ flexWrap: 'wrap' }}>
           <div>
-            <h2>{activity.title}</h2>
+            <h2 className="acts-title-row">
+              {activity.title}
+              <button className="btn-icon" aria-label="Renombrar actividad" title="Cambiar el nombre" onClick={handleRenameActivity}>
+                <PencilLine size={15} />
+              </button>
+            </h2>
             <div className="acts-card-meta mt-1">
               <span className="badge badge-cyan">{activity.subjectName}</span>
               <span className="badge badge-neutral">{activity.courseName}</span>

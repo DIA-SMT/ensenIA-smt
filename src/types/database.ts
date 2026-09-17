@@ -793,6 +793,78 @@ export type Database = {
           },
         ]
       }
+      course_group_members: {
+        Row: {
+          group_id: string
+          student_id: string
+        }
+        Insert: {
+          group_id: string
+          student_id: string
+        }
+        Update: {
+          group_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "course_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_group_members_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_groups: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          emoji: string
+          id: string
+          name: string
+          teacher_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          emoji?: string
+          id?: string
+          name: string
+          teacher_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          emoji?: string
+          id?: string
+          name?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_groups_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_groups_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           created_at: string | null
@@ -1143,6 +1215,7 @@ export type Database = {
           kind: string
           session_id: string
           status: string
+          target_student_id: string | null
         }
         Insert: {
           config?: Json
@@ -1151,6 +1224,7 @@ export type Database = {
           kind: string
           session_id: string
           status?: string
+          target_student_id?: string | null
         }
         Update: {
           config?: Json
@@ -1159,6 +1233,7 @@ export type Database = {
           kind?: string
           session_id?: string
           status?: string
+          target_student_id?: string | null
         }
         Relationships: [
           {
@@ -1166,6 +1241,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_activities_target_student_id_fkey"
+            columns: ["target_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -1201,6 +1283,39 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_presence: {
+        Row: {
+          last_seen_at: string
+          session_id: string
+          student_id: string
+        }
+        Insert: {
+          last_seen_at?: string
+          session_id: string
+          student_id: string
+        }
+        Update: {
+          last_seen_at?: string
+          session_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_presence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_presence_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]

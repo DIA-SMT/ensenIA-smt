@@ -674,3 +674,91 @@
     .cv-join { flex-direction: column; text-align: center; gap: var(--space-4); }
     .cv-join.compact { flex-direction: row; text-align: left; }
 }
+
+/* ── Quiénes están (presencia, migración 014) ── */
+.cv-people { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+
+.cv-people-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cv-people-head h4 {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13.5px; margin: 0;
+}
+.cv-people-count {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-secondary);
+  margin-right: auto;
+}
+.cv-online-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+.cv-people-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.cv-person {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-subtle);
+  font-size: 12px;
+  cursor: default;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.cv-person.online { color: var(--text-primary); cursor: pointer; }
+.cv-person.online:hover { border-color: var(--cyan-bright); background: var(--cyan-glow); }
+.cv-person.targeted {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.12);
+  color: #FCD34D;
+}
+.cv-person-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+.cv-person-dot.on { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.cv-person-target { opacity: 0; transition: opacity 0.12s; }
+.cv-person.online:hover .cv-person-target, .cv-person.targeted .cv-person-target { opacity: 1; }
+
+/* ── Pregunta dirigida (banner del lanzador) ── */
+.cv-target-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+  color: #FCD34D;
+  font-size: 13px;
+}
+.cv-target-banner span { flex: 1; }
+.cv-target-banner strong { color: var(--text-primary); }
+
+/* ── Una respuesta por grupo ── */
+.cv-groupmode {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-secondary);
+  cursor: pointer;
+  margin: 10px 0 4px;
+}
+.cv-groupmode input { accent-color: var(--cyan-bright); }
+
+/* Aviso del estudiante: dirigida a él, a otro, o en grupos */
+.cv-student-note {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+.cv-student-note.mine {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.08);
+  color: #FCD34D;
+  font-weight: 600;
+}

@@ -28,6 +28,8 @@ export interface LiveActivityConfig {
   /** quiz: id de la opción correcta */
   correctId?: string;
   placeholder?: string;
+  /** Una respuesta por grupo (pocos celulares, o consigna grupal). */
+  groupMode?: boolean;
 }
 
 export interface LiveSession {
@@ -53,6 +55,8 @@ export interface LiveActivity {
   kind: LiveActivityKind;
   config: LiveActivityConfig;
   status: LiveActivityStatus;
+  /** Si está, la pregunta es para UN estudiante ("esta va para vos"). */
+  targetStudentId: string | null;
   createdAt: string;
 }
 
@@ -112,6 +116,7 @@ function mapActivity(row: any): LiveActivity {
     kind: row.kind,
     config: row.config ?? {},
     status: row.status,
+    targetStudentId: row.target_student_id ?? null,
     createdAt: row.created_at,
   };
 }
@@ -211,6 +216,7 @@ export async function launchActivity(
   sessionId: string,
   kind: LiveActivityKind,
   config: LiveActivityConfig,
+  targetStudentId?: string | null,
 ): Promise<LiveActivity> {
   // Cierra la anterior: en el celular del estudiante desaparece sola (poll).
   await supabase
@@ -222,7 +228,12 @@ export async function launchActivity(
   const data = unwrap(
     await supabase
       .from('live_activities')
-      .insert({ session_id: sessionId, kind, config: config as never })
+      .insert({
+        session_id: sessionId,
+        kind,
+        config: config as never,
+        target_student_id: targetStudentId ?? null,
+      })
       .select('*')
   );
   return mapActivity((data as any[])[0]);
@@ -349,4 +360,34 @@ export async function getConnectedGuests(sessionId: string): Promise<number> {
     .gt('last_seen_at', since);
   if (error) throw error;
   return count ?? 0;
+}
+
+// ── Presencia: quién está conectado ahora (migración 014) ──
+
+/**
+ * Late mientras el estudiante tiene la clase abierta. Se llama desde el
+ * poll pero throttleado (~30s): la presencia no necesita la cadencia de
+ * los resultados y así cuida datos y batería.
+ */
+export async function sendHeartbeat(sessionId: string, studentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('live_presence')
+    .upsert(
+      { session_id: sessionId, student_id: studentId, last_seen_at: new Date().toISOString() },
+      { onConflict: 'session_id,student_id' },
+    );
+  if (error) throw error;
+}
+
+/** Ids de estudiantes vistos en los últimos 90s (mismo criterio que invitados). */
+export async function getOnlineStudentIds(sessionId: string): Promise<Set<string>> {
+  const since = new Date(Date.now() - 90_000).toISOString();
+  const data = unwrap(
+    await supabase
+      .from('live_presence')
+      .select('student_id')
+      .eq('session_id', sessionId)
+      .gt('last_seen_at', since)
+  );
+  return new Set(data.map((r: any) => r.student_id));
 }

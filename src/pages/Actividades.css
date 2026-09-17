@@ -381,3 +381,8 @@
   color: var(--text-subtle);
   white-space: nowrap;
 }
+
+/* Título editable: el lápiz aparece al lado, discreto */
+.acts-title-row { display: inline-flex; align-items: center; gap: 8px; }
+.acts-title-row .btn-icon { opacity: 0.55; }
+.acts-title-row .btn-icon:hover { opacity: 1; }

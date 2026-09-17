@@ -78,6 +78,14 @@ export async function createMaterial(material: {
   return mapMaterial(row);
 }
 
+export async function renameMaterial(id: string, title: string, description: string): Promise<void> {
+  const { error } = await supabase
+    .from('library_materials')
+    .update({ title, description })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteMaterial(id: string): Promise<void> {
   const { error } = await supabase.from('library_materials').delete().eq('id', id);
   if (error) throw error;

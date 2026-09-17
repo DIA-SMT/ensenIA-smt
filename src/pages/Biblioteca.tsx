@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
-  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers,
+  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine,
   Headphones,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial } from '../services/library.service';
+import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, extractDocxText,
@@ -206,6 +206,35 @@ export default function Biblioteca() {
       refresh();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // ── Renombrar: lo que creaste es tuyo y lo podés corregir ──
+  const [editFor, setEditFor] = useState<LibraryMaterial | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (mat: LibraryMaterial) => {
+    setEditFor(mat);
+    setEditTitle(mat.title);
+    setEditDesc(mat.description ?? '');
+  };
+
+  const handleRename = async () => {
+    if (!editFor || !editTitle.trim() || editSaving) return;
+    setEditSaving(true);
+    try {
+      await renameMaterial(editFor.id, editTitle.trim(), editDesc.trim());
+      setAllMaterials(prev => prev.map(m => m.id === editFor.id
+        ? { ...m, title: editTitle.trim(), description: editDesc.trim() }
+        : m));
+      setEditFor(null);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo guardar el cambio. Probá de nuevo.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -427,6 +456,9 @@ export default function Biblioteca() {
                     >
                       <Share2 size={14} /> {mat.isSharedWithStudents ? 'Compartido' : 'Compartir'}
                     </button>
+                    <button className="mat-action-btn" title="Cambiar nombre o descripción" onClick={() => openEdit(mat)}>
+                      <PencilLine size={14} />
+                    </button>
                     <button className="mat-action-btn danger" title="Eliminar" onClick={() => handleDelete(mat)}>
                       <Trash2 size={14} />
                     </button>
@@ -445,6 +477,46 @@ export default function Biblioteca() {
           )}
         </div>
       </main>
+
+      {/* ── Modal: renombrar material ── */}
+      {editFor && (
+        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditFor(null); }}>
+          <div className="em-modal">
+            <div className="em-modal-header">
+              <h3><PencilLine size={17} className="text-cyan" /> Editar material</h3>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setEditFor(null)}><X size={18} /></button>
+            </div>
+            <div className="em-modal-body">
+              <div className="em-field">
+                <label>Nombre</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  maxLength={120}
+                  autoFocus
+                  onChange={e => setEditTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRename(); }}
+                />
+              </div>
+              <div className="em-field">
+                <label>Descripción (opcional)</label>
+                <textarea
+                  rows={2}
+                  value={editDesc}
+                  maxLength={300}
+                  onChange={e => setEditDesc(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="em-modal-footer">
+              <button className="btn btn-outline btn-sm" onClick={() => setEditFor(null)}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={!editTitle.trim() || editSaving}>
+                {editSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal: subir material ── */}
       {showUpload && (

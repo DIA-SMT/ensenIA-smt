@@ -1,4 +1,4 @@
-import { Search, Zap, Command, Menu } from 'lucide-react';
+import { Search, Zap, Command, Menu, HelpCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationDropdown from './NotificationDropdown';
@@ -40,9 +40,10 @@ function titleFor(pathname: string): string {
 
 interface TopbarProps {
     onMenuClick?: () => void;
+    onHelpClick?: () => void;
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+export default function Topbar({ onMenuClick, onHelpClick }: TopbarProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const { user, isDocente } = useAuth();
@@ -70,6 +71,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                     <Menu size={20} />
                 </button>
                 <h2 className="page-title">{pageTitle}</h2>
+                <span className="demo-chip" title="Demo para las escuelas municipales Gabriela Mistral y Alfonsina Storni. Los datos son de prueba.">DEMO</span>
                 <div className="topbar-greeting">
                     <span>{greeting}, {firstName}</span>
                     <span className="dot-sep">·</span>
@@ -83,6 +85,15 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                     <span className="search-trigger-text">Buscar...</span>
                     <kbd className="search-kbd"><Command size={11} />K</kbd>
                 </div>
+
+                <button
+                    className="btn-icon topbar-help"
+                    onClick={onHelpClick}
+                    aria-label="Guía rápida: ¿qué querés hacer?"
+                    title="¿Qué querés hacer? La guía te lleva"
+                >
+                    <HelpCircle size={19} />
+                </button>
 
                 <NotificationDropdown />
 

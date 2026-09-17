@@ -16,9 +16,10 @@ import { getStudentByUserId } from '../services/activities.service';
 import {
     getLiveSessionForCourse, getSessionState, getLiveResults,
     upsertLiveResponse, getMyLiveResponse, sendLiveReaction, saveLiveCheckin,
-    LIVE_KIND_META, LIVE_REACTIONS,
+    sendHeartbeat, LIVE_KIND_META, LIVE_REACTIONS,
     type LiveSession, type LiveActivity, type LiveResults,
 } from '../services/live.service';
+import { getMyGroup, type CourseGroup } from '../services/groups.service';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type Student, type CheckinFeeling } from '../types';
 import './ClaseEnVivo.css';
@@ -44,6 +45,11 @@ export default function ClaseEnVivoAlumno() {
     const lastReactionAt = useRef(0);
     const [reactionFlash, setReactionFlash] = useState<string | null>(null);
 
+    // Presencia: el docente ve quién está. Late cada ~30s, no en cada poll,
+    // para cuidar datos y batería.
+    const lastBeatAt = useRef(0);
+    const [myGroup, setMyGroup] = useState<CourseGroup | null>(null);
+
     useEffect(() => {
         if (!user) return;
         getStudentByUserId(user.id).then(setStudent).catch(() => setStudent(null));
@@ -66,6 +72,11 @@ export default function ClaseEnVivoAlumno() {
             }
             setSession(state.session);
             setActivity(state.activity);
+
+            if (Date.now() - lastBeatAt.current > 30_000) {
+                lastBeatAt.current = Date.now();
+                sendHeartbeat(session.id, student.id).catch(console.error);
+            }
 
             // Cambió la actividad → resetear respuesta local y traer la mía si existe
             if (state.activity && state.activity.id !== lastActivityId.current) {
@@ -91,6 +102,12 @@ export default function ClaseEnVivoAlumno() {
         const id = window.setInterval(poll, POLL_MS);
         return () => window.clearInterval(id);
     }, [student, poll]);
+
+    // Mi grupo (si el docente armó grupos): para "respondé por tu grupo"
+    useEffect(() => {
+        if (!student || !session) return;
+        getMyGroup(student.id, student.courseId).then(setMyGroup).catch(console.error);
+    }, [student?.id, session?.id]);
 
     if (!user) return null;
     if (student === undefined) return <div className="cv-container"><p className="text-secondary">Cargando...</p></div>;
@@ -153,6 +170,10 @@ export default function ClaseEnVivoAlumno() {
 
     const canChange = activity && activity.status === 'active';
 
+    // Pregunta dirigida: si es para otro, este celular sigue en pausa
+    const targetedToMe = activity?.targetStudentId === student.id;
+    const targetedToOther = Boolean(activity?.targetStudentId) && !targetedToMe;
+
     return (
         <div className="cv-container cv-student animate-in">
             {/* Header compacto */}
@@ -167,8 +188,18 @@ export default function ClaseEnVivoAlumno() {
             </div>
 
             {/* Actividad */}
-            {activity && activity.status !== 'closed' ? (
+            {activity && activity.status !== 'closed' && !targetedToOther ? (
                 <div className="card cv-activity">
+                    {targetedToMe && (
+                        <div className="cv-student-note mine" role="status">
+                            🎯 ¡Esta pregunta es para vos! Tus compañeros no la ven.
+                        </div>
+                    )}
+                    {activity.config.groupMode && !targetedToMe && (
+                        <div className="cv-student-note" role="status">
+                            👥 Una respuesta por grupo{myGroup ? <> — el tuyo: <strong>{myGroup.emoji} {myGroup.name}</strong></> : ''}. Coordinen quién la manda.
+                        </div>
+                    )}
                     <div className="cv-activity-head">
                         <span className="badge badge-ia">
                             {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
@@ -296,7 +327,9 @@ export default function ClaseEnVivoAlumno() {
             ) : (
                 <div className="card cv-idle">
                     <p className="text-secondary">
-                        Atendé a la clase 😄 — cuando tu docente lance una actividad, aparece sola acá.
+                        {targetedToOther
+                            ? '🎯 Tu docente le mandó una pregunta directa a un compañero. Seguí atento a la clase.'
+                            : 'Atendé a la clase 😄 — cuando tu docente lance una actividad, aparece sola acá.'}
                     </p>
                 </div>
             )}

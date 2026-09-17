@@ -112,3 +112,24 @@
   .nueva-clase-btn { padding: 10px; }
   .page-title { font-size: 16px; }
 }
+
+/* Etiqueta de demo: honesta y discreta */
+.demo-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #FCD34D;
+  background: rgba(251, 191, 36, 0.1);
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.topbar-help { color: var(--text-secondary); }
+.topbar-help:hover { color: var(--cyan-bright); }
+
+@media (max-width: 640px) {
+  .demo-chip { display: none; }
+}

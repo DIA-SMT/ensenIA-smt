@@ -12,20 +12,25 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
+    UsersRound, Target, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
+import { getEnrolledStudents } from '../services/activities.service';
+import { getGroupsByCourse, type CourseGroup } from '../services/groups.service';
+import GruposModal from '../components/GruposModal';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, setGuestsEnabled, getConnectedGuests, LIVE_KIND_META,
+    getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds,
+    LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption,
 } from '../services/live.service';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
-import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
+import { FEELING_META, type Subject, type CheckinFeeling, type Student } from '../types';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -58,6 +63,15 @@ export default function ClaseEnVivo() {
     const [connected, setConnected] = useState(0);
     const [joinQr, setJoinQr] = useState('');
 
+    // Quiénes están: la lista del curso + los que laten ahora
+    const [students, setStudents] = useState<Student[]>([]);
+    const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
+    const [groups, setGroups] = useState<CourseGroup[]>([]);
+    const [showGroups, setShowGroups] = useState(false);
+    /** Pregunta dirigida: si está, lo que se lance va solo a este estudiante. */
+    const [targetStudent, setTargetStudent] = useState<Student | null>(null);
+    const [groupMode, setGroupMode] = useState(false);
+
     const pollRef = useRef<number | null>(null);
 
     const assignments = user?.subjects ?? [];
@@ -75,6 +89,13 @@ export default function ClaseEnVivo() {
         if (!user) return;
         getMyLiveSession(user.id).then(setSession).catch(() => setSession(null));
     }, [user]);
+
+    // Con la clase viva, carga el curso (para nombres) y sus grupos
+    useEffect(() => {
+        if (!session || session.status !== 'live') return;
+        getEnrolledStudents(session.subjectId, session.courseId).then(setStudents).catch(console.error);
+        getGroupsByCourse(session.courseId).then(setGroups).catch(console.error);
+    }, [session?.id, session?.status]);
 
     // ── Poll del estado + resultados + reacciones ──
     const poll = useCallback(async () => {
@@ -94,6 +115,7 @@ export default function ClaseEnVivo() {
             if (state.session.guestsEnabled) {
                 getConnectedGuests(session.id).then(setConnected).catch(console.error);
             }
+            getOnlineStudentIds(session.id).then(setOnlineIds).catch(console.error);
         } catch (err) {
             console.error('poll error:', err);
         }
@@ -205,15 +227,18 @@ export default function ClaseEnVivo() {
         if (!session || !pickedKind || !canLaunch || launching) return;
         setLaunching(true);
         try {
-            const config = pickedKind === 'checkin'
+            const base = pickedKind === 'checkin'
                 ? { question: '¿Cómo venís con la clase de hoy?' }
                 : needsOptions
                     ? { question: question.trim(), options: validOptions, ...(pickedKind === 'quiz' ? { correctId } : {}) }
                     : { question: question.trim() };
-            const act = await launchActivity(session.id, pickedKind, config);
+            // Dirigida a uno o una respuesta por grupo: nunca las dos a la vez
+            const config = groupMode && !targetStudent ? { ...base, groupMode: true } : base;
+            const act = await launchActivity(session.id, pickedKind, config, targetStudent?.id ?? null);
             setActivity(act);
             setResults(null);
             resetLauncher();
+            setTargetStudent(null);
         } catch (err) {
             alert(err instanceof Error ? err.message : 'No se pudo lanzar la actividad.');
         } finally {
@@ -282,6 +307,14 @@ export default function ClaseEnVivo() {
         acc[r.emoji] = (acc[r.emoji] ?? 0) + 1;
         return acc;
     }, {});
+
+    const studentName = (id: string) => {
+        const s = students.find(x => x.id === id);
+        return s ? `${s.firstName} ${s.lastName}` : 'un estudiante';
+    };
+    const onlineCount = students.filter(s => onlineIds.has(s.id)).length;
+    /** Grupos con al menos alguien conectado (para el modo grupal). */
+    const groupsOnline = groups.filter(g => g.memberIds.some(id => onlineIds.has(id))).length;
 
     return (
         <div className="cv-container animate-in">
@@ -370,6 +403,43 @@ export default function ClaseEnVivo() {
                 </div>
             )}
 
+            {/* Quiénes están: presencia real, no un contador. Tocás a un
+                conectado y le mandás una pregunta directa. */}
+            <div className="card cv-people">
+                <div className="cv-people-head">
+                    <h4><UsersRound size={15} /> En la sala</h4>
+                    <span className="cv-people-count">
+                        <span className="cv-online-dot" /> {onlineCount}/{students.length} conectados
+                    </span>
+                    <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
+                        👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
+                    </button>
+                </div>
+                <div className="cv-people-chips">
+                    {students.map(s => {
+                        const online = onlineIds.has(s.id);
+                        return (
+                            <button
+                                key={s.id}
+                                className={`cv-person ${online ? 'online' : ''} ${targetStudent?.id === s.id ? 'targeted' : ''}`}
+                                disabled={!online}
+                                title={online
+                                    ? `${s.firstName} está conectado — tocá para mandarle una pregunta directa`
+                                    : `${s.firstName} no está conectado ahora`}
+                                onClick={() => setTargetStudent(t => (t?.id === s.id ? null : s))}
+                            >
+                                <span className={`cv-person-dot ${online ? 'on' : ''}`} />
+                                {s.firstName} {s.lastName[0]}.
+                                {online && <Target size={12} className="cv-person-target" />}
+                            </button>
+                        );
+                    })}
+                    {students.length === 0 && (
+                        <p className="text-xs text-subtle">Cargando el curso...</p>
+                    )}
+                </div>
+            </div>
+
             {/* Reacciones entrantes */}
             {session.reactionsEnabled && reactions.length > 0 && (
                 <div className="cv-reactions-strip card">
@@ -394,9 +464,17 @@ export default function ClaseEnVivo() {
                         <span className="badge badge-ia">
                             {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
                         </span>
+                        {activity.targetStudentId && (
+                            <span className="badge badge-warning" title="Solo este estudiante la ve en su celular">
+                                🎯 Para {studentName(activity.targetStudentId)}
+                            </span>
+                        )}
+                        {activity.config.groupMode && (
+                            <span className="badge badge-cyan" title="Una respuesta por grupo">👥 En grupos</span>
+                        )}
                         {results && (
-                            <span className="cv-responded" title="Respondieron / total del curso">
-                                <Users size={13} /> {results.responded}/{results.courseTotal}
+                            <span className="cv-responded" title={activity.config.groupMode ? 'Respuestas / grupos con alguien conectado' : 'Respondieron / total del curso'}>
+                                <Users size={13} /> {results.responded}/{activity.targetStudentId ? 1 : activity.config.groupMode ? Math.max(groupsOnline, 1) : results.courseTotal}
                             </span>
                         )}
                     </div>
@@ -426,9 +504,18 @@ export default function ClaseEnVivo() {
 
             {/* Lanzador */}
             <div className="card cv-launcher">
+                {targetStudent && (
+                    <div className="cv-target-banner" role="status">
+                        <Target size={15} />
+                        <span>Pregunta directa para <strong>{targetStudent.firstName} {targetStudent.lastName}</strong> — solo su celular la recibe</span>
+                        <button className="btn-icon" aria-label="Quitar destinatario" onClick={() => setTargetStudent(null)}>
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
                 {!pickedKind ? (
                     <>
-                        <h4 className="cv-launcher-title"><Plus size={15} /> Lanzar actividad</h4>
+                        <h4 className="cv-launcher-title"><Plus size={15} /> {targetStudent ? `Elegí qué mandarle a ${targetStudent.firstName}` : 'Lanzar actividad'}</h4>
                         <div className="cv-kinds">
                             {(Object.entries(LIVE_KIND_META) as [LiveActivityKind, typeof LIVE_KIND_META[LiveActivityKind]][]).map(([kind, meta]) => (
                                 <button key={kind} className="cv-kind-card" onClick={() => setPickedKind(kind)}>
@@ -505,9 +592,19 @@ export default function ClaseEnVivo() {
                             </div>
                         )}
 
+                        {groups.length > 0 && !targetStudent && (
+                            <label className="cv-groupmode" title="Para cuando no alcanzan los celulares o la consigna es grupal">
+                                <input type="checkbox" checked={groupMode} onChange={e => setGroupMode(e.target.checked)} />
+                                👥 Una respuesta por grupo ({groups.length} grupos)
+                            </label>
+                        )}
+
                         <button className="btn btn-primary w-full" onClick={handleLaunch} disabled={!canLaunch || launching}>
-                            {launching ? <Loader2 size={15} className="spin" /> : <Radio size={15} />}
-                            {launching ? 'Lanzando...' : 'Lanzar al curso'}
+                            {launching ? <Loader2 size={15} className="spin" /> : targetStudent ? <Target size={15} /> : <Radio size={15} />}
+                            {launching ? 'Lanzando...'
+                                : targetStudent ? `Mandársela a ${targetStudent.firstName}`
+                                : groupMode ? 'Lanzar a los grupos'
+                                : 'Lanzar al curso'}
                         </button>
                     </div>
                 )}
@@ -520,6 +617,17 @@ export default function ClaseEnVivo() {
                     results={results}
                     connected={connected}
                     onClose={() => setProjecting(false)}
+                />
+            )}
+
+            {showGroups && (
+                <GruposModal
+                    courseId={session.courseId}
+                    teacherId={user.id}
+                    courseName={session.title}
+                    students={students}
+                    onClose={() => setShowGroups(false)}
+                    onSaved={setGroups}
                 />
             )}
 

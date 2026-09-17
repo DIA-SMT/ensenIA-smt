@@ -128,6 +128,14 @@ export async function getActivityById(id: string): Promise<Activity | null> {
   return data ? mapActivity(data) : null;
 }
 
+export async function updateActivity(id: string, changes: { title?: string; description?: string }): Promise<void> {
+  const { error } = await supabase
+    .from('activities')
+    .update({ ...(changes.title !== undefined && { title: changes.title }), ...(changes.description !== undefined && { description: changes.description }) })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function updateActivityStatus(id: string, status: 'published' | 'closed'): Promise<void> {
   const { error } = await supabase.from('activities').update({ status }).eq('id', id);
   if (error) throw error;
