@@ -9,6 +9,7 @@ import { supabase, unwrap } from './_helpers';
 import type {
   StudentCheckin, CheckinMoment, CheckinFeeling,
   StudentObservation, ObservationCategory,
+  WellbeingSignal, WellbeingStatus,
 } from '../types';
 
 // ── Check-ins ──
@@ -112,4 +113,60 @@ export async function getObservationsByStudent(studentId: string): Promise<Stude
 export async function deleteObservation(id: string): Promise<void> {
   const { error } = await supabase.from('student_observations').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ── Señales de bienestar de Migue (017) ──
+// Lo que Migue deriva cuando un estudiante escribe algo que preocupa.
+// No es la conversación: es el motivo y, si lo hubo, la frase que la
+// disparó. La RLS decide quién las ve; acá no se filtra por rol.
+
+function mapSignal(row: any): WellbeingSignal {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    schoolId: row.school_id,
+    level: row.level,
+    reason: row.reason,
+    excerpt: row.excerpt ?? null,
+    status: row.status,
+    handledBy: row.handled_by ?? null,
+    handledAt: row.handled_at ?? null,
+    note: row.note ?? null,
+    createdAt: row.created_at,
+  };
+}
+
+export interface WellbeingSignalWithStudent extends WellbeingSignal {
+  studentName: string;
+  courseName: string | null;
+}
+
+export async function getWellbeingSignals(): Promise<WellbeingSignalWithStudent[]> {
+  const { data, error } = await supabase
+    .from('wellbeing_signals')
+    .select('*, students(first_name, last_name, courses(name))')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    ...mapSignal(row),
+    studentName: row.students
+      ? `${row.students.first_name} ${row.students.last_name}`
+      : 'Estudiante',
+    courseName: row.students?.courses?.name ?? null,
+  }));
+}
+
+/** El servidor sella quién la tomó y cuándo (trigger de la 017). */
+export async function updateSignal(
+  id: string, status: WellbeingStatus, note: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('wellbeing_signals')
+    .update({ status, note: note.trim() || null })
+    .eq('id', id)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('No se pudo actualizar: puede que ya no tengas permiso sobre esta señal.');
+  }
 }

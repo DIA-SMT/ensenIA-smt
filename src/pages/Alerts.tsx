@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getAlertsByTeacher, getAlertsBySchool, startFollowUp, closeAlert } from '../services/alerts.service';
 import { getThresholds, saveThresholds } from '../services/thresholds.service';
 import { formatRelative } from '../lib/format';
+import WellbeingSignals from '../components/WellbeingSignals';
 import {
     ALERT_STATUS_META, ALERT_OUTCOME_META,
     type Alert, type AlertOutcome, type AlertThresholds,
@@ -250,6 +251,10 @@ export default function Alerts() {
                     </div>
                 )}
             </header>
+
+            {/* Lo que Migue derivó: va arriba de todo porque una señal
+                emocional no puede quedar debajo de una alerta académica. */}
+            <WellbeingSignals />
 
             {/* Resumen por estado */}
             <div className="alerts-summary-grid">

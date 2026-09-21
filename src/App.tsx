@@ -25,6 +25,8 @@ import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
 import MisHijos from './pages/MisHijos';
 import Estudiar from './pages/Estudiar';
+import Normativa from './pages/Normativa';
+import Migue from './pages/Migue';
 
 /** Redirige al home según el rol. */
 function HomeRedirect() {
@@ -60,6 +62,9 @@ function App() {
               <ProtectedRoute allowedRoles={['docente', 'director']}><Alerts /></ProtectedRoute>
             } />
             <Route path="settings" element={<Settings />} />
+            {/* Migue: los cuatro roles entran por la misma ruta. Qué asistente
+                les toca lo decide el servidor según su rol, no el cliente. */}
+            <Route path="migue" element={<Migue />} />
 
             {/* Teacher-only */}
             <Route path="agenda" element={
@@ -123,6 +128,10 @@ function App() {
             } />
             <Route path="comunicaciones" element={
               <ProtectedRoute allowedRoles={['director']}><Comunicaciones /></ProtectedRoute>
+            } />
+            {/* Normativa: dirección la carga, el equipo docente la consulta. */}
+            <Route path="normativa" element={
+              <ProtectedRoute allowedRoles={['director', 'docente']}><Normativa /></ProtectedRoute>
             } />
           </Route>
 

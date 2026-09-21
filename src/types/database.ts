@@ -1558,6 +1558,180 @@ export type Database = {
           },
         ]
       }
+      migue_sessions: {
+        Row: {
+          audience: Database["public"]["Enums"]["migue_audience"]
+          created_at: string
+          id: string
+          school_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience: Database["public"]["Enums"]["migue_audience"]
+          id?: string
+          school_id?: string
+          title?: string
+          user_id?: string
+        }
+        Update: {
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migue_sessions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migue_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migue_messages: {
+        Row: {
+          cited_policy_ids: string[]
+          content: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["chat_role"]
+          session_id: string
+        }
+        Insert: {
+          cited_policy_ids?: string[]
+          content: string
+          id?: string
+          role: Database["public"]["Enums"]["chat_role"]
+          session_id: string
+        }
+        Update: {
+          content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migue_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "migue_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wellbeing_signals: {
+        Row: {
+          created_at: string
+          excerpt: string | null
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          level: Database["public"]["Enums"]["wellbeing_level"]
+          note: string | null
+          reason: string
+          school_id: string
+          status: Database["public"]["Enums"]["wellbeing_status"]
+          student_id: string
+        }
+        Insert: {
+          excerpt?: string | null
+          id?: string
+          level: Database["public"]["Enums"]["wellbeing_level"]
+          reason: string
+          school_id: string
+          status?: Database["public"]["Enums"]["wellbeing_status"]
+          student_id: string
+        }
+        Update: {
+          note?: string | null
+          status?: Database["public"]["Enums"]["wellbeing_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellbeing_signals_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellbeing_signals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_policies: {
+        Row: {
+          audience: Database["public"]["Enums"]["policy_audience"]
+          body: string
+          category: Database["public"]["Enums"]["policy_category"]
+          created_at: string
+          created_by: string | null
+          effective_from: string | null
+          id: string
+          is_published: boolean
+          school_id: string
+          source_url: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audience?: Database["public"]["Enums"]["policy_audience"]
+          body: string
+          category?: Database["public"]["Enums"]["policy_category"]
+          effective_from?: string | null
+          id?: string
+          is_published?: boolean
+          school_id: string
+          source_url?: string | null
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["policy_audience"]
+          body?: string
+          category?: Database["public"]["Enums"]["policy_category"]
+          effective_from?: string | null
+          is_published?: boolean
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_policies_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           address: string | null
@@ -2084,6 +2258,19 @@ export type Database = {
       }
       auth_school_id: { Args: never; Returns: string }
       auth_student_id: { Args: never; Returns: string }
+      search_school_policies: {
+        Args: { q: string; max_results?: number }
+        Returns: {
+          id: string
+          title: string
+          category: Database["public"]["Enums"]["policy_category"]
+          summary: string | null
+          body: string
+          source_url: string | null
+          effective_from: string | null
+          rank: number
+        }[]
+      }
     }
     Enums: {
       activity_status: "draft" | "published" | "closed"
@@ -2094,10 +2281,20 @@ export type Database = {
       file_type: "pdf" | "doc" | "image" | "link"
       ia_model: "haiku" | "sonnet"
       ia_tool_type: "act" | "eval" | "sum" | "pres" | "oral" | "free"
+      migue_audience: "equipo" | "estudiante" | "familia"
       notification_priority: "high" | "medium" | "low"
+      policy_audience: "equipo" | "comunidad"
+      policy_category:
+        | "reglamento"
+        | "protocolo"
+        | "circular"
+        | "seguridad"
+        | "administrativo"
       student_status: "excellent" | "good" | "warning" | "critical"
       submission_status: "pending" | "in_progress" | "submitted" | "graded"
       user_role: "director" | "docente" | "estudiante" | "padre"
+      wellbeing_level: "seguimiento" | "urgente"
+      wellbeing_status: "abierta" | "en_seguimiento" | "cerrada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2233,10 +2430,15 @@ export const Constants = {
       file_type: ["pdf", "doc", "image", "link"],
       ia_model: ["haiku", "sonnet"],
       ia_tool_type: ["act", "eval", "sum", "pres", "oral", "free"],
+      migue_audience: ["equipo", "estudiante", "familia"],
       notification_priority: ["high", "medium", "low"],
+      policy_audience: ["equipo", "comunidad"],
+      policy_category: ["reglamento", "protocolo", "circular", "seguridad", "administrativo"],
       student_status: ["excellent", "good", "warning", "critical"],
       submission_status: ["pending", "in_progress", "submitted", "graded"],
       user_role: ["director", "docente", "estudiante", "padre"],
+      wellbeing_level: ["seguimiento", "urgente"],
+      wellbeing_status: ["abierta", "en_seguimiento", "cerrada"],
     },
   },
 } as const

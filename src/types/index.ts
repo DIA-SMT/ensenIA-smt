@@ -838,3 +838,80 @@ export interface QuickNote {
   createdAt: string;
   isPinned: boolean;
 }
+
+// ── Normativa y protocolos (015) ──
+export type PolicyCategory =
+  | 'reglamento' | 'protocolo' | 'circular' | 'seguridad' | 'administrativo';
+
+/** 'equipo' = docentes y dirección. 'comunidad' = además familias y estudiantes. */
+export type PolicyAudience = 'equipo' | 'comunidad';
+
+export interface SchoolPolicy {
+  id: string;
+  schoolId: string;
+  title: string;
+  category: PolicyCategory;
+  audience: PolicyAudience;
+  summary: string | null;
+  body: string;
+  sourceUrl: string | null;
+  effectiveFrom: string | null;
+  isPublished: boolean;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Resultado de search_school_policies: lo que Migue cita. */
+export interface PolicyHit {
+  id: string;
+  title: string;
+  category: PolicyCategory;
+  summary: string | null;
+  body: string;
+  sourceUrl: string | null;
+  effectiveFrom: string | null;
+  rank: number;
+}
+
+// ── Migue (017) ──
+export type MigueAudience = 'equipo' | 'estudiante' | 'familia';
+
+export interface MigueSession {
+  id: string;
+  userId: string;
+  schoolId: string;
+  audience: MigueAudience;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MigueMessage {
+  id: string;
+  sessionId: string;
+  role: ChatRole;
+  content: string;
+  /** Normas que Migue usó para responder: deja auditable la respuesta. */
+  citedPolicyIds: string[];
+  createdAt: string;
+}
+
+// ── Señales de bienestar (017) ──
+export type WellbeingLevel = 'seguimiento' | 'urgente';
+export type WellbeingStatus = 'abierta' | 'en_seguimiento' | 'cerrada';
+
+export interface WellbeingSignal {
+  id: string;
+  studentId: string;
+  schoolId: string;
+  level: WellbeingLevel;
+  reason: string;
+  excerpt: string | null;
+  status: WellbeingStatus;
+  handledBy: string | null;
+  handledAt: string | null;
+  note: string | null;
+  createdAt: string;
+}
