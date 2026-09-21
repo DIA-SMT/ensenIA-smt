@@ -820,6 +820,71 @@ export type Database = {
           },
         ]
       }
+      evaluation_criteria: {
+        Row: {
+          course_id: string
+          created_by: string | null
+          criteria: string
+          id: string
+          is_published: boolean
+          school_id: string
+          subject_id: string
+          term_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          created_by?: string | null
+          criteria: string
+          id?: string
+          is_published?: boolean
+          school_id: string
+          subject_id: string
+          term_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_by?: string | null
+          criteria?: string
+          id?: string
+          is_published?: boolean
+          school_id?: string
+          subject_id?: string
+          term_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_criteria_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_criteria_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_criteria_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_criteria_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           course_id: string
@@ -1238,6 +1303,7 @@ export type Database = {
           sort_order: number
           subject_id: string
           teacher_id: string
+          term_id: string | null
           title: string
         }
         Insert: {
@@ -1247,6 +1313,7 @@ export type Database = {
           sort_order?: number
           subject_id: string
           teacher_id: string
+          term_id?: string | null
           title: string
         }
         Update: {
@@ -1256,9 +1323,17 @@ export type Database = {
           sort_order?: number
           subject_id?: string
           teacher_id?: string
+          term_id?: string | null
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "planning_units_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "planning_units_course_id_fkey"
             columns: ["course_id"]

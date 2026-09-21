@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { GraduationCap, HeartPulse, BookMarked } from 'lucide-react';
+import { GraduationCap, HeartPulse, BookMarked, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMyChildren } from '../services/guardians.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
-import type { Student, AlertThresholds } from '../types';
+import SyllabusPanel from '../components/SyllabusPanel';
+import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
+import type { Student, AlertThresholds, AcademicTerm } from '../types';
 import './Familias.css';
 import './StudentPortal.css';
 import './Libreta.css';
@@ -13,6 +15,8 @@ export default function MisHijos() {
   const { user, school } = useAuth();
   const [children, setChildren] = useState<(Student & { relationship: string })[]>([]);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
+  const [terms, setTerms] = useState<AcademicTerm[] | null>(null);
+  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +26,9 @@ export default function MisHijos() {
     // tiene que coincidir con la regla del aviso que recibió, no con un
     // default nuestro. Si la escuela no configuró umbrales, getThresholds
     // ya devuelve los mismos defaults que aplica el servidor.
+    getTerms(user.schoolId, new Date().getFullYear())
+      .then(ts => { setTerms(ts); setCurrentTermId(pickCurrentTerm(ts)?.id ?? null); })
+      .catch(err => { console.error(err); setTerms([]); });
     getThresholds(user.schoolId)
       .then(setThresholds)
       .catch(err => {
@@ -86,6 +93,13 @@ export default function MisHijos() {
               thresholds={thresholds ?? DEFAULT_THRESHOLDS}
               voice="familia"
             />
+          </div>
+
+          <div className="fam-child-grades">
+            <h5 className="text-sm font-medium flex items-center gap-1" style={{ marginBottom: 8 }}>
+              <BookOpen size={13} /> Temario
+            </h5>
+            <SyllabusPanel terms={terms} initialTermId={currentTermId} voice="familia" courseId={c.courseId} />
           </div>
 
           <p className="text-xs text-subtle flex items-center gap-1">

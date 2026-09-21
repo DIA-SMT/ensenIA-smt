@@ -112,6 +112,7 @@ function mapUnit(row: any): PlanningUnit {
     courseId: row.course_id,
     teacherId: row.teacher_id,
     order: row.sort_order,
+    termId: row.term_id ?? null,
     classes,
   };
 }

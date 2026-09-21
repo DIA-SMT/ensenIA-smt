@@ -564,6 +564,8 @@ export interface PlanningUnit {
   courseId: string;
   teacherId: string;
   order: number;
+  /** Trimestre al que pertenece. Null = borrador: solo la ve su docente. */
+  termId?: string | null;
   classes: PlanningClass[];
 }
 
@@ -718,6 +720,28 @@ export interface DailyBrief {
   negativeCheckins: number;
   pendingCitations: number;
   items: DailyBriefItem[]; // orden: lo más urgente primero
+}
+
+// ── Temario y criterios de evaluación (012) ──
+
+export interface EvaluationCriteria {
+  id: string;
+  schoolId: string;
+  subjectId: string;
+  courseId: string;
+  termId: string;
+  criteria: string;
+  isPublished: boolean;
+  updatedAt?: string | null;
+}
+
+/** El temario de una materia en un trimestre, tal como lo ve quien cursa. */
+export interface SyllabusSubject {
+  subjectId: string;
+  subjectName: string;
+  courseId: string;
+  units: PlanningUnit[];
+  criteria: string | null;
 }
 
 // ── Stats ──

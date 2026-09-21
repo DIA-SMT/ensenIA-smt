@@ -154,3 +154,169 @@
   .libreta-actions { flex-direction: column; align-items: stretch; }
   .libreta-actions-right { flex-direction: column; }
 }
+
+/* ── Temario (estudiante / familia / docente) ── */
+.syllabus-list { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.syllabus-subject {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.syllabus-subject:last-child { border-bottom: none; padding-bottom: 0; }
+
+.syllabus-subject-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cyan-bright);
+}
+
+.syllabus-unit {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.syllabus-unit-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.syllabus-unit-head:hover { background: var(--bg-hover); }
+.syllabus-unit-head > span:first-of-type { flex: 1; min-width: 0; }
+
+.syllabus-chevron { flex-shrink: 0; transition: transform var(--transition-fast); }
+.syllabus-chevron.open { transform: rotate(90deg); }
+
+.syllabus-classes {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.syllabus-class { display: flex; flex-direction: column; gap: 2px; }
+.syllabus-class-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.syllabus-objectives {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.syllabus-criteria {
+  background: var(--bg-surface);
+  border-left: 3px solid var(--success);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 10px 12px;
+  margin-top: 2px;
+}
+.syllabus-criteria-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.syllabus-criteria p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  white-space: pre-line;
+  margin: 0;
+}
+
+/* ── Pestañas de la Libreta ── */
+.libreta-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.libreta-tab {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+.libreta-tab:hover { border-color: var(--cyan-dim); color: var(--text-primary); }
+.libreta-tab.active {
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  color: var(--cyan-bright);
+}
+
+/* ── Editor de temario y criterios (docente) ── */
+.temario-unit-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.temario-unit-title { flex: 1; min-width: 180px; font-size: 13.5px; font-weight: 600; }
+.temario-unit-meta { font-size: 12px; color: var(--text-subtle); }
+.temario-unit-row select { min-width: 160px; }
+
+.temario-criteria-box { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* Selector de trimestre del temario (estudiante / familia): las escuelas
+   pidieron los tres trimestres, no solo el que está en curso. */
+.syllabus-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.syllabus-term-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.syllabus-term-chip:hover {
+  border-color: var(--cyan-bright);
+  color: var(--text-primary);
+}
+
+.syllabus-term-chip.active {
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  color: var(--cyan-bright);
+  font-weight: 500;
+}

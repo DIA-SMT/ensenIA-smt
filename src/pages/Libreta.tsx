@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getEnrolledStudents } from '../services/activities.service';
@@ -16,6 +16,7 @@ import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.servic
 import type {
   AcademicTerm, GradebookRow, Subject, SubjectAssignment, AlertThresholds,
 } from '../types';
+import TemarioEditor from '../components/TemarioEditor';
 import './Libreta.css';
 
 export default function Libreta() {
@@ -30,6 +31,7 @@ export default function Libreta() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [okMsg, setOkMsg] = useState('');
+  const [tab, setTab] = useState<'notas' | 'temario'>('notas');
 
   const assignments: SubjectAssignment[] = useMemo(() => user?.subjects ?? [], [user]);
   const assignment = assignments[assignmentIdx];
@@ -234,25 +236,55 @@ export default function Libreta() {
                 {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
-            <div className="libreta-counters">
-              <span className="badge badge-neutral">{conNota}/{rows.length} con nota</span>
-              {publicadas > 0 && <span className="badge badge-success"><CheckCircle size={11} /> {publicadas} publicadas</span>}
-              {aDiciembre > 0 && <span className="badge badge-danger">{aDiciembre} a diciembre</span>}
-            </div>
+            {/* Contadores de notas: en la pestaña Temario no dicen nada
+                sobre lo que el docente está mirando. */}
+            {tab === 'notas' && (
+              <div className="libreta-counters">
+                <span className="badge badge-neutral">{conNota}/{rows.length} con nota</span>
+                {publicadas > 0 && <span className="badge badge-success"><CheckCircle size={11} /> {publicadas} publicadas</span>}
+                {aDiciembre > 0 && <span className="badge badge-danger">{aDiciembre} a diciembre</span>}
+              </div>
+            )}
           </div>
+
+          <div className="libreta-tabs">
+            <button
+              className={`libreta-tab ${tab === 'notas' ? 'active' : ''}`}
+              onClick={() => setTab('notas')}
+            >
+              <BookMarked size={14} /> Notas
+            </button>
+            <button
+              className={`libreta-tab ${tab === 'temario' ? 'active' : ''}`}
+              onClick={() => setTab('temario')}
+            >
+              <BookOpen size={14} /> Temario y criterios
+            </button>
+          </div>
+
+          {tab === 'temario' && assignment && term && (
+            <TemarioEditor
+              teacherId={user.id}
+              schoolId={user.schoolId}
+              subjectId={assignment.subjectId}
+              courseId={assignment.courseId}
+              term={term}
+              terms={terms}
+            />
+          )}
 
           {error && <div className="em-error">{error}</div>}
           {okMsg && <div className="libreta-ok"><CheckCircle size={14} /> {okMsg}</div>}
 
-          {loading && <p className="text-secondary p-6">Cargando libreta…</p>}
+          {tab === 'notas' && loading && <p className="text-secondary p-6">Cargando libreta…</p>}
 
-          {!loading && rows.length === 0 && (
+          {tab === 'notas' && !loading && rows.length === 0 && (
             <div className="card acts-empty">
               <p className="text-secondary">Este curso todavía no tiene estudiantes.</p>
             </div>
           )}
 
-          {!loading && rows.length > 0 && (
+          {tab === 'notas' && !loading && rows.length > 0 && (
             <div className="card">
               <div className="table-responsive">
                 <table className="modern-table libreta-table">

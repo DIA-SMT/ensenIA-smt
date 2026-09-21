@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Clock, CheckCircle, ChevronRight, GraduationCap, BookMarked } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, ChevronRight, GraduationCap, BookMarked, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getStudentByUserId, getEnrollmentsByStudent, getActivitiesForStudent, getMySubmissions,
@@ -8,7 +8,9 @@ import {
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
-import type { Activity, ActivitySubmission, Enrollment, Student, AlertThresholds } from '../types';
+import SyllabusPanel from '../components/SyllabusPanel';
+import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
+import type { Activity, ActivitySubmission, Enrollment, Student, AlertThresholds, AcademicTerm } from '../types';
 import './StudentPortal.css';
 import './Libreta.css';
 
@@ -19,11 +21,16 @@ export default function MisActividades() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [submissions, setSubmissions] = useState<ActivitySubmission[]>([]);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
+  const [terms, setTerms] = useState<AcademicTerm[] | null>(null);
+  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     getThresholds(user.schoolId).then(setThresholds).catch(console.error);
+    getTerms(user.schoolId, new Date().getFullYear())
+      .then(ts => { setTerms(ts); setCurrentTermId(pickCurrentTerm(ts)?.id ?? null); })
+      .catch(err => { console.error(err); setTerms([]); });
     (async () => {
       try {
         const st = await getStudentByUserId(user.id);
@@ -113,6 +120,11 @@ export default function MisActividades() {
             <span className="sp-hero-label">entregadas</span>
           </div>
         </div>
+      </div>
+
+      <h3 className="sp-section-title"><BookOpen size={17} /> Temario</h3>
+      <div className="card" style={{ padding: 'var(--space-4)' }}>
+        <SyllabusPanel terms={terms} initialTermId={currentTermId} voice="propia" />
       </div>
 
       <h3 className="sp-section-title"><BookMarked size={17} /> Mis notas</h3>
