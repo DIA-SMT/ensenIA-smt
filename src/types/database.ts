@@ -1625,6 +1625,34 @@ export type Database = {
           },
         ]
       }
+      wellbeing_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          school_id: string
+          signal_id: string
+        }
+        Insert: {
+          body: string
+          id?: string
+          school_id: string
+          signal_id: string
+        }
+        Update: {
+          body?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellbeing_notes_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "wellbeing_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wellbeing_signals: {
         Row: {
           created_at: string
@@ -1633,7 +1661,6 @@ export type Database = {
           handled_by: string | null
           id: string
           level: Database["public"]["Enums"]["wellbeing_level"]
-          note: string | null
           reason: string
           school_id: string
           status: Database["public"]["Enums"]["wellbeing_status"]
@@ -1649,7 +1676,6 @@ export type Database = {
           student_id: string
         }
         Update: {
-          note?: string | null
           status?: Database["public"]["Enums"]["wellbeing_status"]
         }
         Relationships: [
@@ -1664,6 +1690,105 @@ export type Database = {
             foreignKeyName: "wellbeing_signals_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recorded_classes: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          duration_min: number | null
+          id: string
+          is_published: boolean
+          provider: Database["public"]["Enums"]["recording_provider"]
+          recorded_on: string | null
+          school_id: string
+          subject_id: string
+          teacher_id: string
+          term_id: string | null
+          title: string
+          unit_id: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          course_id: string
+          description?: string | null
+          duration_min?: number | null
+          id?: string
+          is_published?: boolean
+          provider?: Database["public"]["Enums"]["recording_provider"]
+          recorded_on?: string | null
+          school_id: string
+          subject_id: string
+          term_id?: string | null
+          title: string
+          unit_id?: string | null
+          url: string
+        }
+        Update: {
+          description?: string | null
+          duration_min?: number | null
+          is_published?: boolean
+          provider?: Database["public"]["Enums"]["recording_provider"]
+          recorded_on?: string | null
+          term_id?: string | null
+          title?: string
+          unit_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recorded_classes_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "planning_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recorded_classes_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vocational_profiles: {
+        Row: {
+          answers: Json
+          own_words: string | null
+          school_id: string
+          shared_with_school: boolean
+          student_id: string
+          summary: string | null
+          top_areas: string[]
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          own_words?: string | null
+          school_id: string
+          shared_with_school?: boolean
+          student_id: string
+          summary?: string | null
+          top_areas?: string[]
+        }
+        Update: {
+          answers?: Json
+          own_words?: string | null
+          shared_with_school?: boolean
+          summary?: string | null
+          top_areas?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vocational_profiles_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
@@ -2284,6 +2409,7 @@ export type Database = {
       migue_audience: "equipo" | "estudiante" | "familia"
       notification_priority: "high" | "medium" | "low"
       policy_audience: "equipo" | "comunidad"
+      recording_provider: "youtube" | "drive" | "meet" | "otro"
       policy_category:
         | "reglamento"
         | "protocolo"
@@ -2433,6 +2559,7 @@ export const Constants = {
       migue_audience: ["equipo", "estudiante", "familia"],
       notification_priority: ["high", "medium", "low"],
       policy_audience: ["equipo", "comunidad"],
+      recording_provider: ["youtube", "drive", "meet", "otro"],
       policy_category: ["reglamento", "protocolo", "circular", "seguridad", "administrativo"],
       student_status: ["excellent", "good", "warning", "critical"],
       submission_status: ["pending", "in_progress", "submitted", "graded"],

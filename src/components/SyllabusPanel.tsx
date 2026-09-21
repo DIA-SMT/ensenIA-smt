@@ -11,9 +11,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { BookOpen, ClipboardCheck, ChevronRight } from 'lucide-react';
+import { BookOpen, ClipboardCheck, ChevronRight, Video, ExternalLink } from 'lucide-react';
 import { getSyllabusForTerm } from '../services/syllabus.service';
-import type { AcademicTerm, SyllabusSubject } from '../types';
+import { getPublishedRecordings, embedUrl, PROVIDER_LABELS } from '../services/recordings.service';
+import type { AcademicTerm, RecordedClass, SyllabusSubject } from '../types';
 
 interface SyllabusPanelProps {
   /** null = todavía cargando. [] = la escuela no tiene trimestres del año. */
@@ -29,8 +30,10 @@ interface SyllabusPanelProps {
 export default function SyllabusPanel({ terms, initialTermId, voice, courseId }: SyllabusPanelProps) {
   const [termId, setTermId] = useState<string | null>(initialTermId);
   const [subjects, setSubjects] = useState<SyllabusSubject[] | null>(null);
+  const [grabadas, setGrabadas] = useState<RecordedClass[]>([]);
   const [fallo, setFallo] = useState(false);
   const [openUnit, setOpenUnit] = useState<string | null>(null);
+  const [verVideo, setVerVideo] = useState<RecordedClass | null>(null);
 
   // Los trimestres llegan asincrónicos: sin esto el panel queda en el
   // trimestre "null" con el que montó y no carga nunca.
@@ -44,6 +47,14 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
     setSubjects(null);
     setFallo(false);
     setOpenUnit(null);
+    setVerVideo(null);
+
+    // Las grabaciones son de la materia, no del trimestre: si fallan, el
+    // temario se muestra igual.
+    getPublishedRecordings(courseId)
+      .then(r => { if (!cancelled) setGrabadas(r); })
+      .catch(err => { console.error(err); if (!cancelled) setGrabadas([]); });
+
     getSyllabusForTerm(termId)
       .then(s => {
         if (cancelled) return;
@@ -129,25 +140,40 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
                   </button>
 
                   {abierta && (
-                    <ol className="syllabus-classes">
-                      {u.classes.map(c => (
-                        <li key={c.id} className="syllabus-class">
-                          <span className="syllabus-class-title">{c.title}</span>
-                          {c.objectives && c.objectives.length > 0 && (
-                            <ul className="syllabus-objectives">
-                              {c.objectives.map((o, i) => <li key={i}>{o}</li>)}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                      {u.classes.length === 0 && (
-                        <li className="text-subtle text-xs">Sin clases cargadas todavía.</li>
-                      )}
-                    </ol>
+                    <>
+                      <ol className="syllabus-classes">
+                        {u.classes.map(c => (
+                          <li key={c.id} className="syllabus-class">
+                            <span className="syllabus-class-title">{c.title}</span>
+                            {c.objectives && c.objectives.length > 0 && (
+                              <ul className="syllabus-objectives">
+                                {c.objectives.map((o, i) => <li key={i}>{o}</li>)}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                        {u.classes.length === 0 && (
+                          <li className="text-subtle text-xs">Sin clases cargadas todavía.</li>
+                        )}
+                      </ol>
+                      <Grabaciones
+                        lista={grabadas.filter(g => g.unitId === u.id)}
+                        onVer={setVerVideo}
+                      />
+                    </>
                   )}
                 </div>
               );
             })}
+
+            {/* Grabaciones de la materia que no quedaron colgadas de
+                ninguna unidad: si no se mostraran acá, se perderían. */}
+            <Grabaciones
+              lista={grabadas.filter(g => g.subjectId === s.subjectId && !g.unitId
+                && (g.termId === null || g.termId === termId))}
+              onVer={setVerVideo}
+              titulo="Clases grabadas de la materia"
+            />
 
             {s.criteria && (
               <div className="syllabus-criteria">
@@ -167,6 +193,72 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
     <div className="syllabus-panel">
       {selector}
       {cuerpo}
+      {verVideo && <VisorVideo rec={verVideo} onCerrar={() => setVerVideo(null)} />}
+    </div>
+  );
+}
+
+/** Listado de grabaciones dentro de una unidad o de una materia. */
+function Grabaciones({ lista, onVer, titulo }: {
+  lista: RecordedClass[];
+  onVer: (r: RecordedClass) => void;
+  titulo?: string;
+}) {
+  if (lista.length === 0) return null;
+  return (
+    <div className="syllabus-grabadas">
+      {titulo && <span className="syllabus-grabadas-titulo"><Video size={12} /> {titulo}</span>}
+      {lista.map(r => (
+        <button key={r.id} className="syllabus-grabada" onClick={() => onVer(r)}>
+          <Video size={13} />
+          <span className="syllabus-grabada-titulo">{r.title}</span>
+          <span className="text-xs text-subtle">
+            {r.durationMin ? `${r.durationMin} min` : PROVIDER_LABELS[r.provider]}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Visor de la grabación. Si el proveedor no se puede embeber, lo dice y
+ * ofrece abrirla afuera, en vez de mostrar un recuadro en blanco.
+ */
+function VisorVideo({ rec, onCerrar }: { rec: RecordedClass; onCerrar: () => void }) {
+  const src = embedUrl(rec);
+  return (
+    <div className="em-modal-overlay" onClick={onCerrar}>
+      <div className="em-modal visor-modal" onClick={e => e.stopPropagation()}>
+        <div className="em-modal-header">
+          <h3><Video size={17} /> {rec.title}</h3>
+          <button className="btn btn-ghost" onClick={onCerrar}>✕</button>
+        </div>
+        <div className="em-modal-body">
+          {rec.description && <p className="text-secondary text-sm">{rec.description}</p>}
+          {src ? (
+            <div className="visor-video">
+              <iframe
+                src={src}
+                title={rec.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <div className="visor-externo">
+              <p className="text-secondary text-sm">
+                Esta grabación está en {PROVIDER_LABELS[rec.provider]} y no se puede
+                ver acá adentro.
+              </p>
+              <a className="btn btn-primary btn-sm" href={rec.url}
+                 target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={14} /> Abrir la grabación
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

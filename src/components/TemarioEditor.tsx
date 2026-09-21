@@ -12,6 +12,7 @@ import { Save, Eye, EyeOff, CheckCircle, BookOpen } from 'lucide-react';
 import {
   getUnitsForTeacher, setUnitTerm, getCriteria, saveCriteria,
 } from '../services/syllabus.service';
+import GrabadasEditor from './GrabadasEditor';
 import type { AcademicTerm, PlanningUnit, EvaluationCriteria } from '../types';
 
 interface TemarioEditorProps {
@@ -213,6 +214,16 @@ export default function TemarioEditor({
         {error && <div className="em-error">{error}</div>}
         {okMsg && <div className="libreta-ok"><CheckCircle size={14} /> {okMsg}</div>}
       </div>
+
+      {/* Las grabaciones cuelgan del temario, no de una lista aparte: el
+          estudiante las busca por tema. */}
+      <GrabadasEditor
+        schoolId={schoolId}
+        subjectId={subjectId}
+        courseId={courseId}
+        term={term}
+        units={units}
+      />
     </div>
   );
 }

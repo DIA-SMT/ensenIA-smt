@@ -74,3 +74,23 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+
+.wb-notas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--border-color);
+}
+
+.wb-notas-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}

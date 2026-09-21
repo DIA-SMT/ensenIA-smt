@@ -27,6 +27,7 @@ import MisHijos from './pages/MisHijos';
 import Estudiar from './pages/Estudiar';
 import Normativa from './pages/Normativa';
 import Migue from './pages/Migue';
+import Vocacional from './pages/Vocacional';
 
 /** Redirige al home según el rol. */
 function HomeRedirect() {
@@ -117,6 +118,9 @@ function App() {
             } />
             <Route path="mi-biblioteca" element={
               <ProtectedRoute allowedRoles={['estudiante']}><MiBiblioteca /></ProtectedRoute>
+            } />
+            <Route path="vocacional" element={
+              <ProtectedRoute allowedRoles={['estudiante']}><Vocacional /></ProtectedRoute>
             } />
 
             {/* Director-only */}

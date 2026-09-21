@@ -139,21 +139,33 @@ export default function Migue() {
           if (ult?.role === 'assistant') copia[copia.length - 1] = { ...ult, content: ult.content + t };
           return copia;
         }),
-        onDone: (meta) => setBurbujas(prev => {
-          const copia = [...prev];
-          const ult = copia[copia.length - 1];
-          if (ult?.role === 'assistant') {
-            copia[copia.length - 1] = {
-              ...ult, citadas: meta.citedPolicies, derivada: meta.derivada,
-            };
+        onDone: (meta) => {
+          if (!meta.persistido) {
+            setError('Migue respondió, pero esta conversación no se pudo guardar: si recargás, no va a estar.');
           }
-          return copia;
-        }),
+          setBurbujas(prev => {
+            const copia = [...prev];
+            const ult = copia[copia.length - 1];
+            if (ult?.role === 'assistant') {
+              copia[copia.length - 1] = {
+                ...ult, citadas: meta.citedPolicies, derivada: meta.derivada,
+              };
+            }
+            return copia;
+          });
+        },
         onError: (e) => {
           setError(e.message);
           setBurbujas(prev => {
             const copia = [...prev];
-            if (copia[copia.length - 1]?.content === '') copia.pop();
+            const ult = copia[copia.length - 1];
+            // Si la escuela YA fue avisada, la burbuja se queda solo para
+            // llevar ese aviso: que el chat se haya caído no puede hacer
+            // que el chico no se entere.
+            if (ult?.content === '') {
+              if (e.derivada) copia[copia.length - 1] = { ...ult, derivada: e.derivada };
+              else copia.pop();
+            }
             return copia;
           });
         },
@@ -218,7 +230,9 @@ export default function Migue() {
               <>
                 {b.content
                   ? <MarkdownRenderer content={b.content} />
-                  : <span className="migue-pensando"><Loader2 size={14} className="spin" /> Migue está pensando…</span>}
+                  : b.derivada
+                    ? null
+                    : <span className="migue-pensando"><Loader2 size={14} className="spin" /> Migue está pensando…</span>}
 
                 {b.derivada && (
                   <div className={`migue-derivada ${b.derivada}`}>

@@ -3,7 +3,7 @@ import {
     LayoutDashboard, Calendar, FlaskConical, Users, BookOpen,
     Bell, Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
     ClipboardList, HeartHandshake, GraduationCap, Megaphone, Rocket, BookMarked,
-    Scale, Sparkles
+    Scale, Sparkles, Compass
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
@@ -45,6 +45,7 @@ const studentNavItems: NavItem[] = [
     { label: 'Mis Actividades', path: '/mis-actividades', icon: ClipboardList },
     { label: 'Estudiar', path: '/estudiar', icon: Rocket, isIA: true },
     { label: 'Biblioteca', path: '/mi-biblioteca', icon: BookOpen },
+    { label: 'Vocacional', path: '/vocacional', icon: Compass },
     { label: 'Migue', path: '/migue', icon: Sparkles, isIA: true },
     { label: 'Configuración', path: '/settings', icon: Settings },
 ];

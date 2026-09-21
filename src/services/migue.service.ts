@@ -58,8 +58,20 @@ export async function getOrCreateSession(audience: MigueAudience): Promise<Migue
     .insert({ audience })
     .select('*')
     .single();
-  if (err2) throw err2;
-  return mapSession(data);
+  if (!err2) return mapSession(data);
+
+  // Dos cargas de la página a la vez: la UNIQUE(user_id, audience) de
+  // la 019 hace que la segunda choque. No es un error para el usuario,
+  // es que la conversación ya existe.
+  if (err2.code !== '23505') throw err2;
+  const { data: ya, error: err3 } = await supabase
+    .from('migue_sessions')
+    .select('*')
+    .eq('audience', audience)
+    .limit(1);
+  if (err3) throw err3;
+  if (!ya || ya.length === 0) throw err2;
+  return mapSession(ya[0]);
 }
 
 export async function getMessages(sessionId: string): Promise<MigueMessage[]> {
@@ -84,8 +96,16 @@ export interface MigueCallbacks {
   onDone: (meta: {
     citedPolicies: { id: string; title: string }[];
     derivada: 'seguimiento' | 'urgente' | null;
+    /** false = Migue respondió pero la conversación no quedó guardada. */
+    persistido: boolean;
   }) => void;
-  onError: (e: { code: string; message: string }) => void;
+  /** derivada viaja también en el error: si la escuela ya fue avisada, el
+   *  chico tiene que enterarse aunque el chat se haya caído. */
+  onError: (e: {
+    code: string;
+    message: string;
+    derivada: 'seguimiento' | 'urgente' | null;
+  }) => void;
 }
 
 export async function streamMigue(
@@ -96,7 +116,7 @@ export async function streamMigue(
 ): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
-    cb.onError({ code: 'AUTH_INVALID', message: 'No hay sesión activa.' });
+    cb.onError({ code: 'AUTH_INVALID', message: 'No hay sesión activa.', derivada: null });
     return;
   }
 
@@ -114,18 +134,18 @@ export async function streamMigue(
     });
   } catch (err) {
     if ((err as any)?.name === 'AbortError') return;
-    cb.onError({ code: 'NETWORK', message: 'No se pudo conectar con Migue.' });
+    cb.onError({ code: 'NETWORK', message: 'No se pudo conectar con Migue.', derivada: null });
     return;
   }
 
   if (!res.ok && !res.headers.get('Content-Type')?.includes('text/event-stream')) {
-    cb.onError({ code: 'HTTP_' + res.status, message: 'Migue no respondió. Probá de nuevo.' });
+    cb.onError({ code: 'HTTP_' + res.status, message: 'Migue no respondió. Probá de nuevo.', derivada: null });
     return;
   }
 
   const reader = res.body?.getReader();
   if (!reader) {
-    cb.onError({ code: 'NO_BODY', message: 'Migue no respondió. Probá de nuevo.' });
+    cb.onError({ code: 'NO_BODY', message: 'Migue no respondió. Probá de nuevo.', derivada: null });
     return;
   }
 
@@ -152,16 +172,21 @@ export async function streamMigue(
           cb.onDone({
             citedPolicies: payload.citedPolicies ?? [],
             derivada: payload.derivada ?? null,
+            persistido: payload.persistido !== false,
           });
         } else if (evento === 'error') {
-          cb.onError({ code: payload.code ?? 'ERROR', message: payload.message ?? 'Error.' });
+          cb.onError({
+            code: payload.code ?? 'ERROR',
+            message: payload.message ?? 'Error.',
+            derivada: payload.derivada ?? null,
+          });
         }
       }
     }
   } catch (err) {
     if ((err as any)?.name !== 'AbortError') {
       console.error(err);
-      cb.onError({ code: 'STREAM', message: 'Se cortó la respuesta de Migue.' });
+      cb.onError({ code: 'STREAM', message: 'Se cortó la respuesta de Migue.', derivada: null });
     }
   }
 }

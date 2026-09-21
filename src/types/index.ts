@@ -912,6 +912,39 @@ export interface WellbeingSignal {
   status: WellbeingStatus;
   handledBy: string | null;
   handledAt: string | null;
-  note: string | null;
   createdAt: string;
+}
+
+// ── Clases grabadas (020) ──
+export type RecordingProvider = 'youtube' | 'drive' | 'meet' | 'otro';
+
+export interface RecordedClass {
+  id: string;
+  schoolId: string;
+  subjectId: string;
+  courseId: string;
+  teacherId: string;
+  unitId: string | null;
+  termId: string | null;
+  title: string;
+  description: string | null;
+  url: string;
+  provider: RecordingProvider;
+  durationMin: number | null;
+  recordedOn: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Orientación vocacional (020) ──
+export interface VocationalProfile {
+  studentId: string;
+  schoolId: string;
+  answers: Record<string, number>;
+  topAreas: string[];
+  ownWords: string | null;
+  summary: string | null;
+  sharedWithSchool: boolean;
+  updatedAt: string;
 }

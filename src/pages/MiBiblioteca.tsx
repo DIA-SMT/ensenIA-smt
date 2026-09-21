@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Download, FileText, Sparkles, X, Layers, Play, GraduationCap } from 'lucide-react';
+import { BookOpen, Eye, FileText, Sparkles, X, Layers, Play, GraduationCap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
-import { getSignedUrl, generatePracticeQuiz, generateStudyGuide } from '../services/documents.service';
+import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.service';
 import { getStudentByUserId } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
+import MaterialViewer from '../components/MaterialViewer';
 import type { LibraryMaterial, PracticeQuestion, Student } from '../types';
 import './StudentPortal.css';
 import '../components/Modals.css';
@@ -23,6 +24,7 @@ export default function MiBiblioteca() {
   const [guideFor, setGuideFor] = useState<{ title: string; guide: string } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+  const [viendo, setViendo] = useState<LibraryMaterial | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -36,16 +38,6 @@ export default function MiBiblioteca() {
   }, [user]);
 
   if (!user) return null;
-
-  const handleDownload = async (mat: LibraryMaterial) => {
-    if (!mat.storagePath) return;
-    try {
-      const url = await getSignedUrl(mat.storagePath);
-      window.open(url, '_blank');
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const openQuiz = async (mat: LibraryMaterial) => {
     setGenError(null);
@@ -144,11 +136,11 @@ export default function MiBiblioteca() {
                     <Sparkles size={14} /> Resumen
                   </button>
                 )}
-                {mat.storagePath && (
-                  <button className="btn btn-outline btn-sm" onClick={() => handleDownload(mat)}>
-                    <Download size={14} /> Descargar
-                  </button>
-                )}
+                {/* Las escuelas pidieron que el estudiante no tenga que
+                    descargar: el material se lee acá adentro. */}
+                <button className="btn btn-outline btn-sm" onClick={() => setViendo(mat)}>
+                  <Eye size={14} /> Ver
+                </button>
               </div>
             </div>
           );
@@ -165,6 +157,8 @@ export default function MiBiblioteca() {
           onClose={() => setQuizFor(null)}
         />
       )}
+
+      {viendo && <MaterialViewer material={viendo} onClose={() => setViendo(null)} />}
 
       {guideFor && (
         <StudyGuideModal title={guideFor.title} guide={guideFor.guide} onClose={() => setGuideFor(null)} />

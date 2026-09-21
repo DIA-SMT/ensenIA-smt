@@ -9,7 +9,7 @@
  * consulta. Lo que cada uno ve lo decide la RLS (015), no esta pantalla.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   BookMarked, Plus, Search, Eye, EyeOff, Trash2, Save, X,
   ShieldCheck, ExternalLink, Users,
@@ -49,6 +49,28 @@ export default function Normativa() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [okMsg, setOkMsg] = useState('');
+  const editorRef = useRef<HTMLDivElement>(null);
+  /** Copia de cómo abrió el formulario, para saber si hay cambios sin guardar. */
+  const formInicial = useRef<typeof VACIA | null>(null);
+
+  /**
+   * Abrir el editor es siempre el mismo gesto: limpiar los carteles del
+   * guardado anterior —si no, el "guardada y publicada" de una norma
+   * queda arriba del formulario de otra— y traer el editor a la vista,
+   * que se renderiza al tope y con la lista larga queda fuera de cuadro.
+   */
+  const abrirEditor = (datos: typeof VACIA) => {
+    // Nada que preguntar si el formulario abierto está intacto.
+    if (form && JSON.stringify(form) !== JSON.stringify(formInicial.current)) {
+      if (!window.confirm('Tenés cambios sin guardar en el formulario. ¿Los descarto?')) return;
+    }
+    setError(''); setOkMsg('');
+    setForm(datos);
+    formInicial.current = datos;
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const cargar = async () => {
     const p = await getPolicies();
@@ -144,7 +166,7 @@ export default function Normativa() {
         {puedeEditar && (
           <button
             className="btn btn-primary"
-            onClick={() => { setForm({ ...VACIA }); setAbierta(null); setError(''); setOkMsg(''); }}
+            onClick={() => { setAbierta(null); abrirEditor({ ...VACIA }); }}
           >
             <Plus size={16} /> Cargar norma
           </button>
@@ -176,7 +198,7 @@ export default function Normativa() {
 
       {/* ── Editor ── */}
       {form && (
-        <div className="card norm-editor">
+        <div className="card norm-editor" ref={editorRef}>
           <div className="norm-editor-head">
             <h3>{form.id ? 'Editar norma' : 'Nueva norma'}</h3>
             <button className="btn btn-ghost btn-sm" onClick={() => setForm(null)} disabled={busy}>
@@ -345,7 +367,7 @@ export default function Normativa() {
                     <button
                       className="btn btn-outline btn-sm"
                       disabled={busy}
-                      onClick={() => setForm({
+                      onClick={() => abrirEditor({
                         id: p.id, title: p.title, category: p.category, audience: p.audience,
                         summary: p.summary ?? '', body: p.body, sourceUrl: p.sourceUrl ?? '',
                         effectiveFrom: p.effectiveFrom ?? '', isPublished: p.isPublished,

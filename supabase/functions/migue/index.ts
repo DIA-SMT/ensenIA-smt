@@ -26,9 +26,14 @@ const DAILY_QUOTA = 60;
 const MAX_TOKENS = 4000;
 const MAX_MSG_CHARS = 4000;
 const HISTORY_LIMIT = 20;
+const REASON_SIN_CLASIFICAR =
+  'Migue no pudo evaluar el mensaje (falló el clasificador). Conviene mirarlo a mano.';
 
 interface MigueRequest {
   sessionId: string;
+  /** Solo se usa el último, y tiene que ser del usuario. El historial lo
+   *  arma el servidor desde migue_messages: si lo mandara el cliente,
+   *  cualquiera podría inventar lo que Migue supuestamente respondió. */
   messages: { role: 'user' | 'assistant'; content: string }[];
 }
 
@@ -44,8 +49,11 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
-function sseError(code: string, message: string, status = 200): Response {
-  return new Response(sseEvent('error', { code, message }), {
+function sseError(
+  code: string, message: string, status = 200,
+  derivada: 'seguimiento' | 'urgente' | null = null,
+): Response {
+  return new Response(sseEvent('error', { code, message, derivada }), {
     status,
     headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' },
   });
@@ -58,11 +66,21 @@ function audienceForRole(role: string): MigueAudience | null {
   return null;
 }
 
-/** Clasifica el riesgo del mensaje de un estudiante. Nunca lanza. */
-async function clasificarRiesgo(
-  apiKey: string,
-  texto: string,
-): Promise<{ nivel: string; motivo: string; frase: string | null } | null> {
+interface Clasificacion {
+  nivel: 'ninguno' | 'seguimiento' | 'urgente';
+  motivo: string;
+  frase: string | null;
+}
+
+/**
+ * Una pasada del clasificador. Devuelve null SOLO si falló — "sin riesgo"
+ * es un resultado, no un null. La diferencia importa: en un sistema que
+ * protege a un chico, confundir "no pasa nada" con "no pude mirar" es el
+ * peor modo de falla posible.
+ */
+async function pasadaClasificador(
+  apiKey: string, modelo: string, texto: string,
+): Promise<Clasificacion | null> {
   try {
     const r = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -72,29 +90,67 @@ async function clasificarRiesgo(
         'X-Title': 'ENSENIA SMT',
       },
       body: JSON.stringify({
-        model: MODEL_CLASIF,
+        model: modelo,
         max_tokens: 300,
         messages: [
           { role: 'system', content: RIESGO_SYSTEM },
-          { role: 'user', content: `<mensaje_del_estudiante>\n${texto}\n</mensaje_del_estudiante>` },
+          // El texto del chico va delimitado y el prompt dice que es dato.
+          // Además se recorta: un mensaje larguísimo es una vía para
+          // empujar la instrucción fuera de la ventana de atención.
+          {
+            role: 'user',
+            content: `<mensaje_del_estudiante>\n${texto.slice(0, 3000)}\n</mensaje_del_estudiante>`,
+          },
         ],
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      console.error('clasificador HTTP', modelo, r.status, (await r.text()).slice(0, 300));
+      return null;
+    }
     const j = await r.json();
     const raw: string = j?.choices?.[0]?.message?.content ?? '';
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) return null;
-    const parsed = JSON.parse(m[0]);
-    if (!['ninguno', 'seguimiento', 'urgente'].includes(parsed?.nivel)) return null;
+    // Objetos planos, sin anidar: se toma el ÚLTIMO, que es la respuesta
+    // del modelo. Un regex greedy podía abarcar desde una llave escrita
+    // por el estudiante hasta el final.
+    const candidatos = raw.match(/\{[^{}]*\}/g);
+    if (!candidatos || candidatos.length === 0) {
+      console.error('clasificador sin JSON', modelo, raw.slice(0, 200));
+      return null;
+    }
+    const parsed = JSON.parse(candidatos[candidatos.length - 1]);
+    if (!['ninguno', 'seguimiento', 'urgente'].includes(parsed?.nivel)) {
+      console.error('clasificador nivel inválido', modelo, String(parsed?.nivel).slice(0, 60));
+      return null;
+    }
     return {
       nivel: parsed.nivel,
       motivo: String(parsed.motivo ?? '').slice(0, 400) || 'Sin motivo especificado.',
       frase: parsed.frase ? String(parsed.frase).slice(0, 400) : null,
     };
-  } catch (_e) {
+  } catch (e) {
+    console.error('clasificador excepción', modelo, String(e).slice(0, 300));
     return null;
   }
+}
+
+/**
+ * Clasifica con un modelo y, si ese falla, reintenta con el otro. Que
+ * fallen los dos a la vez es mucho menos probable que uno solo, y el del
+ * chat ya demostró estar respondiendo.
+ *
+ * Si igual fallan los dos, NO devuelve "ninguno": devuelve 'error', y el
+ * llamador deja una señal para que alguien de la escuela lo mire a mano.
+ */
+async function clasificarRiesgo(
+  apiKey: string, texto: string,
+): Promise<Clasificacion | 'error'> {
+  const primera = await pasadaClasificador(apiKey, MODEL_CLASIF, texto);
+  if (primera) return primera;
+  const segunda = await pasadaClasificador(apiKey, MODEL_CHAT, texto);
+  if (segunda) return segunda;
+  console.error('clasificador: fallaron los dos modelos');
+  return 'error';
 }
 
 Deno.serve(async (req: Request) => {
@@ -228,37 +284,87 @@ Deno.serve(async (req: Request) => {
 
   const systemPrompt = buildSystemPrompt({
     audience, nombre, escuela, policyHits, cursoNombre, hijosNombres,
+    puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
 
-  // ── Alerta emocional: se decide antes de responder, para poder avisarle
-  //    al chico en la misma respuesta que se compartió con la escuela ──
-  let señal: { nivel: string; motivo: string; frase: string | null } | null = null;
+  if (audience === 'estudiante' && !studentId) {
+    console.error('Migue: estudiante sin fila en students', user.id);
+  }
+
+  // ── Alerta emocional ──
+  // Se decide ANTES de responder para poder avisarle al chico en la misma
+  // respuesta. Y solo se le dice que la escuela se enteró si el registro
+  // se guardó de verdad: prometerlo sin haberlo hecho sería lo peor.
+  let derivada: 'seguimiento' | 'urgente' | null = null;
   if (audience === 'estudiante' && studentId) {
-    señal = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content);
-    if (señal && señal.nivel !== 'ninguno') {
-      await admin.from('wellbeing_signals').insert({
+    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content);
+
+    if (clasif === 'error') {
+      // Falló la evaluación. No es "no pasa nada": se deja una señal para
+      // que alguien mire, acotada a una por día para no inundar el tablero
+      // durante una caída del proveedor.
+      const hoyIso = new Date().toISOString().split('T')[0];
+      const { data: yaHay } = await admin
+        .from('wellbeing_signals')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('reason', REASON_SIN_CLASIFICAR)
+        .gte('created_at', `${hoyIso}T00:00:00Z`)
+        .limit(1);
+      if (!yaHay || yaHay.length === 0) {
+        const { error } = await admin.from('wellbeing_signals').insert({
+          student_id: studentId,
+          school_id: profile.school_id,
+          level: 'seguimiento',
+          reason: REASON_SIN_CLASIFICAR,
+          excerpt: null,
+        });
+        if (error) console.error('wellbeing_signals (sin clasificar):', JSON.stringify(error));
+      }
+      // Al chico no se le dice nada: no se evaluó nada sobre él.
+    } else if (clasif.nivel !== 'ninguno') {
+      const { error } = await admin.from('wellbeing_signals').insert({
         student_id: studentId,
         school_id: profile.school_id,
-        level: señal.nivel,
-        reason: señal.motivo,
-        excerpt: señal.frase,
+        level: clasif.nivel,
+        reason: clasif.motivo,
+        excerpt: clasif.frase,
       });
+      if (error) {
+        // No se guardó: Migue NO puede decirle que la escuela ya sabe.
+        console.error('wellbeing_signals insert:', JSON.stringify(error));
+      } else {
+        derivada = clasif.nivel;
+      }
     }
   }
 
-  const avisoDerivacion = señal && señal.nivel !== 'ninguno'
+  const avisoDerivacion = derivada
     ? `\n\n## Importante para esta respuesta
 Lo que escribió requiere acompañamiento y YA quedó avisada la escuela.
 Decíselo en tu respuesta, con naturalidad y sin asustarlo: que le pasaste esto al equipo
 de la escuela para que puedan darle una mano, y que no está solo. No le pidas permiso
 —ya está hecho— ni se lo presentes como un castigo.${
-        señal.nivel === 'urgente'
+        derivada === 'urgente'
           ? '\nAdemás, pedile que hable HOY con un adulto de confianza de la escuela o de su casa.'
           : ''
       }`
     : '';
 
-  const historial = messages.slice(-HISTORY_LIMIT);
+  // El historial sale de la base, no del cliente: así nadie puede
+  // fabricar turnos de Migue que no existieron (por ejemplo, uno donde
+  // "prometió" no avisarle a la escuela).
+  const { data: guardados } = await admin
+    .from('migue_messages')
+    .select('role, content')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(HISTORY_LIMIT);
+
+  const historial = (guardados ?? [])
+    .reverse()
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
   const orBody = {
     model: MODEL_CHAT,
@@ -267,7 +373,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     stream_options: { include_usage: true },
     messages: [
       { role: 'system', content: systemPrompt + avisoDerivacion },
-      ...historial.map((m) => ({ role: m.role, content: m.content })),
+      ...historial,
+      { role: 'user', content: ultimo.content },
     ],
   };
 
@@ -284,7 +391,9 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
       body: JSON.stringify(orBody),
     });
   } catch (_err) {
-    return sseError('API_ERROR', 'No se pudo conectar con Migue. Probá de nuevo.');
+    // La señal ya se guardó: el error tiene que llevarla igual, o el chico
+    // se queda sin enterarse de algo que la escuela sí sabe.
+    return sseError('API_ERROR', 'No se pudo conectar con Migue. Probá de nuevo.', 200, derivada);
   }
 
   if (!orResponse.ok) {
@@ -295,7 +404,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
       : orResponse.status === 402
         ? 'La cuenta de IA se quedó sin crédito. Avisale al administrador.'
         : 'Error del servicio de IA. Probá de nuevo.';
-    return sseError('API_ERROR', friendly);
+    return sseError('API_ERROR', friendly, 200, derivada);
   }
 
   const reader = orResponse.body!.getReader();
@@ -373,7 +482,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           citedPolicies: policyHits.map((h) => ({ id: h.id, title: h.title })),
           // El cliente lo usa para mostrarle al chico, en la interfaz y no
           // solo dentro del texto de la IA, que esto se compartió.
-          derivada: señal && señal.nivel !== 'ninguno' ? señal.nivel : null,
+          derivada,
         })));
       } catch (err) {
         console.error('stream error', err);

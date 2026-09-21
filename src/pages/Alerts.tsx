@@ -254,7 +254,7 @@ export default function Alerts() {
 
             {/* Lo que Migue derivó: va arriba de todo porque una señal
                 emocional no puede quedar debajo de una alerta académica. */}
-            <WellbeingSignals />
+            <WellbeingSignals schoolId={user.schoolId} />
 
             {/* Resumen por estado */}
             <div className="alerts-summary-grid">

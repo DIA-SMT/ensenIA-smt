@@ -1,0 +1,173 @@
+/* Orientación vocacional (020) */
+
+.voc-container {
+  padding: var(--space-6);
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.voc-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+.voc-head p { max-width: 58ch; }
+
+/* ── Progreso ── */
+
+.voc-progreso {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-2) 0;
+  background: var(--bg-primary, var(--bg-base));
+}
+
+.voc-barra {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.voc-barra > div {
+  height: 100%;
+  background: var(--cyan-bright);
+  transition: width var(--transition-fast);
+}
+
+/* ── Ítems ── */
+
+.voc-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.voc-item {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.voc-item-texto {
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.voc-escala {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.voc-opcion {
+  flex: 1;
+  min-width: 78px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.voc-opcion:hover {
+  border-color: var(--cyan-bright);
+  color: var(--text-primary);
+}
+
+.voc-opcion.activa {
+  background: var(--cyan-glow);
+  border-color: var(--cyan-bright);
+  color: var(--cyan-bright);
+  font-weight: 500;
+}
+
+.voc-acciones { margin-bottom: var(--space-8); }
+
+/* ── Resultado ── */
+
+.voc-resultado {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.voc-areas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.voc-area {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.voc-area.puesto-1 {
+  border-color: var(--cyan-bright);
+  background: var(--cyan-subtle);
+}
+
+.voc-area-nombre { font-weight: 600; }
+
+.voc-area-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.voc-devolucion {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+.voc-palabras {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voc-palabras p { font-size: 0.88rem; }
+
+.voc-compartir {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.voc-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .voc-container { padding: var(--space-4); }
+  .voc-opcion { min-width: 60px; font-size: 0.72rem; }
+}

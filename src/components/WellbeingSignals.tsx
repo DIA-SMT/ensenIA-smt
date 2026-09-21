@@ -5,14 +5,19 @@
  * que un chico le contó a Migue llegue a una persona de la escuela con un
  * botón para hacerse cargo.
  *
- * Muestra el motivo y la frase que la disparó, NO la conversación: el
+ * Muestra el motivo y la frase que lo disparó, NO la conversación: el
  * equipo necesita saber qué pasa, no leer todo lo que el chico escribió.
+ *
+ * Las notas de seguimiento son del equipo y viven en wellbeing_notes
+ * (021). Están separadas de la señal porque la RLS filtra filas y no
+ * columnas: mientras estuvieron en la misma fila, el propio estudiante
+ * las leía desde la API.
  */
 
 import { useState, useEffect } from 'react';
-import { HeartPulse, ShieldAlert, CheckCircle, Loader2 } from 'lucide-react';
+import { HeartPulse, ShieldAlert, CheckCircle, Loader2, Lock } from 'lucide-react';
 import {
-  getWellbeingSignals, updateSignal,
+  getWellbeingSignals, updateSignalStatus, addCaseNote,
   type WellbeingSignalWithStudent,
 } from '../services/wellbeing.service';
 import { formatRelative } from '../lib/format';
@@ -25,17 +30,14 @@ const ESTADO_LABEL: Record<WellbeingStatus, string> = {
   cerrada: 'Cerrada',
 };
 
-export default function WellbeingSignals() {
+export default function WellbeingSignals({ schoolId }: { schoolId: string }) {
   const [señales, setSeñales] = useState<WellbeingSignalWithStudent[] | null>(null);
   const [error, setError] = useState('');
   const [abierta, setAbierta] = useState<string | null>(null);
-  const [nota, setNota] = useState('');
+  // Una nota por señal: con un único estado compartido, abrir el
+  // formulario de otra tarjeta borraba lo que se estaba escribiendo.
+  const [notas, setNotas] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-
-  const cargar = async () => {
-    const s = await getWellbeingSignals();
-    setSeñales(s);
-  };
 
   useEffect(() => {
     let cancelado = false;
@@ -48,13 +50,15 @@ export default function WellbeingSignals() {
     return () => { cancelado = true; };
   }, []);
 
-  const marcar = async (id: string, estado: WellbeingStatus) => {
+  const guardar = async (id: string, estado: WellbeingStatus) => {
     setBusy(true); setError('');
     try {
-      await updateSignal(id, estado, nota);
-      await cargar();
+      const texto = notas[id] ?? '';
+      if (texto.trim()) await addCaseNote(id, schoolId, texto);
+      await updateSignalStatus(id, estado);
+      setSeñales(await getWellbeingSignals());
       setAbierta(null);
-      setNota('');
+      setNotas(n => { const c = { ...n }; delete c[id]; return c; });
     } catch (err: any) {
       console.error(err);
       setError(err?.message ?? 'No se pudo actualizar la señal.');
@@ -105,7 +109,17 @@ export default function WellbeingSignals() {
               </div>
             </div>
 
-            {s.note && <p className="wb-nota">{s.note}</p>}
+            {s.notes.length > 0 && (
+              <div className="wb-notas">
+                <span className="wb-notas-titulo"><Lock size={11} /> Seguimiento del equipo</span>
+                {s.notes.map(n => (
+                  <p key={n.id} className="wb-nota">
+                    {n.body}
+                    <span className="text-xs text-subtle"> · {formatRelative(n.createdAt)}</span>
+                  </p>
+                ))}
+              </div>
+            )}
 
             {s.status !== 'cerrada' && (
               abierta === s.id ? (
@@ -113,31 +127,30 @@ export default function WellbeingSignals() {
                   <textarea
                     className="form-textarea"
                     rows={3}
-                    placeholder="Qué hiciste o qué vas a hacer. Lo lee el resto del equipo."
-                    value={nota}
+                    placeholder="Qué hiciste o qué vas a hacer. Lo lee el equipo de la escuela; el estudiante no."
+                    value={notas[s.id] ?? ''}
                     disabled={busy}
-                    onChange={e => setNota(e.target.value)}
+                    onChange={e => setNotas(n => ({ ...n, [s.id]: e.target.value }))}
                   />
                   <div className="libreta-actions-right">
                     <button className="btn btn-ghost btn-sm" disabled={busy}
-                            onClick={() => { setAbierta(null); setNota(''); }}>
+                            onClick={() => setAbierta(null)}>
                       Cancelar
                     </button>
                     {s.status === 'abierta' && (
                       <button className="btn btn-outline btn-sm" disabled={busy}
-                              onClick={() => marcar(s.id, 'en_seguimiento')}>
+                              onClick={() => guardar(s.id, 'en_seguimiento')}>
                         {busy ? <Loader2 size={14} className="spin" /> : null} Tomar el caso
                       </button>
                     )}
                     <button className="btn btn-primary btn-sm" disabled={busy}
-                            onClick={() => marcar(s.id, 'cerrada')}>
+                            onClick={() => guardar(s.id, 'cerrada')}>
                       <CheckCircle size={14} /> Cerrar
                     </button>
                   </div>
                 </div>
               ) : (
-                <button className="btn btn-outline btn-sm"
-                        onClick={() => { setAbierta(s.id); setNota(s.note ?? ''); }}>
+                <button className="btn btn-outline btn-sm" onClick={() => setAbierta(s.id)}>
                   Registrar qué se hizo
                 </button>
               )

@@ -131,20 +131,23 @@ function mapSignal(row: any): WellbeingSignal {
     status: row.status,
     handledBy: row.handled_by ?? null,
     handledAt: row.handled_at ?? null,
-    note: row.note ?? null,
-    createdAt: row.created_at,
+        createdAt: row.created_at,
   };
 }
 
 export interface WellbeingSignalWithStudent extends WellbeingSignal {
   studentName: string;
   courseName: string | null;
+  /** Notas del equipo sobre el caso. Viven en otra tabla (021) porque
+   *  la RLS filtra filas y no columnas: en la misma fila, el propio
+   *  estudiante las leía. */
+  notes: { id: string; body: string; createdAt: string }[];
 }
 
 export async function getWellbeingSignals(): Promise<WellbeingSignalWithStudent[]> {
   const { data, error } = await supabase
     .from('wellbeing_signals')
-    .select('*, students(first_name, last_name, courses(name))')
+    .select('*, students(first_name, last_name, courses(name)), wellbeing_notes(id, body, created_at)')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map((row: any) => ({
@@ -153,20 +156,36 @@ export async function getWellbeingSignals(): Promise<WellbeingSignalWithStudent[
       ? `${row.students.first_name} ${row.students.last_name}`
       : 'Estudiante',
     courseName: row.students?.courses?.name ?? null,
+    notes: (row.wellbeing_notes ?? [])
+      .map((n: any) => ({ id: n.id, body: n.body, createdAt: n.created_at }))
+      .sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt)),
   }));
 }
 
 /** El servidor sella quién la tomó y cuándo (trigger de la 017). */
-export async function updateSignal(
-  id: string, status: WellbeingStatus, note: string,
-): Promise<void> {
+export async function updateSignalStatus(id: string, status: WellbeingStatus): Promise<void> {
   const { data, error } = await supabase
     .from('wellbeing_signals')
-    .update({ status, note: note.trim() || null })
+    .update({ status })
     .eq('id', id)
     .select('id');
   if (error) throw error;
   if (!data || data.length === 0) {
     throw new Error('No se pudo actualizar: puede que ya no tengas permiso sobre esta señal.');
   }
+}
+
+/**
+ * Agrega una nota de seguimiento. Es del equipo: el estudiante no la
+ * ve, y por eso vive en wellbeing_notes y no en la señal (021).
+ */
+export async function addCaseNote(
+  signalId: string, schoolId: string, body: string,
+): Promise<void> {
+  const texto = body.trim();
+  if (!texto) return;
+  const { error } = await supabase.from('wellbeing_notes').insert({
+    signal_id: signalId, school_id: schoolId, body: texto,
+  });
+  if (error) throw error;
 }

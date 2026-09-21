@@ -51,8 +51,12 @@ export function buildSystemPrompt(params: {
   policyHits: PolicyHit[];
   cursoNombre?: string;
   hijosNombres?: string[];
+  /** false cuando la cuenta no está vinculada a un legajo: entonces Migue
+   *  NO puede derivar nada a la escuela y no puede prometer que lo hará. */
+  puedeDerivar?: boolean;
 }): string {
   const { audience, nombre, escuela, policyHits, cursoNombre, hijosNombres } = params;
+  const puedeDerivar = params.puedeDerivar !== false;
   const partes: string[] = [];
 
   if (audience === 'equipo') {
@@ -108,6 +112,15 @@ Hablale como le hablaría una profe copada, no como un manual.
 ## Sobre la escuela
 Si pregunta por reglas de convivencia y te paso normas abajo, contestale con eso. Si no
 te paso ninguna, decile que no lo sabés y que pregunte en preceptoría.`);
+
+    if (!puedeDerivar) {
+      partes.push(`
+## Atención: esta cuenta no está vinculada a un legajo
+No podés avisarle a nadie de la escuela por esta vía. NO le digas que vas a pasar lo que
+te cuenta, ni que la escuela se va a enterar: sería mentirle. Si algo lo preocupa,
+pedile que hable directamente con preceptoría, con la dirección o con un adulto de
+confianza, y decile que su cuenta todavía no está conectada con su curso.`);
+    }
   }
 
   if (audience === 'familia') {
