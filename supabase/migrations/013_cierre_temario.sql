@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 013: cierre de la revisión del temario por trimestre
+--  SMT EstudIA — 013: cierre de la revisión del temario por trimestre
 --
 --  La 012 volvió planning_units contenido de cara a estudiantes y
 --  familias. Eso movió el piso de tres cosas que hasta entonces eran

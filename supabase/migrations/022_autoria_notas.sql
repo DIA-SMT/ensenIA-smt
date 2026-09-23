@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 022: reponer la autoría de las notas mudadas
+--  SMT EstudIA — 022: reponer la autoría de las notas mudadas
 --
 --  El trigger de la 021 asignaba NEW.author_id := auth.uid() sin más, y
 --  la mudanza de notas de esa misma migración corre como superusuario,

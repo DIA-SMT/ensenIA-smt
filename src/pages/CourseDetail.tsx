@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Ficha de Curso
+ * SMT EstudIA — Ficha de Curso
  *
  * La unidad de gestión del directivo: nómina con semáforo, avance del
  * programa, entregas pendientes de corregir, pulso de bienestar,

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 016: que la búsqueda de normativa encuentre
+--  SMT EstudIA — 016: que la búsqueda de normativa encuentre
 --
 --  La 015 usaba websearch_to_tsquery, que exige TODAS las palabras. Con
 --  eso, "qué hago si un chico falta muchos días" no encontraba el

@@ -1,7 +1,15 @@
 /* ═══════════════════════════════════════════════
-   ENSEÑIA SMT — Design System v2
-   Dark Cyberpunk · Tech · Professional
-   Inspired by Vercel / Linear / Stripe
+   SMT EstudIA — Design System v3
+   Claro · Institucional · Legible en aula y en proyector
+
+   Los nombres de token no cambiaron respecto de la versión oscura: lo que
+   cambió son los valores. Todo lo que ya consumía --bg-main, --text-primary
+   y compañía se dio vuelta solo.
+
+   Regla de contraste: los acentos que llevan texto encima (cian, verde,
+   ámbar, rojo) están oscurecidos para superar 4.5:1 sobre blanco. Los
+   mismos colores en su versión clara viven en los tokens *-light y *-glow,
+   y son solo para rellenos.
    ═══════════════════════════════════════════════ */
 
 :root {
@@ -10,60 +18,63 @@
   --font-mono: 'Fira Code', 'Monaco', 'Courier New', monospace;
 
   /* ── Backgrounds ── */
-  --bg-main: #0F1419;
-  --bg-panel: #1c2333;
-  --bg-elevated: #232b3e;
-  --bg-surface: rgba(45, 55, 72, 0.5);
-  --bg-hover: rgba(0, 168, 255, 0.06);
-  --bg-input: #0F1419;
+  --bg-main: #F4F7FA;
+  --bg-panel: #FFFFFF;
+  --bg-elevated: #EDF1F6;
+  --bg-surface: rgba(15, 23, 42, 0.04);
+  --bg-hover: rgba(2, 132, 199, 0.07);
+  --bg-input: #FFFFFF;
 
-  /* ── Cyan Accent (Primary) ── */
-  --cyan-bright: #00A8FF;
-  --cyan-hover: #33BAFF;
-  --cyan-dim: #006BB3;
-  --cyan-glow: rgba(0, 168, 255, 0.15);
-  --cyan-glow-strong: rgba(0, 168, 255, 0.3);
-  --cyan-subtle: rgba(0, 168, 255, 0.08);
+  /* ── Cyan Accent (Primary) ──
+     Oscurecido respecto del cian de pantalla: #00A8FF sobre blanco queda
+     en 2.4:1 y no se lee. Este llega a 4.6:1. */
+  --cyan-bright: #0284C7;
+  --cyan-hover: #0369A1;
+  --cyan-dim: #38BDF8;
+  --cyan-glow: rgba(2, 132, 199, 0.10);
+  --cyan-glow-strong: rgba(2, 132, 199, 0.20);
+  --cyan-subtle: rgba(2, 132, 199, 0.06);
 
   /* ── Mint (Success accent) ── */
-  --mint: #10D981;
-  --mint-dim: #0D9488;
-  --mint-glow: rgba(16, 217, 129, 0.12);
+  --mint: #059669;
+  --mint-dim: #10B981;
+  --mint-glow: rgba(5, 150, 105, 0.10);
 
   /* ── State Colors ── */
-  --success: #10D981;
-  --success-light: rgba(16, 217, 129, 0.12);
-  --warning: #FBBF24;
-  --warning-light: rgba(251, 191, 36, 0.12);
-  --danger: #EF4444;
-  --danger-light: rgba(239, 68, 68, 0.12);
-  --info: #6B7280;
+  --success: #059669;
+  --success-light: rgba(5, 150, 105, 0.10);
+  --warning: #C2620A;
+  --warning-light: rgba(194, 98, 10, 0.10);
+  --danger: #DC2626;
+  --danger-light: rgba(220, 38, 38, 0.09);
+  --info: #64748B;
 
   /* ── Indigo (IA) ── */
   --indigo: #4F46E5;
-  --indigo-glow: rgba(79, 70, 229, 0.2);
+  --indigo-glow: rgba(79, 70, 229, 0.12);
 
   /* ── Text ── */
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0AEC0;
-  --text-subtle: #718096;
-  --text-muted: #4A5568;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-subtle: #64748B;
+  --text-muted: #94A3B8;
 
   /* ── Borders ── */
-  --border-color: #2D3748;
-  --border-subtle: rgba(160, 174, 192, 0.08);
+  --border-color: #E2E8F0;
+  --border-subtle: rgba(15, 23, 42, 0.07);
   --border-hover: #4F46E5;
   --border-focus: var(--cyan-bright);
 
-  /* ── Shadows ── */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.45);
-  --shadow-cyan: 0 0 20px rgba(0, 168, 255, 0.15);
-  --shadow-cyan-strong: 0 4px 20px rgba(0, 168, 255, 0.25);
-  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.3);
+  /* ── Shadows ──
+     Sobre fondo claro la sombra tiñe, no oscurece: azuladas y suaves. */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.10);
+  --shadow-xl: 0 20px 40px rgba(15, 23, 42, 0.12);
+  --shadow-cyan: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  --shadow-cyan-strong: 0 4px 16px rgba(2, 132, 199, 0.18);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
 
   /* ── Layout ── */
   --sidebar-width: 260px;
@@ -100,7 +111,8 @@
 
   /* ── Legacy aliases ── */
   --primary: var(--cyan-bright);
-  --accent-ia: #818CF8;
+  /* El violeta de IA también se oscurece: el #818CF8 original no llega. */
+  --accent-ia: #6366F1;
   --white: #FFFFFF;
   --gray-medium: var(--bg-elevated);
   --gray-light: var(--bg-surface);
@@ -169,7 +181,7 @@ input, select, textarea {
 }
 
 .card:hover {
-  border-color: #374151;
+  border-color: #CBD5E1;
   box-shadow: var(--shadow-md);
 }
 
@@ -184,14 +196,14 @@ input, select, textarea {
    GLASSMORPHISM
    ══════════════════════════════ */
 .glass-panel {
-  background: rgba(15, 20, 25, 0.75);
+  background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-subtle);
 }
 
 .glass-card {
-  background: rgba(28, 35, 51, 0.6);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
@@ -216,10 +228,10 @@ input, select, textarea {
 .badge-success { background-color: var(--success-light); color: var(--success); }
 .badge-warning { background-color: var(--warning-light); color: var(--warning); }
 .badge-danger { background-color: var(--danger-light); color: var(--danger); }
-.badge-ia { background: var(--indigo-glow); color: #818CF8; }
+.badge-ia { background: var(--indigo-glow); color: var(--accent-ia); }
 .badge-neutral { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); }
 .badge-cyan { background: var(--cyan-glow); color: var(--cyan-bright); }
-.badge-escalada { background: var(--indigo-glow); color: #818CF8; }
+.badge-escalada { background: var(--indigo-glow); color: var(--accent-ia); }
 
 
 /* ══════════════════════════════
@@ -248,7 +260,7 @@ input, select, textarea {
 .btn-primary {
   background-color: var(--cyan-bright);
   color: #FFFFFF;
-  box-shadow: 0 1px 4px rgba(0, 168, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
 }
 .btn-primary:hover {
   filter: brightness(1.1);
@@ -276,8 +288,8 @@ input, select, textarea {
   color: var(--text-secondary);
 }
 .btn-outline:hover {
-  border-color: #4A5568;
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--text-muted);
+  background: var(--bg-surface);
   color: var(--text-primary);
 }
 
@@ -286,7 +298,7 @@ input, select, textarea {
   padding: 8px;
 }
 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface);
   color: var(--text-primary);
 }
 
@@ -301,7 +313,7 @@ input, select, textarea {
   transition: all var(--transition-fast);
 }
 .btn-icon:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
   color: var(--text-primary);
 }
 
@@ -354,7 +366,7 @@ input, select, textarea {
 .text-danger { color: var(--danger); }
 .text-white { color: #FFFFFF; }
 .text-primary { color: var(--text-primary); }
-.text-ia-accent { color: #818CF8; }
+.text-ia-accent { color: var(--accent-ia); }
 
 
 /* ══════════════════════════════
@@ -418,8 +430,8 @@ input, select, textarea {
   100% { background-position: 200% 0; }
 }
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(0, 168, 255, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(0, 168, 255, 0.4); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.22); }
+  50% { box-shadow: 0 0 0 5px rgba(2, 132, 199, 0.12); }
 }
 @keyframes modalSlideIn {
   from { transform: translateY(20px); opacity: 0; }
@@ -458,11 +470,11 @@ input, select, textarea {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #C3CDD9;
   border-radius: var(--radius-full);
 }
-::-webkit-scrollbar-thumb:hover { background: #4A5568; }
-::selection { background-color: rgba(0, 168, 255, 0.3); color: #FFFFFF; }
+::-webkit-scrollbar-thumb:hover { background: #9FADBD; }
+::selection { background-color: var(--cyan-glow-strong); color: var(--text-primary); }
 
 
 /* ══════════════════════════════

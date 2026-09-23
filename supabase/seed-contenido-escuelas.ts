@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Contenido real de las dos escuelas municipales.
+ * SMT EstudIA — Contenido real de las dos escuelas municipales.
  *
  * Fuente (documentos entregados por las escuelas, septiembre 2026):
  *  · E.M. Alfonsina Storni · 2°A

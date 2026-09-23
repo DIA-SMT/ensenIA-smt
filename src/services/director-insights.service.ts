@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Director Insights Service
+ * SMT EstudIA — Director Insights Service
  *
  * Agrega en un solo objeto los 6 indicadores del tablero directivo,
  * el mapa de calor curso × materia y los datos de apoyo para la ficha

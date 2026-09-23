@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Notas personales del estudiante
+ * SMT EstudIA — Notas personales del estudiante
  *
  * Checklist simple para organizarse: crear, tildar como hecha,
  * fijar arriba y borrar. Calcado de quick_notes del docente.

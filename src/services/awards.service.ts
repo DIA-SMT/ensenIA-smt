@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Medallas otorgadas por personas
+ * SMT EstudIA — Medallas otorgadas por personas
  *
  * Docente → estudiante (¡Crack!, Aura +1, ...) con dedicatoria: suman
  * XP (trigger en Postgres) y quedan en el perfil del estudiante.

@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Documents Service
+ * SMT EstudIA — Documents Service
  *
  * Subida real de archivos a Supabase Storage, extracción de texto
  * (edge function process-document con visión para PDFs, mammoth para DOCX),

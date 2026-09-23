@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Migue (017)
+ * SMT EstudIA — Migue (017)
  *
  * La audiencia no se manda: la deriva el servidor del rol del usuario.
  * Acá solo se calcula para elegir qué mostrar en pantalla.

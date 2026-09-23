@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 017: Migue
+--  SMT EstudIA — 017: Migue
 --
 --  Pedido de las escuelas (26/8): "Migue con información de protocolos y
 --  normativas" y "alerta emocional de Migue".

@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 014: quién puede escribir qué
+--  SMT EstudIA — 014: quién puede escribir qué
 --
 --  Tres cosas que salieron del panel adversarial de la 013.
 --

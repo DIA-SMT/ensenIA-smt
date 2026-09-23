@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 002: IA Chat System
+--  SMT EstudIA — Migration 002: IA Chat System
 --  Chat sessions, messages, and usage tracking
 -- ═══════════════════════════════════════════════
 

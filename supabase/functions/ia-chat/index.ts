@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — IA Chat Edge Function
+ * SMT EstudIA — IA Chat Edge Function
  *
  * POST /functions/v1/ia-chat
  *
@@ -205,7 +205,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://ensenia-aula.vercel.app',
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'SMT EstudIA',
       },
       body: JSON.stringify(orBody),
     });

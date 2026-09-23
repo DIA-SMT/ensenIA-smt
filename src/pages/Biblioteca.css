@@ -68,7 +68,7 @@
 .filter-chip.active {
   background-color: var(--cyan-glow);
   color: var(--cyan-bright);
-  border-color: rgba(0, 168, 255, 0.2);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 .biblioteca-upload {

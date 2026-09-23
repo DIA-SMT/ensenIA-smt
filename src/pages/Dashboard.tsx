@@ -683,7 +683,7 @@ function DirectorDashboardContent() {
 
                 <KpiCard
                     borderClass="border-left-violet"
-                    icon={<Megaphone size={20} style={{ color: '#818CF8' }} />}
+                    icon={<Megaphone size={20} style={{ color: 'var(--accent-ia)' }} />}
                     title="Respuesta de Familias"
                     value={familyResponse.readPct !== null ? `${familyResponse.readPct}%` : '—'}
                     caption={familyResponse.citationConfirmedPct !== null

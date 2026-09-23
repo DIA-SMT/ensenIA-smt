@@ -97,7 +97,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <LogoMark size={collapsed ? 22 : 28} />
                 {!collapsed && (
                     <div className="logo-text">
-                        <span className="logo-title">ENSEÑIA SMT</span>
+                        <span className="logo-title">SMT EstudIA</span>
                         <span className="logo-subtitle">{school?.shortName ?? 'Escuela Municipal'}</span>
                     </div>
                 )}

@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Activities Service
+ * SMT EstudIA — Activities Service
  *
  * Actividades publicadas por docentes, entregas de estudiantes
  * y huella digital (activity_events).

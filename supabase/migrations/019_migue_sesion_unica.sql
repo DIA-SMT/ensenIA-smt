@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 019: una conversación con Migue por persona
+--  SMT EstudIA — 019: una conversación con Migue por persona
 --
 --  Probando en el navegador aparecieron dos sesiones por usuario: dos
 --  cargas de la página corriendo a la vez, cada una sin ver nada y cada

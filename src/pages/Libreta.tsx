@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Libreta de calificaciones (docente)
+ * SMT EstudIA — Libreta de calificaciones (docente)
  *
  * El trabajo del trimestre se traduce en nota: la plataforma sugiere,
  * el docente decide. Al publicar corre la regla 5/4 en el servidor —

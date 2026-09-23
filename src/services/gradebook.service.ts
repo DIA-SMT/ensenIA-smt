@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Libreta de calificaciones (Fase 3)
+ * SMT EstudIA — Libreta de calificaciones (Fase 3)
  *
  * La plataforma SUGIERE la nota a partir del trabajo real del trimestre;
  * el docente la FIJA. La sugerencia nunca califica sola: es un punto de

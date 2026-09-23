@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 010: Segmento directivo (Fase 2)
+--  SMT EstudIA — Migration 010: Segmento directivo (Fase 2)
 --  1) Umbrales de alerta configurables por escuela (saca los números
 --     mágicos de adentro de los triggers de 005).
 --  2) Ciclo de vida de la alerta: abierta → en seguimiento (con

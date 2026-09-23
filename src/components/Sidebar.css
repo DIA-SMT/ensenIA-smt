@@ -78,7 +78,7 @@
 }
 
 .nav-item:hover {
-  background: rgba(0, 168, 255, 0.1);
+  background: rgba(2, 132, 199, 0.1);
   color: var(--text-primary);
 }
 
@@ -96,7 +96,7 @@
   width: 3px;
   background: var(--cyan-bright);
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px rgba(0, 168, 255, 0.5);
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.5);
 }
 .sidebar.collapsed .nav-item.active::before { top: 0; bottom: 0; }
 
@@ -127,12 +127,12 @@
   padding: 2px 7px;
   border-radius: var(--radius-full);
   background: var(--indigo-glow);
-  color: #818CF8;
+  color: var(--accent-ia);
   letter-spacing: 0.05em;
 }
-.nav-ia:hover { background: rgba(79, 70, 229, 0.08); color: #818CF8; }
-.nav-ia.active { background: var(--indigo-glow); color: #818CF8; }
-.nav-ia.active::before { background: #818CF8; box-shadow: 0 0 10px rgba(79, 70, 229, 0.5); }
+.nav-ia:hover { background: rgba(79, 70, 229, 0.08); color: var(--accent-ia); }
+.nav-ia.active { background: var(--indigo-glow); color: var(--accent-ia); }
+.nav-ia.active::before { background: var(--accent-ia); box-shadow: 0 0 10px rgba(79, 70, 229, 0.5); }
 
 /* Footer */
 .sidebar-footer {
@@ -159,7 +159,7 @@
   flex: 1;
   min-width: 0;
 }
-.user-profile:hover { background: rgba(255, 255, 255, 0.04); }
+.user-profile:hover { background: var(--bg-surface); }
 
 .avatar-glow {
   padding: 2px;
@@ -203,7 +203,7 @@
   flex-shrink: 0;
 }
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-surface);
   color: var(--text-secondary);
 }
 

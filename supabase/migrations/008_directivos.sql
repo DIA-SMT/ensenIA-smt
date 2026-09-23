@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 008: Segmento directivo (Fase 0)
+--  SMT EstudIA — Migration 008: Segmento directivo (Fase 0)
 --  1) Bitácora de acceso (audit_log): trazabilidad sobre datos
 --     sensibles de menores ANTES de ampliar la visibilidad del rol.
 --     Alcance Fase 0: registra los accesos hechos DESDE LA APP

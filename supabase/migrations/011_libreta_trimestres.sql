@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 011: Libreta de calificaciones (Fase 3)
+--  SMT EstudIA — Migration 011: Libreta de calificaciones (Fase 3)
 --  Pedido de la reunión con las escuelas (26/8/2026):
 --  "Que se traduzca en nota y seguimiento del alumno."
 --  "Alumno de riesgo, alerta a la familia si tiene 5 por trimestre;

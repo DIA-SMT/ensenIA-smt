@@ -69,7 +69,7 @@ export default function Login() {
         {/* Header */}
         <div className="login-header">
           <LogoMark size={48} />
-          <h1 className="login-title">ENSEÑIA SMT</h1>
+          <h1 className="login-title">SMT EstudIA</h1>
           <p className="login-subtitle">Escuelas Municipales · San Miguel de Tucumán</p>
         </div>
 

@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Los tres Migue.
+ * SMT EstudIA — Los tres Migue.
  *
  * No es el mismo asistente con distinto tono: cambia qué sabe, qué puede
  * afirmar y qué hace con lo que escucha. Por eso son tres prompts y no

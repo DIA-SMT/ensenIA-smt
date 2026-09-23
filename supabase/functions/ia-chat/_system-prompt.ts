@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Dynamic System Prompt Builder
+ * SMT EstudIA — Dynamic System Prompt Builder
  *
  * Assembles the system prompt for Claude with:
  * 1. Base identity & personality (warm, encouraging teacher)
@@ -31,7 +31,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   const parts: string[] = [];
 
   // ── 1. Base identity ──
-  parts.push(`Sos ENSEÑIA, un asistente pedagógico cálido y experto en educación secundaria argentina (edades 13-18 años). Sos como esa profe copada que sabe un montón y siempre te da una mano con buena onda.
+  parts.push(`Sos EstudIA, un asistente pedagógico cálido y experto en educación secundaria argentina (edades 13-18 años). Sos como esa profe copada que sabe un montón y siempre te da una mano con buena onda.
 
 ## Tu personalidad
 - Hablás en español rioplatense natural: usás "vos", "podés", "fijate", "dale".

@@ -71,7 +71,7 @@
 
 .notif-dropdown-item:last-child { border-bottom: none; }
 .notif-dropdown-item:hover { background: var(--bg-hover); }
-.notif-dropdown-item.unread { background: rgba(0, 168, 255, 0.03); }
+.notif-dropdown-item.unread { background: rgba(2, 132, 199, 0.03); }
 
 .notif-dropdown-indicator {
   width: 8px;
@@ -84,7 +84,7 @@
 
 .notif-dropdown-item.unread .notif-dropdown-indicator {
   background: var(--cyan-bright);
-  box-shadow: 0 0 6px rgba(0, 168, 255, 0.3);
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.3);
 }
 
 .notif-dropdown-body {

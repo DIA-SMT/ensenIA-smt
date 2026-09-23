@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Sistema de Alertas (Fase 2)
+ * SMT EstudIA — Sistema de Alertas (Fase 2)
  *
  * Ciclo de vida real: abierta → en seguimiento (con intervención
  * registrada) → cerrada (con resultado). La dirección además ve las
@@ -270,7 +270,7 @@ export default function Alerts() {
                     <span className="summary-label">En seguimiento</span>
                 </div>
                 <div className="card alert-summary-card static">
-                    <span className="summary-count" style={{ color: '#818CF8' }}>{counts.escaladas}</span>
+                    <span className="summary-count" style={{ color: 'var(--accent-ia)' }}>{counts.escaladas}</span>
                     <span className="summary-label">Escaladas</span>
                 </div>
                 <button

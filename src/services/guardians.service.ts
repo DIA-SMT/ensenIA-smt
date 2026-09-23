@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Familias
+ * SMT EstudIA — Familias
  *
  * Vínculos tutor-estudiante, comunicados oficiales y citaciones
  * con acuse de recibo y confirmación de asistencia.

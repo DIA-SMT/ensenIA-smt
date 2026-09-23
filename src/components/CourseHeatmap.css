@@ -92,9 +92,11 @@
 .heat-c0 { background: var(--success-light); color: var(--success); }
 .heat-c1 { background: var(--warning-light); color: var(--warning); }
 .heat-c2 { background: var(--danger-light); color: var(--danger); }
+/* Sobre el gris claro de la celda, --text-muted queda en 2.3:1. */
+/* Sobre la celda gris clara, --text-muted queda en 2.3:1. */
 .heat-na {
   background: var(--bg-elevated);
-  color: var(--text-muted);
+  color: var(--text-subtle);
   cursor: default;
   font-weight: 500;
 }

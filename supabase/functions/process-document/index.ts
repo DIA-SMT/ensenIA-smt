@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Document Processing Edge Function
+ * SMT EstudIA — Document Processing Edge Function
  *
  * POST /functions/v1/process-document
  *
@@ -175,7 +175,7 @@ Reglas:
 - Conservá títulos, listas y estructura con Markdown simple.
 - Si hay partes ilegibles, marcalas como [ilegible].`,
 
-  summarize: `Sos ENSEÑIA, asistente pedagógico para docentes de secundaria argentina.
+  summarize: `Sos EstudIA, asistente pedagógico para docentes de secundaria argentina.
 Creá un resumen pedagógico claro y visual del documento en Markdown:
 
 **Ideas principales** (viñetas, máximo 5-7)
@@ -197,7 +197,7 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
 - Mantené el idioma y la terminología del documento.
 - Si el documento NO es un programa educativo, devolvé units como array vacío.`,
 
-  study_cards: `Sos ENSEÑIA, asistente pedagógico. Convertí el material de estudio en PLACAS: tarjetas visuales tipo "slides" para que estudiantes de secundaria repasen desde el celular.
+  study_cards: `Sos EstudIA, asistente pedagógico. Convertí el material de estudio en PLACAS: tarjetas visuales tipo "slides" para que estudiantes de secundaria repasen desde el celular.
 
 Reglas:
 - Entre 6 y 10 placas. La primera presenta el tema; la última es un mini-repaso o dato para recordar.
@@ -206,7 +206,7 @@ Reglas:
 - Un emoji distinto y representativo por placa.
 - Fiel al material: no inventes contenido que no esté.`,
 
-  student_summary: `Sos ENSEÑIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
+  student_summary: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
 
 Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) en Markdown:
 
@@ -220,7 +220,7 @@ Reglas:
 - Tono constructivo y respetuoso: es material para hablar con la familia o el equipo.
 - Español rioplatense. Nada de tecnicismos psicológicos ni diagnósticos.`,
 
-  practice_quiz: `Sos ENSEÑIA, un tutor amigable para estudiantes de secundaria argentina. Creá un quiz de práctica a partir del material de estudio.
+  practice_quiz: `Sos EstudIA, un tutor amigable para estudiantes de secundaria argentina. Creá un quiz de práctica a partir del material de estudio.
 
 Reglas:
 - Entre 5 y 8 preguntas multiple choice, cada una con exactamente 4 opciones plausibles (los distractores reflejan confusiones típicas, no opciones absurdas).
@@ -230,7 +230,7 @@ Reglas:
 - Voseo, lenguaje claro de secundaria, español rioplatense.
 - Fiel al material: no inventes contenido que no esté.`,
 
-  study_guide: `Sos ENSEÑIA, un tutor que ayuda a estudiantes de secundaria argentina a ESTUDIAR un material (no solo leerlo). Escribí una guía de estudio en Markdown dirigida al estudiante (voseo):
+  study_guide: `Sos EstudIA, un tutor que ayuda a estudiantes de secundaria argentina a ESTUDIAR un material (no solo leerlo). Escribí una guía de estudio en Markdown dirigida al estudiante (voseo):
 
 **¿De qué se trata?** — 2-3 oraciones que sitúan el tema.
 **Ideas clave** — 4-6, cada una con explicación breve y un ejemplo cotidiano si ayuda.
@@ -467,7 +467,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://ensenia-aula.vercel.app',
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'SMT EstudIA',
       },
       body: JSON.stringify(orBody),
     });

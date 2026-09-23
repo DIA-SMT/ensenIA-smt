@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 020: clases grabadas y orientación vocacional
+--  SMT EstudIA — 020: clases grabadas y orientación vocacional
 --
 --  Últimos dos pedidos de la reunión del 26/8: "clases grabadas" y
 --  "orientación vocacional. Completar".

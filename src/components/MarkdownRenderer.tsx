@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Markdown Renderer
+ * SMT EstudIA — Markdown Renderer
  *
  * Lightweight wrapper around react-markdown with GFM support.
  * Memoized to avoid expensive re-parses during streaming when

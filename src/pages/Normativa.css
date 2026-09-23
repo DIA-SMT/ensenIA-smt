@@ -114,7 +114,7 @@
   color: inherit;
 }
 
-.norm-card-head:hover { background: var(--bg-hover, rgba(255, 255, 255, 0.02)); }
+.norm-card-head:hover { background: var(--bg-hover); }
 
 .norm-card-main { flex: 1; }
 

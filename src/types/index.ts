@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   ENSEÑIA SMT — Domain Types (Supabase-ready)
+   SMT EstudIA — Domain Types (Supabase-ready)
    ═══════════════════════════════════════════════ */
 
 // ── Enums ──

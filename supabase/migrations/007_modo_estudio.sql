@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 007: Modo Estudio
+--  SMT EstudIA — Migration 007: Modo Estudio
 --  Herramientas de estudio para estudiantes: práctica
 --  gamificada con quiz pedagógico cacheado por material,
 --  guía de estudio IA, progreso personal (XP / racha /

@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Umbrales de alerta por escuela (Fase 2)
+ * SMT EstudIA — Umbrales de alerta por escuela (Fase 2)
  *
  * Cada escuela ajusta cuándo el sistema debe avisar. Los defaults
  * replican los de get_alert_thresholds() en la migración 010: si no

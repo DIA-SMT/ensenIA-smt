@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Orientación vocacional (020)
+ * SMT EstudIA — Orientación vocacional (020)
  *
  * No es un test que "da" una carrera. Junta lo que al estudiante le
  * interesa, lo que él mismo escribe, y deja una devolución para

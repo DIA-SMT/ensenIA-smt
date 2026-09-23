@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   ENSEÑIA SMT — Laboratorio IA (Hub)
+   SMT EstudIA — Laboratorio IA (Hub)
    ═══════════════════════════════════════════════ */
 
 .ia-lab-container {
@@ -60,7 +60,7 @@
 }
 
 .compact-select:focus {
-  border-color: #818CF8;
+  border-color: var(--accent-ia);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
@@ -226,7 +226,7 @@
 
 .mode-tab.active {
   background: var(--bg-panel);
-  color: #818CF8;
+  color: var(--accent-ia);
   box-shadow: var(--shadow-sm);
 }
 
@@ -293,7 +293,7 @@
 }
 
 .bg-ia-gradient {
-  background: linear-gradient(135deg, #4F46E5 0%, #818CF8 100%);
+  background: linear-gradient(135deg, #4F46E5 0%, var(--accent-ia) 100%);
 }
 
 .user-avatar { background-color: var(--cyan-bright); }
@@ -310,8 +310,8 @@
 }
 
 .user-msg .msg-content {
-  background-color: rgba(0, 168, 255, 0.1);
-  border-color: rgba(0, 168, 255, 0.2);
+  background-color: rgba(2, 132, 199, 0.1);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 /* ── Markdown inside messages ── */
@@ -331,7 +331,7 @@
 .msg-content h3 {
   font-size: 15px;
   font-weight: 700;
-  color: #818CF8;
+  color: var(--accent-ia);
   margin: var(--space-3) 0 var(--space-2);
 }
 
@@ -373,7 +373,7 @@
 .msg-content blockquote {
   margin: var(--space-3) 0;
   padding: var(--space-3) var(--space-4);
-  border-left: 3px solid #818CF8;
+  border-left: 3px solid var(--accent-ia);
   background: rgba(79, 70, 229, 0.06);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   color: var(--text-secondary);
@@ -386,7 +386,7 @@
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  color: #818CF8;
+  color: var(--accent-ia);
 }
 
 .msg-content pre {
@@ -444,7 +444,7 @@
 }
 
 .msg-content a:hover {
-  color: #818CF8;
+  color: var(--accent-ia);
 }
 
 /* ── Tool badge in message ── */
@@ -452,7 +452,7 @@
   display: inline-block;
   font-size: 11px;
   font-weight: 600;
-  color: #818CF8;
+  color: var(--accent-ia);
   background: rgba(79, 70, 229, 0.1);
   border: 1px solid rgba(79, 70, 229, 0.2);
   border-radius: var(--radius-full);
@@ -514,7 +514,7 @@
 .dot {
   width: 6px;
   height: 6px;
-  background-color: #818CF8;
+  background-color: var(--accent-ia);
   border-radius: 50%;
   margin-right: 4px;
   animation: pulse 1.5s infinite;
@@ -538,7 +538,7 @@
   margin-bottom: var(--space-3);
   font-size: 13px;
   font-weight: 500;
-  color: var(--red-text, #F87171);
+  color: var(--danger);
   background: rgba(248, 113, 113, 0.08);
   border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: var(--radius-md);
@@ -562,7 +562,7 @@
 }
 
 .text-danger {
-  color: var(--red-text, #F87171) !important;
+  color: var(--danger) !important;
   font-weight: 600;
 }
 
@@ -585,7 +585,7 @@
 }
 
 .lab-input-box:focus-within {
-  border-color: #818CF8;
+  border-color: var(--accent-ia);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
@@ -612,7 +612,7 @@
 }
 
 .btn-send-large {
-  background: linear-gradient(135deg, #4F46E5 0%, #818CF8 100%);
+  background: linear-gradient(135deg, #4F46E5 0%, var(--accent-ia) 100%);
   color: white;
   width: 42px;
   height: 42px;
@@ -654,8 +654,8 @@
 }
 
 .hint-chip:hover {
-  border-color: #818CF8;
-  color: #818CF8;
+  border-color: var(--accent-ia);
+  color: var(--accent-ia);
   background: var(--indigo-glow);
 }
 
@@ -826,7 +826,7 @@
 .tool-item.active {
   background-color: var(--indigo-glow);
   border-color: rgba(79, 70, 229, 0.3);
-  color: #818CF8;
+  color: var(--accent-ia);
 }
 
 /* Config Divider */
@@ -896,13 +896,13 @@
 .config-context-info h5 {
   font-size: 12px;
   font-weight: 600;
-  color: #818CF8;
+  color: var(--accent-ia);
   margin-bottom: var(--space-1);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
-.text-ia-accent { color: #818CF8; }
+.text-ia-accent { color: var(--accent-ia); }
 
 /* ── Planning CRUD (added) ── */
 .tree-inline-form {
@@ -946,7 +946,7 @@
     gap: 6px;
     align-self: flex-start;
     background: var(--indigo-glow);
-    color: #A5B4FC;
+    color: var(--accent-ia);
     border: 1px solid rgba(129, 140, 248, 0.3);
     border-radius: var(--radius-full);
     font-size: 12.5px;

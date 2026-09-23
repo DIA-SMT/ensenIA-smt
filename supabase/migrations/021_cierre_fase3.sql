@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 021: cierre de la revisión de Migue y grabadas
+--  SMT EstudIA — 021: cierre de la revisión de Migue y grabadas
 --
 --  (A) LO MÁS GRAVE. La policy "Students see their own signals" de la 017
 --      deja al estudiante leer la FILA ENTERA de su señal de bienestar,

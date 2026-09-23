@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Parte del Día (Fase 2)
+ * SMT EstudIA — Parte del Día (Fase 2)
  *
  * Qué cambió en las últimas 24 horas, computado determinísticamente
  * sobre datos que ya pasan por la RLS del director. La redacción con

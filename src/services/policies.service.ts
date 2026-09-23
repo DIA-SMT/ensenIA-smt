@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Normativa y protocolos (015)
+ * SMT EstudIA — Normativa y protocolos (015)
  *
  * Las escuelas pidieron "carga sencilla de normativa": dirección escribe
  * el texto acá, no sube un PDF que después nadie abre. La misma tabla es

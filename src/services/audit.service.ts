@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Audit Service
+ * SMT EstudIA — Audit Service
  *
  * Bitácora de acceso a datos sensibles (fichas de estudiantes y docentes).
  * Fire-and-forget: el registro nunca debe romper la UX.

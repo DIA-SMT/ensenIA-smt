@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Migue Edge Function
+ * SMT EstudIA — Migue Edge Function
  *
  * POST /functions/v1/migue
  *
@@ -87,7 +87,7 @@ async function pasadaClasificador(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'SMT EstudIA',
       },
       body: JSON.stringify({
         model: modelo,
@@ -386,7 +386,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
         'HTTP-Referer': 'https://ensenia-aula.vercel.app',
-        'X-Title': 'ENSENIA SMT',
+        'X-Title': 'SMT EstudIA',
       },
       body: JSON.stringify(orBody),
     });

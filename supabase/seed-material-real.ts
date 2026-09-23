@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Carga del material didáctico real de las escuelas.
+ * SMT EstudIA — Carga del material didáctico real de las escuelas.
  *
  * Origen: documentos entregados por las dos escuelas municipales
  * (propuestas de clase, secuencias y unidades didácticas, septiembre 2026).

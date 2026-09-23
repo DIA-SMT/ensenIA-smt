@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Clases grabadas (020)
+ * SMT EstudIA — Clases grabadas (020)
  *
  * La escuela no aloja video: sube a YouTube, Drive o Meet y pega el link.
  * La grabación cuelga de la materia+curso y, si el docente quiere, de una

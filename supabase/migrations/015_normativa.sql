@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 015: normativa y protocolos de la escuela
+--  SMT EstudIA — 015: normativa y protocolos de la escuela
 --
 --  Pedido de las escuelas (reunión del 26/8): "Carga sencilla de
 --  normativa. Migue con información de protocolos y normativas."

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 009: Medallas y niveles
+--  SMT EstudIA — Migration 009: Medallas y niveles
 --  Capa social de la gamificación:
 --   - Docentes otorgan medallas a estudiantes (¡Crack!, Aura +1...)
 --     con dedicatoria; suman XP y quedan en el perfil del estudiante.

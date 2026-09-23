@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  ENSEÑIA SMT — Migration 012: Temario por trimestre y criterios
+--  SMT EstudIA — Migration 012: Temario por trimestre y criterios
 --  Pedido de la reunión (26/8): "Criterios de evaluación. Temario de
 --  primer, segundo y tercer trimestre." Y: el estudiante no tiene que
 --  descargar nada — lo ve en la app.

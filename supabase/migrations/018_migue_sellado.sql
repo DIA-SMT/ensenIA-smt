@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
---  ENSEÑIA SMT — 018: que el servidor selle de quién es la conversación
+--  SMT EstudIA — 018: que el servidor selle de quién es la conversación
 --
 --  La 017 exigía user_id = auth.uid() en el WITH CHECK, pero la columna
 --  no tenía default, así que el cliente creaba la sesión con user_id

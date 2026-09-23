@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Práctica gamificada (Modo Estudio)
+ * SMT EstudIA — Práctica gamificada (Modo Estudio)
  *
  * El estudiante practica con quizzes pedagógicos y acumula XP, racha
  * y logros. El cliente SOLO registra el intento (score/total): el XP,

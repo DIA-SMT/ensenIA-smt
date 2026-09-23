@@ -169,7 +169,7 @@ async function main() {
   await supabase.from('notifications').insert({
     from_user_id: staffIds.director,
     to_user_id: null,
-    title: 'Bienvenidos a ENSEÑIA',
+    title: 'Bienvenidos a EstudIA',
     message: 'La plataforma ya está disponible para la E.M. Alfonsina Storni.',
     priority: 'medium',
     school_id: school.id,

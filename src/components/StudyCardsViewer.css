@@ -15,7 +15,7 @@
   padding: var(--space-8) var(--space-6);
   border-radius: var(--radius-xl);
   background:
-    radial-gradient(120% 120% at 50% 0%, rgba(0, 168, 255, 0.14) 0%, transparent 55%),
+    radial-gradient(120% 120% at 50% 0%, rgba(2, 132, 199, 0.14) 0%, transparent 55%),
     var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-top: 3px solid var(--cyan-bright);

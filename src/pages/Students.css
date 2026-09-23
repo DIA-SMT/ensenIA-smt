@@ -84,7 +84,7 @@
 }
 
 .modern-table tr.selected-row td {
-  background-color: rgba(0, 168, 255, 0.08);
+  background-color: rgba(2, 132, 199, 0.08);
 }
 
 .student-cell {
@@ -203,7 +203,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-4);
-  box-shadow: 0 4px 16px rgba(0, 168, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.2);
 }
 
 .profile-name {

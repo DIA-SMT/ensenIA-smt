@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Temario por trimestre y criterios de evaluación (012)
+ * SMT EstudIA — Temario por trimestre y criterios de evaluación (012)
  *
  * Pedido de las escuelas: "Criterios de evaluación. Temario de primer,
  * segundo y tercer trimestre." Y que el estudiante no tenga que descargar
