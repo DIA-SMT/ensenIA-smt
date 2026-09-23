@@ -35,7 +35,9 @@ import './MainLayout.css';
 /** Pantallas de detalle que conviene tener a mano sin conexión. */
 const DETALLES_POR_ROL: Partial<Record<string, RutaPantalla[]>> = {
   estudiante: ['/mis-actividades/:id'],
-  docente: ['/actividades/:id'],
+  // Actividad rápida es una acción, no está en el menú, pero es lo que el
+  // docente más usa desde el celular: tiene que andar sin conexión.
+  docente: ['/actividades/:id', '/actividad-rapida'],
   director: ['/cursos/:id'],
 };
 
