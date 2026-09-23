@@ -13,6 +13,9 @@ import { X, Lightbulb, ChevronRight, Sparkles, Trophy, WifiOff } from 'lucide-re
 import { recordPracticeAttemptResilient } from '../services/offline-queue.service';
 import { getStudentBadges } from '../services/practice.service';
 import { BADGE_META, type BadgeCode, type PracticeAttempt, type PracticeQuestion } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/StudentPortal.css';
 import './PracticeQuizPlayer.css';
 
 interface Props {

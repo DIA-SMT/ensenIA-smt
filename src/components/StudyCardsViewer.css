@@ -26,15 +26,15 @@
   position: absolute;
   top: 14px;
   right: 18px;
-  font-size: 11.5px;
+  font-size: 0.7188rem;
   color: var(--text-subtle);
   font-family: var(--font-mono);
 }
 
-.sc-emoji { font-size: 52px; line-height: 1; }
+.sc-emoji { font-size: 3.25rem; line-height: 1; }
 
 .sc-title {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--cyan-bright);
   letter-spacing: -0.02em;
@@ -42,7 +42,7 @@
 }
 
 .sc-text {
-  font-size: 15.5px;
+  font-size: 0.9688rem;
   line-height: 1.7;
   color: var(--text-primary);
   max-width: 420px;

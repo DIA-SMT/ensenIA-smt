@@ -745,11 +745,15 @@ export interface SyllabusSubject {
 }
 
 // ── Stats ──
+/**
+ * Contadores del "Mi día" del docente. Todos salen de datos reales: antes
+ * había "evaluaciones pendientes" fijo en 0 y una asistencia promedio que
+ * venía de una columna que solo llenaba el seed de demo.
+ */
 export interface TeacherStats {
   totalStudents: number;
-  classesToday: number;
-  pendingEvaluations: number;
-  avgAttendance: number;
+  /** Entregas enviadas por los chicos que todavía no tienen corrección. */
+  entregasParaCorregir: number;
 }
 
 export interface DirectorStats {

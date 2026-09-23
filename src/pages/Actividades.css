@@ -2,22 +2,22 @@
    SMT EstudIA — Actividades (docente)
    ═══════════════════════════════════════════════ */
 
+/* Sin scroll propio: scrollea el <main> del armazón. */
+.acts-container > * { flex-shrink: 0; }
 .acts-container {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
-  overflow-y: auto;
   padding-bottom: var(--space-6);
 }
 
-.acts-header h2 { font-size: 22px; }
+.acts-header h2 { font-size: 1.375rem; }
 
 .acts-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
   width: fit-content;
 }
@@ -31,7 +31,7 @@
   padding: var(--space-12);
   text-align: center;
 }
-.acts-empty h3 { font-size: 17px; }
+.acts-empty h3 { font-size: 1.0625rem; }
 .acts-empty p { max-width: 480px; }
 
 .acts-list {
@@ -56,7 +56,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 15.5px;
+  font-size: 0.9688rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -82,10 +82,10 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
-.acts-stat-label { font-size: 11px; color: var(--text-subtle); }
+.acts-stat-label { font-size: 0.6875rem; color: var(--text-subtle); }
 
 .acts-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
@@ -97,14 +97,14 @@
   flex-direction: column;
   gap: var(--space-4);
 }
-.acts-detail-header h2 { font-size: 19px; }
+.acts-detail-header h2 { font-size: 1.1875rem; }
 
 .acts-content-preview {
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: var(--space-5);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.7;
   max-height: 320px;
   overflow-y: auto;
@@ -114,17 +114,17 @@
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border-top: 1px dashed var(--border-color);
-  font-size: 13.5px;
+  font-size: 0.8438rem;
 }
 
 .acts-summary-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-5);
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: var(--text-secondary);
 }
-.acts-summary-stat strong { font-size: 16px; margin-right: 3px; }
+.acts-summary-stat strong { font-size: 1rem; margin-right: 3px; }
 
 .acts-detail-body {
   display: grid;
@@ -141,7 +141,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--accent-ia);
   background: var(--indigo-glow);
   padding: 3px 9px;
@@ -166,7 +166,7 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-color);
 }
-.acts-side-header h3 { font-size: 15px; }
+.acts-side-header h3 { font-size: 0.9375rem; }
 
 .acts-side-body {
   padding: var(--space-5);
@@ -180,7 +180,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -189,10 +189,10 @@
 }
 
 .acts-answer { margin-bottom: var(--space-3); }
-.acts-answer-q { font-size: 13px; font-weight: 500; }
-.acts-answer-a { font-size: 13.5px; margin-top: 2px; }
+.acts-answer-q { font-size: 0.8125rem; font-weight: 500; }
+.acts-answer-a { font-size: 0.8438rem; margin-top: 2px; }
 .acts-answer-text {
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   background: var(--bg-elevated);
   border-radius: var(--radius-md);
   padding: var(--space-3);
@@ -241,8 +241,8 @@
   flex-shrink: 0;
   z-index: 1;
 }
-.acts-timeline-label { display: block; font-size: 13px; }
-.acts-timeline-time { display: block; font-size: 11px; color: var(--text-subtle); }
+.acts-timeline-label { display: block; font-size: 0.8125rem; }
+.acts-timeline-time { display: block; font-size: 0.6875rem; color: var(--text-subtle); }
 
 @media (max-width: 1100px) {
   .acts-detail-body.panel-open { grid-template-columns: 1fr; }
@@ -252,8 +252,8 @@
 @media (max-width: 860px) {
   .acts-card { flex-direction: column; align-items: stretch; }
   .acts-card-stats { justify-content: space-between; }
-  .acts-summary-row { gap: var(--space-3); font-size: 12.5px; }
-  .modern-table { font-size: 12.5px; }
+  .acts-summary-row { gap: var(--space-3); font-size: 0.7813rem; }
+  .modern-table { font-size: 0.7813rem; }
 }
 
 /* ── Qué les costó (stats por pregunta) ── */
@@ -262,7 +262,7 @@
   flex-direction: column;
   gap: 8px;
 }
-.acts-qstat { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.acts-qstat { display: flex; align-items: center; gap: 10px; font-size: 0.8125rem; }
 .acts-qstat-label {
   flex: 1;
   min-width: 0;
@@ -286,14 +286,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--bg-elevated);
   border-radius: var(--radius-md);
   padding: 8px 12px;
   flex-wrap: wrap;
 }
 .acts-feeling-comment {
-  font-size: 12.5px;
+  font-size: 0.7813rem;
   color: var(--text-secondary);
   font-style: italic;
   width: 100%;
@@ -302,7 +302,7 @@
 /* ── Reacciones rápidas ── */
 .acts-reactions { display: flex; gap: 6px; flex-wrap: wrap; }
 .acts-reaction-btn {
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 6px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
@@ -319,7 +319,7 @@
 .acts-obs-form { display: flex; flex-direction: column; gap: 8px; }
 .acts-obs-cats { display: flex; gap: 6px; flex-wrap: wrap; }
 .acts-obs-cat {
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 4px 10px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
@@ -336,5 +336,5 @@
   padding: 4px 0 4px 12px;
   margin-bottom: 8px;
 }
-.acts-obs-item .acts-obs-note { font-size: 13px; }
-.acts-obs-item .acts-obs-meta { font-size: 11px; color: var(--text-subtle); }
+.acts-obs-item .acts-obs-note { font-size: 0.8125rem; }
+.acts-obs-item .acts-obs-meta { font-size: 0.6875rem; color: var(--text-subtle); }

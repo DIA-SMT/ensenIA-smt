@@ -1,95 +1,86 @@
-import { Search, Zap, Command, Menu } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+/**
+ * Barra superior: dónde estoy (título de la pantalla, que es el <h1>),
+ * buscar o ir a cualquier lado, ajustes de lectura, avisos y, para el
+ * docente, la actividad rápida.
+ */
+
+import { Search, Zap, Accessibility } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { tituloDe } from '../lib/navegacion';
 import NotificationDropdown from './NotificationDropdown';
+import { LogoMark } from './Sidebar';
 import './Topbar.css';
 
-const routeNames: Record<string, string> = {
-    '/dashboard': 'Dashboard',
-    '/agenda': 'Mi Agenda',
-    '/ia-lab': 'Laboratorio IA',
-    '/students': 'Estudiantes',
-    '/biblioteca': 'Biblioteca Docente',
-    '/alerts': 'Alertas',
-    '/settings': 'Configuración',
-    '/docentes': 'Equipo Docente',
-    '/comunicaciones': 'Comunicaciones',
-    '/actividades': 'Actividades',
-    '/mis-actividades': 'Mis Actividades',
-    '/estudiar': 'Estudiar',
-    '/mi-biblioteca': 'Biblioteca',
-    '/familias': 'Familias',
-    '/comunicados-familia': 'Comunicados',
-    '/mis-hijos': 'Mis Hijos',
-    '/actividad-rapida': 'Actividad rápida',
-};
-
-function titleFor(pathname: string): string {
-    if (routeNames[pathname]) return routeNames[pathname];
-    if (pathname.startsWith('/actividades/')) return 'Resultados de actividad';
-    if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
-    return 'EstudIA';
-}
-
 interface TopbarProps {
-    onMenuClick?: () => void;
+  alBuscar: () => void;
+  alAbrirPreferencias: () => void;
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { user, isDocente } = useAuth();
+const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
-    const pageTitle = titleFor(location.pathname);
+function saludo(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
 
-    const today = new Date().toLocaleDateString('es-AR', {
-        weekday: 'long', day: 'numeric', month: 'long'
-    });
-    const formattedDate = today.charAt(0).toUpperCase() + today.slice(1);
+export default function Topbar({ alBuscar, alAbrirPreferencias }: TopbarProps) {
+  const { pathname } = useLocation();
+  const { user, isDocente } = useAuth();
 
-    const greeting = (() => {
-        const h = new Date().getHours();
-        if (h < 12) return 'Buenos días';
-        if (h < 18) return 'Buenas tardes';
-        return 'Buenas noches';
-    })();
+  const titulo = tituloDe(user?.role, pathname);
+  const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    const firstName = user?.firstName ?? '';
+  return (
+    <header className="topbar">
+      <div className="topbar-left">
+        <span className="topbar-logo" aria-hidden="true"><LogoMark size={20} /></span>
+        <div className="topbar-titulos">
+          <p className="topbar-greeting">
+            <span>{saludo()}{user?.firstName ? `, ${user.firstName}` : ''}</span>
+            <span className="dot-sep" aria-hidden="true">·</span>
+            <span className="date-display">{hoy}</span>
+          </p>
+          <h1 className="page-title">{titulo}</h1>
+        </div>
+      </div>
 
-    return (
-        <header className="topbar glass-panel">
-            <div className="topbar-left">
-                <button className="btn-icon topbar-menu-btn" onClick={onMenuClick} aria-label="Abrir menú">
-                    <Menu size={20} />
-                </button>
-                <h2 className="page-title">{pageTitle}</h2>
-                <div className="topbar-greeting">
-                    <span>{greeting}, {firstName}</span>
-                    <span className="dot-sep">·</span>
-                    <span className="date-display">{formattedDate}</span>
-                </div>
-            </div>
+      <div className="topbar-right">
+        <button
+          type="button"
+          className="search-trigger"
+          onClick={alBuscar}
+          aria-haspopup="dialog"
+          aria-keyshortcuts={esMac ? 'Meta+K' : 'Control+K'}
+          aria-label="Buscar o ir a"
+        >
+          <Search size={17} className="search-trigger-icon" aria-hidden="true" />
+          <span className="search-trigger-text" aria-hidden="true">Buscar o ir a…</span>
+          <kbd className="search-kbd" aria-hidden="true">{esMac ? '⌘' : 'Ctrl'} K</kbd>
+        </button>
 
-            <div className="topbar-right">
-                <div className="search-trigger">
-                    <Search size={16} className="search-trigger-icon" />
-                    <span className="search-trigger-text">Buscar...</span>
-                    <kbd className="search-kbd"><Command size={11} />K</kbd>
-                </div>
+        <button
+          type="button"
+          className="btn-icon topbar-prefs"
+          onClick={alAbrirPreferencias}
+          aria-haspopup="dialog"
+          aria-label="Accesibilidad y datos"
+          title="Accesibilidad y datos"
+        >
+          <Accessibility size={19} aria-hidden="true" />
+        </button>
 
-                <NotificationDropdown />
+        <NotificationDropdown />
 
-                {isDocente && (
-                    <button
-                        className="btn btn-primary nueva-clase-btn"
-                        onClick={() => navigate('/actividad-rapida')}
-                        title="Crear y publicar una actividad en un minuto"
-                    >
-                        <Zap size={18} />
-                        <span>Actividad rápida</span>
-                    </button>
-                )}
-            </div>
-        </header>
-    );
+        {isDocente && (
+          <Link to="/actividad-rapida" className="btn btn-primary nueva-clase-btn" title="Crear y publicar una actividad en un minuto">
+            <Zap size={17} aria-hidden="true" />
+            <span>Actividad rápida</span>
+          </Link>
+        )}
+      </div>
+    </header>
+  );
 }

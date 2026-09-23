@@ -23,7 +23,7 @@
 }
 
 .comms-list-header h3 {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -73,7 +73,7 @@
 }
 
 .comms-item-subject {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -82,7 +82,7 @@
 }
 
 .comms-item-to {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-subtle);
 }
 
@@ -95,7 +95,7 @@
 }
 
 .comms-item-date {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--text-subtle);
   display: flex;
   align-items: center;
@@ -124,7 +124,7 @@
 }
 
 .comms-detail-header h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
 }
 
@@ -140,7 +140,7 @@
   padding: var(--space-6) var(--space-5);
   flex: 1;
   overflow-y: auto;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--text-secondary);
 }
@@ -175,7 +175,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-family: inherit;
   outline: none;
   transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
@@ -199,6 +199,6 @@
 }
 
 .comms-empty p {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: var(--text-secondary);
 }

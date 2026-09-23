@@ -19,6 +19,10 @@ import {
 } from '../services/vocational.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import type { Student, VocationalProfile } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import '../components/Modals.css';
+import './Libreta.css';
 import './Vocacional.css';
 
 const ESCALA = [

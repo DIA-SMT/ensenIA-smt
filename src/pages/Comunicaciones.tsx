@@ -68,7 +68,7 @@ export default function Comunicaciones() {
       {/* Left: List */}
       <div className="card comms-list-panel">
         <div className="comms-list-header">
-          <h3>Comunicaciones</h3>
+          <h3 aria-level={2}>Comunicaciones</h3>
           <button className="btn btn-primary btn-sm" onClick={() => { setComposing(true); setSelectedComm(null); }}>
             <Plus size={16} />
             Nuevo
@@ -110,7 +110,7 @@ export default function Comunicaciones() {
           <div className="comms-compose">
             <div className="comms-detail-header">
               <MessageSquare size={18} />
-              <h3>Nuevo Comunicado</h3>
+              <h3 aria-level={2}>Nuevo comunicado</h3>
             </div>
 
             <div className="comms-compose-form">
@@ -171,7 +171,7 @@ export default function Comunicaciones() {
           <div className="comms-detail">
             <div className="comms-detail-header">
               <MessageSquare size={18} />
-              <h3>{selectedComm.subject}</h3>
+              <h3 aria-level={2}>{selectedComm.subject}</h3>
             </div>
             <div className="comms-detail-meta">
               <span className={`badge ${priorityBadgeClass[selectedComm.priority]}`}>{priorityLabels[selectedComm.priority]}</span>

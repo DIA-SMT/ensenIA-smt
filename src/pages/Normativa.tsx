@@ -21,6 +21,11 @@ import {
 } from '../services/policies.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import type { SchoolPolicy, PolicyCategory, PolicyAudience } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import '../components/Modals.css';
+import './Libreta.css';
+import './Settings.css';
 import './Normativa.css';
 
 const CATEGORIAS = Object.keys(CATEGORY_LABELS) as PolicyCategory[];
@@ -178,6 +183,7 @@ export default function Normativa() {
           <Search size={15} className="text-subtle" />
           <input
             className="form-input"
+            aria-label="Buscar en la normativa"
             placeholder="Buscar por título o contenido…"
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
@@ -185,6 +191,7 @@ export default function Normativa() {
         </div>
         <select
           className="form-select"
+          aria-label="Filtrar por categoría"
           value={categoria}
           onChange={e => setCategoria(e.target.value as PolicyCategory | 'todas')}
         >

@@ -18,18 +18,29 @@ import { getDirectorInsights } from '../services/director-insights.service';
 import { getAlertsBySchool } from '../services/alerts.service';
 import { getTerms, pickCurrentTerm, getPublishedGradesBySchool } from '../services/gradebook.service';
 import { formatLatencyHours } from '../lib/format';
+import { promedioDe, formatoNota } from '../lib/resumenNotas';
 import type {
   Course, Student, DirectorInsights, Alert as AlertType, TermGrade, AcademicTerm,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Dashboard.css';
+import './Actividades.css';
+import './Students.css';
+import './Alerts.css';
 import './CourseDetail.css';
 import './Libreta.css';
 
-const STATUS_META: Record<Student['status'], { label: string; cls: string }> = {
-  excellent: { label: 'Excelente', cls: 'badge-success' },
-  good: { label: 'Bueno', cls: 'badge-success' },
-  warning: { label: 'En observación', cls: 'badge-warning' },
-  critical: { label: 'Riesgo', cls: 'badge-danger' },
-};
+/**
+ * El estado sale de las señales reales (las mismas del indicador "En
+ * riesgo" del tablero), no de la columna students.status, que solo llenaba
+ * el seed de demo.
+ */
+function estadoPorSenales(n: number): { label: string; cls: string } {
+  if (n >= 2) return { label: 'En riesgo', cls: 'badge-danger' };
+  if (n === 1) return { label: 'Una señal', cls: 'badge-warning' };
+  return { label: 'Sin señales', cls: 'badge-neutral' };
+}
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -154,16 +165,17 @@ export default function CourseDetail() {
               <table className="modern-table">
                 <thead>
                   <tr>
-                    <th>Estudiante</th>
-                    <th>Estado</th>
-                    <th>Promedio</th>
-                    <th>Señales</th>
+                    <th scope="col">Estudiante</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Promedio{currentTerm ? ` · ${currentTerm.name}` : ''}</th>
+                    <th scope="col">Señales</th>
                   </tr>
                 </thead>
                 <tbody>
                   {roster.map(s => {
                     const signals = signalsByStudent.get(s.id) ?? 0;
-                    const meta = STATUS_META[s.status];
+                    const meta = estadoPorSenales(signals);
+                    const promedio = promedioDe(gradesHere.filter(g => g.studentId === s.id));
                     return (
                       <tr key={s.id}>
                         <td>
@@ -173,7 +185,7 @@ export default function CourseDetail() {
                           </div>
                         </td>
                         <td><span className={`badge ${meta.cls}`}>{meta.label}</span></td>
-                        <td>{s.average.toFixed(1)}</td>
+                        <td>{promedio === null ? <span className="text-subtle" title="Sin notas publicadas">—</span> : formatoNota(promedio)}</td>
                         <td>{signals > 0 ? <span className="badge badge-danger">{signals}</span> : <span className="text-subtle">—</span>}</td>
                       </tr>
                     );

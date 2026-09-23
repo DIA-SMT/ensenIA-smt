@@ -1,32 +1,37 @@
 import { supabase } from './_helpers';
 import type { TeacherStats, DirectorStats } from '../types';
 
-export async function getTeacherStats(userId: string, todayDayIndex: number): Promise<TeacherStats> {
-  const [assignmentsRes, todayRes] = await Promise.all([
+/**
+ * Solo conteos: la base cuenta y devuelve el número, sin mandar filas
+ * (head: true). Si una consulta falla, se lanza el error: un 0 inventado
+ * haría creer que no hay nada para corregir.
+ */
+export async function getTeacherStats(userId: string): Promise<TeacherStats> {
+  const [asignaciones, actividades] = await Promise.all([
     supabase.from('teacher_assignments').select('course_id').eq('teacher_id', userId),
-    supabase.from('schedule_blocks').select('id').eq('teacher_id', userId).eq('day_index', todayDayIndex),
+    supabase.from('activities').select('id').eq('teacher_id', userId),
   ]);
+  if (asignaciones.error) throw asignaciones.error;
+  if (actividades.error) throw actividades.error;
 
-  const courseIds = [...new Set((assignmentsRes.data ?? []).map((a: any) => a.course_id))];
+  const courseIds = [...new Set((asignaciones.data ?? []).map((a: { course_id: string }) => a.course_id))];
+  const activityIds = (actividades.data ?? []).map((a: { id: string }) => a.id);
 
-  let studentList: any[] = [];
-  if (courseIds.length > 0) {
-    const studentsRes = await supabase
-      .from('students')
-      .select('attendance')
-      .in('course_id', courseIds);
-    studentList = studentsRes.data ?? [];
-  }
+  const [estudiantes, entregas] = await Promise.all([
+    courseIds.length
+      ? supabase.from('students').select('id', { count: 'exact', head: true }).in('course_id', courseIds)
+      : Promise.resolve({ count: 0, error: null }),
+    activityIds.length
+      ? supabase.from('activity_submissions').select('id', { count: 'exact', head: true })
+          .in('activity_id', activityIds).eq('status', 'submitted')
+      : Promise.resolve({ count: 0, error: null }),
+  ]);
+  if (estudiantes.error) throw estudiantes.error;
+  if (entregas.error) throw entregas.error;
 
   return {
-    totalStudents: studentList.length,
-    classesToday: (todayRes.data ?? []).length,
-    pendingEvaluations: 0,
-    avgAttendance: studentList.length > 0
-      ? parseFloat(
-          (studentList.reduce((sum: number, s: any) => sum + Number(s.attendance), 0) / studentList.length).toFixed(1)
-        )
-      : 0,
+    totalStudents: estudiantes.count ?? 0,
+    entregasParaCorregir: entregas.count ?? 0,
   };
 }
 

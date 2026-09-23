@@ -14,6 +14,10 @@ import {
 } from '../services/syllabus.service';
 import GrabadasEditor from './GrabadasEditor';
 import type { AcademicTerm, PlanningUnit, EvaluationCriteria } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import './Modals.css';
+import '../pages/Libreta.css';
 
 interface TemarioEditorProps {
   teacherId: string;

@@ -12,6 +12,9 @@
 import { useState } from 'react';
 import { X, PenLine, Eye, ArrowDownToLine, BookOpen, ClipboardList, Sparkles } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/IALab.css';
 import './Modals.css';
 
 const QUICK_ADJUSTMENTS = [

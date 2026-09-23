@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useId, lazy, Suspense, type ReactNode } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     Clock, AlertTriangle, CheckCircle, Info, Users, BookOpen,
     Activity, ArrowRight, Sparkles,
     GraduationCap, ClipboardCheck, CalendarCheck, Bell, MessageSquare,
     StickyNote, Pin, AlertCircle, HeartPulse, Megaphone, ChevronDown, ChevronUp,
-    Sunrise, ArrowUpRight,
+    Sunrise, ArrowUpRight, Zap, MapPin,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherStats } from '../services/stats.service';
-import { getTodaySchedule, getNextClass, getScheduleByTeacher } from '../services/schedule.service';
+import { getScheduleByTeacher } from '../services/schedule.service';
 import { getAlertsByTeacher, getAlertsBySchool } from '../services/alerts.service';
 import { getNotificationsForUser } from '../services/notifications.service';
 import { getCommunicationsBySchool } from '../services/communications.service';
@@ -22,7 +22,9 @@ import { getOrCreateSession, getSessionsByTeacher } from '../services/chat-histo
 import { streamChat } from '../services/ia-chat.service';
 import { formatRelative, formatLatencyHours } from '../lib/format';
 import CourseHeatmap from '../components/CourseHeatmap';
-import MarkdownRenderer from '../components/MarkdownRenderer';
+// El lector de Markdown pesa ~47 KB y solo se usa si dirección pide la
+// redacción con IA del Parte del Día: se baja recién entonces.
+const MarkdownRenderer = lazy(() => import('../components/MarkdownRenderer'));
 import {
     TEACHER_AWARD_META, type TeacherAward, type TeacherStats, type ScheduleBlock,
     type Alert as AlertType, type Notification as NotifType, type Communication,
@@ -31,29 +33,6 @@ import {
 import './Dashboard.css';
 
 /* -- Shared hooks / components -- */
-
-function useCounter(target: number, duration = 1200, decimals = 0) {
-    const [count, setCount] = useState(0);
-    const ref = useRef<number>(0);
-
-    useEffect(() => {
-        const startTime = performance.now();
-        const step = (now: number) => {
-            const progress = Math.min((now - startTime) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            const value = eased * target;
-            setCount(decimals > 0 ? parseFloat(value.toFixed(decimals)) : Math.round(value));
-            if (progress < 1) ref.current = requestAnimationFrame(step);
-        };
-        ref.current = requestAnimationFrame(step);
-        return () => cancelAnimationFrame(ref.current);
-    }, [target, duration, decimals]);
-
-    return count;
-}
-
-/* -- Color helpers -- */
-const colorMap: Record<string, string> = { green: 'teal', blue: 'teal', orange: 'amber', amber: 'amber', purple: 'violet', teal: 'teal' };
 
 function formatHour(h: number): string {
     const hh = Math.floor(h);
@@ -84,14 +63,61 @@ function getWeeklyCalendar(schedule: ScheduleBlock[]) {
    TEACHER DASHBOARD
    ======================================== */
 
+/* -- Mi día (docente) -- */
+
+function plural(n: number, uno: string, varios: string): string {
+    return `${n} ${n === 1 ? uno : varios}`;
+}
+
+function enCuanto(min: number): string {
+    if (min < 1) return 'ya';
+    if (min < 60) return `en ${min} min`;
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m ? `en ${h} h ${m} min` : `en ${h} h`;
+}
+
+const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
+
+type EstadoDelDia =
+    | { tipo: 'ahora'; clase: ScheduleBlock; minutos: number }
+    | { tipo: 'proxima'; clase: ScheduleBlock; minutos: number }
+    | { tipo: 'terminadas' }
+    | { tipo: 'libre' };
+
+function estadoDelDia(hoy: ScheduleBlock[], ahora: number): EstadoDelDia {
+    const enCurso = hoy.find(c => ahora >= c.startHour && ahora < c.startHour + c.duration);
+    if (enCurso) return { tipo: 'ahora', clase: enCurso, minutos: Math.round((enCurso.startHour + enCurso.duration - ahora) * 60) };
+    const proxima = hoy.filter(c => c.startHour > ahora).sort((a, b) => a.startHour - b.startHour)[0];
+    if (proxima) return { tipo: 'proxima', clase: proxima, minutos: Math.round((proxima.startHour - ahora) * 60) };
+    return hoy.length ? { tipo: 'terminadas' } : { tipo: 'libre' };
+}
+
+/** La primera clase de los días que siguen en la semana. */
+function proximaEnSemana(semana: ScheduleBlock[], hoyIdx: number): ScheduleBlock | null {
+    const siguientes = semana
+        .filter(c => c.dayIndex > hoyIdx)
+        .sort((a, b) => a.dayIndex - b.dayIndex || a.startHour - b.startHour);
+    return siguientes[0] ?? null;
+}
+
+/** La hora del reloj, que se actualiza sola cada minuto. */
+function useAhora(): Date {
+    const [ahora, setAhora] = useState(() => new Date());
+    useEffect(() => {
+        const id = window.setInterval(() => setAhora(new Date()), 60_000);
+        return () => window.clearInterval(id);
+    }, []);
+    return ahora;
+}
+
 function TeacherDashboardContent() {
     const { user } = useAuth();
-    const navigate = useNavigate();
-    const [teacherStats, setTeacherStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, avgAttendance: 0 });
-    const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
-    const [nextClassBlock, setNextClassBlock] = useState<ScheduleBlock | null>(null);
-    const [weekSchedule, setWeekSchedule] = useState<ScheduleBlock[]>([]);
-    const [myAlerts, setMyAlerts] = useState<AlertType[]>([]);
+    const ahora = useAhora();
+    const [stats, setStats] = useState<TeacherStats | null>(null);
+    const [statsFallo, setStatsFallo] = useState(false);
+    const [semana, setSemana] = useState<ScheduleBlock[]>([]);
+    const [alertasAbiertas, setAlertasAbiertas] = useState<AlertType[]>([]);
     const [myNotifs, setMyNotifs] = useState<NotifType[]>([]);
     const [notes, setNotes] = useState<QuickNote[]>([]);
     const [recentActivities, setRecentActivities] = useState<ActivityType[]>([]);
@@ -99,274 +125,156 @@ function TeacherDashboardContent() {
 
     useEffect(() => {
         if (!user) return;
-        const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
-        const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-
-        Promise.all([
-            getTeacherStats(user.id, todayIndex),
-            getTodaySchedule(user.id, todayIndex),
-            getNextClass(user.id, todayIndex, currentHour),
-            getScheduleByTeacher(user.id),
-            getAlertsByTeacher(user.id),
-            getNotificationsForUser(user.id),
-            getQuickNotes(user.id),
-            getActivitiesByTeacher(user.id),
-            getTeacherAwards(user.id).catch(() => [] as TeacherAward[]),
-        ]).then(([stats, today, next, week, alerts, notifs, qn, acts, awds]) => {
-            setTeacherStats(stats);
-            setTodayClasses(today);
-            setNextClassBlock(next ?? today[0] ?? null);
-            setWeekSchedule(week);
-            setMyAlerts(alerts.filter(a => a.status !== 'cerrada').slice(0, 3));
-            setMyNotifs(notifs.slice(0, 3));
-            setNotes(qn);
-            setRecentActivities(acts.slice(0, 3));
-            setMyAwards(awds.slice(0, 4));
-        }).catch(console.error);
+        // Un solo pedido del horario: de la semana salen el día de hoy, la
+        // clase en curso y la próxima. Antes eran tres pedidos distintos.
+        getScheduleByTeacher(user.id).then(setSemana).catch(console.error);
+        getTeacherStats(user.id)
+            .then(setStats)
+            .catch(err => { console.error(err); setStatsFallo(true); });
+        getAlertsByTeacher(user.id).then(a => setAlertasAbiertas(a.filter(x => x.status !== 'cerrada'))).catch(console.error);
+        getNotificationsForUser(user.id).then(n => setMyNotifs(n.slice(0, 3))).catch(console.error);
+        getQuickNotes(user.id).then(setNotes).catch(console.error);
+        getActivitiesByTeacher(user.id).then(a => setRecentActivities(a.slice(0, 3))).catch(console.error);
+        getTeacherAwards(user.id).then(a => setMyAwards(a.slice(0, 4))).catch(() => setMyAwards([]));
     }, [user]);
-
-    const studentsCount = useCounter(teacherStats.totalStudents);
-    const classesCount = useCounter(teacherStats.classesToday, 800);
-    const evalsCount = useCounter(teacherStats.pendingEvaluations, 900);
-    const attendanceCount = useCounter(teacherStats.avgAttendance, 1400, 1);
 
     if (!user) return null;
 
-    const weekCalendar = getWeeklyCalendar(weekSchedule);
+    const dia = ahora.getDay();
+    const hoyIdx = dia === 0 || dia === 6 ? -1 : dia - 1;
+    const horaDecimal = ahora.getHours() + ahora.getMinutes() / 60;
+    const hoy = semana.filter(c => c.dayIndex === hoyIdx).sort((a, b) => a.startHour - b.startHour);
+    const estado = estadoDelDia(hoy, horaDecimal);
+    const siguiente = estado.tipo === 'terminadas' || estado.tipo === 'libre' ? proximaEnSemana(semana, hoyIdx) : null;
+    const weekCalendar = getWeeklyCalendar(semana);
+
+    const contador = (n: number | undefined) => (stats ? String(n) : statsFallo ? '—' : '·');
 
     return (
-        <div className="dashboard-container">
-            {/* Stats Row */}
-            <div className="stats-grid">
-                <div className="card stat-card animate-in stagger-1">
-                    <div className="stat-header">
-                        <div className="stat-icon-wrap icon-teal"><GraduationCap size={20} /></div>
-                    </div>
-                    <div className="stat-body">
-                        <span className="stat-value">{studentsCount}</span>
-                        <span className="stat-label">Estudiantes</span>
+        <div className="dashboard-container midia">
+            {/* ── Ahora ── */}
+            <section className="midia-ahora" aria-labelledby="midia-ahora-titulo">
+                <div className="midia-ahora-principal">
+                    {(estado.tipo === 'ahora' || estado.tipo === 'proxima') ? (
+                        <>
+                            <p className="midia-eyebrow">
+                                <span className={`midia-pulso${estado.tipo === 'ahora' ? ' en-curso' : ''}`} aria-hidden="true" />
+                                {estado.tipo === 'ahora'
+                                    ? `En clase ahora · termina ${enCuanto(estado.minutos)}`
+                                    : `Próxima clase · ${enCuanto(estado.minutos)}`}
+                            </p>
+                            <h2 id="midia-ahora-titulo" className="midia-ahora-titulo">
+                                {estado.clase.subjectName} <span className="midia-ahora-curso">{estado.clase.courseName}</span>
+                            </h2>
+                            <p className="midia-ahora-meta">
+                                {estado.clase.room && <><MapPin size={14} aria-hidden="true" /> {estado.clase.room}<span aria-hidden="true"> · </span></>}
+                                <Clock size={14} aria-hidden="true" /> {formatHour(estado.clase.startHour)} a {formatHour(estado.clase.startHour + estado.clase.duration)}
+                                <span aria-hidden="true"> · </span>
+                                <Users size={14} aria-hidden="true" /> {plural(estado.clase.studentCount, 'estudiante', 'estudiantes')}
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <p className="midia-eyebrow">
+                                <span className="midia-pulso" aria-hidden="true" />
+                                {estado.tipo === 'terminadas' ? 'Por hoy, listo' : hoyIdx === -1 ? 'Fin de semana' : 'Hoy no tenés clases'}
+                            </p>
+                            <h2 id="midia-ahora-titulo" className="midia-ahora-titulo">
+                                {estado.tipo === 'terminadas' ? 'Terminaste las clases de hoy' : 'Día sin clases'}
+                            </h2>
+                            <p className="midia-ahora-meta">
+                                {siguiente
+                                    ? <>La próxima: <strong>{siguiente.subjectName}</strong> con {siguiente.courseName}, el {DIAS[siguiente.dayIndex]} a las {formatHour(siguiente.startHour)}.</>
+                                    : 'No hay más clases cargadas en tu agenda esta semana.'}
+                            </p>
+                        </>
+                    )}
+                    <div className="midia-ahora-acciones">
+                        <Link to="/ia-lab" className="btn btn-primary"><Sparkles size={16} aria-hidden="true" /> Preparar con IA</Link>
+                        <Link to="/actividad-rapida" className="btn btn-outline"><Zap size={16} aria-hidden="true" /> Actividad rápida</Link>
                     </div>
                 </div>
 
-                <div className="card stat-card animate-in stagger-2">
-                    <div className="stat-header">
-                        <div className="stat-icon-wrap icon-amber"><CalendarCheck size={20} /></div>
-                    </div>
-                    <div className="stat-body">
-                        <span className="stat-value">{classesCount}</span>
-                        <span className="stat-label">Clases Hoy</span>
-                    </div>
-                </div>
+                {hoy.length > 0 && (
+                    <ol className="midia-linea" aria-label="Tus clases de hoy">
+                        {hoy.map(c => {
+                            const fin = c.startHour + c.duration;
+                            const cuando = horaDecimal >= fin ? 'pasada' : horaDecimal >= c.startHour ? 'actual' : 'futura';
+                            return (
+                                <li key={c.id} className={`midia-linea-item ${cuando}`} aria-current={cuando === 'actual' ? 'time' : undefined}>
+                                    <span className="midia-linea-hora">{formatHour(c.startHour)}</span>
+                                    <span className="midia-linea-texto">
+                                        <span className="midia-linea-materia">{c.subjectName}</span>
+                                        <span className="midia-linea-curso">{c.courseName}{c.room ? ` · ${c.room}` : ''}</span>
+                                    </span>
+                                    {cuando === 'pasada' && <span className="sr-only">(ya pasó)</span>}
+                                    {cuando === 'actual' && <span className="midia-linea-ahora">Ahora</span>}
+                                </li>
+                            );
+                        })}
+                    </ol>
+                )}
+            </section>
 
-                <div className="card stat-card animate-in stagger-3">
-                    <div className="stat-header">
-                        <div className="stat-icon-wrap icon-violet"><ClipboardCheck size={20} /></div>
-                    </div>
-                    <div className="stat-body">
-                        <span className="stat-value">{evalsCount}</span>
-                        <span className="stat-label">Evals. Pendientes</span>
-                    </div>
-                </div>
-
-                <div className="card stat-card animate-in stagger-4">
-                    <div className="stat-header">
-                        <div className="stat-icon-wrap icon-emerald"><Users size={20} /></div>
-                    </div>
-                    <div className="stat-body">
-                        <span className="stat-value">{attendanceCount}%</span>
-                        <span className="stat-label">Asistencia Prom.</span>
-                    </div>
-                </div>
-            </div>
+            {/* ── Para hacer: cada número lleva a donde se resuelve ── */}
+            <ul className="midia-contadores" aria-label="Para hacer" aria-busy={!stats && !statsFallo}>
+                <li>
+                    <Link to="/actividades" className={`midia-contador${stats && stats.entregasParaCorregir > 0 ? ' pendiente' : ''}`}>
+                        <span className="midia-contador-icono" aria-hidden="true"><ClipboardCheck size={20} /></span>
+                        <span className="midia-contador-num">{contador(stats?.entregasParaCorregir)}</span>
+                        <span className="midia-contador-et">{stats?.entregasParaCorregir === 1 ? 'entrega para corregir' : 'entregas para corregir'}</span>
+                        <ArrowUpRight size={16} className="midia-contador-ir" aria-hidden="true" />
+                    </Link>
+                </li>
+                <li>
+                    <Link to="/alerts" className={`midia-contador${alertasAbiertas.length > 0 ? ' alerta' : ''}`}>
+                        <span className="midia-contador-icono" aria-hidden="true"><Bell size={20} /></span>
+                        <span className="midia-contador-num">{alertasAbiertas.length}</span>
+                        <span className="midia-contador-et">{alertasAbiertas.length === 1 ? 'alerta abierta' : 'alertas abiertas'}</span>
+                        <ArrowUpRight size={16} className="midia-contador-ir" aria-hidden="true" />
+                    </Link>
+                </li>
+                <li>
+                    <Link to="/students" className="midia-contador">
+                        <span className="midia-contador-icono" aria-hidden="true"><GraduationCap size={20} /></span>
+                        <span className="midia-contador-num">{contador(stats?.totalStudents)}</span>
+                        <span className="midia-contador-et">{stats?.totalStudents === 1 ? 'estudiante en tus cursos' : 'estudiantes en tus cursos'}</span>
+                        <ArrowUpRight size={16} className="midia-contador-ir" aria-hidden="true" />
+                    </Link>
+                </li>
+                <li>
+                    <Link to="/agenda" className="midia-contador">
+                        <span className="midia-contador-icono" aria-hidden="true"><CalendarCheck size={20} /></span>
+                        <span className="midia-contador-num">{semana.length}</span>
+                        <span className="midia-contador-et">{semana.length === 1 ? 'clase esta semana' : 'clases esta semana'}</span>
+                        <ArrowUpRight size={16} className="midia-contador-ir" aria-hidden="true" />
+                    </Link>
+                </li>
+            </ul>
 
             <div className="dashboard-main-grid">
-                {/* Left Column */}
                 <div className="dashboard-col-left">
-                    {/* Next Class */}
-                    {nextClassBlock && (
-                        <section className="next-class-card animate-in stagger-5">
-                            <div className="next-class-header">
-                                <div className="next-class-badge">
-                                    <Clock size={14} />
-                                    <span>Próxima clase</span>
-                                </div>
-                                <span className="next-class-time">
-                                    {formatHour(nextClassBlock.startHour)} - {formatHour(nextClassBlock.startHour + nextClassBlock.duration)}
-                                </span>
-                            </div>
-                            <div className="next-class-body">
-                                <h3 className="next-class-subject">{nextClassBlock.subjectName}</h3>
-                                <div className="next-class-meta">
-                                    <span>{nextClassBlock.courseName}</span>
-                                    <span className="meta-dot">·</span>
-                                    <span>{nextClassBlock.room}</span>
-                                    <span className="meta-dot">·</span>
-                                    <span>{nextClassBlock.studentCount} est.</span>
-                                </div>
-                            </div>
-                            <div className="next-class-actions">
-                                <button className="btn btn-primary" onClick={() => navigate('/ia-lab')}>
-                                    <Sparkles size={16} />
-                                    Preparar con IA
-                                </button>
-                                <button className="btn btn-outline btn-light" onClick={() => navigate('/actividad-rapida')}>
-                                    Actividad rápida
-                                    <ArrowRight size={16} />
-                                </button>
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Weekly Calendar */}
-                    <section className="card widget animate-in stagger-6">
+                    <section className="card widget" aria-labelledby="midia-semana">
                         <div className="widget-header">
-                            <h3 className="widget-title">Semana</h3>
-                            <button className="btn btn-ghost text-sm" onClick={() => navigate('/agenda')}>
-                                Ver agenda <ArrowRight size={14} />
-                            </button>
+                            <h2 className="widget-title" id="midia-semana">Semana</h2>
+                            <Link to="/agenda" className="btn btn-ghost btn-sm">Ver agenda <ArrowRight size={14} aria-hidden="true" /></Link>
                         </div>
-                        <div className="weekly-calendar">
+                        <ol className="weekly-calendar">
                             {weekCalendar.map((day, idx) => (
-                                <div key={idx} className={`calendar-day ${day.active ? 'active' : ''}`}>
-                                    <span className="cal-day-name">{day.day}</span>
+                                <li key={idx} className={`calendar-day ${day.active ? 'active' : ''}`} aria-current={day.active ? 'date' : undefined}>
+                                    <span className="cal-day-name"><span aria-hidden="true">{day.day}</span><span className="sr-only">{DIAS[idx]}</span></span>
                                     <span className="cal-day-number">{day.date}</span>
-                                    <span className="cal-day-classes">{day.classes} clases</span>
-                                </div>
+                                    <span className="cal-day-classes">{day.classes === 0 ? 'sin clases' : plural(day.classes, 'clase', 'clases')}</span>
+                                </li>
                             ))}
-                        </div>
+                        </ol>
                     </section>
 
-                    {/* Today's Classes */}
-                    {todayClasses.length > 0 && (
-                        <section className="card widget animate-in stagger-7">
-                            <div className="widget-header">
-                                <h3 className="widget-title">Hoy</h3>
-                                <span className="badge badge-neutral">{todayClasses.length} clases</span>
-                            </div>
-                            <div className="classes-list">
-                                {todayClasses.map(cls => (
-                                    <div key={cls.id} className="class-item">
-                                        <div className={`class-time-pill color-${colorMap[cls.colorClass] || 'teal'}`}>
-                                            <span className="class-time-text">{formatHour(cls.startHour)}</span>
-                                        </div>
-                                        <div className="class-info">
-                                            <h4>{cls.subjectName}</h4>
-                                            <p>{cls.courseName} · {cls.room}</p>
-                                        </div>
-                                        <button className="btn btn-ghost text-sm" onClick={() => navigate('/agenda')}>
-                                            <ArrowRight size={16} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                </div>
-
-                {/* Right Column */}
-                <div className="dashboard-col-right">
-                    {/* Reconocimientos de la dirección */}
-                    {myAwards.length > 0 && (
-                        <section className="card widget animate-in stagger-4 awards-widget">
-                            <div className="widget-header">
-                                <h3 className="widget-title">🏅 Tus reconocimientos</h3>
-                            </div>
-                            <div className="awards-widget-list">
-                                {myAwards.map(a => {
-                                    const meta = TEACHER_AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode, description: '' };
-                                    return (
-                                        <div key={a.id} className="awards-widget-item">
-                                            <span className="awards-widget-emoji">{meta.emoji}</span>
-                                            <div>
-                                                <span className="text-sm font-medium">{meta.label}</span>
-                                                {a.message && <p className="text-xs text-secondary italic">"{a.message}"</p>}
-                                                <span className="text-xs text-subtle">
-                                                    {a.directorName ? `De ${a.directorName} · ` : ''}{formatRelative(a.createdAt)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Notifications from Director */}
-                    {myNotifs.length > 0 && (
-                        <section className="card widget animate-in stagger-5">
-                            <div className="widget-header">
-                                <h3 className="widget-title">
-                                    <Bell size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                                    Notificaciones
-                                </h3>
-                                <span className="badge badge-cyan">{myNotifs.filter(n => !n.isRead).length} nuevas</span>
-                            </div>
-                            <div className="notif-widget-list">
-                                {myNotifs.map(n => (
-                                    <div key={n.id} className={`notif-widget-item ${!n.isRead ? 'unread' : ''}`}>
-                                        <div className="notif-widget-dot" />
-                                        <div className="notif-widget-body">
-                                            <span className="notif-widget-title">{n.title}</span>
-                                            <span className="notif-widget-from">{n.fromName}</span>
-                                        </div>
-                                        <span className={`badge badge-${n.priority === 'high' ? 'danger' : n.priority === 'medium' ? 'warning' : 'neutral'}`}>
-                                            {n.priority === 'high' ? 'Alta' : n.priority === 'medium' ? 'Media' : 'Baja'}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Alerts */}
-                    <section className="card widget animate-in stagger-6">
+                    <section className="card widget" aria-labelledby="midia-actividad">
                         <div className="widget-header">
-                            <h3 className="widget-title">Alertas</h3>
-                            <span className="badge badge-danger">{myAlerts.length}</span>
-                        </div>
-                        <div className="alerts-list">
-                            {myAlerts.map(alert => (
-                                <div key={alert.id} className={`alert-item alert-${alert.type}`}>
-                                    <div className="alert-icon-wrap">
-                                        {alert.type === 'danger' && <AlertTriangle size={16} />}
-                                        {alert.type === 'warning' && <Info size={16} />}
-                                        {alert.type === 'success' && <CheckCircle size={16} />}
-                                    </div>
-                                    <div className="alert-content">
-                                        <p className="alert-msg">{alert.message}</p>
-                                        <span className="alert-date">{alert.date}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Quick Notes */}
-                    <section className="card widget animate-in stagger-7">
-                        <div className="widget-header">
-                            <h3 className="widget-title">
-                                <StickyNote size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                                Notas Rápidas
-                            </h3>
-                        </div>
-                        <div className="notes-list">
-                            {notes.map(note => (
-                                <div key={note.id} className={`note-item ${note.isPinned ? 'pinned' : ''}`}>
-                                    {note.isPinned && <Pin size={12} className="note-pin-icon" />}
-                                    <span className="note-text">{note.text}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    {/* Actividad reciente (real: últimas actividades publicadas) */}
-                    <section className="card widget animate-in stagger-8">
-                        <div className="widget-header">
-                            <h3 className="widget-title">Actividad</h3>
+                            <h2 className="widget-title" id="midia-actividad">Tus últimas actividades</h2>
                             {recentActivities.length > 0 && (
-                                <button className="btn btn-ghost text-sm" onClick={() => navigate('/actividades')}>
-                                    Ver todas <ArrowRight size={14} />
-                                </button>
+                                <Link to="/actividades" className="btn btn-ghost btn-sm">Ver todas <ArrowRight size={14} aria-hidden="true" /></Link>
                             )}
                         </div>
                         <div className="activity-list">
@@ -375,12 +283,11 @@ function TeacherDashboardContent() {
                             )}
                             {recentActivities.map(act => (
                                 <div key={act.id} className="activity-item">
-                                    <div className={`activity-dot dot-${act.sourceTool ? 'ia' : 'material'}`}>
+                                    <div className={`activity-dot dot-${act.sourceTool ? 'ia' : 'material'}`} aria-hidden="true">
                                         {act.sourceTool ? <Sparkles size={12} /> : <Activity size={12} />}
                                     </div>
                                     <div className="activity-content">
-                                        <p className="activity-action">Publicó actividad</p>
-                                        <p className="activity-subject">{act.title}</p>
+                                        <Link to={`/actividades/${act.id}`} className="activity-subject">{act.title || "Actividad sin título"}</Link>
                                         <span className="activity-time">
                                             {act.subjectName ? `${act.subjectName} · ` : ''}{formatRelative(act.createdAt)}
                                         </span>
@@ -390,6 +297,104 @@ function TeacherDashboardContent() {
                         </div>
                     </section>
                 </div>
+
+                <div className="dashboard-col-right">
+                    <section className="card widget" aria-labelledby="midia-alertas">
+                        <div className="widget-header">
+                            <h2 className="widget-title" id="midia-alertas">Alertas abiertas</h2>
+                            {alertasAbiertas.length > 0 && <Link to="/alerts" className="btn btn-ghost btn-sm">Ver todas <ArrowRight size={14} aria-hidden="true" /></Link>}
+                        </div>
+                        {alertasAbiertas.length === 0 ? (
+                            <p className="text-secondary text-sm">No hay alertas abiertas en tus cursos.</p>
+                        ) : (
+                            <ul className="alerts-list">
+                                {alertasAbiertas.slice(0, 3).map(alert => (
+                                    <li key={alert.id} className={`alert-item alert-${alert.type}`}>
+                                        <div className="alert-icon-wrap" aria-hidden="true">
+                                            {alert.type === 'danger' && <AlertTriangle size={16} />}
+                                            {alert.type === 'warning' && <Info size={16} />}
+                                            {alert.type === 'success' && <CheckCircle size={16} />}
+                                            {alert.type === 'info' && <Info size={16} />}
+                                        </div>
+                                        <div className="alert-content">
+                                            <p className="alert-msg">
+                                                <span className="sr-only">{alert.type === 'danger' ? 'Urgente: ' : alert.type === 'warning' ? 'Atención: ' : ''}</span>
+                                                {alert.message}
+                                            </p>
+                                            <span className="alert-date">{alert.date}</span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+
+                    {myNotifs.length > 0 && (
+                        <section className="card widget" aria-labelledby="midia-avisos">
+                            <div className="widget-header">
+                                <h2 className="widget-title" id="midia-avisos">Avisos de dirección</h2>
+                                {myNotifs.some(n => !n.isRead) && (
+                                    <span className="badge badge-cyan">{plural(myNotifs.filter(n => !n.isRead).length, 'nuevo', 'nuevos')}</span>
+                                )}
+                            </div>
+                            <ul className="notif-widget-list">
+                                {myNotifs.map(n => (
+                                    <li key={n.id} className={`notif-widget-item ${!n.isRead ? 'unread' : ''}`}>
+                                        <div className="notif-widget-dot" aria-hidden="true" />
+                                        <div className="notif-widget-body">
+                                            <span className="notif-widget-title">{!n.isRead && <span className="sr-only">Sin leer: </span>}{n.title}</span>
+                                            <span className="notif-widget-from">{n.fromName}</span>
+                                        </div>
+                                        <span className={`badge badge-${n.priority === 'high' ? 'danger' : n.priority === 'medium' ? 'warning' : 'neutral'}`}>
+                                            <span className="sr-only">Prioridad </span>{n.priority === 'high' ? 'Alta' : n.priority === 'medium' ? 'Media' : 'Baja'}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+
+                    {myAwards.length > 0 && (
+                        <section className="card widget awards-widget" aria-labelledby="midia-reconocimientos">
+                            <div className="widget-header">
+                                <h2 className="widget-title" id="midia-reconocimientos"><span aria-hidden="true">🏅 </span>Tus reconocimientos</h2>
+                            </div>
+                            <ul className="awards-widget-list">
+                                {myAwards.map(a => {
+                                    const meta = TEACHER_AWARD_META[a.badgeCode] ?? { emoji: '🏅', label: a.badgeCode, description: '' };
+                                    return (
+                                        <li key={a.id} className="awards-widget-item">
+                                            <span className="awards-widget-emoji" aria-hidden="true">{meta.emoji}</span>
+                                            <div>
+                                                <span className="text-sm font-medium">{meta.label}</span>
+                                                {a.message && <p className="text-xs text-secondary italic">"{a.message}"</p>}
+                                                <span className="text-xs text-subtle">
+                                                    {a.directorName ? `De ${a.directorName} · ` : ''}{formatRelative(a.createdAt)}
+                                                </span>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </section>
+                    )}
+
+                    {notes.length > 0 && (
+                        <section className="card widget" aria-labelledby="midia-notas">
+                            <div className="widget-header">
+                                <h2 className="widget-title" id="midia-notas"><StickyNote size={16} aria-hidden="true" /> Notas rápidas</h2>
+                            </div>
+                            <ul className="notes-list">
+                                {notes.map(note => (
+                                    <li key={note.id} className={`note-item ${note.isPinned ? 'pinned' : ''}`}>
+                                        {note.isPinned && <><Pin size={12} className="note-pin-icon" aria-hidden="true" /><span className="sr-only">Fijada: </span></>}
+                                        <span className="note-text">{note.text}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -398,6 +403,12 @@ function TeacherDashboardContent() {
 /* ========================================
    DIRECTOR DASHBOARD
    ======================================== */
+
+/**
+ * Por debajo de esta cantidad de respuestas, un porcentaje engaña: un solo
+ * check-in positivo daba "100 % de bienestar".
+ */
+const MUESTRA_MINIMA = 5;
 
 /** Tarjeta KPI con drill-down opcional: un clic revela la lista de nombres detrás del número. */
 function KpiCard({
@@ -412,27 +423,34 @@ function KpiCard({
     children?: ReactNode;
 }) {
     const [open, setOpen] = useState(false);
+    const idDetalle = useId();
 
     return (
-        <div className={`card kpi-card ${borderClass}`}>
+        <section className={`card kpi-card ${borderClass}${open ? ' abierta' : ''}`} aria-label={title}>
             <div className="kpi-header">
-                <span className="kpi-title">{title}</span>
-                {icon}
+                <h2 className="kpi-title">{title}</h2>
+                <span aria-hidden="true">{icon}</span>
             </div>
             <div className="kpi-value-row">
-                <h3 className="kpi-value">{value}</h3>
+                <p className="kpi-value">{value}</p>
             </div>
-            <span className="kpi-caption">{caption}</span>
+            <p className="kpi-caption">{caption}</p>
             {children && (
                 <>
-                    <button className="kpi-drilldown-toggle" onClick={() => setOpen(o => !o)}>
+                    <button
+                        type="button"
+                        className="kpi-drilldown-toggle"
+                        onClick={() => setOpen(o => !o)}
+                        aria-expanded={open}
+                        aria-controls={open ? idDetalle : undefined}
+                    >
                         {open ? 'Ocultar' : (drilldownLabel ?? 'Ver detalle')}
-                        {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        {open ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
                     </button>
-                    {open && <div className="kpi-drilldown">{children}</div>}
+                    {open && <div className="kpi-drilldown" id={idDetalle}>{children}</div>}
                 </>
             )}
-        </div>
+        </section>
     );
 }
 
@@ -502,7 +520,7 @@ function DailyBriefWidget({ brief }: { brief: DailyBrief }) {
     return (
         <section className="card widget brief-widget animate-in stagger-1">
             <div className="widget-header">
-                <h3 className="widget-title">
+                <h3 className="widget-title" aria-level={2}>
                     <Sunrise size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                     Parte del Día
                 </h3>
@@ -538,7 +556,7 @@ function DailyBriefWidget({ brief }: { brief: DailyBrief }) {
                 <div className="brief-ai">
                     {aiError
                         ? <p className="text-danger text-sm">{aiError}</p>
-                        : <MarkdownRenderer content={aiText} />}
+                        : <Suspense fallback={<p className="text-secondary text-sm">Preparando el texto…</p>}><MarkdownRenderer content={aiText} /></Suspense>}
                 </div>
             )}
         </section>
@@ -650,8 +668,12 @@ function DirectorDashboardContent() {
                     borderClass="border-left-success"
                     icon={<HeartPulse size={20} className="text-success" />}
                     title="Pulso de Bienestar"
-                    value={wellbeingPulse.pct !== null ? `${wellbeingPulse.pct}%` : '—'}
-                    caption={`${wellbeingPulse.totalCheckins} check-ins esta semana`}
+                    value={wellbeingPulse.pct !== null && wellbeingPulse.totalCheckins >= MUESTRA_MINIMA ? `${wellbeingPulse.pct}%` : '—'}
+                    caption={wellbeingPulse.totalCheckins >= MUESTRA_MINIMA
+                        ? `positivos, sobre ${wellbeingPulse.totalCheckins} check-ins esta semana`
+                        : wellbeingPulse.totalCheckins === 0
+                            ? 'sin check-ins esta semana'
+                            : `${wellbeingPulse.totalCheckins === 1 ? 'un check-in' : `${wellbeingPulse.totalCheckins} check-ins`} esta semana: pocos para sacar un porcentaje`}
                 >
                     {wellbeingPulse.byCourse.length === 0
                         ? <p className="kpi-empty">Sin check-ins esta semana.</p>
@@ -721,7 +743,7 @@ function DirectorDashboardContent() {
             <div className="director-main-grid">
                 {/* Left: Mapa institucional curso × materia */}
                 <div className="card padding-xl animate-in stagger-5">
-                    <h3 className="mb-1 text-lg font-semibold">Mapa Institucional</h3>
+                    <h3 className="mb-1 text-lg font-semibold" aria-level={2}>Mapa Institucional</h3>
                     <p className="text-sm text-secondary mb-6">Curso × materia. Un clic en una celda o en el curso abre su ficha.</p>
                     <CourseHeatmap cellsByMetric={heatmap} />
                 </div>
@@ -731,7 +753,7 @@ function DirectorDashboardContent() {
                     {/* Alerts Summary */}
                     <section className="card widget animate-in stagger-6">
                         <div className="widget-header">
-                            <h3 className="widget-title">Alertas Pendientes</h3>
+                            <h3 className="widget-title" aria-level={2}>Alertas Pendientes</h3>
                             <span className="badge badge-danger">{openAlertCount}</span>
                         </div>
                         <div className="alerts-list">
@@ -761,7 +783,7 @@ function DirectorDashboardContent() {
                     {/* Recent Communications */}
                     <section className="card widget animate-in stagger-7">
                         <div className="widget-header">
-                            <h3 className="widget-title">
+                            <h3 className="widget-title" aria-level={2}>
                                 <MessageSquare size={16} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                                 Últimos Comunicados
                             </h3>

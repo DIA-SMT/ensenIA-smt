@@ -23,6 +23,10 @@ import {
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
 import type { Activity, ActivitySubmission, ActivityAnswer, Student, CheckinFeeling, CheckinMoment } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
+import '../components/Modals.css';
 import './StudentPortal.css';
 
 const checkinDoneKey = (activityId: string, moment: CheckinMoment) => `ensenia_checkin_${activityId}_${moment}`;

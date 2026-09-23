@@ -7,34 +7,51 @@
 import { useEffect, useState } from 'react';
 import { BookMarked, AlertTriangle } from 'lucide-react';
 import { getPublishedGradesByStudent } from '../services/gradebook.service';
+import { formatoNota } from '../lib/resumenNotas';
 import type { TermGrade, AlertThresholds } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/Libreta.css';
 
 interface GradesPanelProps {
   studentId: string;
   thresholds: Pick<AlertThresholds, 'gradeRiskMax' | 'gradeFailMax'>;
   /** El estudiante se ve a sí mismo; la familia mira a su hijo/a. */
   voice: 'propia' | 'familia';
+  /** Para quien quiera resumir las mismas notas sin volver a pedirlas. */
+  alCargar?: (notas: TermGrade[]) => void;
 }
 
-export default function GradesPanel({ studentId, thresholds, voice }: GradesPanelProps) {
+export default function GradesPanel({ studentId, thresholds, voice, alCargar }: GradesPanelProps) {
   const [grades, setGrades] = useState<TermGrade[] | null>(null);
+  const [fallo, setFallo] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setFallo(false);
     getPublishedGradesByStudent(studentId)
-      .then(g => { if (!cancelled) setGrades(g); })
-      .catch(err => { console.error(err); if (!cancelled) setGrades([]); });
+      .then(g => { if (!cancelled) { setGrades(g); alCargar?.(g); } })
+      .catch(err => { console.error(err); if (!cancelled) { setGrades([]); setFallo(true); } });
     return () => { cancelled = true; };
+    // alCargar puede cambiar de identidad en cada render del padre: no
+    // debe volver a pedir las notas por eso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
-  if (grades === null) return <p className="text-secondary text-sm">Cargando notas…</p>;
+  if (grades === null) return <p className="text-secondary text-sm" role="status">Cargando notas…</p>;
+
+  // Un error no es "no hay notas": decirlo así haría creer que no hay nada
+  // que ver cuando en realidad no se pudo consultar.
+  if (fallo) {
+    return <p className="text-sm text-danger" role="alert">No se pudieron traer las notas. Revisá la conexión y volvé a entrar.</p>;
+  }
 
   if (grades.length === 0) {
     return (
       <p className="text-secondary text-sm">
         {voice === 'propia'
           ? 'Todavía no hay notas publicadas.'
-          : 'Todavía no hay notas publicadas para este trimestre.'}
+          : 'Todavía no hay notas publicadas. Aparecen acá cuando sus docentes las cargan en la libreta.'}
       </p>
     );
   }
@@ -77,7 +94,7 @@ export default function GradesPanel({ studentId, thresholds, voice }: GradesPane
                 </div>
                 {g.grade !== null && (
                   <span className={`grade-pill ${gradeClass(g.grade)}`}>
-                    {Number.isInteger(g.grade) ? g.grade : g.grade.toFixed(1)}
+                    {formatoNota(g.grade)}
                   </span>
                 )}
               </div>

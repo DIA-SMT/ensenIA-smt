@@ -14,7 +14,12 @@ import { useEffect, useState } from 'react';
 import { BookOpen, ClipboardCheck, ChevronRight, Video, ExternalLink } from 'lucide-react';
 import { getSyllabusForTerm } from '../services/syllabus.service';
 import { getPublishedRecordings, embedUrl, PROVIDER_LABELS } from '../services/recordings.service';
+import { usePreferencias } from '../contexts/PreferencesContext';
 import type { AcademicTerm, RecordedClass, SyllabusSubject } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import './Modals.css';
+import '../pages/Libreta.css';
 
 interface SyllabusPanelProps {
   /** null = todavía cargando. [] = la escuela no tiene trimestres del año. */
@@ -224,19 +229,36 @@ function Grabaciones({ lista, onVer, titulo }: {
 /**
  * Visor de la grabación. Si el proveedor no se puede embeber, lo dice y
  * ofrece abrirla afuera, en vez de mostrar un recuadro en blanco.
+ *
+ * Con ahorro de datos, el video no se carga hasta que la persona lo pide:
+ * solo el reproductor de YouTube ya baja cerca de un mega antes de apretar
+ * play.
  */
 function VisorVideo({ rec, onCerrar }: { rec: RecordedClass; onCerrar: () => void }) {
   const src = embedUrl(rec);
+  const { ahorroActivo } = usePreferencias();
+  const [confirmado, setConfirmado] = useState(!ahorroActivo);
   return (
     <div className="em-modal-overlay" onClick={onCerrar}>
       <div className="em-modal visor-modal" onClick={e => e.stopPropagation()}>
         <div className="em-modal-header">
           <h3><Video size={17} /> {rec.title}</h3>
-          <button className="btn btn-ghost" onClick={onCerrar}>✕</button>
+          <button className="btn btn-ghost" onClick={onCerrar} aria-label="Cerrar el video">✕</button>
         </div>
         <div className="em-modal-body">
           {rec.description && <p className="text-secondary text-sm">{rec.description}</p>}
-          {src ? (
+          {src && !confirmado ? (
+            <div className="visor-externo visor-ahorro">
+              <p className="text-secondary text-sm">
+                Tenés el <strong>ahorro de datos</strong> activo. Mirar un video gasta muchos
+                datos: unos 5 MB por minuto en calidad baja, y más en calidad alta. Si podés,
+                miralo con wifi.
+              </p>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setConfirmado(true)}>
+                Cargar el video igual
+              </button>
+            </div>
+          ) : src ? (
             <div className="visor-video">
               <iframe
                 src={src}

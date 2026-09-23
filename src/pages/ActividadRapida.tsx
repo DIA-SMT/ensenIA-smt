@@ -232,8 +232,9 @@ export default function ActividadRapida() {
 
       {/* 2. Tema + generación */}
       <section className="ar-step card">
-        <h3><span className="ar-step-num">2</span> ¿Sobre qué tema?</h3>
+        <h3 id="ar-tema"><span className="ar-step-num" aria-hidden="true">2</span> ¿Sobre qué tema?</h3>
         <input
+          aria-labelledby="ar-tema"
           className="ar-topic-input"
           type="text"
           placeholder='Ej: "suma de vectores con ejemplos de la vida real"'

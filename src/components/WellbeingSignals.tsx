@@ -22,6 +22,10 @@ import {
 } from '../services/wellbeing.service';
 import { formatRelative } from '../lib/format';
 import type { WellbeingStatus } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import './Modals.css';
+import '../pages/Libreta.css';
 import './WellbeingSignals.css';
 
 const ESTADO_LABEL: Record<WellbeingStatus, string> = {

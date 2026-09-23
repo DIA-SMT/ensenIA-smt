@@ -7,8 +7,8 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 380px;
-  max-height: 480px;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(480px, 70dvh);
   display: flex;
   flex-direction: column;
   z-index: 50;
@@ -34,8 +34,9 @@
   flex-shrink: 0;
 }
 
-.notif-dropdown-header h4 {
-  font-size: 15px;
+.notif-dropdown-header h4,
+.notif-dropdown-titulo {
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -55,7 +56,7 @@
 }
 
 .notif-dropdown-empty p {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
@@ -101,14 +102,14 @@
 }
 
 .notif-dropdown-title {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.3;
 }
 
 .notif-dropdown-msg {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   line-height: 1.4;
   display: -webkit-box;
@@ -122,7 +123,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--text-subtle);
   font-weight: 500;
 }
@@ -143,4 +144,11 @@
 .notif-read-btn:hover {
   background: var(--cyan-glow);
   color: var(--cyan-bright);
+}
+
+.notif-lista { list-style: none; }
+
+/* En celular el panel se ancla al borde de la pantalla, no al botón. */
+@media (max-width: 860px) {
+  .notif-dropdown { position: fixed; top: calc(var(--topbar-height) + env(safe-area-inset-top)); right: 12px; left: 12px; width: auto; }
 }

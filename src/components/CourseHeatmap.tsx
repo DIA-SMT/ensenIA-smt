@@ -1,6 +1,9 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { HeatmapCell, HeatmapMetric } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/Students.css';
 import './CourseHeatmap.css';
 
 const METRIC_META: Record<HeatmapMetric, { label: string; caption: string; goodIsHigh: boolean }> = {

@@ -17,6 +17,9 @@ import {
 } from '../services/migue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import type { MigueAudience, MigueSession } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import '../components/Modals.css';
 import './Migue.css';
 
 interface Burbuja {
@@ -272,6 +275,7 @@ export default function Migue() {
           placeholder={audience === 'estudiante'
             ? 'Escribile a Migue…'
             : 'Preguntale a Migue…'}
+          aria-label={audience === 'estudiante' ? 'Mensaje para Migue' : 'Pregunta para Migue'}
           value={texto}
           disabled={enVuelo || cargando || !sesion}
           onChange={e => setTexto(e.target.value)}
@@ -283,8 +287,9 @@ export default function Migue() {
           type="submit"
           className="btn btn-primary"
           disabled={enVuelo || cargando || !sesion || !texto.trim()}
+          aria-label={enVuelo ? 'Enviando…' : 'Enviar'}
         >
-          {enVuelo ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
+          {enVuelo ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
         </button>
       </form>
     </div>

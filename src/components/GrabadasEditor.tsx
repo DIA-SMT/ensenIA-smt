@@ -15,6 +15,11 @@ import {
 import type { AcademicTerm, PlanningUnit, RecordedClass } from '../types';
 // Reusa la grilla de formulario de Normativa: mismo gesto de carga, y el
 // proyecto ya cruza CSS entre páginas y componentes.
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import './Modals.css';
+import '../pages/Settings.css';
+import '../pages/Libreta.css';
 import '../pages/Normativa.css';
 
 interface GrabadasEditorProps {

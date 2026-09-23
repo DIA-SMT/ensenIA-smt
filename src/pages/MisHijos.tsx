@@ -1,16 +1,26 @@
-import { useState, useEffect } from 'react';
-import { GraduationCap, HeartPulse, BookMarked, BookOpen } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { GraduationCap, HeartPulse, BookMarked, BookOpen, AlertTriangle, CalendarX2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMyChildren } from '../services/guardians.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
-import type { Student, AlertThresholds, AcademicTerm } from '../types';
+import { resumirNotas, formatoNota, type ResumenNotas } from '../lib/resumenNotas';
+import type { Student, AlertThresholds, AcademicTerm, TermGrade } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
 import './Familias.css';
 import './StudentPortal.css';
 import './Libreta.css';
 
+/**
+ * Mis hijos. Todo lo que se muestra acá sale de lo que la escuela publicó:
+ * notas de la libreta y temario. Antes había tres números (asistencia,
+ * promedio, progreso) y un "Excelente" que venían de datos de demo que
+ * ninguna función de la app calcula.
+ */
 export default function MisHijos() {
   const { user, school } = useAuth();
   const [children, setChildren] = useState<(Student & { relationship: string })[]>([]);
@@ -18,10 +28,15 @@ export default function MisHijos() {
   const [terms, setTerms] = useState<AcademicTerm[] | null>(null);
   const [currentTermId, setCurrentTermId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fallo, setFallo] = useState(false);
+  const [notasPorHijo, setNotasPorHijo] = useState<Record<string, TermGrade[]>>({});
 
   useEffect(() => {
     if (!user) return;
-    getMyChildren().then(setChildren).catch(console.error).finally(() => setLoading(false));
+    getMyChildren()
+      .then(setChildren)
+      .catch(err => { console.error(err); setFallo(true); })
+      .finally(() => setLoading(false));
     // La familia lee los umbrales de su escuela (011): el color de la nota
     // tiene que coincidir con la regla del aviso que recibió, no con un
     // default nuestro. Si la escuela no configuró umbrales, getThresholds
@@ -37,76 +52,88 @@ export default function MisHijos() {
       });
   }, [user]);
 
-  if (!user) return null;
+  const alCargarNotas = useCallback((id: string, notas: TermGrade[]) => {
+    setNotasPorHijo(prev => ({ ...prev, [id]: notas }));
+  }, []);
 
-  const statusBadge = (s: Student) => {
-    switch (s.status) {
-      case 'excellent': return <span className="badge badge-success">Excelente</span>;
-      case 'good': return <span className="badge badge-success" style={{ opacity: 0.8 }}>Buen ritmo</span>;
-      case 'warning': return <span className="badge badge-warning">En observación</span>;
-      case 'critical': return <span className="badge badge-danger">Necesita apoyo</span>;
-    }
-  };
+  if (!user) return null;
+  const umbrales = thresholds ?? { schoolId: user.schoolId, ...DEFAULT_THRESHOLDS };
 
   return (
-    <div className="sp-container animate-in">
-      <h3 className="sp-section-title"><GraduationCap size={17} /> Mis hijos en la escuela</h3>
-
-      {loading && <p className="text-secondary">Cargando...</p>}
-      {!loading && children.length === 0 && (
+    <div className="sp-container fam-v4">
+      {loading && <p className="text-secondary" role="status">Cargando…</p>}
+      {!loading && fallo && (
+        <div className="card acts-empty" role="alert">
+          <p className="text-danger">No pudimos traer los datos de tus hijos. Revisá la conexión y volvé a entrar.</p>
+        </div>
+      )}
+      {!loading && !fallo && children.length === 0 && (
         <div className="card acts-empty">
-          <GraduationCap size={30} className="text-secondary" />
+          <GraduationCap size={30} className="text-secondary" aria-hidden="true" />
           <p className="text-secondary">No hay estudiantes vinculados a tu cuenta. Consultá en la escuela.</p>
         </div>
       )}
 
-      {children.map(c => (
-        <div key={c.id} className="card fam-child">
-          <div className="fam-child-head">
-            <div className="student-avatar" style={{ width: 46, height: 46, fontSize: 16 }}>{c.avatarInitials}</div>
-            <div>
-              <h4>{c.firstName} {c.lastName}</h4>
-              <span className="text-sm text-secondary">{c.courseName}{school ? ` · ${school.shortName}` : ''}</span>
-            </div>
-            <div style={{ marginLeft: 'auto' }}>{statusBadge(c)}</div>
-          </div>
-          <div className="fam-child-metrics">
-            <div className="metric-box">
-              <span className="metric-label">Asistencia</span>
-              <span className="metric-val">{c.attendance}%</span>
-            </div>
-            <div className="metric-box">
-              <span className="metric-label">Promedio</span>
-              <span className="metric-val">{c.average}</span>
-            </div>
-            <div className="metric-box">
-              <span className="metric-label">Progreso</span>
-              <span className="metric-val">{c.progress}%</span>
-            </div>
-          </div>
-          <div className="fam-child-grades">
-            <h5 className="text-sm font-medium flex items-center gap-1" style={{ marginBottom: 8 }}>
-              <BookMarked size={13} /> Notas del año
-            </h5>
-            <GradesPanel
-              studentId={c.id}
-              thresholds={thresholds ?? DEFAULT_THRESHOLDS}
-              voice="familia"
-            />
-          </div>
+      {children.map(c => {
+        const notas = notasPorHijo[c.id];
+        const resumen = notas ? resumirNotas(notas, umbrales) : null;
+        const idTitulo = `hijo-${c.id}`;
+        return (
+          <article key={c.id} className="card fam-child" aria-labelledby={idTitulo}>
+            <header className="fam-child-head">
+              <div className="fam-avatar" aria-hidden="true">{c.avatarInitials}</div>
+              <div className="fam-child-nombre">
+                <h2 id={idTitulo}>{c.firstName} {c.lastName}</h2>
+                <p className="text-sm text-secondary">{c.courseName}{school ? ` · ${school.shortName}` : ''}</p>
+              </div>
+            </header>
 
-          <div className="fam-child-grades">
-            <h5 className="text-sm font-medium flex items-center gap-1" style={{ marginBottom: 8 }}>
-              <BookOpen size={13} /> Temario
-            </h5>
-            <SyllabusPanel terms={terms} initialTermId={currentTermId} voice="familia" courseId={c.courseId} />
-          </div>
+            <ResumenHijo notas={notas} resumen={resumen} />
 
-          <p className="text-xs text-subtle flex items-center gap-1">
-            <HeartPulse size={12} /> Ante cualquier duda sobre su acompañamiento, respondé la citación o acercate a la escuela.
-          </p>
-        </div>
-      ))}
+            <section className="fam-child-grades" aria-labelledby={`${idTitulo}-notas`}>
+              <h3 id={`${idTitulo}-notas`} className="fam-subtitulo"><BookMarked size={15} aria-hidden="true" /> Notas del año</h3>
+              <GradesPanel
+                studentId={c.id}
+                thresholds={umbrales}
+                voice="familia"
+                alCargar={n => alCargarNotas(c.id, n)}
+              />
+            </section>
+
+            <section className="fam-child-grades" aria-labelledby={`${idTitulo}-temario`}>
+              <h3 id={`${idTitulo}-temario`} className="fam-subtitulo"><BookOpen size={15} aria-hidden="true" /> Temario</h3>
+              <SyllabusPanel terms={terms} initialTermId={currentTermId} voice="familia" courseId={c.courseId} />
+            </section>
+
+            <p className="fam-pie">
+              <HeartPulse size={14} aria-hidden="true" /> Ante cualquier duda sobre su acompañamiento, respondé la citación o acercate a la escuela.
+            </p>
+          </article>
+        );
+      })}
     </div>
+  );
+}
+
+/** Tres datos de la libreta, o una explicación honesta de por qué no hay. */
+function ResumenHijo({ notas, resumen }: { notas: TermGrade[] | undefined; resumen: ResumenNotas | null }) {
+  if (notas === undefined) return null;
+  // Sin notas publicadas no hay nada que resumir: lo explica el panel de notas.
+  if (!resumen) return null;
+  return (
+    <dl className="fam-resumen" aria-label={`Resumen del ${resumen.trimestre}`}>
+      <div className="fam-dato">
+        <dt>Promedio · {resumen.trimestre}</dt>
+        <dd>{formatoNota(resumen.promedio)}<span className="fam-dato-de"> en {resumen.materias} {resumen.materias === 1 ? 'materia' : 'materias'}</span></dd>
+      </div>
+      <div className={`fam-dato${resumen.conAviso > 0 ? ' fam-dato-aviso' : ''}`}>
+        <dt><AlertTriangle size={13} aria-hidden="true" /> Para reforzar</dt>
+        <dd>{resumen.conAviso}<span className="fam-dato-de"> {resumen.conAviso === 1 ? 'materia' : 'materias'}</span></dd>
+      </div>
+      <div className={`fam-dato${resumen.aDiciembre > 0 ? ' fam-dato-riesgo' : ''}`}>
+        <dt><CalendarX2 size={13} aria-hidden="true" /> A diciembre</dt>
+        <dd>{resumen.aDiciembre}<span className="fam-dato-de"> {resumen.aDiciembre === 1 ? 'materia' : 'materias'}</span></dd>
+      </div>
+    </dl>
   );
 }

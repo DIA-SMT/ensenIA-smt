@@ -11,6 +11,10 @@ import { logAccess } from '../services/audit.service';
 import { formatRelative, daysSince } from '../lib/format';
 import AwardPickerModal from '../components/AwardPickerModal';
 import { TEACHER_AWARD_META, type TeacherAward, type User, type Subject, type Student, type ScheduleBlock } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Students.css';
+import './Actividades.css';
 import './Docentes.css';
 
 /** Chip honesto: cuándo fue la última actividad publicada por el docente. */
@@ -136,6 +140,7 @@ export default function Docentes() {
               <Search size={16} className="search-icon" />
               <input
                 className="search-input"
+                aria-label="Buscar docente por nombre"
                 placeholder="Buscar docente..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}

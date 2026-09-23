@@ -32,9 +32,9 @@
   box-shadow: 0 0 0 1px var(--warning);
 }
 
-.award-emoji { font-size: 26px; line-height: 1.2; }
-.award-label { font-size: 13px; font-weight: 700; }
-.award-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
+.award-emoji { font-size: 1.625rem; line-height: 1.2; }
+.award-label { font-size: 0.8125rem; font-weight: 700; }
+.award-desc { font-size: 0.6875rem; color: var(--text-secondary); line-height: 1.3; }
 
 .award-message {
   display: flex;
@@ -51,4 +51,4 @@
   padding: var(--space-8) var(--space-4);
   text-align: center;
 }
-.award-done-emoji { font-size: 48px; line-height: 1; }
+.award-done-emoji { font-size: 3rem; line-height: 1; }

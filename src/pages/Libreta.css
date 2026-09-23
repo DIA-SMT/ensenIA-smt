@@ -11,7 +11,7 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
-.libreta-header h2 { font-size: 22px; font-weight: 700; }
+.libreta-header h2 { font-size: 1.375rem; font-weight: 700; }
 
 /* ── Barra de selección ── */
 .libreta-toolbar {
@@ -30,7 +30,7 @@
   flex: 1;
 }
 .libreta-field label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-subtle);
   text-transform: uppercase;
@@ -52,7 +52,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--accent-ia);
   font-variant-numeric: tabular-nums;
@@ -65,7 +65,7 @@
   border-radius: var(--radius-md);
   color: var(--text-primary);
   padding: 8px 10px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 700;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
@@ -97,7 +97,7 @@
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: 0.7813rem;
   color: var(--text-subtle);
   line-height: 1.5;
   padding: 0 var(--space-5) var(--space-4);
@@ -113,7 +113,7 @@
   color: var(--success);
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 /* ── Notas publicadas (estudiante / familia) ── */
@@ -133,11 +133,11 @@
   border-radius: var(--radius-lg);
 }
 .grade-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.grade-row-subject { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.grade-row-term { font-size: 12px; color: var(--text-subtle); }
+.grade-row-subject { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.grade-row-term { font-size: 0.75rem; color: var(--text-subtle); }
 
 .grade-pill {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   min-width: 48px;
@@ -171,7 +171,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--cyan-bright);
 }
@@ -193,7 +193,7 @@
   border: none;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -213,11 +213,11 @@
   gap: 8px;
 }
 .syllabus-class { display: flex; flex-direction: column; gap: 2px; }
-.syllabus-class-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.syllabus-class-title { font-size: 0.8125rem; font-weight: 500; color: var(--text-primary); }
 .syllabus-objectives {
   margin: 0;
   padding-left: 16px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   line-height: 1.45;
 }
@@ -233,7 +233,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--success);
   text-transform: uppercase;
@@ -241,7 +241,7 @@
   margin-bottom: 4px;
 }
 .syllabus-criteria p {
-  font-size: 12.5px;
+  font-size: 0.7813rem;
   color: var(--text-secondary);
   line-height: 1.55;
   white-space: pre-line;
@@ -255,7 +255,7 @@
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 7px 14px;
   border-radius: var(--radius-full);
@@ -283,8 +283,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
 }
-.temario-unit-title { flex: 1; min-width: 180px; font-size: 13.5px; font-weight: 600; }
-.temario-unit-meta { font-size: 12px; color: var(--text-subtle); }
+.temario-unit-title { flex: 1; min-width: 180px; font-size: 0.8438rem; font-weight: 600; }
+.temario-unit-meta { font-size: 0.75rem; color: var(--text-subtle); }
 .temario-unit-row select { min-width: 160px; }
 
 .temario-criteria-box { display: flex; flex-direction: column; gap: var(--space-2); }

@@ -2,17 +2,20 @@
    SMT EstudIA — Portal del estudiante
    ═══════════════════════════════════════════════ */
 
+/* Sin scroll propio: scrollea el <main> del armazón. Un scroll anidado
+   hacía que los bloques con overflow:hidden se achicaran hasta cortarse y
+   que el "volver arriba" al cambiar de pantalla no funcionara. */
 .sp-container {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
-  overflow-y: auto;
   padding-bottom: var(--space-8);
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
 }
+
+.sp-container > * { flex-shrink: 0; }
 
 /* ── Hero ── */
 .sp-hero {
@@ -24,7 +27,7 @@
   flex-wrap: wrap;
   background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(0, 107, 179, 0.15) 100%);
 }
-.sp-hero h2 { font-size: 21px; }
+.sp-hero h2 { font-size: 1.3125rem; }
 
 .sp-enrollments {
   display: flex;
@@ -36,7 +39,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 0.7813rem;
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
@@ -45,7 +48,7 @@
 }
 .sp-enrollment-chip code {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 0.7188rem;
   color: var(--cyan-bright);
   background: var(--cyan-subtle);
   padding: 1px 7px;
@@ -54,14 +57,14 @@
 
 .sp-hero-stats { display: flex; gap: var(--space-6); }
 .sp-hero-stat { display: flex; flex-direction: column; align-items: center; }
-.sp-hero-num { font-size: 30px; font-weight: 700; line-height: 1.1; }
-.sp-hero-label { font-size: 12px; color: var(--text-subtle); }
+.sp-hero-num { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
+.sp-hero-label { font-size: 0.75rem; color: var(--text-subtle); }
 
 .sp-section-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
   margin-top: var(--space-2);
 }
@@ -81,8 +84,8 @@
   color: var(--text-primary);
 }
 .sp-activity-card:hover { opacity: 1; }
-.sp-activity-card.done { opacity: 0.75; }
-.sp-activity-main h4 { font-size: 15px; font-weight: 600; }
+.sp-activity-card.done { background: var(--bg-main); box-shadow: none; }
+.sp-activity-main h4, .sp-activity-main h3 { font-size: 0.9375rem; font-weight: 650; }
 .sp-activity-meta {
   display: flex;
   align-items: center;
@@ -105,7 +108,7 @@
   gap: var(--space-4);
   flex-wrap: wrap;
 }
-.sp-detail-header h2 { font-size: 19px; }
+.sp-detail-header h2 { font-size: 1.1875rem; }
 
 .sp-score-box {
   display: flex;
@@ -116,15 +119,15 @@
   border-radius: var(--radius-lg);
   padding: 10px 20px;
 }
-.sp-score-num { font-size: 26px; font-weight: 700; color: var(--success); line-height: 1.1; }
-.sp-score-label { font-size: 11px; color: var(--text-secondary); }
+.sp-score-num { font-size: 1.625rem; font-weight: 700; color: var(--success); line-height: 1.1; }
+.sp-score-label { font-size: 0.6875rem; color: var(--text-secondary); }
 
 .sp-content {
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: var(--space-5);
-  font-size: 14.5px;
+  font-size: 0.9063rem;
   line-height: 1.7;
 }
 .sp-content ul, .sp-content ol { padding-left: 22px; margin: 8px 0; }
@@ -140,7 +143,7 @@
   color: var(--warning);
   border-radius: var(--radius-md);
   padding: 12px 16px;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
 }
 
 .sp-start-btn { align-self: center; padding: 14px 32px; }
@@ -151,7 +154,7 @@
 .sp-question { padding: var(--space-4) var(--space-5); }
 .sp-question.readonly { background: var(--bg-elevated); }
 .sp-question-prompt {
-  font-size: 14.5px;
+  font-size: 0.9063rem;
   font-weight: 500;
   margin-bottom: var(--space-3);
   display: flex;
@@ -167,7 +170,7 @@
   border-radius: 50%;
   background: var(--cyan-subtle);
   color: var(--cyan-bright);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -181,7 +184,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
   transition: all var(--transition-fast);
 }
 .sp-option:hover { border-color: var(--cyan-bright); background: var(--cyan-subtle); }
@@ -200,7 +203,7 @@
   border-radius: 50%;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -235,18 +238,101 @@
   border: 1px solid rgba(129, 140, 248, 0.3);
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
-.sp-answer-review { font-size: 14px; }
+.sp-answer-review { font-size: 0.875rem; }
 
 /* ── Devolución rápida del docente ── */
 .sp-reaction-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 15px;
+  font-size: 0.9375rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
   padding: 4px 12px;
   margin-right: 8px;
+}
+
+/* ══════════════════════════════
+   Inicio del estudiante — v4
+   ══════════════════════════════ */
+.sp-v4 { gap: var(--space-5); }
+.sp-v4 > section:not(.sp-hoy) { display: flex; flex-direction: column; gap: var(--space-3); }
+.sp-v4 .sp-section-title { font-size: 1.0625rem; font-weight: 750; margin-top: 0; }
+.sp-v4 .sp-section-title svg { color: var(--acento); }
+.sp-v4 .sp-activity-list { list-style: none; }
+.sp-panel { padding: var(--space-4); }
+
+.sp-hoy {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "texto anillo" "sig sig";
+  align-items: center;
+  column-gap: var(--space-5);
+  row-gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  background: var(--acento);
+  color: #FFFFFF;
+  overflow: hidden;
+  isolation: isolate;
+}
+.sp-hoy::before {
+  content: '';
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
+    radial-gradient(70% 90% at 0% 100%, rgba(0, 0, 0, 0.2), transparent 60%);
+}
+html[data-contraste="alto"] .sp-hoy::before { display: none; }
+.sp-hoy-texto { grid-area: texto; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.sp-hoy .sp-anillo { grid-area: anillo; }
+.sp-hoy .sp-hoy-siguiente { grid-area: sig; margin-top: 0; }
+.sp-hoy-saludo { font-size: 0.9375rem; font-weight: 700; color: rgba(255, 255, 255, 0.92); }
+.sp-hoy-titulo { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; color: #FFFFFF; }
+.sp-hoy-bajada { color: rgba(255, 255, 255, 0.92); font-size: 0.9375rem; }
+.sp-hoy-btn { align-self: flex-start; background: #FFFFFF; color: var(--acento-hover); margin-top: var(--space-2); }
+.sp-hoy-btn:hover { background: #F1F5F9; color: var(--acento-hover); }
+.sp-hoy :focus-visible { outline-color: #FFFFFF !important; }
+
+.sp-hoy-siguiente {
+  position: relative;
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: var(--space-2);
+  padding: var(--space-3) 52px var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: #FFFFFF;
+  color: var(--text-primary);
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.45);
+  transition: transform var(--transition-fast);
+}
+.sp-hoy-siguiente:hover { color: var(--text-primary); transform: translateY(-1px); }
+.sp-hoy-siguiente-et { font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento-hover); }
+.sp-hoy-siguiente-titulo { font-size: 1.0625rem; font-weight: 750; line-height: 1.25; }
+.sp-hoy-siguiente-meta { font-size: 0.8125rem; color: var(--text-secondary); }
+.sp-hoy-siguiente-ir {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--acento); color: #FFFFFF;
+}
+
+.sp-anillo { position: relative; flex-shrink: 0; width: 88px; height: 88px; }
+.sp-anillo svg { display: block; }
+.sp-anillo-num {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em;
+}
+.sp-anillo-num small { font-size: 0.8125rem; font-weight: 700; opacity: 0.85; }
+
+.sp-v4 .sp-enrollments { list-style: none; margin-top: calc(var(--space-2) * -1); }
+
+@media (max-width: 520px) {
+  .sp-hoy { padding: var(--space-5); }
+  .sp-anillo { width: 72px; height: 72px; }
+  .sp-anillo svg { width: 72px; height: 72px; }
+  .sp-anillo-num { font-size: 1.125rem; }
 }

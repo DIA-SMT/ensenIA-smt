@@ -1,5 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { inicioDe } from '../lib/navegacion';
+import CargandoPantalla from './CargandoPantalla';
 import type { UserRole } from '../types';
 
 interface ProtectedRouteProps {
@@ -11,21 +13,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  // Show nothing while checking auth status
-  if (isLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: 'var(--bg-main)',
-        color: 'var(--text-secondary)',
-      }}>
-        Cargando...
-      </div>
-    );
-  }
+  if (isLoading) return <CargandoPantalla completa />;
 
   if (!isAuthenticated) {
     // Preservamos el destino (clave para los QR de actividades):
@@ -36,11 +24,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    // Cada rol tiene su "home"
-    const home = user.role === 'estudiante' ? '/mis-actividades'
-      : user.role === 'padre' ? '/comunicados-familia'
-      : '/dashboard';
-    return <Navigate to={home} replace />;
+    return <Navigate to={inicioDe(user.role)} replace />;
   }
 
   return <>{children}</>;

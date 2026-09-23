@@ -10,6 +10,10 @@ import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
 import MaterialViewer from '../components/MaterialViewer';
 import type { LibraryMaterial, PracticeQuestion, Student } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
+import './Biblioteca.css';
 import './StudentPortal.css';
 import '../components/Modals.css';
 
@@ -77,7 +81,7 @@ export default function MiBiblioteca() {
 
   return (
     <div className="sp-container animate-in">
-      <h3 className="sp-section-title"><BookOpen size={17} /> Material de mis materias</h3>
+      <h3 className="sp-section-title" aria-level={2}><BookOpen size={17} aria-hidden="true" /> Material de mis materias</h3>
       <p className="text-secondary text-sm" style={{ marginTop: -8 }}>
         Acá aparece el material que tus docentes comparten con el curso.
       </p>
@@ -98,7 +102,7 @@ export default function MiBiblioteca() {
           return (
             <div key={mat.id} className="card sp-activity-card">
               <div className="sp-activity-main">
-                <h4 className="flex items-center gap-2"><FileText size={16} className="text-cyan" /> {mat.title}</h4>
+                <h4 className="flex items-center gap-2" aria-level={3}><FileText size={16} className="text-cyan" aria-hidden="true" /> {mat.title}</h4>
                 {mat.description && <p className="text-sm text-secondary">{mat.description}</p>}
                 <div className="sp-activity-meta">
                   <span className="badge badge-cyan">{mat.subjectName}</span>

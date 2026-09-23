@@ -12,7 +12,6 @@ import {
   extractPdfText, summarizeDocument, updateMaterial, formatFileSize,
   generateStudyCards,
 } from '../services/documents.service';
-import { textToPdf } from '../lib/pdf';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import type { LibraryMaterial, Subject } from '../types';
@@ -262,7 +261,7 @@ export default function Biblioteca() {
       <aside className="card biblioteca-sidebar">
         <div className="biblioteca-sidebar-header">
           <BookOpen size={18} />
-          <h3>Biblioteca Docente</h3>
+          <h3 aria-level={2}>Biblioteca Docente</h3>
         </div>
 
         <div className="biblioteca-filters">
@@ -302,6 +301,7 @@ export default function Biblioteca() {
             <Search size={16} className="search-icon" />
             <input
               className="search-input"
+              aria-label="Buscar en la biblioteca"
               placeholder="Buscar por título, tag o contenido..."
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -323,7 +323,7 @@ export default function Biblioteca() {
                   <Icon size={24} />
                 </div>
                 <div className="mat-info">
-                  <h4 className="mat-title">{mat.title}</h4>
+                  <h4 className="mat-title" aria-level={3}>{mat.title}</h4>
                   {mat.description && <p className="mat-desc">{mat.description}</p>}
                   <div className="mat-meta">
                     <span className="badge badge-cyan">{mat.subjectName}</span>
@@ -501,7 +501,7 @@ export default function Biblioteca() {
                 <>
                   <button
                     className="btn btn-outline btn-sm"
-                    onClick={() => textToPdf(summaryFor.aiSummary ?? '', summaryFor.title, summaryFor.subjectName)}
+                    onClick={async () => { const { textToPdf } = await import('../lib/pdf'); textToPdf(summaryFor.aiSummary ?? '', summaryFor.title, summaryFor.subjectName); }}
                   >
                     <Download size={14} /> PDF
                   </button>

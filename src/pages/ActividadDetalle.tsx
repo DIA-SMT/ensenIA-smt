@@ -17,6 +17,9 @@ import {
   type Activity, type ActivitySubmission, type ActivityEvent, type Student,
   type StudentCheckin, type ObservationCategory,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Students.css';
 import './Actividades.css';
 
 const QUICK_REACTIONS = ['👏 Excelente', '👍 Muy bien', '💪 Seguí así', '🤝 Hablemos'];

@@ -1,11 +1,13 @@
 /**
  * Visor de placas de estudio: tarjetas hojeables (mobile-first)
  * con descarga en PDF para imprimir o compartir por WhatsApp.
+ *
+ * El generador de PDF pesa más que todo el resto del visor: se baja recién
+ * cuando alguien toca "Descargar PDF", no cada vez que se abren las placas.
  */
 
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, Layers } from 'lucide-react';
-import { studyCardsToPdf } from '../lib/pdf';
 import type { StudyCard } from '../types';
 import './Modals.css';
 import './StudyCardsViewer.css';
@@ -19,6 +21,19 @@ interface Props {
 
 export default function StudyCardsViewer({ cards, title, subjectName, onClose }: Props) {
   const [index, setIndex] = useState(0);
+  const [generando, setGenerando] = useState(false);
+
+  const descargar = async () => {
+    setGenerando(true);
+    try {
+      const { studyCardsToPdf } = await import('../lib/pdf');
+      studyCardsToPdf(cards, title, subjectName);
+    } catch (err) {
+      console.error('No se pudo generar el PDF:', err);
+    } finally {
+      setGenerando(false);
+    }
+  };
   const card = cards[index];
 
   const prev = () => setIndex(i => Math.max(0, i - 1));
@@ -36,13 +51,13 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
       <div className="em-modal sc-modal">
         <div className="em-modal-header">
           <h3><Layers size={17} className="text-ia-accent" /> Placas — {title}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <button className="btn-icon" onClick={onClose} aria-label="Cerrar las placas"><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="em-modal-body sc-body">
           <div className="sc-card" key={index}>
             <span className="sc-counter">{index + 1} / {cards.length}</span>
-            <span className="sc-emoji">{card.emoji}</span>
+            <span className="sc-emoji" aria-hidden="true">{card.emoji}</span>
             <h2 className="sc-title">{card.title}</h2>
             <p className="sc-text">{card.body}</p>
           </div>
@@ -58,6 +73,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
                   className={`sc-dot ${i === index ? 'active' : ''}`}
                   onClick={() => setIndex(i)}
                   aria-label={`Placa ${i + 1}`}
+                  aria-current={i === index ? 'true' : undefined}
                 />
               ))}
             </div>
@@ -68,8 +84,8 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
         </div>
 
         <div className="em-modal-footer">
-          <button className="btn btn-outline btn-sm" onClick={() => studyCardsToPdf(cards, title, subjectName)}>
-            <Download size={14} /> Descargar PDF
+          <button className="btn btn-outline btn-sm" onClick={descargar} disabled={generando} aria-busy={generando}>
+            <Download size={14} aria-hidden="true" /> {generando ? 'Preparando…' : 'Descargar PDF'}
           </button>
           <button className="btn btn-primary btn-sm" onClick={onClose}>Cerrar</button>
         </div>

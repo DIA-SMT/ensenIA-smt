@@ -11,6 +11,12 @@
  *
  * Los errores del SERVIDOR (RLS, validación) no se reintentan: esa
  * operación se descarta para no trabar el resto de la cola.
+ *
+ * Cada operación lleva a su DUEÑO (el usuario que la hizo) y solo se envía
+ * con la sesión de esa persona. En una compu compartida, si Sofía dejó una
+ * entrega sin enviar y después entra Nicolás, antes se intentaba mandar lo
+ * de Sofía con la sesión de Nicolás: la base lo rechazaba y se perdía. Ahora
+ * espera a que Sofía vuelva a entrar en ese dispositivo.
  */
 
 import {
@@ -30,14 +36,17 @@ type QueuedOp =
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number }
   | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number; ts: number };
 
+type QueuedOpConDuenio = QueuedOp & { owner?: string };
+
 type Listener = (pending: number, syncing: boolean) => void;
 
-let queue: QueuedOp[] = load();
+let queue: QueuedOpConDuenio[] = load();
+let duenio: string | null = null;
 let listeners: Listener[] = [];
 let flushing = false;
 let started = false;
 
-function load(): QueuedOp[] {
+function load(): QueuedOpConDuenio[] {
   try {
     return JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]');
   } catch {
@@ -51,8 +60,25 @@ function persist() {
   } catch { /* storage lleno: seguimos en memoria */ }
 }
 
+/** Las de la persona con sesión abierta (o viejas, de antes de tener dueño). */
+function esMia(op: QueuedOpConDuenio): boolean {
+  return !!duenio && (!op.owner || op.owner === duenio);
+}
+
+function misPendientes(): number {
+  return queue.filter(esMia).length;
+}
+
 function notify(syncing = false) {
-  listeners.forEach(l => l(queue.length, syncing));
+  const n = misPendientes();
+  listeners.forEach(l => l(n, syncing));
+}
+
+/** Lo llama AuthContext cuando se sabe quién entró (o null al salir). */
+export function setDuenioCola(userId: string | null): void {
+  duenio = userId;
+  notify();
+  if (userId) flush();
 }
 
 function isNetworkError(err: unknown): boolean {
@@ -104,24 +130,27 @@ type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : n
 type QueuedOpInput = DistributiveOmit<QueuedOp, 'ts'>;
 
 export function enqueue(op: QueuedOpInput) {
-  queue.push({ ...op, ts: Date.now() } as QueuedOp);
+  queue.push({ ...op, ts: Date.now(), owner: duenio ?? undefined } as QueuedOpConDuenio);
   compact();
   persist();
   notify();
 }
 
 export async function flush(): Promise<void> {
-  if (flushing || queue.length === 0) return;
+  if (flushing || misPendientes() === 0) return;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   flushing = true;
   notify(true);
   try {
-    while (queue.length > 0) {
-      const op = queue[0];
+    // En orden, solo las de quien tiene la sesión: las de otra persona se
+    // quedan en la cola hasta que esa persona vuelva a entrar.
+    let op: QueuedOpConDuenio | undefined;
+    while ((op = queue.find(esMia))) {
+      const actual = op;
+      const sacar = () => { queue = queue.filter(x => x !== actual); persist(); };
       try {
-        await run(op);
-        queue.shift();
-        persist();
+        await run(actual);
+        sacar();
         notify(true);
       } catch (err) {
         if (isNetworkError(err)) {
@@ -130,8 +159,7 @@ export async function flush(): Promise<void> {
         }
         // error del servidor: descartamos esta operación y seguimos
         console.error('Operación offline descartada por error del servidor:', err);
-        queue.shift();
-        persist();
+        sacar();
       }
     }
   } finally {
@@ -241,16 +269,16 @@ export async function recordPracticeAttemptResilient(input: {
 
 /** ¿Hay una entrega esperando sincronizarse para esta actividad? */
 export function hasPendingSubmit(activityId: string): boolean {
-  return queue.some(op => op.kind === 'submit' && op.activityId === activityId);
+  return queue.some(op => esMia(op) && op.kind === 'submit' && op.activityId === activityId);
 }
 
 export function pendingCount(): number {
-  return queue.length;
+  return misPendientes();
 }
 
 export function subscribe(listener: Listener): () => void {
   listeners.push(listener);
-  listener(queue.length, flushing);
+  listener(misPendientes(), flushing);
   return () => { listeners = listeners.filter(l => l !== listener); };
 }
 

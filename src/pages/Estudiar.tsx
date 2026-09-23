@@ -33,6 +33,9 @@ import {
   type PracticeAttempt, type PracticeQuestion, type Student, type StudentAward,
   type StudentBadge, type StudentNote, type StudentProgress,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
 import './StudentPortal.css';
 import './Estudiar.css';
 
@@ -278,25 +281,30 @@ export default function Estudiar() {
             )}
           </div>
 
-          <div className="est-badge-row">
+          {/* Cada medalla dice qué es y si ya la conseguiste: antes solo lo
+              decía un title, que no llega ni al lector de pantalla ni al dedo. */}
+          <ul className="est-badge-row" aria-label="Tus medallas">
             {(Object.keys(BADGE_META) as BadgeCode[]).map(code => {
               const earned = earnedCodes.includes(code);
+              const texto = `${BADGE_META[code].label}: ${BADGE_META[code].description}. ${earned ? 'Conseguida' : 'Todavía no'}`;
               return (
-                <span
+                <li
                   key={code}
                   className={`est-badge ${earned ? 'earned' : ''}`}
-                  title={`${BADGE_META[code].label} — ${BADGE_META[code].description}${earned ? '' : ' (todavía no)'}`}
+                  role="img"
+                  aria-label={texto}
+                  title={texto}
                 >
-                  {BADGE_META[code].emoji}
-                </span>
+                  <span aria-hidden="true">{BADGE_META[code].emoji}</span>
+                </li>
               );
             })}
             {subjectBadges.map(sb => (
-              <span key={sb.code} className="est-badge earned est-badge-subject" title={sb.label}>
-                🏆
-              </span>
+              <li key={sb.code} className="est-badge earned est-badge-subject" role="img" aria-label={`${sb.label}: conseguida`} title={sb.label}>
+                <span aria-hidden="true">🏆</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
         <div className="sp-hero-stats">
           <div className="sp-hero-stat">
@@ -466,13 +474,14 @@ export default function Estudiar() {
             className="form-input"
             type="text"
             placeholder="Anotá algo para no olvidarte (ej: repasar fotosíntesis)"
+            aria-label="Nueva nota personal"
             value={newNote}
             onChange={e => setNewNote(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addNote(); }}
             maxLength={300}
           />
-          <button className="btn btn-primary btn-sm" onClick={addNote} disabled={!newNote.trim()}>
-            <Plus size={14} />
+          <button className="btn btn-primary btn-sm" onClick={addNote} disabled={!newNote.trim()} aria-label="Agregar la nota">
+            <Plus size={14} aria-hidden="true" />
           </button>
         </div>
         {sortedNotes.length === 0 && (

@@ -17,6 +17,11 @@ import type {
   AcademicTerm, GradebookRow, Subject, SubjectAssignment, AlertThresholds,
 } from '../types';
 import TemarioEditor from '../components/TemarioEditor';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
+import '../components/Modals.css';
+import './Students.css';
 import './Libreta.css';
 
 export default function Libreta() {
@@ -217,8 +222,9 @@ export default function Libreta() {
         <>
           <div className="card libreta-toolbar">
             <div className="libreta-field">
-              <label>Materia y curso</label>
+              <label htmlFor="libreta-materia">Materia y curso</label>
               <select
+                id="libreta-materia"
                 className="form-select"
                 value={assignmentIdx}
                 onChange={e => setAssignmentIdx(Number(e.target.value))}
@@ -231,8 +237,8 @@ export default function Libreta() {
               </select>
             </div>
             <div className="libreta-field">
-              <label>Trimestre</label>
-              <select className="form-select" value={termId} onChange={e => setTermId(e.target.value)}>
+              <label htmlFor="libreta-trimestre">Trimestre</label>
+              <select id="libreta-trimestre" className="form-select" value={termId} onChange={e => setTermId(e.target.value)}>
                 {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
@@ -321,6 +327,7 @@ export default function Libreta() {
                         <td>
                           <input
                             type="number"
+                            aria-label={`Nota del trimestre de ${r.firstName} ${r.lastName}`}
                             className={`libreta-input ${gradeClass(r.grade)}`}
                             min={1}
                             max={10}

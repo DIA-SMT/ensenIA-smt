@@ -17,6 +17,9 @@ import { X, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { getSignedUrl } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
 import type { LibraryMaterial } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import './Modals.css';
 import './MaterialViewer.css';
 
 interface MaterialViewerProps {

@@ -48,7 +48,7 @@
   transition: width 0.4s var(--ease-spring);
 }
 .pq-counter {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-subtle);
   font-family: var(--font-mono);
@@ -64,7 +64,7 @@
   animation: fadeInUp 0.35s var(--ease-spring);
 }
 .pq-material { text-transform: uppercase; letter-spacing: 0.4px; }
-.pq-prompt { font-size: 17px; font-weight: 600; line-height: 1.45; }
+.pq-prompt { font-size: 1.0625rem; font-weight: 600; line-height: 1.45; }
 
 /* Opciones: reusa .sp-option y agrega estados de feedback */
 .pq-option {
@@ -108,14 +108,14 @@
   color: var(--warning);
   border-radius: var(--radius-md);
   padding: 10px 14px;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
 }
 
 /* ── Feedback formativo ── */
 .pq-feedback {
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.55;
 }
 .pq-feedback strong { display: block; margin-bottom: 6px; }
@@ -144,15 +144,15 @@
   gap: var(--space-4);
   padding: var(--space-8) var(--space-6);
 }
-.pq-final-emoji { font-size: 52px; line-height: 1; }
-.pq-final h2 { font-size: 22px; }
+.pq-final-emoji { font-size: 3.25rem; line-height: 1; }
+.pq-final h2 { font-size: 1.375rem; }
 .pq-final-score { padding: 14px 32px; }
 
 .pq-xp {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 700;
   color: var(--accent-ia);
   background: var(--indigo-glow);
@@ -165,7 +165,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--warning);
 }
 
@@ -185,7 +185,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--warning);
 }
 .pq-badge-row {
@@ -194,7 +194,7 @@
   gap: var(--space-3);
   text-align: left;
 }
-.pq-badge-emoji { font-size: 26px; line-height: 1; }
+.pq-badge-emoji { font-size: 1.625rem; line-height: 1; }
 
 @media (max-width: 480px) {
   .pq-overlay { padding: 0; }

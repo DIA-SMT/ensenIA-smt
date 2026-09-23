@@ -19,8 +19,8 @@
   align-items: flex-start;
   gap: 4px;
 }
-.course-kpi-value { font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1; }
-.course-kpi-label { font-size: 12px; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.04em; }
+.course-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.course-kpi-label { font-size: 0.75rem; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.04em; }
 
 .course-detail-grid {
   display: grid;
@@ -44,7 +44,7 @@
   align-items: center;
   gap: var(--space-3);
 }
-.coverage-subject { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.coverage-subject { font-size: 0.8125rem; color: var(--text-secondary); font-weight: 500; }
 .coverage-track {
   height: 8px;
   background: var(--bg-elevated);
@@ -52,4 +52,4 @@
   overflow: hidden;
 }
 .coverage-fill { height: 100%; background: var(--cyan-bright); border-radius: var(--radius-full); }
-.coverage-value { font-size: 12px; color: var(--text-subtle); text-align: right; font-variant-numeric: tabular-nums; }
+.coverage-value { font-size: 0.75rem; color: var(--text-subtle); text-align: right; font-variant-numeric: tabular-nums; }

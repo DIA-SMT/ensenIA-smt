@@ -20,6 +20,9 @@ import {
     ALERT_STATUS_META, ALERT_OUTCOME_META,
     type Alert, type AlertOutcome, type AlertThresholds,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Dashboard.css';
 import './Alerts.css';
 import '../components/Modals.css';
 

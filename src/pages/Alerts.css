@@ -40,9 +40,9 @@
 .alert-summary-card.static { cursor: default; }
 .alert-summary-card.active { border-color: var(--cyan-bright); box-shadow: var(--shadow-cyan); }
 
-.summary-count { font-size: 28px; font-weight: 700; line-height: 1; }
+.summary-count { font-size: 1.75rem; font-weight: 700; line-height: 1; }
 .summary-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-subtle);
   text-transform: uppercase;
@@ -102,7 +102,7 @@
 /* .badge-escalada vive en index.css: la comparten Alertas y Dashboard. */
 
 .lifecycle-msg {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--text-primary);
   line-height: 1.45;
 }
@@ -111,7 +111,7 @@
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
   background: var(--bg-surface);
   border-radius: var(--radius-md);

@@ -604,7 +604,7 @@ export default function IALab() {
             <div className="lab-sidebar card">
                 <div className="lab-panel-header">
                     <Folder size={18} className="text-ia-accent" />
-                    <h3>Planificación</h3>
+                    <h3 aria-level={2}>Planificación</h3>
                 </div>
 
                 {/* Subject/Course Selector */}
@@ -612,6 +612,7 @@ export default function IALab() {
                     <div className="subject-selector">
                         <div className="selector-current" tabIndex={0}>
                             <select
+                                aria-label="Materia y curso"
                                 className="form-select compact-select"
                                 value={selectedAssignmentIdx}
                                 onChange={e => {
@@ -899,8 +900,9 @@ export default function IALab() {
                                     className="btn-send-large"
                                     onClick={handleSend}
                                     disabled={isStreaming || !chatInput.trim()}
+                                    aria-label="Enviar a la IA"
                                 >
-                                    <Send size={18} />
+                                    <Send size={18} aria-hidden="true" />
                                 </button>
                             </div>
                             {activeTool === 'sum' && (
@@ -1028,8 +1030,9 @@ export default function IALab() {
                                     className="btn-send-large"
                                     onClick={() => { setCenterMode('chat'); handleSend(); }}
                                     disabled={isStreaming || !chatInput.trim()}
+                                    aria-label="Enviar a la IA"
                                 >
-                                    <Send size={18} />
+                                    <Send size={18} aria-hidden="true" />
                                 </button>
                             </div>
                             <div className="lab-input-hints">
@@ -1047,7 +1050,7 @@ export default function IALab() {
                 {/* Tools Section */}
                 <div className="lab-panel-header">
                     <Sparkles size={18} className="text-ia-accent" />
-                    <h3>Herramientas IA</h3>
+                    <h3 aria-level={2}>Herramientas IA</h3>
                 </div>
                 <div className="tools-list">
                     {tools.map(t => (
@@ -1080,8 +1083,9 @@ export default function IALab() {
 
                 <div className="config-form">
                     <div className="form-group">
-                        <label><Users size={14} /> Edad / Nivel Educativo</label>
+                        <label htmlFor="lab-nivel"><Users size={14} aria-hidden="true" /> Edad / Nivel Educativo</label>
                         <select
+                            id="lab-nivel"
                             className="form-select"
                             value={educationLevel}
                             onChange={e => setEducationLevel(e.target.value)}
@@ -1095,8 +1099,8 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><BookOpen size={14} /> Materia</label>
-                        <select className="form-select" value={currentAssignment?.subjectId ?? ''} disabled>
+                        <label htmlFor="lab-materia"><BookOpen size={14} aria-hidden="true" /> Materia</label>
+                        <select id="lab-materia" className="form-select" value={currentAssignment?.subjectId ?? ''} disabled>
                             {assignments.map((a, i) => (
                                 <option key={i} value={a.subjectId}>
                                     {getSubjectName(a.subjectId) || 'Materia'}
@@ -1106,10 +1110,12 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><SlidersHorizontal size={14} /> Dificultad</label>
+                        <label htmlFor="lab-dificultad"><SlidersHorizontal size={14} aria-hidden="true" /> Dificultad</label>
                         <div className="range-wrapper">
                             <input
+                                id="lab-dificultad"
                                 type="range"
+                                aria-valuetext={['básica', 'fácil', 'media', 'difícil', 'avanzada'][difficulty - 1]}
                                 min="1"
                                 max="5"
                                 value={difficulty}
@@ -1124,8 +1130,9 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><Paperclip size={14} /> Material de la Biblioteca</label>
+                        <label htmlFor="lab-material"><Paperclip size={14} aria-hidden="true" /> Material de la Biblioteca</label>
                         <select
+                            id="lab-material"
                             className="form-select"
                             value={attachedDoc?.id ?? ''}
                             onChange={e => {

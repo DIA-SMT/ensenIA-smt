@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-    Search, MoreHorizontal, AlertTriangle, X, HeartPulse, PencilLine,
+    Search, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,18 +12,26 @@ import { getGuardiansOfStudent, createNotice } from '../services/guardians.servi
 import { summarizeStudent } from '../services/documents.service';
 import { getStudentProgress } from '../services/practice.service';
 import { getStudentAwards, giveStudentAward } from '../services/awards.service';
+import { getPublishedGradesByStudent } from '../services/gradebook.service';
+import { formatoNota } from '../lib/resumenNotas';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import AwardPickerModal from '../components/AwardPickerModal';
 import {
     FEELING_META, OBSERVATION_META, AWARD_META, levelForXp,
     type Student, type StudentCheckin, type StudentObservation,
     type GuardianLink, type ObservationCategory, type StudentAward, type StudentProgress,
+    type TermGrade,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
+import './Biblioteca.css';
 import './Students.css';
 import '../components/Modals.css';
 
 export default function Students() {
     const { user } = useAuth();
+    const [params, setParams] = useSearchParams();
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [search, setSearch] = useState('');
@@ -33,6 +42,8 @@ export default function Students() {
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
     const [awards, setAwards] = useState<StudentAward[]>([]);
     const [studentProgress, setStudentProgress] = useState<StudentProgress | null>(null);
+    // Notas publicadas en la libreta: lo único real para "cómo le va".
+    const [notasFicha, setNotasFicha] = useState<TermGrade[] | null>(null);
     const [showAwardModal, setShowAwardModal] = useState(false);
 
     // Observación rápida
@@ -62,6 +73,16 @@ export default function Students() {
         getStudentsByTeacher(courseIds).then(setAllStudents).catch(console.error);
     }, [user]);
 
+    // Enlace directo desde el buscador: /students?estudiante=<id> abre la
+    // ficha. Solo si el estudiante está entre los de sus cursos.
+    const pedido = params.get('estudiante');
+    useEffect(() => {
+        if (!pedido || allStudents.length === 0) return;
+        const hallado = allStudents.find(s => s.id === pedido);
+        if (hallado) setSelectedStudent(hallado);
+        setParams(p => { p.delete('estudiante'); return p; }, { replace: true });
+    }, [pedido, allStudents, setParams]);
+
     useEffect(() => {
         if (!selectedStudent) return;
         setCheckins([]);
@@ -69,6 +90,8 @@ export default function Students() {
         setGuardians([]);
         setAwards([]);
         setStudentProgress(null);
+        setNotasFicha(null);
+        getPublishedGradesByStudent(selectedStudent.id).then(setNotasFicha).catch(err => { console.error(err); setNotasFicha([]); });
         getCheckinsByStudent(selectedStudent.id, 8).then(setCheckins).catch(console.error);
         getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
@@ -95,15 +118,6 @@ export default function Students() {
             s.courseName.toLowerCase().includes(search.toLowerCase())
         )
         : allStudents;
-
-    const getStatusBadge = (status: Student['status']) => {
-        switch (status) {
-            case 'excellent': return <span className="badge badge-success">Excelente</span>;
-            case 'good': return <span className="badge badge-success" style={{ opacity: 0.8 }}>Bueno</span>;
-            case 'warning': return <span className="badge badge-warning">En Observación</span>;
-            case 'critical': return <span className="badge badge-danger">Riesgo</span>;
-        }
-    };
 
     const handleAddObservation = async () => {
         if (!selectedStudent || !obsNote.trim()) return;
@@ -162,9 +176,16 @@ export default function Students() {
         setSummaryLoading(true);
         try {
             const s = selectedStudent;
+            const notas = notasFicha ?? await getPublishedGradesByStudent(s.id);
             const lines: string[] = [
                 `ESTUDIANTE: ${s.firstName} ${s.lastName} — ${s.courseName}.`,
-                `MÉTRICAS: asistencia ${s.attendance}%, promedio ${s.average}, progreso ${s.progress}%, estado general: ${s.status}.`,
+                '',
+                'NOTAS PUBLICADAS EN LA LIBRETA:',
+                ...(notas.length
+                    ? notas.filter(n => n.grade !== null).map(n =>
+                        `- ${n.subjectName ?? 'Materia'}, ${n.termName ?? 'trimestre'}: ${n.grade}${n.carriesToDecember ? ' (se lleva la materia a diciembre)' : ''}`)
+                    : ['(todavía no hay notas publicadas)']),
+                '(La plataforma no registra asistencia: no la menciones ni la supongas.)',
                 '',
                 'CHECK-INS EMOCIONALES RECIENTES:',
                 ...(checkins.length
@@ -198,6 +219,7 @@ export default function Students() {
                             <input
                                 type="text"
                                 placeholder="Buscar alumno..."
+                                aria-label="Buscar estudiante por nombre o curso"
                                 className="search-input"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -210,12 +232,8 @@ export default function Students() {
                     <table className="modern-table">
                         <thead>
                             <tr>
-                                <th>Estudiante</th>
-                                <th>Curso</th>
-                                <th>Estado</th>
-                                <th>Alertas</th>
-                                <th>Progreso</th>
-                                <th></th>
+                                <th scope="col">Estudiante</th>
+                                <th scope="col">Curso</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -226,32 +244,17 @@ export default function Students() {
                                     className={selectedStudent?.id === student.id ? 'selected-row' : ''}
                                 >
                                     <td>
-                                        <div className="student-cell">
-                                            <div className="student-avatar">{student.avatarInitials}</div>
+                                        <button
+                                            type="button"
+                                            className="student-cell student-cell-btn"
+                                            onClick={e => { e.stopPropagation(); setSelectedStudent(student); }}
+                                            aria-pressed={selectedStudent?.id === student.id}
+                                        >
+                                            <span className="student-avatar" aria-hidden="true">{student.avatarInitials}</span>
                                             <span className="font-medium">{student.firstName} {student.lastName}</span>
-                                        </div>
+                                        </button>
                                     </td>
                                     <td className="text-secondary">{student.courseName}</td>
-                                    <td>{getStatusBadge(student.status)}</td>
-                                    <td>
-                                        {student.alerts > 0
-                                            ? <span className="alert-count text-danger"><AlertTriangle size={14} /> {student.alerts}</span>
-                                            : <span className="text-secondary">-</span>}
-                                    </td>
-                                    <td>
-                                        <div className="progress-cell">
-                                            <div className="progress-bar-bg">
-                                                <div
-                                                    className={`progress-bar-fill pb-${student.status}`}
-                                                    style={{ width: `${student.progress}%` }}
-                                                ></div>
-                                            </div>
-                                            <span className="text-sm font-medium">{student.progress}%</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <button className="btn-icon"><MoreHorizontal size={18} /></button>
-                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -265,7 +268,7 @@ export default function Students() {
                     <div className="profile-header border-bottom">
                         <div className="profile-title-row">
                             <h3>Perfil del Estudiante</h3>
-                            <button className="btn-icon" onClick={() => setSelectedStudent(null)}><X size={18} /></button>
+                            <button className="btn-icon" onClick={() => setSelectedStudent(null)} aria-label="Cerrar la ficha"><X size={18} aria-hidden="true" /></button>
                         </div>
                     </div>
 
@@ -274,20 +277,29 @@ export default function Students() {
                             <div className="profile-avatar-large">{selectedStudent.avatarInitials}</div>
                             <h2 className="profile-name">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
                             <p className="profile-course">{selectedStudent.courseName}</p>
-                            <div className="profile-status mt-2">{getStatusBadge(selectedStudent.status)}</div>
                         </div>
 
                         <div className="profile-section">
-                            <h4>Métricas Generales</h4>
+                            <h4>Notas publicadas</h4>
+                            {notasFicha === null && <p className="text-sm text-secondary" role="status">Cargando notas…</p>}
+                            {notasFicha && notasFicha.filter(n => n.grade !== null).length === 0 && (
+                                <p className="text-sm text-secondary">Todavía no hay notas publicadas en la libreta.</p>
+                            )}
+                            {notasFicha && notasFicha.some(n => n.grade !== null) && (
+                                <ul className="ficha-notas">
+                                    {notasFicha.filter(n => n.grade !== null).map(n => (
+                                        <li key={n.id}>
+                                            <span>{n.subjectName ?? 'Materia'} <span className="text-subtle">· {n.termName}</span></span>
+                                            <strong className={n.carriesToDecember ? 'text-danger' : undefined}>{formatoNota(n.grade as number)}</strong>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        <div className="profile-section">
+                            <h4>Estudio</h4>
                             <div className="metrics-grid">
-                                <div className="metric-box">
-                                    <span className="metric-label">Asistencia</span>
-                                    <span className="metric-val">{selectedStudent.attendance}%</span>
-                                </div>
-                                <div className="metric-box">
-                                    <span className="metric-label">Promedio</span>
-                                    <span className="metric-val">{selectedStudent.average}</span>
-                                </div>
                                 {studentProgress && (
                                     <>
                                         <div className="metric-box">

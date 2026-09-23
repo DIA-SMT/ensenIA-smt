@@ -8,8 +8,8 @@
   position: relative;
 }
 
-.checkin-title { font-size: 14.5px; font-weight: 600; }
-.checkin-subtitle { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+.checkin-title { font-size: 0.9063rem; font-weight: 600; }
+.checkin-subtitle { font-size: 0.7813rem; color: var(--text-secondary); margin-top: 2px; }
 
 .checkin-emojis {
   display: flex;
@@ -35,8 +35,8 @@
   background: var(--cyan-glow);
   box-shadow: 0 0 0 1px var(--cyan-bright);
 }
-.checkin-emoji-icon { font-size: 22px; line-height: 1; }
-.checkin-emoji-label { font-size: 10.5px; color: var(--text-secondary); }
+.checkin-emoji-icon { font-size: 1.375rem; line-height: 1; }
+.checkin-emoji-label { font-size: 0.6563rem; color: var(--text-secondary); }
 
 .checkin-comment { display: flex; flex-direction: column; gap: 8px; }
 
@@ -44,7 +44,7 @@
   position: absolute;
   top: 4px;
   right: 6px;
-  font-size: 12.5px;
+  font-size: 0.7813rem;
   color: var(--text-subtle);
   /* target táctil cómodo sin cambiar el look */
   padding: 10px 12px;

@@ -20,7 +20,7 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 6px 12px;
   border-radius: var(--radius-full);
@@ -35,7 +35,7 @@
 }
 
 .heatmap-caption {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-subtle);
 }
 
@@ -49,7 +49,7 @@
 
 .heat-collab,
 .heat-rowlab {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--text-subtle);
   text-transform: uppercase;
@@ -80,7 +80,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   border: none;
@@ -90,8 +90,8 @@
 .heat-cell:hover { filter: brightness(1.15); }
 
 .heat-c0 { background: var(--success-light); color: var(--success); }
-.heat-c1 { background: var(--warning-light); color: var(--warning); }
-.heat-c2 { background: var(--danger-light); color: var(--danger); }
+.heat-c1 { background: var(--warning-light); color: var(--warning-ink); }
+.heat-c2 { background: var(--danger-light); color: var(--danger-ink); }
 /* Sobre el gris claro de la celda, --text-muted queda en 2.3:1. */
 /* Sobre la celda gris clara, --text-muted queda en 2.3:1. */
 .heat-na {

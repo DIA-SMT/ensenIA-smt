@@ -5,6 +5,9 @@
 
 import { X, GraduationCap } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/Biblioteca.css';
 import './Modals.css';
 
 interface Props {

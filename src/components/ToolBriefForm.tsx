@@ -9,6 +9,9 @@
 import { useMemo, useState } from 'react';
 import { Wand2, X } from 'lucide-react';
 import type { IAToolType } from '../types';
+// Estilos que este componente usa y viven en otra hoja: se importan acá
+// para que se vea bien en cualquier pantalla donde aparezca.
+import '../pages/IALab.css';
 
 interface Props {
   tool: IAToolType;

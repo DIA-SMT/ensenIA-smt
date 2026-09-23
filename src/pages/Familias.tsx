@@ -11,6 +11,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { getNoticesForStaff, createNotice, deleteNotice } from '../services/guardians.service';
 import { getStudentsByTeacher, getAllStudents } from '../services/students.service';
 import type { GuardianNotice, NoticeReceipt, NoticeType, Student } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
 import './Familias.css';
 import '../components/Modals.css';
 
@@ -117,8 +120,8 @@ export default function Familias() {
           </div>
 
           <div className="em-field">
-            <label>Destinatario</label>
-            <select className="form-select" value={targetStudentId} onChange={e => setTargetStudentId(e.target.value)}>
+            <label htmlFor="fam-dest">Destinatario</label>
+            <select id="fam-dest" className="form-select" value={targetStudentId} onChange={e => setTargetStudentId(e.target.value)}>
               <option value="">📢 Todas las familias de la escuela</option>
               {students.map(s => (
                 <option key={s.id} value={s.id}>Familia de {s.firstName} {s.lastName} ({s.courseName})</option>
@@ -127,30 +130,30 @@ export default function Familias() {
           </div>
 
           <div className="em-field">
-            <label>Título</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={type === 'citacion' ? 'Citación: reunión por...' : 'Ej: Acto del 9 de Julio'} />
+            <label htmlFor="fam-titulo">Título</label>
+            <input id="fam-titulo" type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={type === 'citacion' ? 'Citación: reunión por...' : 'Ej: Acto del 9 de Julio'} />
           </div>
 
           <div className="em-field">
-            <label>Mensaje</label>
-            <textarea rows={4} value={body} onChange={e => setBody(e.target.value)} placeholder="Estimadas familias..." />
+            <label htmlFor="fam-mensaje">Mensaje</label>
+            <textarea id="fam-mensaje" rows={4} value={body} onChange={e => setBody(e.target.value)} placeholder="Estimadas familias..." />
           </div>
 
           {type === 'citacion' && (
             <>
               <div className="em-row">
                 <div className="em-field">
-                  <label>Fecha</label>
-                  <input type="date" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} />
+                  <label htmlFor="fam-fecha">Fecha</label>
+                  <input id="fam-fecha" type="date" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} />
                 </div>
                 <div className="em-field">
-                  <label>Hora</label>
-                  <input type="text" placeholder="10:00" value={meetingTime} onChange={e => setMeetingTime(e.target.value)} />
+                  <label htmlFor="fam-hora">Hora</label>
+                  <input id="fam-hora" type="text" placeholder="10:00" value={meetingTime} onChange={e => setMeetingTime(e.target.value)} />
                 </div>
               </div>
               <div className="em-field">
-                <label>Lugar</label>
-                <input type="text" value={meetingPlace} onChange={e => setMeetingPlace(e.target.value)} placeholder="Dirección de la escuela" />
+                <label htmlFor="fam-lugar">Lugar</label>
+                <input id="fam-lugar" type="text" value={meetingPlace} onChange={e => setMeetingPlace(e.target.value)} placeholder="Dirección de la escuela" />
               </div>
             </>
           )}
