@@ -51,7 +51,7 @@ interface TopbarProps {
 export default function Topbar({ onMenuClick, onHelpClick }: TopbarProps) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, isDocente, school, mySchools, switchSchool } = useAuth();
+    const { user, isDocente, isSuperadmin, school, mySchools, switchSchool } = useAuth();
     const [switching, setSwitching] = useState(false);
 
     // Quien trabaja en más de una escuela elige en cuál está ahora
@@ -90,7 +90,9 @@ export default function Topbar({ onMenuClick, onHelpClick }: TopbarProps) {
                     <Menu size={20} />
                 </button>
                 <h2 className="page-title">{pageTitle}</h2>
-                {mySchools.length > 1 && (
+                {/* El superadmin no "entra" a una escuela: pasarse a una de sus
+                    membresías lo dejaría sin el rol de superadmin */}
+                {!isSuperadmin && mySchools.length > 1 && (
                     <select
                         className="form-select topbar-school"
                         value={school?.id ?? ''}
