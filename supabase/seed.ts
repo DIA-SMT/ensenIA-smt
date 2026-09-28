@@ -69,11 +69,12 @@ async function main() {
       email: u.email,
       password: PASSWORD,
       email_confirm: true,
+      // Rol y escuela van en app_metadata: solo la service role puede
+      // escribirlo, y es lo único que lee handle_new_user (migración 017).
+      app_metadata: { role: u.role, school_id: ids.school },
       user_metadata: {
         first_name: u.firstName,
         last_name: u.lastName,
-        role: u.role,
-        school_id: ids.school,
         avatar_initials: u.initials,
       },
     });
@@ -177,11 +178,10 @@ async function main() {
       email,
       password: PASSWORD,
       email_confirm: true,
+      app_metadata: { role: 'estudiante', school_id: ids.school },
       user_metadata: {
         first_name: s.firstName,
         last_name: s.lastName,
-        role: 'estudiante',
-        school_id: ids.school,
         avatar_initials: s.initials,
       },
     });

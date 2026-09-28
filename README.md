@@ -58,6 +58,9 @@ Variables en `.env.local`:
 ```
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key>
+# Solo para demos: muestra los botones de cuentas demo en el login.
+# Nunca en producción (las contraseñas quedan en el bundle público).
+# VITE_DEMO_LOGIN=true
 ```
 
 ### Backend (Supabase)
@@ -66,7 +69,8 @@ VITE_SUPABASE_ANON_KEY=<anon key>
 - Edge functions en `supabase/functions/`: `ia-chat` (chat con streaming) y `process-document`
   (extraer texto, resumir, importar programa, extraer preguntas — structured outputs).
 - Deploy de funciones: `supabase functions deploy <name> --project-ref <ref> --use-api`
-- Secret necesario para la IA: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-... --project-ref <ref>`
+- Secret necesario para la IA: `supabase secrets set OPENROUTER_API_KEY=... --project-ref <ref>` (podcasts: `ELEVENLABS_API_KEY`)
+- Las cuentas se crean solo desde el backend: rol y escuela van en `app_metadata` (`auth.admin.createUser`). Desde la migración 017 un usuario no puede elegir ni cambiar su rol o escuela.
 - Seed de datos demo: `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed.ts`
 
 ## Cuentas demo (password: `demo123`)

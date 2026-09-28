@@ -42,11 +42,11 @@ async function main() {
       email: p.email,
       password: 'demo123',
       email_confirm: true,
+      // Rol y escuela en app_metadata (migración 017).
+      app_metadata: { role: 'padre', school_id: school.id },
       user_metadata: {
         first_name: p.firstName,
         last_name: p.lastName,
-        role: 'padre',
-        school_id: school.id,
         avatar_initials: p.initials,
       },
     });

@@ -133,7 +133,10 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Demo credentials */}
+        {/* Credenciales demo: solo con VITE_DEMO_LOGIN=true. Vite reemplaza
+            la variable al compilar y, apagada, las contraseñas ni llegan al
+            bundle — en producción cualquiera las leía y entraba. */}
+        {import.meta.env.VITE_DEMO_LOGIN === 'true' && (
         <div className="login-demo">
           <p className="login-demo-title">Credenciales demo</p>
           <div className="login-demo-grid">
@@ -155,6 +158,7 @@ export default function Login() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
