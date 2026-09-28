@@ -30,6 +30,9 @@ import Corregir from './pages/Corregir';
 import ArmarModulo from './pages/ArmarModulo';
 import PanelDireccion from './pages/PanelDireccion';
 import Familias from './pages/Familias';
+import AdminEscuelas from './pages/admin/AdminEscuelas';
+import GestionEscuela from './pages/admin/GestionEscuela';
+import { homeFor } from './lib/home';
 import ActividadRapida from './pages/ActividadRapida';
 import ComunicadosFamilia from './pages/ComunicadosFamilia';
 import MisHijos from './pages/MisHijos';
@@ -37,11 +40,7 @@ import MisHijos from './pages/MisHijos';
 /** Redirige al home según el rol. */
 function HomeRedirect() {
   const { user } = useAuth();
-  const home = user?.role === 'estudiante' ? '/mis-actividades'
-    : user?.role === 'padre' ? '/mis-hijos'
-    : user?.role === 'docente' ? '/hoy'
-    : '/panel';
-  return <Navigate to={home} replace />;
+  return <Navigate to={homeFor(user?.role)} replace />;
 }
 
 function App() {
@@ -160,6 +159,17 @@ function App() {
             } />
             <Route path="comunicaciones" element={
               <ProtectedRoute allowedRoles={['director']}><Comunicaciones /></ProtectedRoute>
+            } />
+            <Route path="mi-escuela" element={
+              <ProtectedRoute allowedRoles={['director']}><GestionEscuela /></ProtectedRoute>
+            } />
+
+            {/* Superadmin */}
+            <Route path="admin" element={
+              <ProtectedRoute allowedRoles={['superadmin']}><AdminEscuelas /></ProtectedRoute>
+            } />
+            <Route path="admin/escuelas/:id" element={
+              <ProtectedRoute allowedRoles={['superadmin']}><GestionEscuela /></ProtectedRoute>
             } />
           </Route>
 

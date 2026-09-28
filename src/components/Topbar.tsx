@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Zap, Command, Menu, HelpCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,10 +31,13 @@ const routeNames: Record<string, string> = {
     '/comunicados-familia': 'Comunicados',
     '/mis-hijos': 'Cómo le va',
     '/actividad-rapida': 'Crear actividad',
+    '/mi-escuela': 'Mi escuela',
+    '/admin': 'Escuelas',
 };
 
 function titleFor(pathname: string): string {
     if (routeNames[pathname]) return routeNames[pathname];
+    if (pathname.startsWith('/admin/escuelas/')) return 'Gestión de escuela';
     if (pathname.startsWith('/actividades/')) return 'Resultados de actividad';
     if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
     return 'SMT EstudIA';
@@ -47,7 +51,21 @@ interface TopbarProps {
 export default function Topbar({ onMenuClick, onHelpClick }: TopbarProps) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, isDocente } = useAuth();
+    const { user, isDocente, school, mySchools, switchSchool } = useAuth();
+    const [switching, setSwitching] = useState(false);
+
+    // Quien trabaja en más de una escuela elige en cuál está ahora
+    const handleSwitch = async (schoolId: string) => {
+        if (!schoolId || schoolId === school?.id) return;
+        setSwitching(true);
+        try {
+            await switchSchool(schoolId); // recarga la app en la escuela nueva
+        } catch (err) {
+            console.error(err);
+            alert('No se pudo cambiar de escuela. Probá de nuevo.');
+            setSwitching(false);
+        }
+    };
 
     const pageTitle = titleFor(location.pathname);
 
@@ -72,6 +90,20 @@ export default function Topbar({ onMenuClick, onHelpClick }: TopbarProps) {
                     <Menu size={20} />
                 </button>
                 <h2 className="page-title">{pageTitle}</h2>
+                {mySchools.length > 1 && (
+                    <select
+                        className="form-select topbar-school"
+                        value={school?.id ?? ''}
+                        onChange={e => handleSwitch(e.target.value)}
+                        disabled={switching}
+                        aria-label="Escuela en la que estás trabajando"
+                        title="Cambiar de escuela"
+                    >
+                        {mySchools.map(s => (
+                            <option key={s.schoolId} value={s.schoolId}>{s.schoolName}</option>
+                        ))}
+                    </select>
+                )}
                 <span className="demo-chip" title="Demo para las escuelas municipales Gabriela Mistral y Alfonsina Storni. Los datos son de prueba.">DEMO</span>
                 <div className="topbar-greeting">
                     <span>{greeting}, {firstName}</span>

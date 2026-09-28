@@ -528,3 +528,37 @@ CREATE POLICY "Managers manage guardian links"
     manages_school(student_school(student_id))
     AND is_member_as(guardian_user_id, student_school(student_id), 'padre')
   );
+
+-- ══ 7. Permisos para crear cuentas y resetear claves ══
+-- Los usa la función de servidor admin-usuarios, llamándolos con el JWT
+-- de quien pide (así la regla vive acá y se prueba junto con el resto).
+
+-- ¿Puedo crear una cuenta con este rol en esta escuela?
+CREATE OR REPLACE FUNCTION admin_can_create(p_school UUID, p_role user_role)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT p_role <> 'superadmin'
+     AND manages_school(p_school)
+     AND (p_role <> 'director' OR is_superadmin())
+$$;
+
+-- ¿Puedo resetearle la clave a esta persona? El superadmin, a cualquiera
+-- menos a otro superadmin; el director, a la gente de su escuela que no
+-- sea directora en ninguna.
+CREATE OR REPLACE FUNCTION admin_can_manage_user(p_user UUID)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT p_user <> auth.uid()
+     AND NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_user AND role = 'superadmin')
+     AND (
+       is_superadmin()
+       OR (
+         is_managed_member(p_user)
+         AND NOT EXISTS (SELECT 1 FROM school_memberships WHERE user_id = p_user AND role = 'director')
+       )
+     )
+$$;

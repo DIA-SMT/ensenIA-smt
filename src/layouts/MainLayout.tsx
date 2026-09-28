@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import OfflineBanner from '../components/OfflineBanner';
 import GuiaRapida, { shouldAutoOpenGuide } from '../components/GuiaRapida';
+import CambiarClave from '../components/CambiarClave';
 import { useAuth } from '../contexts/AuthContext';
 import { startOfflineSync } from '../services/offline-queue.service';
 import './MainLayout.css';
@@ -20,11 +21,15 @@ export default function MainLayout() {
 
     // La guía se abre sola la primera vez (salvo que pidan que no)
     useEffect(() => {
-        if (user && shouldAutoOpenGuide(user.role)) setShowGuide(true);
+        // La guía es de uso en el aula: el superadmin no tiene destinos ahí
+        if (user && user.role !== 'superadmin' && shouldAutoOpenGuide(user.role)) setShowGuide(true);
     }, [user?.id]);
 
     // Al navegar en móvil, cerramos el drawer
     useEffect(() => { setMobileNavOpen(false); }, [location.pathname]);
+
+    // Con la clave inicial que dio la escuela no se entra: primero una propia
+    if (user?.mustChangePassword) return <CambiarClave />;
 
     return (
         <div className={`layout-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>

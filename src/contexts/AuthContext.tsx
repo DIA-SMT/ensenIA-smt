@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback, ty
 import { useNavigate } from 'react-router-dom';
 import type { User, School } from '../types';
 import { supabase } from '../lib/supabase';
-import { getProfile, getSchool } from '../services/profiles.service';
+import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
+import { toLoginEmail } from '../lib/dni';
 
 /**
  * Reglas de este contexto (aprendidas a fuerza de bugs):
@@ -25,7 +26,8 @@ const PROFILE_CACHE_KEY = 'ensenia_profile_cache_v1';
 
 interface ProfileCache {
   user: User;
-  school: School;
+  /** null para el superadmin, que no pertenece a ninguna escuela */
+  school: School | null;
 }
 
 function readProfileCache(): ProfileCache | null {
@@ -57,11 +59,19 @@ interface AuthContextType {
   isDirector: boolean;
   isDocente: boolean;
   isEstudiante: boolean;
+  isSuperadmin: boolean;
   isLoading: boolean;
   /** true cuando estamos mostrando el perfil cacheado sin poder validar contra el servidor */
   isOfflineProfile: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** Escuelas a las que pertenece (más de una: puede elegir la activa) */
+  mySchools: MySchool[];
+  /** email o DNI */
+  login: (emailOrDni: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  /** Vuelve a leer el perfil (después de cambiar la clave, por ejemplo) */
+  refreshProfile: () => Promise<void>;
+  /** Cambia la escuela activa y recarga la app en esa escuela */
+  switchSchool: (schoolId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [school, setSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOfflineProfile, setIsOfflineProfile] = useState(false);
+  const [mySchools, setMySchools] = useState<MySchool[]>([]);
   const navigate = useNavigate();
 
   const currentUserIdRef = useRef<string | null>(null);
@@ -103,10 +114,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         try {
           const profile = await getProfile(userId);
-          const schoolData = await getSchool(profile.schoolId);
+          // El superadmin no tiene escuela activa
+          const schoolData = profile.schoolId ? await getSchool(profile.schoolId) : null;
+          const schools = await getMySchools(userId).catch(() => []);
           if (cancelled) return;
           setUser(profile);
           setSchool(schoolData);
+          setMySchools(schools);
           setIsOfflineProfile(false);
           writeProfileCache({ user: profile, school: schoolData });
         } catch (err) {
@@ -154,15 +168,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (emailOrDni: string, password: string): Promise<{ success: boolean; error?: string }> => {
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
+      email: toLoginEmail(emailOrDni),
       password,
     });
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        return { success: false, error: 'Email o contraseña incorrectos.' };
+        return { success: false, error: 'Usuario o contraseña incorrectos.' };
       }
       if (error.message.includes('fetch') || error.name === 'AuthRetryableFetchError') {
         return { success: false, error: 'Sin conexión. Conectate a una red para iniciar sesión la primera vez.' };
@@ -192,6 +206,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/login');
   }, [navigate]);
 
+  const refreshProfile = useCallback(async () => {
+    const id = currentUserIdRef.current;
+    if (!id) return;
+    const profile = await getProfile(id);
+    const schoolData = profile.schoolId ? await getSchool(profile.schoolId) : null;
+    setUser(profile);
+    setSchool(schoolData);
+    setMySchools(await getMySchools(id).catch(() => []));
+    writeProfileCache({ user: profile, school: schoolData });
+  }, []);
+
+  const switchSchool = useCallback(async (schoolId: string) => {
+    await switchSchoolRpc(schoolId);
+    // Todo lo cargado (y lo cacheado offline) es de la otra escuela:
+    // más simple y seguro arrancar de cero en la nueva.
+    clearProfileCache();
+    if ('caches' in window) await caches.delete('supabase-rest').catch(() => false);
+    window.location.assign('/');
+  }, []);
+
   const value: AuthContextType = {
     user,
     school,
@@ -199,10 +233,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isDirector: user?.role === 'director',
     isDocente: user?.role === 'docente',
     isEstudiante: user?.role === 'estudiante',
+    isSuperadmin: user?.role === 'superadmin',
     isLoading,
     isOfflineProfile,
+    mySchools,
     login,
     logout,
+    refreshProfile,
+    switchSchool,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

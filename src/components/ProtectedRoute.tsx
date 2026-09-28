@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../types';
+import { homeFor } from '../lib/home';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -37,11 +38,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     // Cada rol tiene su "home"
-    const home = user.role === 'estudiante' ? '/mis-actividades'
-      : user.role === 'padre' ? '/mis-hijos'
-      : user.role === 'docente' ? '/hoy'
-      : '/panel';
-    return <Navigate to={home} replace />;
+    return <Navigate to={homeFor(user.role)} replace />;
   }
 
   return <>{children}</>;

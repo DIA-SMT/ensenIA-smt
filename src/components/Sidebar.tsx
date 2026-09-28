@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Calendar, Users, BookOpen,
     Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
     ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun, Boxes, Activity
-, NotebookText } from 'lucide-react';
+, NotebookText, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUnreadAlertCount } from '../services/alerts.service';
 import { getMyLiveSession } from '../services/live.service';
@@ -49,6 +49,12 @@ const directorNavItems: NavItem[] = [
     { label: 'Docentes', path: '/docentes', icon: Users, showAlerts: true },
     { label: 'Familias', path: '/familias', icon: HeartHandshake },
     { label: 'Comunicaciones', path: '/comunicaciones', icon: MessageSquare },
+    { label: 'Mi escuela', path: '/mi-escuela', icon: Building2 },
+    { label: 'Ajustes', path: '/settings', icon: Settings },
+];
+
+const superadminNavItems: NavItem[] = [
+    { label: 'Escuelas', path: '/admin', icon: Building2 },
     { label: 'Ajustes', path: '/settings', icon: Settings },
 ];
 
@@ -88,7 +94,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
-    const { user, school, isDirector, isEstudiante, logout } = useAuth();
+    const { user, school, isDirector, isEstudiante, isSuperadmin, logout } = useAuth();
     const isPadre = user?.role === 'padre';
     const [alertCount, setAlertCount] = useState(0);
 
@@ -117,13 +123,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         return () => { alive = false; window.clearInterval(id); };
     }, [user?.id, isDocente]);
 
-    const navItems = isDirector ? directorNavItems
+    const navItems = isSuperadmin ? superadminNavItems
+        : isDirector ? directorNavItems
         : isEstudiante ? studentNavItems
         : isPadre ? guardianNavItems
         : teacherNavItems;
 
     const displayName = user ? `${user.firstName} ${user.lastName}` : '';
-    const roleLabel = isDirector ? 'Directora' : isEstudiante ? 'Estudiante' : isPadre ? 'Familia' : 'Docente';
+    const roleLabel = isSuperadmin ? 'Superadmin' : isDirector ? 'Dirección' : isEstudiante ? 'Estudiante' : isPadre ? 'Familia' : 'Docente';
     const avatarInitials = user?.avatarInitials ?? '??';
 
     return (
@@ -133,7 +140,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {!collapsed && (
                     <div className="logo-text">
                         <span className="logo-title">SMT EstudIA</span>
-                        <span className="logo-subtitle">{school?.shortName ?? 'Escuela Municipal'}</span>
+                        <span className="logo-subtitle">{school?.shortName ?? (isSuperadmin ? 'Administración' : 'Escuela Municipal')}</span>
                     </div>
                 )}
             </div>
