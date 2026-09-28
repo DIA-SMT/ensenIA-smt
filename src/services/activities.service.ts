@@ -272,16 +272,39 @@ export async function getEnrollmentsByStudent(studentId: string): Promise<Enroll
   }));
 }
 
-/** Actividades publicadas visibles para el alumno (RLS filtra por enrollment). */
+// El alumno lee student_activities y no activities: es la misma fila con
+// las preguntas sin correct_index, filtrada a lo publicado de sus materias
+// (migración 019). La corrección vuelve en su entrega.
+
+/** Actividades publicadas visibles para el alumno. */
 export async function getActivitiesForStudent(): Promise<Activity[]> {
   const data = unwrap(
     await supabase
-      .from('activities')
+      .from('student_activities')
       .select('*, subjects(name), courses(name)')
-      .eq('status', 'published')
       .order('created_at', { ascending: false })
   );
   return data.map(mapActivity);
+}
+
+export async function getActivityForStudent(id: string): Promise<Activity | null> {
+  const { data, error } = await supabase
+    .from('student_activities')
+    .select('*, subjects(name), courses(name)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapActivity(data) : null;
+}
+
+export async function getSubmissionById(id: string): Promise<ActivitySubmission | null> {
+  const { data, error } = await supabase
+    .from('activity_submissions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapSubmission(data) : null;
 }
 
 export async function getMySubmissions(studentId: string): Promise<ActivitySubmission[]> {
@@ -349,19 +372,18 @@ export async function submitActivity(
   payload: {
     answers: Record<string, ActivityAnswer>;
     responseText?: string;
-    autoScore?: number | null;
     timeSpentSeconds: number;
   },
 ): Promise<void> {
+  // auto_score, `correct` de cada respuesta y submitted_at los pone la
+  // base al pasar a 'submitted' (migración 018).
   const { error } = await supabase
     .from('activity_submissions')
     .update({
       answers: payload.answers as any,
       response_text: payload.responseText ?? null,
-      auto_score: payload.autoScore ?? null,
       time_spent_seconds: payload.timeSpentSeconds,
       status: 'submitted',
-      submitted_at: new Date().toISOString(),
     })
     .eq('id', submissionId);
   if (error) throw error;

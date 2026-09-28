@@ -20,9 +20,9 @@
 --    `correct` de cada respuesta a partir de activities.questions;
 --  · una vez entregada, la entrega del alumno no se modifica más.
 --
--- El cliente no cambia: sigue calculando la nota para mostrarla al
--- instante (también sin conexión), pero lo que queda guardado es lo que
--- calcula la base. Misma fórmula que RealizarActividad.
+-- La nota la calcula solo la base (misma fórmula que usaba
+-- RealizarActividad). Con la 019 el alumno tampoco recibe las respuestas
+-- correctas antes de entregar: las ve en su entrega, ya corregida.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ── 1. Policies del estudiante: sin DELETE y solo actividades visibles ──
@@ -33,13 +33,30 @@ CREATE POLICY "Students view own submissions"
   ON activity_submissions FOR SELECT
   USING (student_id = auth_student_id());
 
--- El EXISTS pasa por la RLS de activities: solo matchea si el alumno
--- puede ver la actividad (publicada y de una materia en la que está).
+-- ¿La actividad es para este alumno? Publicada y de una materia+curso en
+-- la que está inscripto. SECURITY DEFINER porque desde la 019 el alumno
+-- no lee activities directo (vería las respuestas correctas).
+CREATE OR REPLACE FUNCTION student_can_see_activity(p_activity_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM activities a
+    JOIN enrollments e
+      ON e.subject_id = a.subject_id AND e.course_id = a.course_id
+    WHERE a.id = p_activity_id
+      AND a.status = 'published'
+      AND e.student_id = auth_student_id()
+  )
+$$;
+
 CREATE POLICY "Students create own submissions"
   ON activity_submissions FOR INSERT
   WITH CHECK (
     student_id = auth_student_id()
-    AND EXISTS (SELECT 1 FROM activities a WHERE a.id = activity_id)
+    AND student_can_see_activity(activity_id)
   );
 
 CREATE POLICY "Students update own submissions"
@@ -125,10 +142,14 @@ BEGIN
         ELSE false
       END;
       IF ok THEN hits := hits + 1; END IF;
-      NEW.answers := jsonb_set(NEW.answers, ARRAY[q->>'id'], a || jsonb_build_object('correct', ok));
+      -- correct_index viaja en la entrega: el alumno ve cuál era la
+      -- correcta después de entregar, sin leer las preguntas con la
+      -- respuesta (migración 019).
+      NEW.answers := jsonb_set(NEW.answers, ARRAY[q->>'id'],
+        a || jsonb_build_object('correct', ok, 'correct_index', q->'correct_index'));
     ELSE
       -- Las abiertas las corrige el docente: el alumno no se las marca bien
-      NEW.answers := jsonb_set(NEW.answers, ARRAY[q->>'id'], a - 'correct');
+      NEW.answers := jsonb_set(NEW.answers, ARRAY[q->>'id'], a - 'correct' - 'correct_index');
     END IF;
   END LOOP;
 

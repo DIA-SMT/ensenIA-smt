@@ -180,7 +180,14 @@ export async function setReactionsEnabled(id: string, enabled: boolean): Promise
 
 // ── Sesión + actividad actual (lo pollean docente y estudiante) ──
 
-export async function getSessionState(sessionId: string): Promise<{ session: LiveSession; activity: LiveActivity | null } | null> {
+/**
+ * `asStudent`: el alumno lee live_activities_alumno, que no trae la
+ * respuesta correcta del quiz hasta que el docente la revela (019).
+ */
+export async function getSessionState(
+  sessionId: string,
+  { asStudent = false }: { asStudent?: boolean } = {},
+): Promise<{ session: LiveSession; activity: LiveActivity | null } | null> {
   const { data: ses } = await supabase
     .from('live_sessions')
     .select('*')
@@ -189,7 +196,8 @@ export async function getSessionState(sessionId: string): Promise<{ session: Liv
   if (!ses) return null;
 
   const { data: act } = await supabase
-    .from('live_activities')
+    // Mismas columnas en los dos: el cast es solo para que TS acepte la unión
+    .from((asStudent ? 'live_activities_alumno' : 'live_activities') as 'live_activities')
     .select('*')
     .eq('session_id', sessionId)
     .order('created_at', { ascending: false })

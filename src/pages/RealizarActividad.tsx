@@ -15,10 +15,11 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getActivityById, getStudentByUserId, getOrCreateSubmission, getMySubmissions,
+  getActivityForStudent, getStudentByUserId, getOrCreateSubmission, getMySubmissions, getSubmissionById,
 } from '../services/activities.service';
 import {
   saveProgressResilient, submitResilient, logEventResilient, saveCheckinResilient,
+  subscribe, hasPendingSubmit,
 } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
@@ -72,7 +73,7 @@ export default function RealizarActividad() {
     if (!user || !id) return;
     (async () => {
       try {
-        const [act, st] = await Promise.all([getActivityById(id), getStudentByUserId(user.id)]);
+        const [act, st] = await Promise.all([getActivityForStudent(id), getStudentByUserId(user.id)]);
         setActivity(act);
         setStudent(st);
         if (act && st) {
@@ -98,6 +99,25 @@ export default function RealizarActividad() {
       }
     })();
   }, [user, id]);
+
+  // Entregada sin conexión: la corrección la hace la base, así que cuando
+  // la cola termina de mandarla traemos la entrega ya corregida.
+  const submissionId = submission?.id;
+  useEffect(() => {
+    if (!pendingSync || !activity || !submissionId) return;
+    const refresh = () => {
+      if (hasPendingSubmit(activity.id)) return;
+      getSubmissionById(submissionId)
+        .then(s => {
+          if (s && s.status !== 'in_progress') {
+            setSubmission(s);
+            setPendingSync(false);
+          }
+        })
+        .catch(() => {});
+    };
+    return subscribe(refresh); // subscribe ya lo llama una vez al suscribir
+  }, [pendingSync, activity, submissionId]);
 
   const isActive = submission?.status === 'in_progress';
   const isDone = submission?.status === 'submitted' || submission?.status === 'graded';
@@ -179,7 +199,6 @@ export default function RealizarActividad() {
     }
   };
 
-  const mcqs = activity.questions.filter(q => q.type === 'multiple_choice');
   const answeredCount = activity.questions.filter(q => {
     const a = answers[q.id];
     return a != null && a.answer !== '' && a.answer !== undefined;
@@ -194,44 +213,26 @@ export default function RealizarActividad() {
     setSubmitting(true);
     setError('');
     try {
-      // Autocorrección de opción múltiple. Es solo para mostrarla al
-      // instante (también sin conexión): la nota que queda guardada la
-      // recalcula la base con la misma fórmula (migración 018).
-      const graded: Record<string, ActivityAnswer> = {};
-      let correct = 0;
-      for (const q of activity.questions) {
-        const a = answers[q.id];
-        if (!a) continue;
-        if (q.type === 'multiple_choice') {
-          // Number('') es 0: sin el chequeo, dejar vacía contaba como la opción A
-          const isCorrect = a.answer !== '' && Number(a.answer) === q.correct_index;
-          if (isCorrect) correct++;
-          graded[q.id] = { ...a, correct: isCorrect };
-        } else {
-          graded[q.id] = a;
-        }
-      }
-      const autoScore = mcqs.length > 0 && activity.points != null
-        ? Math.round((correct / mcqs.length) * activity.points * 10) / 10
-        : mcqs.length > 0 ? Math.round((correct / mcqs.length) * 10 * 10) / 10 : null;
-
+      // La corrección la hace la base al entregar (migración 018): acá no
+      // hay respuestas correctas para comparar, a propósito (019).
       const totalTime = baseSecondsRef.current + secondsRef.current;
       const queued = await submitResilient(submission.id, activity.id, {
-        answers: graded,
+        answers,
         responseText: responseText.trim() || undefined,
-        autoScore,
         timeSpentSeconds: totalTime,
       });
       logEventResilient(activity.id, student.id, 'submitted');
       setPendingSync(queued);
-      setSubmission({
+      const local: ActivitySubmission = {
         ...submission,
         status: 'submitted',
-        answers: graded,
-        autoScore,
+        answers,
         timeSpentSeconds: totalTime,
         submittedAt: new Date().toISOString(),
-      });
+      };
+      // Con conexión, mostramos la entrega ya corregida por la base
+      const corrected = queued ? null : await getSubmissionById(submission.id).catch(() => null);
+      setSubmission(corrected ?? local);
     } catch (err) {
       setError('No se pudo entregar. Intentá de nuevo.');
       console.error(err);
@@ -402,12 +403,22 @@ export default function RealizarActividad() {
                     <div key={q.id} className="sp-question card readonly">
                       <p className="sp-question-prompt"><span className="sp-q-num">{qi + 1}</span> {q.prompt}</p>
                       {q.type === 'multiple_choice' && q.options ? (
-                        a != null ? (
+                        a == null ? (
+                          <p className="sp-answer-review text-subtle">Sin responder</p>
+                        ) : a.correct == null ? (
+                          // Todavía sin corregir: se entregó sin conexión
+                          <p className="sp-answer-review">
+                            {q.options[Number(a.answer)]}
+                            <span className="text-subtle"> · se corrige cuando se sincronice</span>
+                          </p>
+                        ) : (
                           <p className={`sp-answer-review ${a.correct ? 'text-success' : 'text-danger'}`}>
                             {a.correct ? '✓' : '✗'} {q.options[Number(a.answer)]}
-                            {!a.correct && <span className="text-subtle"> · Correcta: {q.options[q.correct_index ?? 0]}</span>}
+                            {!a.correct && a.correct_index != null && (
+                              <span className="text-subtle"> · Correcta: {q.options[a.correct_index]}</span>
+                            )}
                           </p>
-                        ) : <p className="sp-answer-review text-subtle">Sin responder</p>
+                        )
                       ) : (
                         <p className="sp-answer-review">{a?.answer ? String(a.answer) : <em className="text-subtle">Sin responder</em>}</p>
                       )}
