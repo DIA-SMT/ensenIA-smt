@@ -194,14 +194,17 @@ export default function RealizarActividad() {
     setSubmitting(true);
     setError('');
     try {
-      // Autocorrección de opción múltiple
+      // Autocorrección de opción múltiple. Es solo para mostrarla al
+      // instante (también sin conexión): la nota que queda guardada la
+      // recalcula la base con la misma fórmula (migración 018).
       const graded: Record<string, ActivityAnswer> = {};
       let correct = 0;
       for (const q of activity.questions) {
         const a = answers[q.id];
         if (!a) continue;
         if (q.type === 'multiple_choice') {
-          const isCorrect = Number(a.answer) === q.correct_index;
+          // Number('') es 0: sin el chequeo, dejar vacía contaba como la opción A
+          const isCorrect = a.answer !== '' && Number(a.answer) === q.correct_index;
           if (isCorrect) correct++;
           graded[q.id] = { ...a, correct: isCorrect };
         } else {
