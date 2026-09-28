@@ -93,6 +93,26 @@ export default function Biblioteca() {
     return () => clearTimeout(timeout);
   }, [query, user]);
 
+  // Videos de YouTube
+  const [showVideo, setShowVideo] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDesc, setVideoDesc] = useState('');
+  const [videoSubjectId, setVideoSubjectId] = useState('');
+  const [videoSaving, setVideoSaving] = useState(false);
+  const [videoError, setVideoError] = useState('');
+  const [playing, setPlaying] = useState<LibraryMaterial | null>(null);
+  const [transcribingId, setTranscribingId] = useState<string | null>(null);
+
+  // Renombrar
+  const [editFor, setEditFor] = useState<LibraryMaterial | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Todos los hooks van antes de este return: al cerrar sesión user pasa
+  // a null, y si quedaba alguno abajo React rompía la pantalla con
+  // "Rendered fewer hooks than expected".
   if (!user) return null;
 
   let filtered = searchResults ?? allMaterials;
@@ -213,16 +233,6 @@ export default function Biblioteca() {
   };
 
   // ── Videos de YouTube: el disparador con el que arranca la clase ──
-  const [showVideo, setShowVideo] = useState(false);
-  const [videoUrl, setVideoUrl] = useState('');
-  const [videoTitle, setVideoTitle] = useState('');
-  const [videoDesc, setVideoDesc] = useState('');
-  const [videoSubjectId, setVideoSubjectId] = useState('');
-  const [videoSaving, setVideoSaving] = useState(false);
-  const [videoError, setVideoError] = useState('');
-  const [playing, setPlaying] = useState<LibraryMaterial | null>(null);
-  const [transcribingId, setTranscribingId] = useState<string | null>(null);
-
   const handleAddVideo = async () => {
     if (!user || videoSaving) return;
     const videoId = parseYouTubeId(videoUrl);
@@ -280,11 +290,6 @@ export default function Biblioteca() {
   };
 
   // ── Renombrar: lo que creaste es tuyo y lo podés corregir ──
-  const [editFor, setEditFor] = useState<LibraryMaterial | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
-  const [editSaving, setEditSaving] = useState(false);
-
   const openEdit = (mat: LibraryMaterial) => {
     setEditFor(mat);
     setEditTitle(mat.title);
