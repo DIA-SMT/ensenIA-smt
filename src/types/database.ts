@@ -2649,7 +2649,100 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      // Vista de la migración 019: live_activities sin correctId hasta revelar
+      live_activities_alumno: {
+        Row: {
+          config: Json
+          created_at: string | null
+          id: string
+          kind: string
+          session_id: string
+          status: string
+          target_student_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_activities_alumno_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_activities_alumno_target_student_id_fkey"
+            columns: ["target_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      // Vista de la migración 019: activities sin correct_index, para el alumno
+      student_activities: {
+        Row: {
+          class_id: string | null
+          content_md: string
+          course_id: string
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          points: number | null
+          questions: Json
+          school_id: string
+          source_tool: Database["public"]["Enums"]["ia_tool_type"] | null
+          status: Database["public"]["Enums"]["activity_status"]
+          subject_id: string
+          teacher_id: string
+          title: string
+          unit_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_activities_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "planning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_activities_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_activities_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_activities_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_activities_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_activities_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "planning_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       auth_guardian_student_ids: { Args: never; Returns: string[] }

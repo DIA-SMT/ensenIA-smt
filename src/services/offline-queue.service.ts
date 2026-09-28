@@ -24,7 +24,7 @@ const FLUSH_INTERVAL_MS = 30_000;
 
 type QueuedOp =
   | { kind: 'progress'; submissionId: string; updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number }; ts: number }
-  | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; autoScore?: number | null; timeSpentSeconds: number }; ts: number }
+  | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number }; ts: number }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown>; ts: number }
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number };
 
@@ -153,7 +153,7 @@ export async function saveProgressResilient(
 export async function submitResilient(
   submissionId: string,
   activityId: string,
-  payload: { answers: Record<string, ActivityAnswer>; responseText?: string; autoScore?: number | null; timeSpentSeconds: number },
+  payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number },
 ): Promise<boolean> {
   if (!navigator.onLine) {
     enqueue({ kind: 'submit', submissionId, activityId, payload });

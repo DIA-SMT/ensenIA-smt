@@ -63,7 +63,7 @@ export default function ClaseEnVivoAlumno() {
                 setSession(s);
                 return;
             }
-            const state = await getSessionState(session.id);
+            const state = await getSessionState(session.id, { asStudent: true });
             if (!state || state.session.status !== 'live') {
                 setSession(null);
                 setActivity(null);

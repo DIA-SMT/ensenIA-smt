@@ -127,7 +127,9 @@ export interface Activity {
 
 export interface ActivityAnswer {
   answer: string | number;
+  /** Los pone la base al entregar (migración 018), solo en opción múltiple. */
   correct?: boolean;
+  correct_index?: number | null;
 }
 
 export interface ActivitySubmission {
