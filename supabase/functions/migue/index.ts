@@ -233,7 +233,10 @@ Deno.serve(async (req: Request) => {
     .eq('usage_date', hoy)
     .maybeSingle();
 
-  if (usage && usage.message_count >= DAILY_QUOTA) {
+  // A un estudiante el tope le llega mucho más tarde: si le cortamos Migue
+  // antes, lo que cuente ya no pasa por la alerta emocional.
+  const tope = audience === 'estudiante' ? DAILY_QUOTA * 4 : DAILY_QUOTA;
+  if (usage && usage.message_count >= tope) {
     return sseError('QUOTA_EXCEEDED',
       `Llegaste al límite de ${DAILY_QUOTA} mensajes por hoy. Seguimos mañana.`);
   }

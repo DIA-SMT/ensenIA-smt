@@ -73,7 +73,7 @@ AS $$
 DECLARE
   hoy DATE := (now() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date;
 BEGIN
-  IF NEW.total <= 0 OR NEW.score < 0 OR NEW.score > NEW.total THEN
+  IF NEW.total <= 0 OR NEW.total > 50 OR NEW.score < 0 OR NEW.score > NEW.total THEN
     RAISE EXCEPTION 'Puntaje de práctica inválido';
   END IF;
 

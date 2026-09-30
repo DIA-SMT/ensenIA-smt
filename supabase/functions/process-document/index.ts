@@ -425,6 +425,10 @@ Deno.serve(async (req: Request) => {
   if (profile?.role === 'estudiante' && !STUDENT_MODES.includes(mode)) {
     return json({ error: 'FORBIDDEN_MODE', message: 'Este modo no está disponible para estudiantes.' }, 403);
   }
+  // Lista de permitidos: familias y cuentas sin perfil no usan la IA de docente.
+  if (profile?.role !== 'estudiante' && profile?.role !== 'docente' && profile?.role !== 'director') {
+    return json({ error: 'FORBIDDEN_ROLE', message: 'Tu cuenta no puede usar esta función.' }, 403);
+  }
 
   // ── Transcripción de YouTube: subtítulos primero (gratis, sin cupo);
   //    si YouTube bloquea la IP del servidor, se intenta con Gemini vía

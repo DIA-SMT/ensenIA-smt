@@ -105,7 +105,7 @@ REVOKE INSERT, UPDATE ON wellbeing_notes FROM anon, authenticated;
 GRANT INSERT (signal_id, school_id, body) ON wellbeing_notes TO authenticated;
 
 -- Mudar lo que ya estaba escrito antes de borrar la columna.
-DO $
+DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns
              WHERE table_schema = 'public' AND table_name = 'wellbeing_signals' AND column_name = 'note') THEN
@@ -116,7 +116,7 @@ BEGIN
 
     ALTER TABLE wellbeing_signals DROP COLUMN note;
   END IF;
-END $;
+END $$;
 
 -- Ya no hace falta cerrar nada más sobre wellbeing_signals. Los GRANT por
 -- columna se aplican al ROL, no por policy, así que no sirven para
