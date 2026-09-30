@@ -5,11 +5,10 @@
  */
 
 import { useState } from 'react';
-import { KeyRound, AlertCircle, LogOut } from 'lucide-react';
+import { KeyRound, AlertCircle, LogOut, Eye, EyeOff, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { clearMustChangePassword } from '../services/profiles.service';
-import './Modals.css';
 import './CambiarClave.css';
 
 const MIN_LENGTH = 8;
@@ -20,6 +19,7 @@ export default function CambiarClave() {
   const [repeat, setRepeat] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [ver, setVer] = useState(false);
 
   if (!user) return null;
 
@@ -45,35 +45,46 @@ export default function CambiarClave() {
 
   return (
     <div className="cc-screen">
-      <div className="card cc-card">
-        <KeyRound size={30} className="text-cyan" />
-        <h2>Elegí tu clave</h2>
-        <p className="text-secondary text-sm">
+      <form className="card cc-card" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+        <span className="cc-icono" aria-hidden="true"><KeyRound size={24} /></span>
+        <h1 className="cc-titulo">Elegí tu clave</h1>
+        <p className="cc-bajada">
           Hola {user.firstName}. Entraste con la clave que te dio la escuela: elegí una tuya
-          para seguir. Que tenga al menos {MIN_LENGTH} caracteres y no se la digas a nadie.
+          para seguir, y no se la digas a nadie.
         </p>
 
-        {error && <div className="em-error"><AlertCircle size={14} /> {error}</div>}
+        {error && <div className="cc-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {error}</div>}
 
-        <div className="em-field">
+        <div className="cc-campo">
           <label htmlFor="cc-pass">Clave nueva</label>
-          <input id="cc-pass" type="password" autoComplete="new-password" value={password}
-            onChange={e => setPassword(e.target.value)} autoFocus />
+          <div className="cc-con-ojo">
+            <input id="cc-pass" className="form-input" type={ver ? 'text' : 'password'} autoComplete="new-password"
+              value={password} onChange={e => setPassword(e.target.value)} autoFocus aria-describedby="cc-largo" />
+            <button type="button" className="btn-icon" onClick={() => setVer(v => !v)}
+              aria-label={ver ? 'Ocultar la clave' : 'Mostrar la clave'} aria-pressed={ver}>
+              {ver ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            </button>
+          </div>
+          <div id="cc-largo" className={`cc-largo ${password.length >= MIN_LENGTH ? 'ok' : ''}`}>
+            <span style={{ width: `${Math.min(100, (password.length / MIN_LENGTH) * 100)}%` }} aria-hidden="true" />
+            <small>{password.length >= MIN_LENGTH ? <><Check size={13} aria-hidden="true" /> Largo suficiente</> : `Al menos ${MIN_LENGTH} caracteres`}</small>
+          </div>
         </div>
-        <div className="em-field">
+        <div className="cc-campo">
           <label htmlFor="cc-repeat">Repetila</label>
-          <input id="cc-repeat" type="password" autoComplete="new-password" value={repeat}
-            onChange={e => setRepeat(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave(); }} />
+          <input id="cc-repeat" className="form-input" type={ver ? 'text' : 'password'} autoComplete="new-password"
+            value={repeat} onChange={e => setRepeat(e.target.value)}
+            aria-invalid={!!repeat && repeat !== password} />
+          {!!repeat && repeat !== password && <small className="cc-no-coincide">Todavía no coinciden</small>}
         </div>
 
-        <button className="btn btn-primary w-full" onClick={handleSave} disabled={saving}>
+        <button type="submit" className="btn btn-primary w-full cc-boton" disabled={saving}>
           {saving ? 'Guardando...' : 'Guardar y entrar'}
         </button>
-        <button className="btn btn-ghost w-full" onClick={logout}>
-          <LogOut size={15} /> Salir
+        <button type="button" className="btn btn-ghost w-full cc-boton" onClick={logout}>
+          <LogOut size={15} aria-hidden="true" /> Salir
         </button>
-      </div>
+      </form>
     </div>
   );
 }
