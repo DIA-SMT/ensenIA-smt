@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
--- EstudIA — Initial Database Schema
+-- SMT EstudIA — Initial Database Schema
 -- ═══════════════════════════════════════════════
 
 -- ── Enums ──

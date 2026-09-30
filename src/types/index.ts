@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   EstudIA — Domain Types (Supabase-ready)
+   SMT EstudIA — Domain Types (Supabase-ready)
    ═══════════════════════════════════════════════ */
 
 // ── Enums ──
@@ -293,6 +293,9 @@ export interface ScheduleBlock {
 }
 
 // ── Alert ──
+export type AlertStatus = 'abierta' | 'en_seguimiento' | 'cerrada';
+export type AlertOutcome = 'resuelta' | 'derivada' | 'sin_cambio';
+
 export interface Alert {
   id: string;
   type: AlertLevel;
@@ -305,6 +308,90 @@ export interface Alert {
   schoolId: string;
   isRead: boolean;
   createdAt: string;
+  // Ciclo de vida (010)
+  status: AlertStatus;
+  interventionNote?: string | null;
+  interventionBy?: string | null;
+  interventionAt?: string | null;
+  closedOutcome?: AlertOutcome | null;
+  closedAt?: string | null;
+  escalatedAt?: string | null;
+}
+
+export const ALERT_STATUS_META: Record<AlertStatus, { label: string; badgeClass: string }> = {
+  abierta: { label: 'Abierta', badgeClass: 'badge-danger' },
+  en_seguimiento: { label: 'En seguimiento', badgeClass: 'badge-warning' },
+  cerrada: { label: 'Cerrada', badgeClass: 'badge-neutral' },
+};
+
+export const ALERT_OUTCOME_META: Record<AlertOutcome, string> = {
+  resuelta: 'Resuelta',
+  derivada: 'Derivada (equipo externo / supervisión)',
+  sin_cambio: 'Cerrada sin cambios',
+};
+
+/** Umbrales configurables por escuela (defaults de las migraciones 010 y 011). */
+export interface AlertThresholds {
+  schoolId: string;
+  negativeCheckinsCount: number;
+  negativeCheckinsDays: number;
+  lowScorePct: number;
+  inactivityDays: number;
+  escalationHours: number;
+  /** Nota ≤ este valor (y > gradeFailMax) → aviso de riesgo a la familia. */
+  gradeRiskMax: number;
+  /** Nota ≤ este valor → la materia se lleva a diciembre. */
+  gradeFailMax: number;
+}
+
+// ── Libreta de calificaciones (011) ──
+
+export interface AcademicTerm {
+  id: string;
+  schoolId: string;
+  year: number;
+  number: 1 | 2 | 3;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+}
+
+export type TermGradeStatus = 'borrador' | 'publicada';
+
+export interface TermGrade {
+  id: string;
+  studentId: string;
+  subjectId: string;
+  courseId: string;
+  termId: string;
+  schoolId: string;
+  grade: number | null;
+  suggestedGrade: number | null;
+  suggestedFrom: number;
+  status: TermGradeStatus;
+  carriesToDecember: boolean;
+  teacherNote?: string | null;
+  gradedAt?: string | null;
+  /** Enriquecidos por el servicio para las vistas de lectura. */
+  subjectName?: string;
+  termName?: string;
+  termNumber?: number;
+}
+
+/** Fila de la libreta que ve el docente: estudiante + nota + sugerencia. */
+export interface GradebookRow {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  avatarInitials: string;
+  gradeId: string | null;
+  grade: number | null;
+  status: TermGradeStatus;
+  carriesToDecember: boolean;
+  teacherNote?: string | null;
+  /** Sugerencia recalculada ahora, a partir del trabajo del trimestre. */
+  suggestedGrade: number | null;
+  suggestedFrom: number;
 }
 
 // ── Notification (Director → Teacher) ──
@@ -348,6 +435,8 @@ export interface LibraryMaterial {
   classId?: string | null;
   /** Video embebido (YouTube): el disparador con el que arranca la clase. */
   videoUrl?: string | null;
+  practiceQuiz?: PracticeQuestion[] | null;
+  studyGuide?: string | null;
 }
 
 // ── Placas de estudio ──
@@ -364,6 +453,145 @@ export interface StudyCard {
   options?: string[];
   correct_index?: number;
   explanation?: string;
+}
+
+// ── Modo Estudio (práctica gamificada del estudiante) ──
+export interface PracticeQuestion {
+  prompt: string;
+  options: string[];
+  correct_index: number;
+  explanation: string;
+  hint?: string;
+}
+
+export interface PracticeAttempt {
+  id: string;
+  studentId: string;
+  materialId: string | null;
+  score: number;
+  total: number;
+  xpEarned: number;
+  createdAt: string;
+}
+
+export interface StudentProgress {
+  studentId: string;
+  xp: number;
+  streakDays: number;
+  bestStreak: number;
+  lastPracticeDate: string | null;
+  totalAttempts: number;
+  perfectCount: number;
+}
+
+export type BadgeCode = 'primer_quiz' | 'quiz_perfecto' | 'racha_5' | 'diez_practicas';
+
+export interface StudentBadge {
+  /** Código del catálogo BADGE_META, o dinámico 'crack:<subjectId>' (medalla de materia). */
+  code: string;
+  earnedAt: string;
+}
+
+export const BADGE_META: Record<BadgeCode, { emoji: string; label: string; description: string }> = {
+  primer_quiz: { emoji: '🎯', label: 'Primer quiz', description: 'Completaste tu primera práctica' },
+  quiz_perfecto: { emoji: '💯', label: 'Quiz perfecto', description: 'Respondiste todo bien en una práctica' },
+  racha_5: { emoji: '🔥', label: 'Racha de 5 días', description: 'Practicaste 5 días seguidos' },
+  diez_practicas: { emoji: '🏅', label: '10 prácticas', description: 'Completaste 10 prácticas' },
+};
+
+// ── Niveles (derivados del XP, sin tabla) ──
+export interface Level {
+  n: number;
+  name: string;
+  minXp: number;
+}
+
+export const LEVELS: Level[] = [
+  { n: 1, name: 'Recién llegado/a', minXp: 0 },
+  { n: 2, name: 'En marcha', minXp: 100 },
+  { n: 3, name: 'Estudioso/a', minXp: 250 },
+  { n: 4, name: 'Capo/a', minXp: 450 },
+  { n: 5, name: 'Crack', minXp: 700 },
+  { n: 6, name: 'Ídolo/a', minXp: 1000 },
+  { n: 7, name: 'Leyenda', minXp: 1400 },
+  { n: 8, name: 'Aura máxima', minXp: 1900 },
+];
+
+/** Nivel actual + progreso hacia el próximo (0..1; 1 si es el último). */
+export function levelForXp(xp: number): { level: Level; next: Level | null; progress: number } {
+  let level = LEVELS[0];
+  for (const l of LEVELS) if (xp >= l.minXp) level = l;
+  const next = LEVELS[LEVELS.indexOf(level) + 1] ?? null;
+  const progress = next ? Math.min(1, (xp - level.minXp) / (next.minXp - level.minXp)) : 1;
+  return { level, next, progress };
+}
+
+// ── Medallas otorgadas por personas ──
+
+/** Medalla de docente a estudiante. */
+export interface StudentAward {
+  id: string;
+  studentId: string;
+  teacherId: string;
+  subjectId: string | null;
+  badgeCode: string;
+  message: string | null;
+  createdAt: string;
+  teacherName?: string;
+  subjectName?: string;
+}
+
+/** Medalla de directivo a docente. */
+export interface TeacherAward {
+  id: string;
+  teacherId: string;
+  directorId: string;
+  badgeCode: string;
+  message: string | null;
+  createdAt: string;
+  directorName?: string;
+  teacherName?: string;
+}
+
+/** Catálogo de medallas docente → estudiante (mitad clásicas, mitad bien argentas). */
+export const AWARD_META: Record<string, { emoji: string; label: string; description: string }> = {
+  crack: { emoji: '🌟', label: '¡Crack!', description: 'Te la re bancaste' },
+  aura: { emoji: '✨', label: 'Aura +1', description: 'Subiste tu aura con esta' },
+  genio: { emoji: '🧠', label: '¡Qué genio!', description: 'Una respuesta brillante' },
+  esfuerzo: { emoji: '💪', label: 'Esfuerzo total', description: 'Se nota cuánto le pusiste' },
+  imparable: { emoji: '📈', label: 'Imparable', description: 'Mejoraste un montón' },
+  companerismo: { emoji: '🤝', label: 'Gran compañero/a', description: 'Ayudaste a otros a aprender' },
+  participacion: { emoji: '🙋', label: 'Siempre presente', description: 'Participación destacada en clase' },
+  creatividad: { emoji: '🎨', label: 'Idea grosa', description: 'Creatividad fuera de serie' },
+};
+
+/** Catálogo de medallas directivo → docente. */
+export const TEACHER_AWARD_META: Record<string, { emoji: string; label: string; description: string }> = {
+  presente_total: { emoji: '🗓️', label: 'Presente total', description: 'Por no faltar nunca' },
+  fabrica_actividades: { emoji: '🏭', label: 'Fábrica de actividades', description: 'Por crear actividades en la plataforma' },
+  siempre_ahi: { emoji: '💬', label: 'Siempre ahí', description: 'Por comunicarse con los chicos en la plataforma' },
+  crack_docente: { emoji: '🌟', label: '¡Crack!', description: 'Reconocimiento de la dirección' },
+  aura_docente: { emoji: '✨', label: 'Aura +1', description: 'Subiste el aura de la escuela' },
+  innovacion: { emoji: '🚀', label: 'Innovador/a', description: 'Por animarse a probar cosas nuevas' },
+};
+
+/** Etiqueta de la medalla automática de materia: 'crack:<subjectId>' → frase lunfarda. */
+export function subjectBadgeLabel(subjectName: string): string {
+  const templates = [
+    `El crack de ${subjectName}`,
+    `${subjectName} es lo mío`,
+    `Yo sé de ${subjectName}`,
+  ];
+  return templates[subjectName.length % templates.length];
+}
+
+export interface StudentNote {
+  id: string;
+  studentId: string;
+  text: string;
+  isDone: boolean;
+  isPinned: boolean;
+  createdAt: string;
 }
 
 // ── Programa importado (respuesta de process-document) ──
@@ -383,6 +611,8 @@ export interface PlanningUnit {
   courseId: string;
   teacherId: string;
   order: number;
+  /** Trimestre al que pertenece. Null = borrador: solo la ve su docente. */
+  termId?: string | null;
   classes: PlanningClass[];
 }
 
@@ -396,11 +626,184 @@ export interface PlanningClass {
   isComplete: boolean;
 }
 
+// ── Insights directivos (tablero de gestión) ──
+
+export interface RiskSignals {
+  overdueUnsubmitted: boolean;   // actividad vencida sin entregar
+  lowRecentScore: boolean;       // <40% en las últimas 2 entregas
+  negativeCheckins: boolean;     // 2+ check-ins negativos en 7 días
+  noRecentEvents: boolean;       // sin huella digital en 14 días
+  openAlert: boolean;            // alerta sin leer
+}
+
+export interface AtRiskStudent {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  courseId: string;
+  courseName: string;
+  signalCount: number;
+  signals: RiskSignals;
+}
+
+export interface RiskIndexKpi {
+  pct: number;
+  atRiskCount: number;
+  totalStudents: number;
+  atRiskStudents: AtRiskStudent[]; // orden desc por signalCount
+}
+
+/** Celda genérica de mapa de calor: numerator/denominator ya resueltos a pct. */
+export interface HeatmapCell {
+  subjectId: string;
+  subjectName: string;
+  courseId: string;
+  courseName: string;
+  pct: number | null; // null = sin datos
+  numerator: number;
+  denominator: number;
+}
+
+export type HeatmapMetric = 'riesgo' | 'cobertura' | 'entregas';
+
+export interface CurriculumCoverageKpi {
+  pct: number | null;
+  bySubjectCourse: HeatmapCell[];
+}
+
+export interface WellbeingByCourse {
+  courseId: string;
+  courseName: string;
+  positivePct: number;
+  totalCheckins: number;
+}
+
+export interface WellbeingPulseKpi {
+  pct: number | null;
+  totalCheckins: number;
+  byCourse: WellbeingByCourse[];
+}
+
+export interface InactiveTeacher {
+  teacherId: string;
+  firstName: string;
+  lastName: string;
+  lastActiveAt: string | null;
+}
+
+export interface TeacherAdoptionKpi {
+  pct: number;
+  activeCount: number;
+  totalTeachers: number;
+  inactiveTeachers: InactiveTeacher[]; // orden: nunca publicó primero, luego más antiguo
+}
+
+export interface NoticeResponseRow {
+  noticeId: string;
+  title: string;
+  type: 'comunicado' | 'citacion';
+  createdAt: string;
+  audienceSize: number;
+  readCount: number;
+  readPct: number | null;
+  citationConfirmedInTime?: boolean;
+}
+
+export interface FamilyResponseKpi {
+  readPct: number | null;
+  citationConfirmedPct: number | null;
+  totalCitations: number;
+  recentNotices: NoticeResponseRow[]; // peor % de lectura primero
+}
+
+export interface PendingFeedbackRow {
+  submissionId: string;
+  studentName: string;
+  activityTitle: string;
+  subjectName: string;
+  courseId: string;
+  hoursWaiting: number;
+}
+
+export interface FeedbackLatencyKpi {
+  medianHours: number | null;
+  sampleSize: number;
+  pendingReview: PendingFeedbackRow[]; // más tiempo esperando primero
+}
+
+export interface CourseAssignmentInfo {
+  teacherId: string;
+  teacherName: string;
+  subjectId: string;
+  subjectName: string;
+}
+
+export interface DirectorInsights {
+  riskIndex: RiskIndexKpi;
+  curriculumCoverage: CurriculumCoverageKpi;
+  wellbeingPulse: WellbeingPulseKpi;
+  teacherAdoption: TeacherAdoptionKpi;
+  familyResponse: FamilyResponseKpi;
+  feedbackLatency: FeedbackLatencyKpi;
+  heatmap: Record<HeatmapMetric, HeatmapCell[]>;
+  courseAssignments: Record<string, CourseAssignmentInfo[]>; // por courseId
+  courses: Course[];
+}
+
+// ── Parte del Día (Fase 2) ──
+
+export interface DailyBriefItem {
+  kind: 'alerta' | 'escalada' | 'entrega' | 'actividad' | 'bienestar' | 'citacion';
+  text: string;
+  courseId?: string;
+}
+
+export interface DailyBrief {
+  generatedAt: string;
+  newAlerts: number;
+  escalatedAlerts: number;
+  newSubmissions: number;
+  newActivities: number;
+  negativeCheckins: number;
+  pendingCitations: number;
+  items: DailyBriefItem[]; // orden: lo más urgente primero
+}
+
+// ── Temario y criterios de evaluación (012) ──
+
+export interface EvaluationCriteria {
+  id: string;
+  schoolId: string;
+  subjectId: string;
+  courseId: string;
+  termId: string;
+  criteria: string;
+  isPublished: boolean;
+  updatedAt?: string | null;
+}
+
+/** El temario de una materia en un trimestre, tal como lo ve quien cursa. */
+export interface SyllabusSubject {
+  subjectId: string;
+  subjectName: string;
+  courseId: string;
+  units: PlanningUnit[];
+  criteria: string | null;
+}
+
 // ── Stats ──
+/**
+ * Contadores del "Mi día" del docente. Todos salen de datos reales: antes
+ * había "evaluaciones pendientes" fijo en 0 y una asistencia promedio que
+ * venía de una columna que solo llenaba el seed de demo.
+ */
 export interface TeacherStats {
   totalStudents: number;
   classesToday: number;
+  /** Entregas enviadas por los chicos que todavía no tienen corrección. */
   pendingEvaluations: number;
+  /** Mismo valor que pendingEvaluations (nombre que usa la pantalla renovada). */
+  entregasParaCorregir: number;
   avgAttendance: number;
 }
 
@@ -489,4 +892,114 @@ export interface QuickNote {
   teacherId: string;
   createdAt: string;
   isPinned: boolean;
+}
+
+// ── Normativa y protocolos (015) ──
+export type PolicyCategory =
+  | 'reglamento' | 'protocolo' | 'circular' | 'seguridad' | 'administrativo';
+
+/** 'equipo' = docentes y dirección. 'comunidad' = además familias y estudiantes. */
+export type PolicyAudience = 'equipo' | 'comunidad';
+
+export interface SchoolPolicy {
+  id: string;
+  schoolId: string;
+  title: string;
+  category: PolicyCategory;
+  audience: PolicyAudience;
+  summary: string | null;
+  body: string;
+  sourceUrl: string | null;
+  effectiveFrom: string | null;
+  isPublished: boolean;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Resultado de search_school_policies: lo que Migue cita. */
+export interface PolicyHit {
+  id: string;
+  title: string;
+  category: PolicyCategory;
+  summary: string | null;
+  body: string;
+  sourceUrl: string | null;
+  effectiveFrom: string | null;
+  rank: number;
+}
+
+// ── Migue (017) ──
+export type MigueAudience = 'equipo' | 'estudiante' | 'familia';
+
+export interface MigueSession {
+  id: string;
+  userId: string;
+  schoolId: string;
+  audience: MigueAudience;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MigueMessage {
+  id: string;
+  sessionId: string;
+  role: ChatRole;
+  content: string;
+  /** Normas que Migue usó para responder: deja auditable la respuesta. */
+  citedPolicyIds: string[];
+  createdAt: string;
+}
+
+// ── Señales de bienestar (017) ──
+export type WellbeingLevel = 'seguimiento' | 'urgente';
+export type WellbeingStatus = 'abierta' | 'en_seguimiento' | 'cerrada';
+
+export interface WellbeingSignal {
+  id: string;
+  studentId: string;
+  schoolId: string;
+  level: WellbeingLevel;
+  reason: string;
+  excerpt: string | null;
+  status: WellbeingStatus;
+  handledBy: string | null;
+  handledAt: string | null;
+  createdAt: string;
+}
+
+// ── Clases grabadas (020) ──
+export type RecordingProvider = 'youtube' | 'drive' | 'meet' | 'otro';
+
+export interface RecordedClass {
+  id: string;
+  schoolId: string;
+  subjectId: string;
+  courseId: string;
+  teacherId: string;
+  unitId: string | null;
+  termId: string | null;
+  title: string;
+  description: string | null;
+  url: string;
+  provider: RecordingProvider;
+  durationMin: number | null;
+  recordedOn: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Orientación vocacional (020) ──
+export interface VocationalProfile {
+  studentId: string;
+  schoolId: string;
+  answers: Record<string, number>;
+  topAreas: string[];
+  ownWords: string | null;
+  summary: string | null;
+  sharedWithSchool: boolean;
+  updatedAt: string;
 }

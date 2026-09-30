@@ -1,5 +1,5 @@
 /**
- * EstudIA — Tool-specific prompt instructions
+ * SMT EstudIA — Tool-specific prompt instructions
  *
  * Each tool injects specialized formatting and content requirements
  * into the system prompt so Claude produces structured, pedagogically

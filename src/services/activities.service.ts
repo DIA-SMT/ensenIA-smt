@@ -1,5 +1,5 @@
 /**
- * EstudIA — Activities Service
+ * SMT EstudIA — Activities Service
  *
  * Actividades publicadas por docentes, entregas de estudiantes
  * y huella digital (activity_events).
@@ -224,6 +224,62 @@ export async function getEnrolledStudents(subjectId: string, courseId: string): 
       enrollmentCode: r.enrollment_code,
     }))
     .sort((a: any, b: any) => a.lastName.localeCompare(b.lastName));
+}
+
+// ── Director: actividad publicada por los docentes de la escuela ──
+// La RLS "Directors see school activities" (003) habilita la lectura.
+
+export interface SchoolActivityLight {
+  teacherId: string;
+  title: string;
+  createdAt: string;
+}
+
+export async function getSchoolActivitiesLight(schoolId: string): Promise<SchoolActivityLight[]> {
+  const data = unwrap(
+    await supabase
+      .from('activities')
+      .select('teacher_id, title, created_at')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+  );
+  return data.map((r: any) => ({
+    teacherId: r.teacher_id,
+    title: r.title,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Todas las actividades de la escuela (campos completos), para el tablero directivo. */
+export async function getSchoolActivities(schoolId: string): Promise<Activity[]> {
+  const data = unwrap(
+    await supabase
+      .from('activities')
+      .select('*, subjects(name), courses(name)')
+      .eq('school_id', schoolId)
+  );
+  return data.map(mapActivity);
+}
+
+/** Entregas de un lote de actividades (RLS: "Directors view school submissions", 008). */
+export async function getSubmissionsByActivityIds(activityIds: string[]): Promise<ActivitySubmission[]> {
+  if (activityIds.length === 0) return [];
+  const data = unwrap(
+    await supabase.from('activity_submissions').select('*').in('activity_id', activityIds)
+  );
+  return data.map(mapSubmission);
+}
+
+/** IDs de estudiantes con al menos un evento de huella digital desde `sinceIso`, sobre un lote de actividades. */
+export async function getStudentIdsWithRecentEvents(activityIds: string[], sinceIso: string): Promise<Set<string>> {
+  if (activityIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from('activity_events')
+    .select('student_id')
+    .in('activity_id', activityIds)
+    .gte('created_at', sinceIso);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r.student_id as string));
 }
 
 // ── Student: mi vista ──

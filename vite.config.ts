@@ -17,16 +17,16 @@ export default defineConfig({
         'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
       ],
       manifest: {
-        name: 'SMT EstudIA — Aula Municipal',
+        name: 'SMT EstudIA',
         short_name: 'SMT EstudIA',
-        description: 'Plataforma educativa con IA de la Escuela Municipal Gabriela Mistral. Funciona sin conexión.',
+        description: 'Plataforma educativa de las escuelas municipales de San Miguel de Tucumán. Funciona sin conexión.',
         lang: 'es-AR',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0F1419',
-        theme_color: '#0F1419',
+        background_color: '#FFFFFF',
+        theme_color: '#FFFFFF',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -37,17 +37,36 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        // Sin esto, el service worker viejo sigue sirviendo la app anterior
-        // hasta que el usuario cierra TODAS las pestañas: se publica una
-        // versión nueva y nadie la ve, ni siquiera con Ctrl+Shift+R.
-        skipWaiting: true,
+        // Que tome el control de la página ya en la primera visita: si no,
+        // lo que se baja en esa visita no queda guardado para usar sin conexión.
+        // Con skipWaiting, una versión nueva se activa sin esperar a que se
+        // cierren TODAS las pestañas.
         clientsClaim: true,
+        skipWaiting: true,
         cleanupOutdatedCaches: true,
-        // Los datos ya vistos quedan disponibles sin conexión:
+        // Al instalarse, el service worker baja SOLO el armazón: la entrada,
+        // su CSS y las librerías base. Cada pantalla se baja cuando se abre
+        // y queda guardada para usarla sin conexión.
+        globPatterns: [
+          'index.html', '*.svg', 'icons/*.png',
+          'assets/entry-*.js', 'assets/index-*.css', 'assets/vendor-*.js',
+        ],
         runtimeCaching: [
           {
+            // Pantallas y librerías bajo demanda: los nombres llevan hash,
+            // no cambian nunca, así que la copia local alcanza.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-pantallas',
+              expiration: { maxEntries: 150, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             // Datos (PostgREST): red primero, caché si no hay conexión.
+            // Se borra al cerrar sesión y cuando entra otra persona en el
+            // mismo dispositivo (ver AuthContext).
             //
             // Las tablas live_* quedan afuera a propósito: son la clase en
             // vivo, y ahí una respuesta cacheada es peor que ninguna. Con el
@@ -81,7 +100,26 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Nombres estables para que el precache sepa qué es armazón.
+        entryFileNames: 'assets/entry-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        // React y Supabase cambian poco: en su propio archivo, el navegador
+        // los conserva entre versiones de la app.
+        manualChunks(id) {
+          if (/node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'vendor-react';
+          if (/node_modules[\\/]@supabase[\\/]/.test(id)) return 'vendor-supabase';
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     host: '0.0.0.0',
+    // Respetar PORT si viene del entorno: permite levantar el dev server
+    // en otro puerto cuando el 5173 está ocupado.
+    ...(process.env.PORT ? { port: Number(process.env.PORT) } : {}),
   },
 })

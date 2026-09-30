@@ -1,5 +1,5 @@
 /**
- * EstudIA — Bienestar y observaciones
+ * SMT EstudIA — Bienestar y observaciones
  *
  * Check-ins emocionales de estudiantes y observaciones del docente:
  * la información "que no se ve" y que mejora la experiencia educativa.
@@ -9,6 +9,7 @@ import { supabase, unwrap } from './_helpers';
 import type {
   StudentCheckin, CheckinMoment, CheckinFeeling,
   StudentObservation, ObservationCategory,
+  WellbeingSignal, WellbeingStatus,
 } from '../types';
 
 // ── Check-ins ──
@@ -236,4 +237,78 @@ export async function getCourseClimate(courseId: string, days = 30): Promise<Cou
       .filter(s => s.negatives >= 2)
       .sort((a, b) => b.negatives - a.negatives),
   };
+}
+// ── Señales de bienestar de Migue (017) ──
+// Lo que Migue deriva cuando un estudiante escribe algo que preocupa.
+// No es la conversación: es el motivo y, si lo hubo, la frase que la
+// disparó. La RLS decide quién las ve; acá no se filtra por rol.
+
+function mapSignal(row: any): WellbeingSignal {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    schoolId: row.school_id,
+    level: row.level,
+    reason: row.reason,
+    excerpt: row.excerpt ?? null,
+    status: row.status,
+    handledBy: row.handled_by ?? null,
+    handledAt: row.handled_at ?? null,
+        createdAt: row.created_at,
+  };
+}
+
+export interface WellbeingSignalWithStudent extends WellbeingSignal {
+  studentName: string;
+  courseName: string | null;
+  /** Notas del equipo sobre el caso. Viven en otra tabla (021) porque
+   *  la RLS filtra filas y no columnas: en la misma fila, el propio
+   *  estudiante las leía. */
+  notes: { id: string; body: string; createdAt: string }[];
+}
+
+export async function getWellbeingSignals(): Promise<WellbeingSignalWithStudent[]> {
+  const { data, error } = await supabase
+    .from('wellbeing_signals')
+    .select('*, students(first_name, last_name, courses(name)), wellbeing_notes(id, body, created_at)')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    ...mapSignal(row),
+    studentName: row.students
+      ? `${row.students.first_name} ${row.students.last_name}`
+      : 'Estudiante',
+    courseName: row.students?.courses?.name ?? null,
+    notes: (row.wellbeing_notes ?? [])
+      .map((n: any) => ({ id: n.id, body: n.body, createdAt: n.created_at }))
+      .sort((a: any, b: any) => a.createdAt.localeCompare(b.createdAt)),
+  }));
+}
+
+/** El servidor sella quién la tomó y cuándo (trigger de la 017). */
+export async function updateSignalStatus(id: string, status: WellbeingStatus): Promise<void> {
+  const { data, error } = await supabase
+    .from('wellbeing_signals')
+    .update({ status })
+    .eq('id', id)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('No se pudo actualizar: puede que ya no tengas permiso sobre esta señal.');
+  }
+}
+
+/**
+ * Agrega una nota de seguimiento. Es del equipo: el estudiante no la
+ * ve, y por eso vive en wellbeing_notes y no en la señal (021).
+ */
+export async function addCaseNote(
+  signalId: string, schoolId: string, body: string,
+): Promise<void> {
+  const texto = body.trim();
+  if (!texto) return;
+  const { error } = await supabase.from('wellbeing_notes').insert({
+    signal_id: signalId, school_id: schoolId, body: texto,
+  });
+  if (error) throw error;
 }

@@ -18,6 +18,9 @@ import {
   type Activity, type ActivitySubmission, type ActivityEvent, type Student,
   type StudentCheckin, type CheckinMoment, type ObservationCategory, type StudentObservation,
 } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Students.css';
 import './Actividades.css';
 
 const QUICK_REACTIONS = ['👏 Excelente', '👍 Muy bien', '💪 Seguí así', '🤝 Hablemos'];
@@ -27,7 +30,7 @@ type EnrolledStudent = Student & { enrollmentCode: string };
 const EVENT_LABELS: Record<string, { label: string; icon: typeof Eye; color: string }> = {
   viewed: { label: 'Vio la actividad', icon: Eye, color: 'var(--text-secondary)' },
   started: { label: 'Comenzó a trabajar', icon: Play, color: 'var(--cyan-bright)' },
-  answer_changed: { label: 'Modificó una respuesta', icon: MousePointerClick, color: '#818CF8' },
+  answer_changed: { label: 'Modificó una respuesta', icon: MousePointerClick, color: 'var(--accent-ia)' },
   submitted: { label: 'Entregó la actividad', icon: Send, color: 'var(--success)' },
   reopened: { label: 'Volvió a abrirla', icon: RotateCcw, color: 'var(--warning)' },
   focus_lost: { label: 'Salió de la pestaña', icon: FocusLost, color: 'var(--warning)' },

@@ -18,14 +18,14 @@
 }
 
 .qr-hint {
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: var(--text-secondary);
   max-width: 380px;
 }
 
 .qr-url {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--text-subtle);
   word-break: break-all;
   background: var(--bg-elevated);

@@ -1,5 +1,5 @@
 /**
- * EstudIA — Database Seed Script
+ * SMT EstudIA — Database Seed Script
  *
  * Run with:
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx supabase/seed.ts

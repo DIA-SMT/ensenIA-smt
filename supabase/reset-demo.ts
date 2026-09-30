@@ -1,5 +1,5 @@
 /**
- * ENSEÑIA SMT — Reset seguro de datos demo
+ * SMT EstudIA — Reset seguro de datos demo
  *
  * Borra TODO lo creado por seed.ts / seed-familias.ts (escuelas, cursos,
  * materias, alumnos, docentes, actividades, etc.) para poder resembrar
@@ -44,6 +44,19 @@ const TABLES_BY_ID: string[] = [
   'student_guardians',
   'student_observations',
   'student_checkins',
+  // Tablas de migraciones 009 y 020-035: las que referencian schools/profiles
+  // sin ON DELETE CASCADE bloquearían el borrado de escuelas o de usuarios.
+  'wellbeing_notes',
+  'wellbeing_signals',
+  'migue_sessions', // migue_messages cae por FK cascade
+  'student_awards',
+  'teacher_awards',
+  'recorded_classes',
+  'term_grades',
+  'evaluation_criteria',
+  'attendance_sessions', // attendance_records cae por FK cascade
+  'practice_attempts',
+  'student_notes',
   'alerts', // alert_students cae por FK cascade al borrar esto
   'activity_events',
   'activity_submissions',
@@ -58,9 +71,9 @@ const TABLES_BY_ID: string[] = [
   'notifications', // notification_reads cae por FK cascade al borrar esto
   'communications', // communication_recipients/reads caen por FK cascade al borrar esto
   'quick_notes',
-  'live_sessions', // no está en supabase/migrations/, existe solo en la DB real
-  'school_policies', // ídem
-  'audit_log', // ídem
+  'live_sessions', // live_activities/responses/reactions/guests caen por FK cascade
+  'school_policies',
+  'audit_log',
   'courses',
   'subjects',
   // 'schools' se borra al final, después de los auth.users: profiles.school_id

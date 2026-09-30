@@ -4,13 +4,13 @@ import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
-    MessageSquare, PenLine, Copy, Trash2, Square, ArrowDownToLine,
-    Paperclip, X, ClipboardList, Play, Boxes
+    MessageSquare, PenLine, Copy, Trash2, Square,
+    Paperclip, X, Play, Boxes
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
-import { getMaterialsByTeacher } from '../services/library.service';
+import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
 import {
     getOrCreateSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
@@ -21,6 +21,8 @@ import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
 import PresentationViewer from '../components/PresentationViewer';
 import { parsePresentation, type ParsedPresentation } from '../lib/presentation';
+import ToolBriefForm from '../components/ToolBriefForm';
+import RefineResultModal from '../components/RefineResultModal';
 import type {
     PlanningUnit, PlanningClass, SubjectAssignment, Subject,
     ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
@@ -84,7 +86,12 @@ function getSuggestions(tool: IAToolType, classTitle?: string): string[] {
     }
 }
 
-/* -- Tool-specific pre-fill prompts -- */
+/* Formato que espera el visor de diapositivas (parsePresentation). El brief
+   guiado arma el pedido, pero sin esto la IA contesta en cualquier formato y
+   el botón "Presentar" no puede leerlo. */
+const FORMATO_DIAPOSITIVAS = 'Usá EXACTAMENTE este formato para cada diapositiva:\n\n## Diapositiva N: [título corto]\n- [punto 1]\n- [punto 2]\n\n> Nota para el docente: [cómo presentarla, 1-2 frases]\n\nIncluí 1 o 2 diapositivas de "🙋 Pregunta al grupo" con opciones A) B) C) D) para hacerla interactiva.';
+
+/* -- Tool-specific pre-fill prompts (si el docente saltea el brief guiado) -- */
 function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
     const ctx = classTitle ? ` para la clase "${classTitle}"` : '';
     switch (toolId) {
@@ -144,9 +151,13 @@ export default function IALab() {
     const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
     const [attachedDoc, setAttachedDoc] = useState<LibraryMaterial | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
-    const [publishSource, setPublishSource] = useState<ChatMessage | null>(null);
+    const [publishSource, setPublishSource] = useState<{ content: string; toolUsed: IAToolType | null; title?: string } | null>(null);
     const [activePresentation, setActivePresentation] = useState<ParsedPresentation | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // ── Flujo guiado: brief antes de generar + revisión antes de consolidar ──
+    const [briefTool, setBriefTool] = useState<IAToolType | null>(null);
+    const [refineSource, setRefineSource] = useState<ChatMessage | null>(null);
 
     /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
     const assignments = user?.subjects ?? [];
@@ -159,7 +170,7 @@ export default function IALab() {
         getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
         getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
 
-        getSubjects().then(subjects => {
+        getSubjects(user.schoolId).then(subjects => {
             const map: Record<string, Subject> = {};
             subjects.forEach(s => { map[s.id] = s; });
             setSubjectsMap(map);
@@ -365,12 +376,15 @@ export default function IALab() {
         }
     };
 
-    // ── Tool click → pre-fill prompt ──
+    // ── Tool click → brief guiado (preguntas mínimas antes de generar) ──
     const handleToolClick = (toolId: IAToolType) => {
         setActiveTool(toolId);
         setCenterMode('chat');
         if (toolId !== 'free') {
-            setChatInput(getToolPrompt(toolId, selectedClass?.title));
+            setBriefTool(toolId);
+            setChatInput('');
+        } else {
+            setBriefTool(null);
         }
 
         // Ensure session exists
@@ -388,7 +402,11 @@ export default function IALab() {
 
     // ── Send message ──
     const handleSend = async () => {
-        const text = chatInput.trim();
+        await sendMessage(chatInput);
+    };
+
+    const sendMessage = async (rawText: string) => {
+        const text = rawText.trim();
         if (!text || isStreaming) return;
 
         // Validate summary input length
@@ -566,22 +584,42 @@ export default function IALab() {
         setActivePresentation(parsed);
     };
 
-    // ── Insert from chat into editor ──
-    const handleInsertFromChat = async (msg: ChatMessage) => {
+    // ── Consolidar: insertar contenido (revisado) en la clase ──
+    const handleInsertContent = async (content: string) => {
         if (!selectedClass) return;
         const newContent = selectedClass.content
-            ? selectedClass.content + '\n\n' + msg.content
-            : msg.content;
-        try {
-            await updateClass(selectedClass.id, { content: newContent });
-            // Update local state
-            setSelectedClass({ ...selectedClass, content: newContent });
-            // Refresh planning
-            const units = await getPlanningByTeacher(user.id);
-            setAllUnits(units);
-        } catch (err) {
-            console.error('Error inserting content:', err);
-        }
+            ? selectedClass.content + '\n\n' + content
+            : content;
+        await updateClass(selectedClass.id, { content: newContent });
+        setSelectedClass({ ...selectedClass, content: newContent });
+        const units = await getPlanningByTeacher(user.id);
+        setAllUnits(units);
+    };
+
+    // ── Consolidar: guardar contenido (revisado) como material de Biblioteca ──
+    const handleSaveAsMaterial = async (content: string, title: string) => {
+        if (!currentAssignment) throw new Error('Elegí una materia primero.');
+        await createMaterial({
+            title,
+            description: 'Generado con el Laboratorio IA',
+            fileType: 'doc',
+            fileName: '',
+            fileSize: '—',
+            subjectId: currentAssignment.subjectId,
+            subjectName: subjectName || 'Materia',
+            unitName: selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined,
+            teacherId: user.id,
+            schoolId: user.schoolId,
+            tags: ['IA'],
+            extractedText: content,
+        });
+        getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
+    };
+
+    // ── Pedir un ajuste rápido a la IA sobre la última respuesta ──
+    const handleAskAdjust = (instruction: string) => {
+        setRefineSource(null);
+        sendMessage(`Ajustá tu última respuesta: ${instruction.toLowerCase()}. Mantené todo lo demás igual y devolvé la versión completa corregida.`);
     };
 
     // ── Enter key handler ──
@@ -605,7 +643,7 @@ export default function IALab() {
             <div className="lab-sidebar card">
                 <div className="lab-panel-header">
                     <Folder size={18} className="text-ia-accent" />
-                    <h3>Mis módulos</h3>
+                    <h3 aria-level={2}>Mis módulos</h3>
                 </div>
 
                 {/* Subject/Course Selector */}
@@ -613,6 +651,7 @@ export default function IALab() {
                     <div className="subject-selector">
                         <div className="selector-current" tabIndex={0}>
                             <select
+                                aria-label="Materia y curso"
                                 className="form-select compact-select"
                                 value={selectedAssignmentIdx}
                                 onChange={e => {
@@ -844,22 +883,13 @@ export default function IALab() {
                                                             : <><Copy size={13} /> Copiar</>
                                                         }
                                                     </button>
-                                                    {selectedClass && (
-                                                        <button
-                                                            className="msg-action-btn btn-insert-chat"
-                                                            onClick={() => handleInsertFromChat(msg)}
-                                                            title="Insertar en editor"
-                                                        >
-                                                            <ArrowDownToLine size={13} /> Insertar en clase
-                                                        </button>
-                                                    )}
-                                                    {currentAssignment && (
+                                                    {currentAssignment && !msg.content.startsWith('⚠️') && (
                                                         <button
                                                             className="msg-action-btn btn-publish-chat"
-                                                            onClick={() => setPublishSource(msg)}
-                                                            title="Publicar como actividad para estudiantes"
+                                                            onClick={() => setRefineSource(msg)}
+                                                            title="Revisá y editá el resultado antes de usarlo en clase, material o actividad"
                                                         >
-                                                            <ClipboardList size={13} /> Publicar actividad
+                                                            <PenLine size={13} /> Revisar y usar
                                                         </button>
                                                     )}
                                                 </div>
@@ -893,6 +923,24 @@ export default function IALab() {
 
                             <div ref={chatEndRef} />
                         </div>
+
+                        {briefTool && briefTool !== 'free' && !isStreaming && (
+                            <div className="brief-wrapper border-top">
+                                <ToolBriefForm
+                                    tool={briefTool}
+                                    classTitle={selectedClass?.title}
+                                    hasAttachedDoc={!!attachedDoc}
+                                    onGenerate={prompt => {
+                                        setBriefTool(null);
+                                        sendMessage(briefTool === 'pres' ? `${prompt}\n\n${FORMATO_DIAPOSITIVAS}` : prompt);
+                                    }}
+                                    onSkip={() => {
+                                        setChatInput(getToolPrompt(briefTool, selectedClass?.title));
+                                        setBriefTool(null);
+                                    }}
+                                />
+                            </div>
+                        )}
 
                         <div className="lab-input-wrapper border-top">
                             {isStreaming && (
@@ -936,8 +984,9 @@ export default function IALab() {
                                     className="btn-send-large"
                                     onClick={handleSend}
                                     disabled={isStreaming || !chatInput.trim()}
+                                    aria-label="Enviar a la IA"
                                 >
-                                    <Send size={18} />
+                                    <Send size={18} aria-hidden="true" />
                                 </button>
                             </div>
                             {activeTool === 'sum' && (
@@ -1094,15 +1143,16 @@ export default function IALab() {
                                     className="btn-send-large"
                                     onClick={() => { setCenterMode('chat'); handleSend(); }}
                                     disabled={isStreaming || !chatInput.trim()}
+                                    aria-label="Enviar a la IA"
                                 >
-                                    <Send size={18} />
+                                    <Send size={18} aria-hidden="true" />
                                 </button>
                             </div>
                             <div className="lab-input-hints">
                                 <span>Probá con:</span>
                                 <button className="hint-chip" onClick={() => handleSuggestionClick('Desarrollá el contenido completo de esta clase')}>Desarrollar la clase completa</button>
                                 <button className="hint-chip" onClick={() => handleSuggestionClick('Creá una actividad práctica para esta clase')}>Crear actividad práctica</button>
-                                <span className="kbd-hint">La respuesta aparece en <strong>Asistente</strong> · después usá «Insertar en clase»</span>
+                                <span className="kbd-hint">La respuesta aparece en <strong>Asistente</strong> · después usá «Revisar y usar»</span>
                             </div>
                         </div>
                     </>
@@ -1114,7 +1164,7 @@ export default function IALab() {
                 {/* Tools Section */}
                 <div className="lab-panel-header">
                     <Sparkles size={18} className="text-ia-accent" />
-                    <h3>¿Qué querés crear?</h3>
+                    <h3 aria-level={2}>¿Qué querés crear?</h3>
                 </div>
                 <div className="tools-list">
                     {tools.map(t => (
@@ -1152,8 +1202,9 @@ export default function IALab() {
 
                 <div className="config-form">
                     <div className="form-group">
-                        <label><Users size={14} /> Edad / Nivel Educativo</label>
+                        <label htmlFor="lab-nivel"><Users size={14} aria-hidden="true" /> Edad / Nivel Educativo</label>
                         <select
+                            id="lab-nivel"
                             className="form-select"
                             value={educationLevel}
                             onChange={e => setEducationLevel(e.target.value)}
@@ -1167,8 +1218,8 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><BookOpen size={14} /> Materia</label>
-                        <select className="form-select" value={currentAssignment?.subjectId ?? ''} disabled>
+                        <label htmlFor="lab-materia"><BookOpen size={14} aria-hidden="true" /> Materia</label>
+                        <select id="lab-materia" className="form-select" value={currentAssignment?.subjectId ?? ''} disabled>
                             {assignments.map((a, i) => (
                                 <option key={i} value={a.subjectId}>
                                     {getSubjectName(a.subjectId) || 'Materia'}
@@ -1178,10 +1229,12 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><SlidersHorizontal size={14} /> Dificultad</label>
+                        <label htmlFor="lab-dificultad"><SlidersHorizontal size={14} aria-hidden="true" /> Dificultad</label>
                         <div className="range-wrapper">
                             <input
+                                id="lab-dificultad"
                                 type="range"
+                                aria-valuetext={['básica', 'fácil', 'media', 'difícil', 'avanzada'][difficulty - 1]}
                                 min="1"
                                 max="5"
                                 value={difficulty}
@@ -1196,8 +1249,9 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label><Paperclip size={14} /> Material de la Biblioteca</label>
+                        <label htmlFor="lab-material"><Paperclip size={14} aria-hidden="true" /> Material de la Biblioteca</label>
                         <select
+                            id="lab-material"
                             className="form-select"
                             value={attachedDoc?.id ?? ''}
                             onChange={e => {
@@ -1244,6 +1298,28 @@ export default function IALab() {
                     }}
                 />
             )}
+            {refineSource && currentAssignment && (
+                <RefineResultModal
+                    initialContent={refineSource.content}
+                    defaultTitle={
+                        selectedClass
+                            ? `${refineSource.toolUsed === 'eval' ? 'Evaluación' : 'Actividad'}: ${selectedClass.title}`
+                            : refineSource.toolUsed
+                                ? `${tools.find(t => t.id === refineSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
+                                : `Actividad de ${subjectName}`
+                    }
+                    canInsertInClass={!!selectedClass}
+                    className={selectedClass?.title}
+                    onClose={() => setRefineSource(null)}
+                    onInsertInClass={handleInsertContent}
+                    onSaveAsMaterial={handleSaveAsMaterial}
+                    onPublish={(content) => {
+                        setPublishSource({ content, toolUsed: refineSource.toolUsed });
+                        setRefineSource(null);
+                    }}
+                    onAskAdjust={handleAskAdjust}
+                />
+            )}
             {publishSource && currentAssignment && (
                 <PublishActivityModal
                     contentMd={publishSource.content}
@@ -1257,11 +1333,12 @@ export default function IALab() {
                     unitId={selectedUnitId}
                     classId={selectedClass?.id ?? null}
                     defaultTitle={
-                        selectedClass
-                            ? `Actividad: ${selectedClass.title}`
-                            : publishSource.toolUsed
-                                ? `${tools.find(t => t.id === publishSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
-                                : `Actividad de ${subjectName}`
+                        publishSource.title
+                            ?? (selectedClass
+                                ? `Actividad: ${selectedClass.title}`
+                                : publishSource.toolUsed
+                                    ? `${tools.find(t => t.id === publishSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`
+                                    : `Actividad de ${subjectName}`)
                     }
                     onClose={() => setPublishSource(null)}
                     onPublished={() => { /* la actividad ya quedó publicada */ }}

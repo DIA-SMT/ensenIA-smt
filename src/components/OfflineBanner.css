@@ -3,7 +3,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.4;
   border-bottom: 1px solid var(--border-color);
 }
