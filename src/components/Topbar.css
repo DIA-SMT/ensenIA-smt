@@ -147,3 +147,16 @@ html[data-contraste="alto"] .topbar { background: #FFFFFF; backdrop-filter: none
 @media (max-width: 640px) {
   .demo-chip { display: none; }
 }
+
+/* Selector de escuela (quien trabaja en más de una) */
+.topbar-school {
+    width: auto;
+    max-width: 220px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    .topbar-school { max-width: 140px; }
+}

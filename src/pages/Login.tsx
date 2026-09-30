@@ -50,7 +50,7 @@ export default function Login() {
     setError('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Completá el email y la contraseña.');
+      setError('Completá tu usuario (email o DNI) y la contraseña.');
       return;
     }
 
@@ -106,15 +106,15 @@ export default function Login() {
             )}
 
             <div className="login-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">Email o DNI</label>
+              {/* type="text": los estudiantes entran con el DNI (ver lib/dni.ts) */}
               <input
                 id="email"
-                type="email"
-                inputMode="email"
+                type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="nombre@ensenia.edu.ar"
-                autoComplete="email"
+                placeholder="Tu email, o tu DNI si sos estudiante"
+                autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-invalid={!!error && !email.trim()}

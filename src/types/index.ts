@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════ */
 
 // ── Enums ──
-export type UserRole = 'director' | 'docente' | 'estudiante' | 'padre';
+export type UserRole = 'director' | 'docente' | 'estudiante' | 'padre' | 'superadmin';
 export type AlertLevel = 'danger' | 'warning' | 'info' | 'success';
 export type AlertCategory = 'academic' | 'attendance' | 'conduct' | 'system';
 export type StudentStatus = 'excellent' | 'good' | 'warning' | 'critical';
@@ -33,8 +33,12 @@ export interface User {
   firstName: string;
   lastName: string;
   role: UserRole;
+  /** Escuela activa. Vacío para el superadmin, que no pertenece a ninguna. */
   schoolId: string;
   avatarInitials: string;
+  dni?: string | null;
+  /** Entró con la clave inicial que le dio la escuela: tiene que cambiarla. */
+  mustChangePassword?: boolean;
   subjects?: SubjectAssignment[];
   createdAt: string;
 }

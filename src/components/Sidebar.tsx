@@ -101,7 +101,7 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
         <LogoMark size={colapsada ? 22 : 26} />
         <div className="logo-text">
           <span className="logo-title">SMT Estud<span className="logo-ia">IA</span></span>
-          <span className="logo-subtitle">{school?.shortName ?? 'Escuela municipal'}</span>
+          <span className="logo-subtitle">{school?.shortName ?? (user.role === 'superadmin' ? 'Administración' : 'Escuela municipal')}</span>
         </div>
       </div>
 

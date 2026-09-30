@@ -112,6 +112,12 @@ function App() {
                 {ruta('/docentes', ['director'])}
                 {ruta('/cursos/:id', ['director'])}
                 {ruta('/comunicaciones', ['director'])}
+                {ruta('/mi-escuela', ['director'])}
+
+                {/* Superadmin: escuelas y cuentas. Quién puede qué lo decide
+                    la base (migración de membresías); acá solo se enruta. */}
+                {ruta('/admin', ['superadmin'])}
+                {ruta('/admin/escuelas/:id', ['superadmin'])}
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

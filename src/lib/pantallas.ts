@@ -75,6 +75,10 @@ export const cargadores = {
   '/mi-guia':             () => import('../pages/MiGuia'),
   '/clase':               () => import('../pages/ClaseEnVivoAlumno'),
   '/panel':               () => import('../pages/PanelDireccion'),
+  // Gestión de escuelas: superadmin (todas) y dirección (la suya)
+  '/admin':               () => import('../pages/admin/AdminEscuelas'),
+  '/admin/escuelas/:id':   () => import('../pages/admin/GestionEscuela'),
+  '/mi-escuela':          () => import('../pages/admin/GestionEscuela'),
 } satisfies Record<string, Cargador>;
 
 export type RutaPantalla = keyof typeof cargadores;

@@ -4,6 +4,7 @@
  * docente, la actividad rápida.
  */
 
+import { useState } from 'react';
 import { Search, Zap, Accessibility, HelpCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,7 +31,23 @@ function saludo(): string {
 
 export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: TopbarProps) {
   const { pathname } = useLocation();
-  const { user, isDocente } = useAuth();
+  const { user, isDocente, isSuperadmin, school, mySchools, switchSchool } = useAuth();
+  const [cambiando, setCambiando] = useState(false);
+
+  // Quien trabaja en más de una escuela elige en cuál está ahora. El
+  // superadmin no: pasarse a una de sus membresías lo dejaría sin el rol.
+  const eligeEscuela = !isSuperadmin && mySchools.length > 1;
+  const cambiarEscuela = async (schoolId: string) => {
+    if (!schoolId || schoolId === school?.id) return;
+    setCambiando(true);
+    try {
+      await switchSchool(schoolId); // recarga la app en la escuela nueva
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo cambiar de escuela. Probá de nuevo.');
+      setCambiando(false);
+    }
+  };
 
   const titulo = tituloDe(user?.role, pathname);
   const hoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -48,6 +65,18 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
           <h1 className="page-title">{titulo}</h1>
         </div>
         <span className="demo-chip" title="Demo para las escuelas municipales Gabriela Mistral y Alfonsina Storni. Los datos son de prueba.">DEMO</span>
+        {eligeEscuela && (
+          <select
+            className="form-select topbar-school"
+            value={school?.id ?? ''}
+            onChange={e => cambiarEscuela(e.target.value)}
+            disabled={cambiando}
+            aria-label="Escuela en la que estás trabajando"
+            title="Cambiar de escuela"
+          >
+            {mySchools.map(s => <option key={s.schoolId} value={s.schoolId}>{s.schoolName}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="topbar-right">

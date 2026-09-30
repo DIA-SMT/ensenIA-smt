@@ -1425,32 +1425,38 @@ export type Database = {
         Row: {
           avatar_initials: string
           created_at: string | null
+          dni: string | null
           email: string
           first_name: string
           id: string
           last_name: string
+          must_change_password: boolean
           role: Database["public"]["Enums"]["user_role"]
-          school_id: string
+          school_id: string | null
         }
         Insert: {
           avatar_initials?: string
           created_at?: string | null
+          dni?: string | null
           email: string
           first_name: string
           id: string
           last_name: string
+          must_change_password?: boolean
           role?: Database["public"]["Enums"]["user_role"]
-          school_id: string
+          school_id?: string | null
         }
         Update: {
           avatar_initials?: string
           created_at?: string | null
+          dni?: string | null
           email?: string
           first_name?: string
           id?: string
           last_name?: string
+          must_change_password?: boolean
           role?: Database["public"]["Enums"]["user_role"]
-          school_id?: string
+          school_id?: string | null
         }
         Relationships: [
           {
@@ -1870,6 +1876,45 @@ export type Database = {
           {
             foreignKeyName: "school_policies_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_memberships: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_memberships_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_memberships_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3118,6 +3163,18 @@ export type Database = {
       }
     }
     Functions: {
+      admin_can_manage_user: {
+        Args: { p_user: string }
+        Returns: boolean
+      }
+      admin_can_create: {
+        Args: { p_school: string; p_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
+      switch_school: {
+        Args: { p_school: string }
+        Returns: undefined
+      }
       ensure_academic_terms: {
         Args: { p_school_id: string; p_year: number }
         Returns: Database["public"]["Tables"]["academic_terms"]["Row"][]
@@ -3248,7 +3305,7 @@ export type Database = {
         | "administrativo"
       student_status: "excellent" | "good" | "warning" | "critical"
       submission_status: "pending" | "in_progress" | "submitted" | "graded"
-      user_role: "director" | "docente" | "estudiante" | "padre"
+      user_role: "director" | "docente" | "estudiante" | "padre" | "superadmin"
       wellbeing_level: "seguimiento" | "urgente"
       wellbeing_status: "abierta" | "en_seguimiento" | "cerrada"
     }
@@ -3402,7 +3459,7 @@ export const Constants = {
       policy_category: ["reglamento", "protocolo", "circular", "seguridad", "administrativo"],
       student_status: ["excellent", "good", "warning", "critical"],
       submission_status: ["pending", "in_progress", "submitted", "graded"],
-      user_role: ["director", "docente", "estudiante", "padre"],
+      user_role: ["director", "docente", "estudiante", "padre", "superadmin"],
       wellbeing_level: ["seguimiento", "urgente"],
       wellbeing_status: ["abierta", "en_seguimiento", "cerrada"],
     },

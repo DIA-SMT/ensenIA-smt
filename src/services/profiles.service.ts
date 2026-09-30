@@ -6,12 +6,18 @@ export async function getProfile(userId: string): Promise<User> {
     await supabase.from('profiles').select('*').eq('id', userId).single()
   );
 
-  const assignments = unwrap(
-    await supabase
-      .from('teacher_assignments')
-      .select('subject_id, course_id, courses(name)')
-      .eq('teacher_id', userId)
-  );
+  // Solo las materias de la escuela activa: un docente de dos escuelas
+  // trabaja en una por vez (se cambia con switchSchool).
+  const activeSchool = (profile as { school_id: string | null }).school_id;
+  const assignments = activeSchool
+    ? unwrap(
+        await supabase
+          .from('teacher_assignments')
+          .select('subject_id, course_id, courses!inner(name, school_id)')
+          .eq('teacher_id', userId)
+          .eq('courses.school_id', activeSchool)
+      )
+    : [];
 
   const subjects: SubjectAssignment[] = assignments.map((a: any) => ({
     subjectId: a.subject_id,
@@ -22,20 +28,64 @@ export async function getProfile(userId: string): Promise<User> {
   return mapProfileToUser(profile, subjects);
 }
 
-/** Docentes de una escuela. El filtro por school_id es explícito además de la RLS. */
-export async function getTeacherUsers(schoolId: string): Promise<User[]> {
-  const profiles = unwrap(
-    await supabase.from('profiles').select('*').eq('role', 'docente').eq('school_id', schoolId)
+export interface MySchool {
+  schoolId: string;
+  schoolName: string;
+  role: User['role'];
+}
+
+/** Escuelas a las que pertenezco (para elegir la activa). */
+export async function getMySchools(userId: string): Promise<MySchool[]> {
+  const rows = unwrap(
+    await supabase
+      .from('school_memberships')
+      .select('school_id, role, schools(name)')
+      .eq('user_id', userId)
   );
+  return rows
+    .map((r: any) => ({ schoolId: r.school_id, schoolName: r.schools?.name ?? '', role: r.role }))
+    .sort((a: MySchool, b: MySchool) => a.schoolName.localeCompare(b.schoolName));
+}
+
+export async function switchSchool(schoolId: string): Promise<void> {
+  const { error } = await supabase.rpc('switch_school', { p_school: schoolId });
+  if (error) throw error;
+}
+
+/** Después de cambiar la clave inicial. */
+export async function clearMustChangePassword(userId: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ must_change_password: false }).eq('id', userId);
+  if (error) throw error;
+}
+
+/**
+ * Docentes de una escuela. El filtro por escuela es explícito además de la RLS.
+ *
+ * Se buscan por membresía (039) y no por profiles.school_id: esa es la
+ * escuela ACTIVA, y un docente que está en dos escuelas y hoy trabaja en
+ * la otra desaparecería del equipo de esta. Sin la 039 aplicada todavía,
+ * cae a la búsqueda de siempre.
+ */
+export async function getTeacherUsers(schoolId: string): Promise<User[]> {
+  const byMembership = await supabase
+    .from('school_memberships')
+    .select('profiles(*)')
+    .eq('school_id', schoolId)
+    .eq('role', 'docente');
+  const profiles: any[] = byMembership.error
+    ? unwrap(await supabase.from('profiles').select('*').eq('role', 'docente').eq('school_id', schoolId))
+    : (byMembership.data ?? []).map((m: any) => m.profiles).filter(Boolean);
 
   const teacherIds = profiles.map((p: any) => p.id);
   if (teacherIds.length === 0) return [];
 
+  // Solo sus materias en ESTA escuela
   const allAssignments = unwrap(
     await supabase
       .from('teacher_assignments')
-      .select('teacher_id, subject_id, course_id, courses(name)')
+      .select('teacher_id, subject_id, course_id, courses!inner(name, school_id)')
       .in('teacher_id', teacherIds)
+      .eq('courses.school_id', schoolId)
   );
 
   return profiles.map((p: any) => {
@@ -94,8 +144,10 @@ function mapProfileToUser(row: any, subjects: SubjectAssignment[]): User {
     firstName: row.first_name,
     lastName: row.last_name,
     role: row.role,
-    schoolId: row.school_id,
+    schoolId: row.school_id ?? '',
     avatarInitials: row.avatar_initials,
+    dni: row.dni ?? null,
+    mustChangePassword: row.must_change_password ?? false,
     subjects: subjects.length > 0 ? subjects : undefined,
     createdAt: row.created_at,
   };

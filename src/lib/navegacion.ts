@@ -10,7 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
-  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity,
+  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -65,7 +65,14 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Herramientas', ia: true, claves: 'asistente preguntar protocolo' },
+  { ruta: '/mi-escuela', etiqueta: 'Mi escuela', titulo: 'Gestión de la escuela', icono: Building2, grupo: 'Cuenta', claves: 'usuarios cuentas docentes alumnos cursos materias alta clave dni' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración umbrales accesibilidad letra contraste datos' },
+];
+
+// El superadmin administra escuelas y cuentas: no usa la app como aula.
+const SUPERADMIN: ItemNav[] = [
+  { ruta: '/admin', etiqueta: 'Escuelas', icono: Building2, grupo: 'Administración', enBarra: true, claves: 'escuelas directores usuarios cuentas alta' },
+  { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', enBarra: true, claves: 'configuración accesibilidad letra contraste datos' },
 ];
 
 const ESTUDIANTE: ItemNav[] = [
@@ -89,6 +96,7 @@ export const NAV_POR_ROL: Record<UserRole, ItemNav[]> = {
   director: DIRECTOR,
   estudiante: ESTUDIANTE,
   padre: FAMILIA,
+  superadmin: SUPERADMIN,
 };
 
 export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
@@ -98,6 +106,7 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   director: [],
   estudiante: [],
   padre: [],
+  superadmin: [],
 };
 
 export const ETIQUETA_ROL: Record<UserRole, string> = {
@@ -105,6 +114,7 @@ export const ETIQUETA_ROL: Record<UserRole, string> = {
   docente: 'Docente',
   estudiante: 'Estudiante',
   padre: 'Familia',
+  superadmin: 'Superadmin',
 };
 
 /**
@@ -117,6 +127,7 @@ export function inicioDe(rol: UserRole | undefined): RutaPantalla {
   if (rol === 'estudiante') return '/mis-actividades';
   if (rol === 'padre') return '/comunicados-familia';
   if (rol === 'docente') return '/hoy';
+  if (rol === 'superadmin') return '/admin';
   return '/dashboard';
 }
 
@@ -129,6 +140,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
   if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
+  if (pathname.startsWith('/admin/escuelas/')) return 'Gestión de la escuela';
   return 'SMT EstudIA';
 }
 
@@ -140,5 +152,6 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   if (pathname.startsWith('/actividades/') || pathname === '/actividad-rapida') return '/actividades';
   if (pathname.startsWith('/mis-actividades/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';
+  if (pathname.startsWith('/admin/escuelas/')) return '/admin';
   return null;
 }

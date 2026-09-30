@@ -24,6 +24,7 @@ import Dialogo from '../components/shell/Dialogo';
 import PanelPreferencias from '../components/shell/PanelPreferencias';
 import LimitePantalla from '../components/shell/LimitePantalla';
 import GuiaRapida, { shouldAutoOpenGuide } from '../components/GuiaRapida';
+import CambiarClave from '../components/CambiarClave';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferencias } from '../contexts/PreferencesContext';
 import { NAV_POR_ROL, tituloDe } from '../lib/navegacion';
@@ -58,7 +59,8 @@ export default function MainLayout() {
 
   // La guía rápida se abre sola la primera vez (salvo que pidan que no).
   useEffect(() => {
-    if (user && shouldAutoOpenGuide(user.role)) setGuiaAbierta(true);
+    // La guía es de uso en el aula: el superadmin no tiene destinos ahí
+    if (user && user.role !== 'superadmin' && shouldAutoOpenGuide(user.role)) setGuiaAbierta(true);
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // El color del rol, antes de pintar.
@@ -109,6 +111,9 @@ export default function MainLayout() {
   const abrirPreferencias = useCallback(() => setPrefsAbiertas(true), []);
   const cerrarBuscador = useCallback(() => setBuscando(false), []);
   const cerrarPreferencias = useCallback(() => setPrefsAbiertas(false), []);
+
+  // Con la clave inicial que dio la escuela no se entra: primero una propia
+  if (user?.mustChangePassword) return <CambiarClave />;
 
   return (
     <div className="layout-container">
