@@ -2,7 +2,7 @@
  * SMT EstudIA — Gestión de escuelas
  *
  * Lo usan el superadmin (todas las escuelas) y el director (la suya).
- * Quién puede qué lo deciden las policies de la migración 022; acá no se
+ * Quién puede qué lo deciden las policies de la migración 039; acá no se
  * repite ninguna regla. Crear cuentas y resetear claves pasa por la
  * función admin-usuarios, que es la única que tiene la service role.
  */

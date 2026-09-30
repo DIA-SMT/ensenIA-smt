@@ -58,19 +58,34 @@ export async function clearMustChangePassword(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getTeacherUsers(): Promise<User[]> {
-  const profiles = unwrap(
-    await supabase.from('profiles').select('*').eq('role', 'docente')
-  );
+/**
+ * Docentes de una escuela. El filtro por escuela es explícito además de la RLS.
+ *
+ * Se buscan por membresía (039) y no por profiles.school_id: esa es la
+ * escuela ACTIVA, y un docente que está en dos escuelas y hoy trabaja en
+ * la otra desaparecería del equipo de esta. Sin la 039 aplicada todavía,
+ * cae a la búsqueda de siempre.
+ */
+export async function getTeacherUsers(schoolId: string): Promise<User[]> {
+  const byMembership = await supabase
+    .from('school_memberships')
+    .select('profiles(*)')
+    .eq('school_id', schoolId)
+    .eq('role', 'docente');
+  const profiles: any[] = byMembership.error
+    ? unwrap(await supabase.from('profiles').select('*').eq('role', 'docente').eq('school_id', schoolId))
+    : (byMembership.data ?? []).map((m: any) => m.profiles).filter(Boolean);
 
   const teacherIds = profiles.map((p: any) => p.id);
   if (teacherIds.length === 0) return [];
 
+  // Solo sus materias en ESTA escuela
   const allAssignments = unwrap(
     await supabase
       .from('teacher_assignments')
-      .select('teacher_id, subject_id, course_id, courses(name)')
+      .select('teacher_id, subject_id, course_id, courses!inner(name, school_id)')
       .in('teacher_id', teacherIds)
+      .eq('courses.school_id', schoolId)
   );
 
   return profiles.map((p: any) => {

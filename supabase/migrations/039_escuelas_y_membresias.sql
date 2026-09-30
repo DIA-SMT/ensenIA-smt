@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 022 — Varias escuelas por persona, superadmin y gestión por escuela
+-- 039 — Varias escuelas por persona, superadmin y gestión por escuela
 --
 -- Hasta ahora cada usuario tenía una escuela y un rol fijos en profiles,
 -- y todo (escuelas, cursos, materias, docentes, alumnos, familias) se
@@ -22,7 +22,7 @@
 --    asignaciones, alumnos, familias). No crea directores.
 --  · los alumnos se inscriben solos en las materias de su curso.
 --
--- Requiere la 021 (valor 'superadmin' del enum) ya aplicada.
+-- Requiere la 038 (valor 'superadmin' del enum) ya aplicada.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ══ 1. Perfiles ══

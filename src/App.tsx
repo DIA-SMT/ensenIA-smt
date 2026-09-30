@@ -1,183 +1,130 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { PreferencesProvider } from './contexts/PreferencesContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import CargandoPantalla from './components/CargandoPantalla';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Agenda from './pages/Agenda';
-import Students from './pages/Students';
-import IALab from './pages/IALab';
-import Biblioteca from './pages/Biblioteca';
-import Alerts from './pages/Alerts';
-import Settings from './pages/Settings';
-import Docentes from './pages/Docentes';
-import Comunicaciones from './pages/Comunicaciones';
-import Actividades from './pages/Actividades';
-import ActividadDetalle from './pages/ActividadDetalle';
-import MisActividades from './pages/MisActividades';
-import RealizarActividad from './pages/RealizarActividad';
-import MiBiblioteca from './pages/MiBiblioteca';
-import MiGuia from './pages/MiGuia';
-import ClaseEnVivo from './pages/ClaseEnVivo';
-import ClaseEnVivoAlumno from './pages/ClaseEnVivoAlumno';
-import ClaseEnVivoInvitado from './pages/ClaseEnVivoInvitado';
-import Hoy from './pages/Hoy';
-import MisClases from './pages/MisClases';
-import Libreta from './pages/Libreta';
-import Asistencia from './pages/Asistencia';
-import Corregir from './pages/Corregir';
-import ArmarModulo from './pages/ArmarModulo';
-import PanelDireccion from './pages/PanelDireccion';
-import Familias from './pages/Familias';
-import AdminEscuelas from './pages/admin/AdminEscuelas';
-import GestionEscuela from './pages/admin/GestionEscuela';
-import { homeFor } from './lib/home';
-import ActividadRapida from './pages/ActividadRapida';
-import ComunicadosFamilia from './pages/ComunicadosFamilia';
-import MisHijos from './pages/MisHijos';
+import { Pantalla } from './lib/pantallas';
+import { inicioDe } from './lib/navegacion';
+import type { UserRole } from './types';
 
-/** Redirige al home según el rol. */
+// Pública a propósito y fuera de `Pantalla`: la abre alguien que escaneó el QR
+// de una clase en vivo, sin cuenta, y no tiene que bajarse nada de más.
+const ClaseEnVivoInvitado = lazy(() => import('./pages/ClaseEnVivoInvitado'));
+
+/** Redirige al inicio de cada rol. */
 function HomeRedirect() {
   const { user } = useAuth();
-  return <Navigate to={homeFor(user?.role)} replace />;
+  return <Navigate to={inicioDe(user?.role)} replace />;
 }
+
+/** Ruta protegida cuyo componente se baja recién cuando se abre. */
+function ruta(path: keyof typeof Pantalla, roles?: UserRole[]) {
+  const Componente = Pantalla[path];
+  const pantalla = (
+    <Suspense fallback={<CargandoPantalla />}>
+      <Componente />
+    </Suspense>
+  );
+  return (
+    <Route
+      key={path}
+      path={path.slice(1)}
+      element={roles ? <ProtectedRoute allowedRoles={roles}>{pantalla}</ProtectedRoute> : pantalla}
+    />
+  );
+}
+
+const STAFF: UserRole[] = ['docente', 'director'];
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <NotificationProvider>
-        <Routes>
-          {/* Login — outside layout */}
-          <Route path="/login" element={<Login />} />
+      <PreferencesProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <Routes>
+              {/* Login — afuera del armazón, y en el archivo principal:
+                  es lo primero que ve cualquiera. */}
+              <Route path="/login" element={<Login />} />
 
-          {/* Invitados por QR — pública a propósito: el que escanea no tiene
-              cuenta y no la va a crear parado en una sala. */}
-          <Route path="/vivo/:codigo" element={<ClaseEnVivoInvitado />} />
+              {/* Invitados por QR — pública a propósito: el que escanea no
+                  tiene cuenta y no la va a crear parado en una sala. */}
+              <Route path="/vivo/:codigo" element={
+                <Suspense fallback={<CargandoPantalla />}><ClaseEnVivoInvitado /></Suspense>
+              } />
 
-          {/* Protected — inside layout */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<HomeRedirect />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<HomeRedirect />} />
 
-            {/* Shared routes (staff) */}
-            <Route path="dashboard" element={
-              <ProtectedRoute allowedRoles={['director']}><Dashboard /></ProtectedRoute>
-            } />
-            <Route path="alerts" element={
-              <ProtectedRoute allowedRoles={['docente', 'director']}><Alerts /></ProtectedRoute>
-            } />
-            <Route path="settings" element={<Settings />} />
+                {/* Staff */}
+                {ruta('/alerts', STAFF)}
+                {ruta('/familias', STAFF)}
+                {/* Normativa: dirección la carga, el equipo docente la consulta. */}
+                {ruta('/normativa', STAFF)}
 
-            {/* Teacher-only */}
-            <Route path="hoy" element={
-              <ProtectedRoute allowedRoles={['docente']}><Hoy /></ProtectedRoute>
-            } />
-            <Route path="mis-clases" element={
-              <ProtectedRoute allowedRoles={['docente']}><MisClases /></ProtectedRoute>
-            } />
-            <Route path="libreta" element={
-              <ProtectedRoute allowedRoles={['docente']}><Libreta /></ProtectedRoute>
-            } />
-            <Route path="asistencia" element={
-              <ProtectedRoute allowedRoles={['docente']}><Asistencia /></ProtectedRoute>
-            } />
-            <Route path="corregir" element={
-              <ProtectedRoute allowedRoles={['docente']}><Corregir /></ProtectedRoute>
-            } />
-            <Route path="modulo" element={
-              <ProtectedRoute allowedRoles={['docente']}><ArmarModulo /></ProtectedRoute>
-            } />
-            <Route path="crear" element={
-              <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>
-            } />
-            <Route path="agenda" element={
-              <ProtectedRoute allowedRoles={['docente']}><Agenda /></ProtectedRoute>
-            } />
-            <Route path="ia-lab" element={
-              <ProtectedRoute allowedRoles={['docente']}><IALab /></ProtectedRoute>
-            } />
-            <Route path="clase-en-vivo" element={
-              <ProtectedRoute allowedRoles={['docente']}><ClaseEnVivo /></ProtectedRoute>
-            } />
-            <Route path="actividad-rapida" element={
-              <ProtectedRoute allowedRoles={['docente']}><ActividadRapida /></ProtectedRoute>
-            } />
-            <Route path="students" element={
-              <ProtectedRoute allowedRoles={['docente']}><Students /></ProtectedRoute>
-            } />
-            <Route path="biblioteca" element={
-              <ProtectedRoute allowedRoles={['docente']}><Biblioteca /></ProtectedRoute>
-            } />
-            <Route path="actividades" element={
-              <ProtectedRoute allowedRoles={['docente']}><Actividades /></ProtectedRoute>
-            } />
-            <Route path="actividades/:id" element={
-              <ProtectedRoute allowedRoles={['docente']}><ActividadDetalle /></ProtectedRoute>
-            } />
+                {/* Todos los roles. Migue: qué asistente le toca a cada uno lo
+                    decide el servidor según el rol, no el cliente. */}
+                {ruta('/settings')}
+                {ruta('/migue')}
 
-            {/* Staff: comunicación con familias */}
-            <Route path="familias" element={
-              <ProtectedRoute allowedRoles={['docente', 'director']}><Familias /></ProtectedRoute>
-            } />
+                {/* Docente */}
+                {ruta('/hoy', ['docente'])}
+                {ruta('/mis-clases', ['docente'])}
+                {ruta('/libreta', ['docente'])}
+                {ruta('/asistencia', ['docente'])}
+                {ruta('/corregir', ['docente'])}
+                {ruta('/modulo', ['docente'])}
+                <Route path="crear" element={<Navigate to="/actividad-rapida" replace />} />
+                {ruta('/agenda', ['docente'])}
+                {ruta('/ia-lab', ['docente'])}
+                {ruta('/clase-en-vivo', ['docente'])}
+                {ruta('/actividad-rapida', ['docente'])}
+                {ruta('/students', ['docente'])}
+                {ruta('/biblioteca', ['docente'])}
+                {ruta('/actividades', ['docente'])}
+                {ruta('/actividades/:id', ['docente'])}
 
-            {/* Familia-only */}
-            <Route path="comunicados-familia" element={
-              <ProtectedRoute allowedRoles={['padre']}><ComunicadosFamilia /></ProtectedRoute>
-            } />
-            <Route path="mis-hijos" element={
-              <ProtectedRoute allowedRoles={['padre']}><MisHijos /></ProtectedRoute>
-            } />
+                {/* Familia */}
+                {ruta('/comunicados-familia', ['padre'])}
+                {ruta('/mis-hijos', ['padre'])}
 
-            {/* Student-only */}
-            <Route path="mis-actividades" element={
-              <ProtectedRoute allowedRoles={['estudiante']}><MisActividades /></ProtectedRoute>
-            } />
-            <Route path="mis-actividades/:id" element={
-              <ProtectedRoute allowedRoles={['estudiante']}><RealizarActividad /></ProtectedRoute>
-            } />
-            <Route path="mi-biblioteca" element={
-              <ProtectedRoute allowedRoles={['estudiante']}><MiBiblioteca /></ProtectedRoute>
-            } />
-            <Route path="mi-guia" element={
-              <ProtectedRoute allowedRoles={['estudiante']}><MiGuia /></ProtectedRoute>
-            } />
-            <Route path="clase" element={
-              <ProtectedRoute allowedRoles={['estudiante']}><ClaseEnVivoAlumno /></ProtectedRoute>
-            } />
+                {/* Estudiante */}
+                {ruta('/mis-actividades', ['estudiante'])}
+                {ruta('/mis-actividades/:id', ['estudiante'])}
+                {ruta('/estudiar', ['estudiante'])}
+                {ruta('/mi-biblioteca', ['estudiante'])}
+                {ruta('/mi-guia', ['estudiante'])}
+                {ruta('/clase', ['estudiante'])}
+                {ruta('/vocacional', ['estudiante'])}
 
-            {/* Director-only */}
-            <Route path="panel" element={
-              <ProtectedRoute allowedRoles={['director']}><PanelDireccion /></ProtectedRoute>
-            } />
-            <Route path="docentes" element={
-              <ProtectedRoute allowedRoles={['director']}><Docentes /></ProtectedRoute>
-            } />
-            <Route path="comunicaciones" element={
-              <ProtectedRoute allowedRoles={['director']}><Comunicaciones /></ProtectedRoute>
-            } />
-            <Route path="mi-escuela" element={
-              <ProtectedRoute allowedRoles={['director']}><GestionEscuela /></ProtectedRoute>
-            } />
+                {/* Dirección. El panel de dirección es su inicio; el tablero
+                    (/dashboard) es solo de dirección, el docente arranca en /hoy. */}
+                {ruta('/panel', ['director'])}
+                {ruta('/dashboard', ['director'])}
+                {ruta('/docentes', ['director'])}
+                {ruta('/cursos/:id', ['director'])}
+                {ruta('/comunicaciones', ['director'])}
+                {ruta('/mi-escuela', ['director'])}
 
-            {/* Superadmin */}
-            <Route path="admin" element={
-              <ProtectedRoute allowedRoles={['superadmin']}><AdminEscuelas /></ProtectedRoute>
-            } />
-            <Route path="admin/escuelas/:id" element={
-              <ProtectedRoute allowedRoles={['superadmin']}><GestionEscuela /></ProtectedRoute>
-            } />
-          </Route>
+                {/* Superadmin: escuelas y cuentas. Quién puede qué lo decide
+                    la base (migración de membresías); acá solo se enruta. */}
+                {ruta('/admin', ['superadmin'])}
+                {ruta('/admin/escuelas/:id', ['superadmin'])}
+              </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </NotificationProvider>
-      </AuthProvider>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </NotificationProvider>
+        </AuthProvider>
+      </PreferencesProvider>
     </BrowserRouter>
   );
 }

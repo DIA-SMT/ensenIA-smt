@@ -63,7 +63,7 @@ export default function Hoy() {
     const navigate = useNavigate();
 
     const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
-    const [stats, setStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, avgAttendance: 0 });
+    const [stats, setStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, entregasParaCorregir: 0, avgAttendance: 0 });
     const [alerts, setAlerts] = useState<AlertType[]>([]);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());

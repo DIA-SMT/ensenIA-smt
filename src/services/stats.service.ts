@@ -1,36 +1,53 @@
 import { supabase } from './_helpers';
 import type { TeacherStats, DirectorStats } from '../types';
 
-export async function getTeacherStats(userId: string, todayDayIndex: number): Promise<TeacherStats> {
-  const [assignmentsRes, todayRes, pendingRes] = await Promise.all([
+/**
+ * Solo conteos donde se puede: la base cuenta y devuelve el número, sin
+ * mandar filas (head: true). Si una consulta falla, se lanza el error: un 0
+ * inventado haría creer que no hay nada para corregir.
+ *
+ * `todayDayIndex` (0 = lunes) es opcional; si no llega se toma el de hoy.
+ * Devuelve la unión de lo que piden las pantallas: entregasParaCorregir y
+ * pendingEvaluations son el mismo número (alias).
+ */
+export async function getTeacherStats(userId: string, todayDayIndex?: number): Promise<TeacherStats> {
+  const dayIndex = todayDayIndex ?? (new Date().getDay() - 1);
+  const [asignaciones, actividades, hoy] = await Promise.all([
     supabase.from('teacher_assignments').select('course_id').eq('teacher_id', userId),
-    supabase.from('schedule_blocks').select('id').eq('teacher_id', userId).eq('day_index', todayDayIndex),
-    // Entregas esperando nota: antes este número estaba fijo en 0.
-    supabase
-      .from('activity_submissions')
-      .select('id, activities!inner(teacher_id)', { count: 'exact', head: true })
-      .eq('activities.teacher_id', userId)
-      .eq('status', 'submitted'),
+    supabase.from('activities').select('id').eq('teacher_id', userId),
+    supabase.from('schedule_blocks').select('id', { count: 'exact', head: true })
+      .eq('teacher_id', userId).eq('day_index', dayIndex),
   ]);
+  if (asignaciones.error) throw asignaciones.error;
+  if (actividades.error) throw actividades.error;
+  if (hoy.error) throw hoy.error;
 
-  const courseIds = [...new Set((assignmentsRes.data ?? []).map((a: any) => a.course_id))];
+  const courseIds = [...new Set((asignaciones.data ?? []).map((a: { course_id: string }) => a.course_id))];
+  const activityIds = (actividades.data ?? []).map((a: { id: string }) => a.id);
 
-  let studentList: any[] = [];
-  if (courseIds.length > 0) {
-    const studentsRes = await supabase
-      .from('students')
-      .select('attendance')
-      .in('course_id', courseIds);
-    studentList = studentsRes.data ?? [];
-  }
+  const [estudiantes, entregas] = await Promise.all([
+    courseIds.length
+      ? supabase.from('students').select('attendance').in('course_id', courseIds)
+      : Promise.resolve({ data: [] as { attendance: number | string }[], error: null }),
+    activityIds.length
+      ? supabase.from('activity_submissions').select('id', { count: 'exact', head: true })
+          .in('activity_id', activityIds).eq('status', 'submitted')
+      : Promise.resolve({ count: 0, error: null }),
+  ]);
+  if (estudiantes.error) throw estudiantes.error;
+  if (entregas.error) throw entregas.error;
+
+  const studentList = (estudiantes.data ?? []) as { attendance: number | string }[];
+  const pendientes = entregas.count ?? 0;
 
   return {
     totalStudents: studentList.length,
-    classesToday: (todayRes.data ?? []).length,
-    pendingEvaluations: pendingRes.count ?? 0,
+    classesToday: hoy.count ?? 0,
+    pendingEvaluations: pendientes,
+    entregasParaCorregir: pendientes,
     avgAttendance: studentList.length > 0
       ? parseFloat(
-          (studentList.reduce((sum: number, s: any) => sum + Number(s.attendance), 0) / studentList.length).toFixed(1)
+          (studentList.reduce((sum, s) => sum + Number(s.attendance), 0) / studentList.length).toFixed(1)
         )
       : 0,
   };

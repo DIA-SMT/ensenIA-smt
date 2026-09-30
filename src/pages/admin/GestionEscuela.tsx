@@ -5,7 +5,7 @@
  * La usan dos personas con la misma pantalla:
  *  - el superadmin, en /admin/escuelas/:id (cualquier escuela);
  *  - el director, en /mi-escuela (la suya), sin poder tocar directores.
- * Lo que no le corresponde a cada uno lo frena la base (migración 022);
+ * Lo que no le corresponde a cada uno lo frena la base (migración 039);
  * acá solo se esconde para no ofrecer botones que van a fallar.
  */
 

@@ -4,6 +4,8 @@ import type { User, School } from '../types';
 import { supabase } from '../lib/supabase';
 import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
 import { toLoginEmail } from '../lib/dni';
+import { olvidarBusquedas } from '../services/busqueda.service';
+import { setDuenioCola } from '../services/offline-queue.service';
 
 /**
  * Reglas de este contexto (aprendidas a fuerza de bugs):
@@ -52,6 +54,35 @@ function clearProfileCache() {
   try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch { /* noop */ }
 }
 
+/**
+ * Datos personales guardados para usar sin conexión (respuestas de la base
+ * y archivos). En una compu compartida no pueden quedar para el siguiente:
+ * se borran al cerrar sesión y también cuando entra OTRA persona sin que la
+ * anterior haya cerrado (se cerró la pestaña, se venció la sesión).
+ */
+const CACHE_OWNER_KEY = 'estudia_duenio_datos_locales';
+
+function borrarDatosOffline() {
+  if ('caches' in window) {
+    caches.delete('supabase-rest').catch(() => {});
+    caches.delete('supabase-storage').catch(() => {});
+  }
+  olvidarBusquedas();
+}
+
+function reclamarDatosLocales(userId: string) {
+  try {
+    const duenio = localStorage.getItem(CACHE_OWNER_KEY);
+    if (duenio && duenio !== userId) borrarDatosOffline();
+    localStorage.setItem(CACHE_OWNER_KEY, userId);
+  } catch { /* sin storage: no hay dueño que comparar */ }
+}
+
+function soltarDatosLocales() {
+  borrarDatosOffline();
+  try { localStorage.removeItem(CACHE_OWNER_KEY); } catch { /* noop */ }
+}
+
 interface AuthContextType {
   user: User | null;
   school: School | null;
@@ -87,6 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currentUserIdRef = useRef<string | null>(null);
   currentUserIdRef.current = user?.id ?? null;
 
+  // La cola offline envía solo lo de quien tiene la sesión abierta.
+  useEffect(() => { setDuenioCola(user?.id ?? null); }, [user?.id]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -118,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const schoolData = profile.schoolId ? await getSchool(profile.schoolId) : null;
           const schools = await getMySchools(userId).catch(() => []);
           if (cancelled) return;
+          reclamarDatosLocales(profile.id);
           setUser(profile);
           setSchool(schoolData);
           setMySchools(schools);
@@ -194,10 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsOfflineProfile(false);
     // En dispositivos compartidos, los datos cacheados offline no deben
     // quedar disponibles para el próximo usuario.
-    if ('caches' in window) {
-      caches.delete('supabase-rest').catch(() => {});
-      caches.delete('supabase-storage').catch(() => {});
-    }
+    soltarDatosLocales();
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -221,7 +253,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await switchSchoolRpc(schoolId);
     // Todo lo cargado (y lo cacheado offline) es de la otra escuela:
     // más simple y seguro arrancar de cero en la nueva.
+    // Mismo criterio que borrarDatosOffline, pero esperando al caché antes
+    // de recargar (si no, la recarga puede cortar el borrado a la mitad).
     clearProfileCache();
+    olvidarBusquedas();
     if ('caches' in window) await caches.delete('supabase-rest').catch(() => false);
     window.location.assign('/');
   }, []);

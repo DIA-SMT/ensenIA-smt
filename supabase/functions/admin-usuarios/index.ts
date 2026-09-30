@@ -15,7 +15,7 @@
  *  - reset_password:  { action, userId } → { login, password }
  *
  * Quién puede qué lo deciden admin_can_create / admin_can_manage_user
- * (migración 022), llamadas con el JWT de quien pide: la regla vive en la
+ * (migración 039), llamadas con el JWT de quien pide: la regla vive en la
  * base y está probada junto con el resto de las policies.
  *
  * Los alumnos entran con su DNI: por dentro su cuenta es
@@ -175,7 +175,7 @@ Deno.serve(async (req: Request) => {
       password,
       email_confirm: true,
       // Rol, escuela y DNI en app_metadata: solo la service role lo escribe
-      // y handle_new_user arma perfil + membresía con eso (022).
+      // y handle_new_user arma perfil + membresía con eso (039).
       app_metadata: { role, school_id: schoolId, dni: dni || null, must_change_password: true },
       user_metadata: { first_name: firstName, last_name: lastName, avatar_initials: initials(firstName, lastName) },
     });

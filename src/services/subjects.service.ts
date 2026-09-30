@@ -1,10 +1,11 @@
 import { supabase, unwrap } from './_helpers';
 import type { Subject, Course } from '../types';
 
-export async function getSubjects(): Promise<Subject[]> {
-  const data = unwrap(
-    await supabase.from('subjects').select('*').order('name')
-  );
+/** Materias de una escuela. El filtro por school_id es explícito además de la RLS. */
+export async function getSubjects(schoolId?: string): Promise<Subject[]> {
+  let q = supabase.from('subjects').select('*');
+  if (schoolId) q = q.eq('school_id', schoolId);
+  const data = unwrap(await q.order('name'));
 
   return data.map(mapSubject);
 }
@@ -20,9 +21,10 @@ export async function getSubjectById(id: string): Promise<Subject | undefined> {
   return mapSubject(data);
 }
 
-export async function getCourses(): Promise<Course[]> {
+/** Cursos de una escuela. El filtro por school_id es explícito además de la RLS. */
+export async function getCourses(schoolId: string): Promise<Course[]> {
   const data = unwrap(
-    await supabase.from('courses').select('*').order('year').order('division')
+    await supabase.from('courses').select('*').eq('school_id', schoolId).order('year').order('division')
   );
 
   return data.map(mapCourse);

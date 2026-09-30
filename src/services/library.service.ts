@@ -54,6 +54,9 @@ export async function createMaterial(material: {
   tags: string[];
   classId?: string | null;
   videoUrl?: string | null;
+  /** Contenido en texto (ej. generado por IA): habilita resumen, placas y quiz sin archivo. */
+  extractedText?: string;
+  aiSummary?: string;
 }): Promise<LibraryMaterial> {
   const row = unwrap(
     await supabase
@@ -72,6 +75,8 @@ export async function createMaterial(material: {
         teacher_id: material.teacherId,
         school_id: material.schoolId,
         tags: material.tags,
+        extracted_text: material.extractedText ?? null,
+        ai_summary: material.aiSummary ?? null,
       })
       .select()
       .single()
@@ -130,6 +135,8 @@ function mapMaterial(row: any): LibraryMaterial {
     podcastStatus: row.podcast_status ?? 'none',
     classId: row.class_id ?? null,
     videoUrl: row.video_url ?? null,
+    practiceQuiz: row.practice_quiz ?? null,
+    studyGuide: row.study_guide ?? null,
   };
 }
 

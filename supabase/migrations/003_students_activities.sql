@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  EstudIA — Migration 003: Estudiantes con cuenta,
+--  SMT EstudIA — Migration 003: Estudiantes con cuenta,
 --  actividades, huella digital y biblioteca real
 -- ═══════════════════════════════════════════════
 

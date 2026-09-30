@@ -1,200 +1,180 @@
-import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import {
-    LayoutDashboard, Calendar, Users, BookOpen,
-    Settings, ChevronsLeft, ChevronsRight, LogOut, MessageSquare,
-    ClipboardList, HeartHandshake, GraduationCap, Megaphone, Sparkles, Radio, Sun, Boxes, Activity
-, NotebookText, Building2 } from 'lucide-react';
+/**
+ * Barra lateral (escritorio y tablet horizontal).
+ *
+ * Agrupada por lo que la persona hace ("Mi día", "Aula", "Escuela"), no
+ * por módulo. Arriba de todo, quién tiene la sesión abierta y de qué
+ * escuela, con el color del rol: en una compu compartida se ve al instante.
+ */
+
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronsLeft, ChevronsRight, LogOut, Accessibility } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo } from '../lib/navegacion';
 import { getUnreadAlertCount } from '../services/alerts.service';
 import { getMyLiveSession } from '../services/live.service';
 import './Sidebar.css';
 
-interface NavItem {
-    label: string;
-    path: string;
-    icon: typeof LayoutDashboard;
-    isIA?: boolean;
-    /** Muestra el contador de alertas sin abrir (Alertas dejó de ser sección). */
-    showAlerts?: boolean;
-    /** Muestra el punto rojo cuando hay una clase en vivo abierta. */
-    showLive?: boolean;
-}
+const CLAVE_COLAPSADA = 'estudia_barra_colapsada';
 
-// Destinos con nombres de aula y no de sistema. Preparar clase y crear
-// actividad siguen siendo botones de acción que viven en Hoy: el docente
-// llega a ellos desde su clase del día.
-//
-// Clase en vivo es la excepción y tiene su item: colgaba de la tarjeta de
-// la clase de hoy, y esa tarjeta se atenúa cuando pasó el horario. Para
-// una jornada, una presentación o cualquier momento que no sea tu clase
-// de las 8, había que ir a buscarlo a un botón que parecía apagado.
-const teacherNavItems: NavItem[] = [
-    { label: 'Hoy', path: '/hoy', icon: Sun },
-    { label: 'Clase en vivo', path: '/clase-en-vivo', icon: Radio, showLive: true },
-    { label: 'Armar módulo', path: '/modulo', icon: Boxes, isIA: true },
-    // La biblioteca no tenía ningún enlace en toda la app: Armar módulo y el
-    // IA Lab listan los materiales para elegirlos, pero para subir, compartir,
-    // renombrar o borrar había que escribir /biblioteca a mano.
-    { label: 'Mis materiales', path: '/biblioteca', icon: BookOpen },
-    { label: 'Mis clases', path: '/mis-clases', icon: Calendar },
-    { label: 'Libreta', path: '/libreta', icon: NotebookText },
-    { label: 'Estudiantes', path: '/students', icon: Users, showAlerts: true },
-    { label: 'Familias', path: '/familias', icon: HeartHandshake },
-    { label: 'Ajustes', path: '/settings', icon: Settings },
-];
+/** id válido para aria-labelledby: sin espacios ni tildes. */
+const idGrupo = (g: string) => 'nav-g-' + g.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-const directorNavItems: NavItem[] = [
-    { label: 'Qué está pasando', path: '/panel', icon: Activity },
-    { label: 'Docentes', path: '/docentes', icon: Users, showAlerts: true },
-    { label: 'Familias', path: '/familias', icon: HeartHandshake },
-    { label: 'Comunicaciones', path: '/comunicaciones', icon: MessageSquare },
-    { label: 'Mi escuela', path: '/mi-escuela', icon: Building2 },
-    { label: 'Ajustes', path: '/settings', icon: Settings },
-];
-
-const superadminNavItems: NavItem[] = [
-    { label: 'Escuelas', path: '/admin', icon: Building2 },
-    { label: 'Ajustes', path: '/settings', icon: Settings },
-];
-
-const studentNavItems: NavItem[] = [
-    { label: 'Mi escuela', path: '/mis-actividades', icon: ClipboardList },
-    { label: 'Clase en vivo', path: '/clase', icon: Radio },
-    { label: 'Mi guía IA', path: '/mi-guia', icon: Sparkles, isIA: true },
-    { label: 'Mis materiales', path: '/mi-biblioteca', icon: BookOpen },
-    { label: 'Ajustes', path: '/settings', icon: Settings },
-];
-
-const guardianNavItems: NavItem[] = [
-    { label: 'Cómo le va', path: '/mis-hijos', icon: GraduationCap },
-    { label: 'Comunicados', path: '/comunicados-familia', icon: Megaphone },
-    { label: 'Ajustes', path: '/settings', icon: Settings },
-];
-
-function LogoMark({ size = 28 }: { size?: number }) {
-    return (
-        <svg width={size} height={size * 1.2} viewBox="0 0 40 48" fill="none">
-            <defs>
-                <linearGradient id="leaf-g" x1="20" y1="46" x2="20" y2="6" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#005FA3" />
-                    <stop offset="0.45" stopColor="#00A8FF" />
-                    <stop offset="1" stopColor="#7BC8F4" />
-                </linearGradient>
-            </defs>
-            <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16C21 13 23 10.5 26 9.5C32 7 37 12 37 19C37 30 20 46 20 46Z" fill="url(#leaf-g)" />
-            <circle cx="20" cy="5" r="4.5" fill="#FCD34D" />
-        </svg>
-    );
+export function LogoMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * 1.2} viewBox="0 0 40 48" fill="none" aria-hidden="true" focusable="false">
+      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16C21 13 23 10.5 26 9.5C32 7 37 12 37 19C37 30 20 46 20 46Z" fill="var(--acento)" />
+      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16Z" fill="#FFFFFF" opacity="0.18" />
+      <circle cx="20" cy="5" r="4.5" fill="#F5B82E" />
+    </svg>
+  );
 }
 
 interface SidebarProps {
-    collapsed: boolean;
-    onToggle: () => void;
+  alAbrirPreferencias: () => void;
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
-    const { user, school, isDirector, isEstudiante, isSuperadmin, logout } = useAuth();
-    const isPadre = user?.role === 'padre';
-    const [alertCount, setAlertCount] = useState(0);
+export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
+  const { user, school, logout } = useAuth();
+  const { pathname } = useLocation();
+  const [colapsada, setColapsada] = useState(() => {
+    try { return localStorage.getItem(CLAVE_COLAPSADA) === '1'; } catch { return false; }
+  });
 
-    const isDocente = user?.role === 'docente';
-    const [liveNow, setLiveNow] = useState(false);
+  useEffect(() => {
+    try { localStorage.setItem(CLAVE_COLAPSADA, colapsada ? '1' : '0'); } catch { /* sin storage */ }
+    document.documentElement.dataset.barra = colapsada ? 'colapsada' : 'abierta';
+  }, [colapsada]);
 
-    useEffect(() => {
-        if (!user || !isDocente) return;
-        getUnreadAlertCount(user.id).then(setAlertCount).catch(() => {});
-    }, [user?.id, isDocente]);
+  const userId = user?.id;
+  const isDocente = user?.role === 'docente';
+  const [alertCount, setAlertCount] = useState(0);
+  const [liveNow, setLiveNow] = useState(false);
 
-    // Una sesión abierta y olvidada bloquea al curso (hay un único índice
-    // de "una clase viva por curso"), así que el punto rojo no es adorno:
-    // es cómo te enterás de que la dejaste prendida. Cada 30s alcanza —
-    // el que está dando la clase ya tiene el panel polleando cada 2,5s.
-    useEffect(() => {
-        if (!user || !isDocente) return;
-        let alive = true;
-        const check = () => {
-            getMyLiveSession(user.id)
-                .then(s => { if (alive) setLiveNow(!!s); })
-                .catch(() => {});
-        };
-        check();
-        const id = window.setInterval(check, 30_000);
-        return () => { alive = false; window.clearInterval(id); };
-    }, [user?.id, isDocente]);
+  useEffect(() => {
+    if (!userId || !isDocente) return;
+    getUnreadAlertCount(userId).then(setAlertCount).catch(() => {});
+  }, [userId, isDocente]);
 
-    const navItems = isSuperadmin ? superadminNavItems
-        : isDirector ? directorNavItems
-        : isEstudiante ? studentNavItems
-        : isPadre ? guardianNavItems
-        : teacherNavItems;
+  // Una sesión abierta y olvidada bloquea al curso (hay un único índice de
+  // "una clase viva por curso"), así que el punto rojo no es adorno: es cómo
+  // te enterás de que la dejaste prendida. Cada 30s alcanza — el que está
+  // dando la clase ya tiene el panel polleando cada 2,5s.
+  useEffect(() => {
+    if (!userId || !isDocente) return;
+    let alive = true;
+    const check = () => {
+      getMyLiveSession(userId)
+        .then(s => { if (alive) setLiveNow(!!s); })
+        .catch(() => {});
+    };
+    check();
+    const id = window.setInterval(check, 30_000);
+    return () => { alive = false; window.clearInterval(id); };
+  }, [userId, isDocente]);
 
-    const displayName = user ? `${user.firstName} ${user.lastName}` : '';
-    const roleLabel = isSuperadmin ? 'Superadmin' : isDirector ? 'Dirección' : isEstudiante ? 'Estudiante' : isPadre ? 'Familia' : 'Docente';
-    const avatarInitials = user?.avatarInitials ?? '??';
+  if (!user) return null;
 
-    return (
-        <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-            <div className="sidebar-header">
-                <LogoMark size={collapsed ? 22 : 28} />
-                {!collapsed && (
-                    <div className="logo-text">
-                        <span className="logo-title">SMT EstudIA</span>
-                        <span className="logo-subtitle">{school?.shortName ?? (isSuperadmin ? 'Administración' : 'Escuela Municipal')}</span>
-                    </div>
-                )}
-            </div>
+  const items = NAV_POR_ROL[user.role];
+  const grupos = [...new Set(items.map(i => i.grupo))];
+  const activo = itemActivo(user.role, pathname);
+  const nombre = `${user.firstName} ${user.lastName}`;
 
-            <nav className="sidebar-nav">
-                {navItems.map((item) => (
-                    <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={({ isActive }) =>
-                            `nav-item ${isActive ? 'active' : ''} ${item.isIA ? 'nav-ia' : ''}`
-                        }
-                        title={collapsed ? item.label : undefined}
+  // Contador de alertas sin ver: sobre "Alertas" si el menú la tiene; si no,
+  // sobre la lista de personas que la genera (Estudiantes / Docentes).
+  const rutaAlertas = items.some(i => i.ruta === '/alerts') ? '/alerts'
+    : user.role === 'docente' ? '/students' : null;
+  const insignias = (ruta: string) => (
+    <>
+      {isDocente && ruta === rutaAlertas && alertCount > 0 && (
+        <span className="nav-alert-badge" title={`${alertCount} alertas sin ver`}>{alertCount}</span>
+      )}
+      {isDocente && ruta === '/clase-en-vivo' && liveNow && (
+        <span className="nav-live-dot" title="Tenés una clase en vivo abierta" />
+      )}
+    </>
+  );
+
+  return (
+    <aside className={`sidebar${colapsada ? ' collapsed' : ''}`} aria-label="Menú lateral">
+      <div className="sidebar-header">
+        <LogoMark size={colapsada ? 22 : 26} />
+        <div className="logo-text">
+          <span className="logo-title">SMT Estud<span className="logo-ia">IA</span></span>
+          <span className="logo-subtitle">{school?.shortName ?? (user.role === 'superadmin' ? 'Administración' : 'Escuela municipal')}</span>
+        </div>
+      </div>
+
+      <div className="sidebar-quien" title={colapsada ? `${nombre} · ${ETIQUETA_ROL[user.role]}` : undefined}>
+        <div className="avatar" aria-hidden="true">{user.avatarInitials}</div>
+        <div className="user-info">
+          <span className="user-name">{nombre}</span>
+          <span className="user-role">{ETIQUETA_ROL[user.role]}</span>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav" aria-label="Principal">
+        {grupos.filter(g => g !== 'Cuenta').map(g => (
+          <div className="nav-grupo" key={g}>
+            <h2 className="nav-grupo-titulo" id={idGrupo(g)}>{g}</h2>
+            <ul aria-labelledby={idGrupo(g)}>
+              {items.filter(i => i.grupo === g).map(i => {
+                const esActivo = activo === i.ruta;
+                return (
+                  <li key={i.ruta}>
+                    <Link
+                      to={i.ruta}
+                      className={`nav-item${esActivo ? ' active' : ''}${i.ia ? ' nav-ia' : ''}`}
+                      aria-current={esActivo ? 'page' : undefined}
+                      title={colapsada ? i.etiqueta : undefined}
                     >
-                        <div className="nav-icon-wrap">
-                            <item.icon size={20} />
-                        </div>
-                        {!collapsed && <span className="nav-label">{item.label}</span>}
-                        {!collapsed && item.isIA && <span className="ia-tag">IA</span>}
-                        {item.showAlerts && alertCount > 0 && (
-                            <span className="nav-alert-badge" title={`${alertCount} alertas sin ver`}>
-                                {alertCount}
-                            </span>
-                        )}
-                        {item.showLive && liveNow && (
-                            <span className="nav-live-dot" title="Tenés una clase en vivo abierta" />
-                        )}
-                    </NavLink>
-                ))}
-            </nav>
+                      <span className="nav-icon-wrap"><i.icono size={19} aria-hidden="true" /></span>
+                      <span className="nav-label">{i.etiqueta}</span>
+                      {i.ia && <span className="ia-tag" aria-hidden="true">IA</span>}
+                      {insignias(i.ruta)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
 
-            <div className="sidebar-footer">
-                <div className="user-profile" title={collapsed ? displayName : undefined}>
-                    <div className="avatar-glow"><div className="avatar">{avatarInitials}</div></div>
-                    {!collapsed && (
-                        <div className="user-info">
-                            <span className="user-name">{displayName}</span>
-                            <span className="user-role">{roleLabel}</span>
-                        </div>
-                    )}
-                </div>
-                {!collapsed && (
-                    <button
-                        className="collapse-btn logout-btn"
-                        onClick={logout}
-                        title="Cerrar sesión"
-                    >
-                        <LogOut size={16} />
-                    </button>
-                )}
-                <button className="collapse-btn" onClick={onToggle} title={collapsed ? 'Expandir' : 'Colapsar'}>
-                    {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-                </button>
-            </div>
-        </aside>
-    );
+      <div className="sidebar-footer">
+        {items.filter(i => i.grupo === 'Cuenta').map(i => (
+          <Link
+            key={i.ruta}
+            to={i.ruta}
+            className={`nav-item${activo === i.ruta ? ' active' : ''}`}
+            aria-current={activo === i.ruta ? 'page' : undefined}
+            title={colapsada ? i.etiqueta : undefined}
+          >
+            <span className="nav-icon-wrap"><i.icono size={19} aria-hidden="true" /></span>
+            <span className="nav-label">{i.etiqueta}</span>
+          </Link>
+        ))}
+        <button type="button" className="nav-item" onClick={alAbrirPreferencias} aria-haspopup="dialog" title={colapsada ? 'Accesibilidad y datos' : undefined}>
+          <span className="nav-icon-wrap"><Accessibility size={19} aria-hidden="true" /></span>
+          <span className="nav-label">Accesibilidad y datos</span>
+        </button>
+        <div className="sidebar-footer-fila">
+          <button type="button" className="nav-item nav-salir" onClick={logout} title={colapsada ? 'Cerrar sesión' : undefined}>
+            <span className="nav-icon-wrap"><LogOut size={19} aria-hidden="true" /></span>
+            <span className="nav-label">Cerrar sesión</span>
+          </button>
+          <button
+            type="button"
+            className="collapse-btn"
+            onClick={() => setColapsada(c => !c)}
+            aria-expanded={!colapsada}
+            aria-label={colapsada ? 'Mostrar el menú completo' : 'Achicar el menú'}
+            title={colapsada ? 'Mostrar el menú completo' : 'Achicar el menú'}
+          >
+            {colapsada ? <ChevronsRight size={16} aria-hidden="true" /> : <ChevronsLeft size={16} aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
 }

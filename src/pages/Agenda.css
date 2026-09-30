@@ -11,10 +11,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .agenda-title {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -22,6 +24,7 @@
 .agenda-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-4);
 }
 
@@ -30,6 +33,17 @@
   color: var(--text-primary);
   min-width: 160px;
   text-align: center;
+}
+
+/* ── Móvil: la semana se scrollea horizontal con la columna de horas fija ── */
+@media (max-width: 640px) {
+  .agenda-container { height: auto; min-height: calc(100vh - var(--topbar-height) - var(--space-12)); }
+  .agenda-header { padding: var(--space-4); }
+  .agenda-controls { gap: var(--space-2); width: 100%; justify-content: space-between; }
+  .current-week { min-width: 0; flex: 1; font-size: 0.8438rem; }
+  .calendar-grid { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .time-col { position: sticky; left: 0; flex-shrink: 0; }
+  .days-wrapper { min-width: 480px; }
 }
 
 .calendar-grid {
@@ -57,7 +71,7 @@
   display: flex;
   justify-content: center;
   padding-top: var(--space-2);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-subtle);
   font-weight: 500;
   border-bottom: 1px solid transparent;
@@ -101,7 +115,7 @@
 }
 
 .day-header-cell.today {
-  background-color: rgba(0, 168, 255, 0.06);
+  background-color: rgba(2, 132, 199, 0.06);
 }
 
 .day-header-cell.today .day-date {
@@ -116,7 +130,7 @@
 }
 
 .day-name {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-subtle);
   text-transform: uppercase;
@@ -124,7 +138,7 @@
 }
 
 .day-date {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -157,7 +171,7 @@
   cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.11);
 }
 
 .schedule-block:hover {
@@ -167,7 +181,7 @@
 }
 
 .block-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   margin-bottom: var(--space-1);
   white-space: nowrap;
@@ -176,8 +190,7 @@
 }
 
 .block-details {
-  font-size: 12px;
-  opacity: 0.85;
+  font-size: 0.75rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -185,34 +198,34 @@
 
 /* Block Colors */
 .block-blue {
-  background-color: rgba(0, 168, 255, 0.15);
+  background-color: rgba(2, 132, 199, 0.15);
   border-left: 3px solid var(--cyan-bright);
-  color: #7DD3FC;
+  color: #075985;
 }
 
 .block-green {
   background-color: rgba(16, 217, 129, 0.15);
   border-left: 3px solid var(--success);
-  color: #6EE7B7;
+  color: #065F46;
 }
 
 .block-purple {
   background-color: rgba(79, 70, 229, 0.18);
-  border-left: 3px solid #818CF8;
-  color: #C4B5FD;
+  border-left: 3px solid var(--accent-ia);
+  color: #3730A3;
 }
 
 .block-orange {
   background-color: rgba(251, 191, 36, 0.15);
   border-left: 3px solid var(--warning);
-  color: #FDE68A;
+  color: #92400E;
 }
 
 /* ── Modal ── */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(15, 23, 42, 0.27);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 50;
@@ -237,7 +250,7 @@
 }
 
 .modal-header h3 {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -248,13 +261,13 @@
 }
 
 .modal-banner h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: var(--space-1);
 }
 
 .modal-banner p {
-  font-size: 14px;
+  font-size: 0.875rem;
   opacity: 0.85;
 }
 
@@ -277,13 +290,13 @@
 }
 
 .detail-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-subtle);
   font-weight: 500;
 }
 
 .detail-value {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--text-primary);
   font-weight: 500;
 }

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 020 — Cada docente escribe solo sobre sus cursos y sus alumnos
+-- 036 — Cada docente escribe solo sobre sus cursos y sus alumnos
 --
 -- Las policies de escritura de los docentes chequeaban una sola cosa:
 -- `teacher_id = auth.uid()`. Leer sí estaba acotado a sus cursos, pero

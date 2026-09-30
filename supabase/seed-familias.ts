@@ -19,13 +19,16 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 async function main() {
   console.log('🌱 Seed familias + bienestar...\n');
 
-  const { data: school } = await supabase.from('schools').select('id').limit(1).single();
-  if (!school) throw new Error('No hay escuela; corré el seed principal primero.');
+  const { data: schools } = await supabase.from('schools').select('id, name');
+  if (!schools || schools.length === 0) throw new Error('No hay escuelas; corré el seed principal primero.');
+  const schoolGM = schools.find(s => s.name.includes('Gabriela Mistral'));
+  const schoolAS = schools.find(s => s.name.includes('Alfonsina Storni'));
+  if (!schoolGM || !schoolAS) throw new Error('Faltan escuelas del seed principal.');
 
   const { data: students } = await supabase.from('students').select('id, first_name, last_name, email');
   const byEmail = new Map((students ?? []).map(s => [s.email, s]));
-  const sofia = byEmail.get('sofia.ramirez@estudiante.ensenia.edu.ar');
-  const juan = byEmail.get('juan.perez@estudiante.ensenia.edu.ar');
+  const sofia = byEmail.get('sofia.ramirez@estudiante.ensenia.edu.ar'); // 2° A — Alfonsina Storni
+  const juan = byEmail.get('juan.perez@estudiante.ensenia.edu.ar'); // 3° A — Gabriela Mistral
   if (!sofia || !juan) throw new Error('Faltan estudiantes del seed principal.');
 
   const { data: directora } = await supabase.from('profiles').select('id').eq('role', 'director').limit(1).single();
@@ -38,12 +41,13 @@ async function main() {
   ];
 
   for (const p of parents) {
+    const childSchool = p.child === sofia ? schoolAS : schoolGM;
     const { data: created, error } = await supabase.auth.admin.createUser({
       email: p.email,
       password: 'demo123',
       email_confirm: true,
       // Rol y escuela en app_metadata (migración 017).
-      app_metadata: { role: 'padre', school_id: school.id },
+      app_metadata: { role: 'padre', school_id: childSchool.id },
       user_metadata: {
         first_name: p.firstName,
         last_name: p.lastName,
@@ -62,7 +66,7 @@ async function main() {
 
   // ── Comunicados demo ──
   await supabase.from('guardian_notices').insert({
-    school_id: school.id,
+    school_id: schoolGM.id,
     student_id: null,
     from_user_id: directora!.id,
     type: 'comunicado',
@@ -71,7 +75,7 @@ async function main() {
   });
 
   await supabase.from('guardian_notices').insert({
-    school_id: school.id,
+    school_id: schoolGM.id,
     student_id: juan.id,
     from_user_id: marco!.id,
     type: 'citacion',
@@ -82,31 +86,18 @@ async function main() {
   });
   console.log('  ✓ 1 comunicado general + 1 citación');
 
-  // ── Bienestar demo: check-ins de Sofía y Nicolás en la actividad ──
-  const { data: activity } = await supabase.from('activities').select('id').limit(1).single();
-  const nicolas = byEmail.get('nicolas.moreno@estudiante.ensenia.edu.ar');
-  if (activity && nicolas) {
-    const hoursAgo = (h: number) => new Date(Date.now() - h * 3600 * 1000).toISOString();
-    await supabase.from('student_checkins').insert([
-      { student_id: sofia.id, activity_id: activity.id, moment: 'inicio', feeling: 'bien', created_at: hoursAgo(27) },
-      { student_id: sofia.id, activity_id: activity.id, moment: 'fin', feeling: 'genial', comment: 'Me gustó, ¡estaba fácil!', created_at: hoursAgo(25.6) },
-      { student_id: nicolas.id, activity_id: activity.id, moment: 'inicio', feeling: 'confundido', comment: 'No entiendo bien lo de los incas', created_at: hoursAgo(3) },
-    ]);
-    console.log('  ✓ 3 check-ins emocionales');
-  }
-
   // ── Observaciones demo del docente ──
   await supabase.from('student_observations').insert([
     { student_id: juan.id, teacher_id: marco!.id, category: 'dificultad', note: 'Le cuesta sostener la atención en clases largas. Rinde mucho mejor con actividades cortas y concretas.' },
     { student_id: juan.id, teacher_id: marco!.id, category: 'familia', note: 'La familia avisó que está pasando por una mudanza. Tener paciencia con las entregas de esta semana.' },
-    { student_id: sofia.id, teacher_id: marco!.id, category: 'logro', note: 'Excelente razonamiento en la actividad de civilizaciones. Podría ayudar como tutora de pares.' },
+    { student_id: sofia.id, teacher_id: marco!.id, category: 'logro', note: 'Excelente razonamiento y participación en clase. Podría ayudar como tutora de pares.' },
   ]);
   console.log('  ✓ 3 observaciones docentes');
 
   console.log('\n✅ Listo.');
   console.log('── Cuentas familia (password: demo123) ──');
-  console.log('  laura.paz@familia.ensenia.edu.ar    (madre de Sofía, 2°B)');
-  console.log('  roberto.perez@familia.ensenia.edu.ar (padre de Juan, 4°A — tiene una citación)');
+  console.log('  laura.paz@familia.ensenia.edu.ar    (madre de Sofía, 2°A — Alfonsina Storni)');
+  console.log('  roberto.perez@familia.ensenia.edu.ar (padre de Juan, 3°A — Gabriela Mistral — tiene una citación)');
 }
 
 main().catch(err => { console.error('❌', err); process.exit(1); });

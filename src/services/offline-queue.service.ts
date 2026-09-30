@@ -1,5 +1,5 @@
 /**
- * EstudIA — Cola offline
+ * SMT EstudIA — Cola offline
  *
  * Los chicos muchas veces no tienen datos: trabajan offline y la app
  * sincroniza sola cuando aparece wifi. Cada operación de escritura del
@@ -11,13 +11,20 @@
  *
  * Los errores del SERVIDOR (RLS, validación) no se reintentan: esa
  * operación se descarta para no trabar el resto de la cola.
+ *
+ * Cada operación lleva a su DUEÑO (el usuario que la hizo) y solo se envía
+ * con la sesión de esa persona. En una compu compartida, si Sofía dejó una
+ * entrega sin enviar y después entra Nicolás, antes se intentaba mandar lo
+ * de Sofía con la sesión de Nicolás: la base lo rechazaba y se perdía. Ahora
+ * espera a que Sofía vuelva a entrar en ese dispositivo.
  */
 
 import {
   saveSubmissionProgress, submitActivity, logActivityEvent,
 } from './activities.service';
 import { saveCheckin } from './wellbeing.service';
-import type { ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment } from '../types';
+import { recordPracticeAttempt } from './practice.service';
+import type { ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment, PracticeAttempt } from '../types';
 
 const QUEUE_KEY = 'ensenia_offline_queue_v1';
 const FLUSH_INTERVAL_MS = 30_000;
@@ -26,16 +33,20 @@ type QueuedOp =
   | { kind: 'progress'; submissionId: string; updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number }; ts: number }
   | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number }; ts: number }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown>; ts: number }
-  | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number };
+  | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string; ts: number }
+  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number; ts: number };
+
+type QueuedOpConDuenio = QueuedOp & { owner?: string };
 
 type Listener = (pending: number, syncing: boolean) => void;
 
-let queue: QueuedOp[] = load();
+let queue: QueuedOpConDuenio[] = load();
+let duenio: string | null = null;
 let listeners: Listener[] = [];
 let flushing = false;
 let started = false;
 
-function load(): QueuedOp[] {
+function load(): QueuedOpConDuenio[] {
   try {
     return JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]');
   } catch {
@@ -49,8 +60,25 @@ function persist() {
   } catch { /* storage lleno: seguimos en memoria */ }
 }
 
+/** Las de la persona con sesión abierta (o viejas, de antes de tener dueño). */
+function esMia(op: QueuedOpConDuenio): boolean {
+  return !!duenio && (!op.owner || op.owner === duenio);
+}
+
+function misPendientes(): number {
+  return queue.filter(esMia).length;
+}
+
 function notify(syncing = false) {
-  listeners.forEach(l => l(queue.length, syncing));
+  const n = misPendientes();
+  listeners.forEach(l => l(n, syncing));
+}
+
+/** Lo llama AuthContext cuando se sabe quién entró (o null al salir). */
+export function setDuenioCola(userId: string | null): void {
+  duenio = userId;
+  notify();
+  if (userId) flush();
 }
 
 function isNetworkError(err: unknown): boolean {
@@ -72,6 +100,13 @@ async function run(op: QueuedOp): Promise<void> {
       moment: op.moment,
       feeling: op.feeling,
       comment: op.comment,
+    });
+  } else if (op.kind === 'practice') {
+    await recordPracticeAttempt({
+      studentId: op.studentId,
+      materialId: op.materialId,
+      score: op.score,
+      total: op.total,
     });
   } else {
     await logActivityEvent(op.activityId, op.studentId, op.eventType, {
@@ -95,24 +130,27 @@ type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : n
 type QueuedOpInput = DistributiveOmit<QueuedOp, 'ts'>;
 
 export function enqueue(op: QueuedOpInput) {
-  queue.push({ ...op, ts: Date.now() } as QueuedOp);
+  queue.push({ ...op, ts: Date.now(), owner: duenio ?? undefined } as QueuedOpConDuenio);
   compact();
   persist();
   notify();
 }
 
 export async function flush(): Promise<void> {
-  if (flushing || queue.length === 0) return;
+  if (flushing || misPendientes() === 0) return;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   flushing = true;
   notify(true);
   try {
-    while (queue.length > 0) {
-      const op = queue[0];
+    // En orden, solo las de quien tiene la sesión: las de otra persona se
+    // quedan en la cola hasta que esa persona vuelva a entrar.
+    let op: QueuedOpConDuenio | undefined;
+    while ((op = queue.find(esMia))) {
+      const actual = op;
+      const sacar = () => { queue = queue.filter(x => x !== actual); persist(); };
       try {
-        await run(op);
-        queue.shift();
-        persist();
+        await run(actual);
+        sacar();
         notify(true);
       } catch (err) {
         if (isNetworkError(err)) {
@@ -121,8 +159,7 @@ export async function flush(): Promise<void> {
         }
         // error del servidor: descartamos esta operación y seguimos
         console.error('Operación offline descartada por error del servidor:', err);
-        queue.shift();
-        persist();
+        sacar();
       }
     }
   } finally {
@@ -204,18 +241,44 @@ export function saveCheckinResilient(c: {
   });
 }
 
+/**
+ * Registra un intento de práctica.
+ * @returns el intento con el XP real (calculado por el trigger), o null si
+ * quedó encolado para sincronizar cuando vuelva la conexión.
+ */
+export async function recordPracticeAttemptResilient(input: {
+  studentId: string;
+  materialId: string;
+  score: number;
+  total: number;
+}): Promise<PracticeAttempt | null> {
+  if (!navigator.onLine) {
+    enqueue({ kind: 'practice', ...input });
+    return null;
+  }
+  try {
+    return await recordPracticeAttempt(input);
+  } catch (err) {
+    if (isNetworkError(err)) {
+      enqueue({ kind: 'practice', ...input });
+      return null;
+    }
+    throw err;
+  }
+}
+
 /** ¿Hay una entrega esperando sincronizarse para esta actividad? */
 export function hasPendingSubmit(activityId: string): boolean {
-  return queue.some(op => op.kind === 'submit' && op.activityId === activityId);
+  return queue.some(op => esMia(op) && op.kind === 'submit' && op.activityId === activityId);
 }
 
 export function pendingCount(): number {
-  return queue.length;
+  return misPendientes();
 }
 
 export function subscribe(listener: Listener): () => void {
   listeners.push(listener);
-  listener(queue.length, flushing);
+  listener(misPendientes(), flushing);
   return () => { listeners = listeners.filter(l => l !== listener); };
 }
 

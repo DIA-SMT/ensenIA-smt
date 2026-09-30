@@ -1,40 +1,55 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Download, FileText, Sparkles, X, Layers, ThumbsUp, ThumbsDown, Wand2, Headphones, Youtube } from 'lucide-react';
+import { BookOpen, Eye, FileText, Sparkles, X, Layers, Play, GraduationCap, ThumbsUp, ThumbsDown, Wand2, Headphones, Youtube } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
+import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.service';
 import { getStudentByUserId } from '../services/activities.service';
 import { getMyMaterialReactions, setMaterialReaction } from '../services/gamification.service';
-import { getSignedUrl } from '../services/documents.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
+import StudyGuideModal from '../components/StudyGuideModal';
+import MaterialViewer from '../components/MaterialViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
 import VideoModal from '../components/VideoModal';
-import type { LibraryMaterial, MaterialReactionType, Student } from '../types';
+import type { LibraryMaterial, MaterialReactionType, PracticeQuestion, Student } from '../types';
+// Estilos compartidos con otras pantallas: desde que cada pantalla se baja
+// por separado, lo que no se importa acá no llega.
+import './Actividades.css';
+import './Biblioteca.css';
 import './StudentPortal.css';
 import '../components/Modals.css';
 
 export default function MiBiblioteca() {
   const { user } = useAuth();
+  const [student, setStudent] = useState<Student | null>(null);
   const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
-  const [student, setStudent] = useState<Student | null>(null);
   const [reactions, setReactions] = useState<Record<string, MaterialReactionType>>({});
   const [podcastFor, setPodcastFor] = useState<LibraryMaterial | null>(null);
   const [videoFor, setVideoFor] = useState<LibraryMaterial | null>(null);
+  const [quizFor, setQuizFor] = useState<{ material: LibraryMaterial; questions: PracticeQuestion[] } | null>(null);
+  const [guideFor, setGuideFor] = useState<{ title: string; guide: string } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [viendo, setViendo] = useState<LibraryMaterial | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    getSharedMaterialsForStudent()
-      .then(setMaterials)
+    Promise.all([
+      getSharedMaterialsForStudent(),
+      getStudentByUserId(user.id),
+    ])
+      .then(([mats, st]) => {
+        setMaterials(mats);
+        setStudent(st);
+        if (st) getMyMaterialReactions(st.id).then(setReactions).catch(console.error);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-    getStudentByUserId(user.id).then(st => {
-      setStudent(st);
-      if (st) getMyMaterialReactions(st.id).then(setReactions).catch(console.error);
-    }).catch(console.error);
   }, [user]);
 
   if (!user) return null;
@@ -63,24 +78,51 @@ export default function MiBiblioteca() {
     }
   };
 
-  const handleDownload = async (mat: LibraryMaterial) => {
-    if (!mat.storagePath) return;
+  const openQuiz = async (mat: LibraryMaterial) => {
+    setGenError(null);
+    if (mat.practiceQuiz && mat.practiceQuiz.length > 0) {
+      setQuizFor({ material: mat, questions: mat.practiceQuiz });
+      return;
+    }
+    setGenerating(mat.id);
     try {
-      const url = await getSignedUrl(mat.storagePath);
-      window.open(url, '_blank');
+      const { questions } = await generatePracticeQuiz(mat.id);
+      setMaterials(ms => ms.map(m => (m.id === mat.id ? { ...m, practiceQuiz: questions } : m)));
+      setQuizFor({ material: mat, questions });
     } catch (err) {
-      console.error(err);
+      setGenError(err instanceof Error ? err.message : 'No se pudo preparar el quiz.');
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+  const openGuide = async (mat: LibraryMaterial) => {
+    setGenError(null);
+    if (mat.studyGuide) {
+      setGuideFor({ title: mat.title, guide: mat.studyGuide });
+      return;
+    }
+    setGenerating(mat.id);
+    try {
+      const { guide } = await generateStudyGuide(mat.id);
+      setMaterials(ms => ms.map(m => (m.id === mat.id ? { ...m, studyGuide: guide } : m)));
+      setGuideFor({ title: mat.title, guide });
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : 'No se pudo preparar la guía.');
+    } finally {
+      setGenerating(null);
     }
   };
 
   return (
     <div className="sp-container animate-in">
-      <h3 className="sp-section-title"><BookOpen size={17} /> Material de mis materias</h3>
+      <h3 className="sp-section-title" aria-level={2}><BookOpen size={17} aria-hidden="true" /> Material de mis materias</h3>
       <p className="text-secondary text-sm" style={{ marginTop: -8 }}>
         Acá aparece el material que tus docentes comparten con el curso.
       </p>
 
       {loading && <p className="text-secondary">Cargando material...</p>}
+      {genError && <div className="sp-notice">{genError}</div>}
 
       {!loading && materials.length === 0 && (
         <div className="card acts-empty">
@@ -90,68 +132,91 @@ export default function MiBiblioteca() {
       )}
 
       <div className="sp-activity-list">
-        {materials.map(mat => (
-          <div key={mat.id} className="card sp-activity-card">
-            <div className="sp-activity-main">
-              <h4 className="flex items-center gap-2"><FileText size={16} className="text-cyan" /> {mat.title}</h4>
-              {mat.description && <p className="text-sm text-secondary">{mat.description}</p>}
-              <div className="sp-activity-meta">
-                <span className="badge badge-cyan">{mat.subjectName}</span>
-                <span className="text-xs text-subtle">{mat.fileSize}</span>
+        {materials.map(mat => {
+          const hasSource = Boolean(mat.extractedText || mat.aiSummary || (mat.studyCards?.length ?? 0) > 0);
+          return (
+            <div key={mat.id} className="card sp-activity-card">
+              <div className="sp-activity-main">
+                <h4 className="flex items-center gap-2" aria-level={3}><FileText size={16} className="text-cyan" aria-hidden="true" /> {mat.title}</h4>
+                {mat.description && <p className="text-sm text-secondary">{mat.description}</p>}
+                <div className="sp-activity-meta">
+                  <span className="badge badge-cyan">{mat.subjectName}</span>
+                  <span className="text-xs text-subtle">{mat.fileSize}</span>
+                </div>
+              </div>
+              <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+                {mat.videoUrl && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setVideoFor(mat)} title="Miralo acá, junto a la consigna">
+                    <Youtube size={14} /> Ver video
+                  </button>
+                )}
+                {student && hasSource && (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => openQuiz(mat)}
+                    disabled={generating !== null}
+                    title="Quiz de práctica con explicaciones"
+                  >
+                    <Play size={14} /> {generating === mat.id ? 'Preparando…' : 'Practicar'}
+                  </button>
+                )}
+                {student && hasSource && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => openGuide(mat)}
+                    disabled={generating !== null}
+                    title="Guía para estudiar este material"
+                  >
+                    <GraduationCap size={14} /> Guía
+                  </button>
+                )}
+                {mat.studyCards && mat.studyCards.length > 0 && (
+                  <button className="btn btn-secondary btn-sm" onClick={() => setCardsFor(mat)} title="Repasá con tarjetas visuales">
+                    <Layers size={14} /> Placas
+                  </button>
+                )}
+                {mat.aiSummary && (
+                  <button className="btn btn-outline btn-sm" onClick={() => setSummaryFor(mat)}>
+                    <Sparkles size={14} /> Resumen
+                  </button>
+                )}
+                {mat.podcastStatus === 'ready' && mat.podcastPath && (
+                  <button className="btn btn-outline btn-sm" onClick={() => setPodcastFor(mat)} title="Escuchá el resumen en audio">
+                    <Headphones size={14} /> Podcast
+                  </button>
+                )}
+                {mat.extractedText && (
+                  <Link to={`/mi-guia?doc=${mat.id}`} className="btn btn-secondary btn-sm" title="La IA te lo explica con palabras simples">
+                    <Wand2 size={14} /> Explicámelo fácil
+                  </Link>
+                )}
+                {/* Las escuelas pidieron que el estudiante no tenga que
+                    descargar: el material se lee acá adentro. */}
+                <button className="btn btn-outline btn-sm" onClick={() => setViendo(mat)}>
+                  <Eye size={14} /> Ver
+                </button>
+                {student && (
+                  <div className="sp-reaction-group" title="¿Te sirvió este material? Tu docente lo ve.">
+                    <button
+                      className={`sp-reaction-btn ${reactions[mat.id] === 'like' ? 'active-like' : ''}`}
+                      onClick={() => handleReaction(mat, 'like')}
+                      aria-label="Me sirvió"
+                    >
+                      <ThumbsUp size={14} aria-hidden="true" />
+                    </button>
+                    <button
+                      className={`sp-reaction-btn ${reactions[mat.id] === 'dislike' ? 'active-dislike' : ''}`}
+                      onClick={() => handleReaction(mat, 'dislike')}
+                      aria-label="No me sirvió"
+                    >
+                      <ThumbsDown size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
-              {mat.videoUrl && (
-                <button className="btn btn-primary btn-sm" onClick={() => setVideoFor(mat)} title="Miralo acá, junto a la consigna">
-                  <Youtube size={14} /> Ver video
-                </button>
-              )}
-              {mat.studyCards && mat.studyCards.length > 0 && (
-                <button className="btn btn-primary btn-sm" onClick={() => setCardsFor(mat)} title="Repasá con tarjetas visuales">
-                  <Layers size={14} /> Placas
-                </button>
-              )}
-              {mat.aiSummary && (
-                <button className="btn btn-secondary btn-sm" onClick={() => setSummaryFor(mat)}>
-                  <Sparkles size={14} /> Resumen
-                </button>
-              )}
-              {mat.podcastStatus === 'ready' && mat.podcastPath && (
-                <button className="btn btn-primary btn-sm" onClick={() => setPodcastFor(mat)} title="Escuchá el resumen en audio">
-                  <Headphones size={14} /> Podcast
-                </button>
-              )}
-              {mat.extractedText && (
-                <Link to={`/mi-guia?doc=${mat.id}`} className="btn btn-secondary btn-sm" title="La IA te lo explica con palabras simples">
-                  <Wand2 size={14} /> Explicámelo fácil
-                </Link>
-              )}
-              {mat.storagePath && (
-                <button className="btn btn-outline btn-sm" onClick={() => handleDownload(mat)}>
-                  <Download size={14} /> Descargar
-                </button>
-              )}
-              {student && (
-                <div className="sp-reaction-group" title="¿Te sirvió este material? Tu docente lo ve.">
-                  <button
-                    className={`sp-reaction-btn ${reactions[mat.id] === 'like' ? 'active-like' : ''}`}
-                    onClick={() => handleReaction(mat, 'like')}
-                    aria-label="Me sirvió"
-                  >
-                    <ThumbsUp size={14} />
-                  </button>
-                  <button
-                    className={`sp-reaction-btn ${reactions[mat.id] === 'dislike' ? 'active-dislike' : ''}`}
-                    onClick={() => handleReaction(mat, 'dislike')}
-                    aria-label="No me sirvió"
-                  >
-                    <ThumbsDown size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {videoFor?.videoUrl && (
@@ -160,6 +225,23 @@ export default function MiBiblioteca() {
 
       {podcastFor?.podcastPath && (
         <PodcastPlayer path={podcastFor.podcastPath} title={podcastFor.title} onClose={() => setPodcastFor(null)} />
+      )}
+
+      {quizFor && student && (
+        <PracticeQuizPlayer
+          questions={quizFor.questions}
+          materialTitle={quizFor.material.title}
+          subjectName={quizFor.material.subjectName}
+          studentId={student.id}
+          materialId={quizFor.material.id}
+          onClose={() => setQuizFor(null)}
+        />
+      )}
+
+      {viendo && <MaterialViewer material={viendo} onClose={() => setViendo(null)} />}
+
+      {guideFor && (
+        <StudyGuideModal title={guideFor.title} guide={guideFor.guide} onClose={() => setGuideFor(null)} />
       )}
 
       {cardsFor?.studyCards && (

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════
---  EstudIA — Migration 004: Bienestar, observaciones,
+--  SMT EstudIA — Migration 004: Bienestar, observaciones,
 --  devoluciones rápidas y portal de familias
 -- ═══════════════════════════════════════════════
 

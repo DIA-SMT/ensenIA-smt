@@ -1,5 +1,5 @@
 /**
- * EstudIA — Dynamic System Prompt Builder
+ * SMT EstudIA — Dynamic System Prompt Builder
  *
  * Assembles the system prompt for Claude with:
  * 1. Base identity & personality (warm, encouraging teacher)

@@ -3,11 +3,13 @@
  * Tres tipos de placa: concepto (leer), flashcard (dar vuelta para ver
  * la respuesta) y quiz (tocar una opción y recibir devolución al toque).
  * Compatible con placas viejas sin `type` (se tratan como concepto).
+ *
+ * El generador de PDF pesa más que todo el resto del visor: se baja recién
+ * cuando alguien toca "Descargar PDF", no cada vez que se abren las placas.
  */
 
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, Layers, RotateCcw } from 'lucide-react';
-import { studyCardsToPdf } from '../lib/pdf';
 import type { StudyCard } from '../types';
 import './Modals.css';
 import './StudyCardsViewer.css';
@@ -24,10 +26,23 @@ const cardType = (c: StudyCard) => c.type ?? 'concept';
 export default function StudyCardsViewer({ cards, title, subjectName, onClose }: Props) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [generando, setGenerando] = useState(false);
   // respuestas del quiz por placa: índice elegido
   const [picked, setPicked] = useState<Record<number, number>>({});
 
   const card = cards[index];
+
+  const descargar = async () => {
+    setGenerando(true);
+    try {
+      const { studyCardsToPdf } = await import('../lib/pdf');
+      studyCardsToPdf(cards, title, subjectName);
+    } catch (err) {
+      console.error('No se pudo generar el PDF:', err);
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   const goTo = (i: number) => {
     setIndex(Math.max(0, Math.min(cards.length - 1, i)));
@@ -64,7 +79,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
                 🎯 {quizOk}/{quizDone}
               </span>
             )}
-            <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
+            <button className="btn-icon" aria-label="Cerrar las placas" onClick={onClose}><X size={18} aria-hidden="true" /></button>
           </div>
         </div>
 
@@ -78,7 +93,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
             {/* ── Concepto ── */}
             {kind === 'concept' && (
               <>
-                {card.emoji && <span className="sc-emoji">{card.emoji}</span>}
+                {card.emoji && <span className="sc-emoji" aria-hidden="true">{card.emoji}</span>}
                 <h2 className="sc-title">{card.title}</h2>
                 <p className="sc-text">{card.body}</p>
               </>
@@ -89,7 +104,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
               <button className="sc-flip-area" onClick={() => setFlipped(v => !v)}>
                 {!flipped ? (
                   <>
-                    {card.emoji && <span className="sc-emoji">{card.emoji}</span>}
+                    {card.emoji && <span className="sc-emoji" aria-hidden="true">{card.emoji}</span>}
                     <h2 className="sc-title">{card.question}</h2>
                     <span className="sc-flip-hint"><RotateCcw size={13} /> Pensá la respuesta y tocá para dar vuelta</span>
                   </>
@@ -106,7 +121,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
             {/* ── Quiz: tocá una opción ── */}
             {kind === 'quiz' && (
               <>
-                {card.emoji && <span className="sc-emoji sc-emoji-sm">{card.emoji}</span>}
+                {card.emoji && <span className="sc-emoji sc-emoji-sm" aria-hidden="true">{card.emoji}</span>}
                 <h2 className="sc-title sc-title-quiz">{card.question}</h2>
                 <div className="sc-options">
                   {(card.options ?? []).map((opt, i) => {
@@ -146,6 +161,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
                   className={`sc-dot sc-dot-${cardType(c)} ${i === index ? 'active' : ''} ${picked[i] !== undefined ? 'done' : ''}`}
                   onClick={() => goTo(i)}
                   aria-label={`Placa ${i + 1}`}
+                  aria-current={i === index ? 'true' : undefined}
                 />
               ))}
             </div>
@@ -156,8 +172,8 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
         </div>
 
         <div className="em-modal-footer">
-          <button className="btn btn-outline btn-sm" onClick={() => studyCardsToPdf(cards, title, subjectName)}>
-            <Download size={14} /> Descargar PDF
+          <button className="btn btn-outline btn-sm" onClick={descargar} disabled={generando} aria-busy={generando}>
+            <Download size={14} aria-hidden="true" /> {generando ? 'Preparando…' : 'Descargar PDF'}
           </button>
           <button className="btn btn-primary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
