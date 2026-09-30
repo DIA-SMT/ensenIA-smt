@@ -107,9 +107,16 @@ export const ETIQUETA_ROL: Record<UserRole, string> = {
   padre: 'Familia',
 };
 
+/**
+ * Inicio de cada rol. Tiene que ser una ruta que ese rol PUEDA abrir:
+ * ProtectedRoute rebota a quien entra donde no le toca... hacia inicioDe().
+ * Si el inicio no le está permitido, rebota contra sí mismo para siempre
+ * (le pasó al docente con /dashboard, que es solo de dirección).
+ */
 export function inicioDe(rol: UserRole | undefined): RutaPantalla {
   if (rol === 'estudiante') return '/mis-actividades';
   if (rol === 'padre') return '/comunicados-familia';
+  if (rol === 'docente') return '/hoy';
   return '/dashboard';
 }
 
