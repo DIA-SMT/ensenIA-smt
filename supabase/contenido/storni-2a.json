@@ -1,0 +1,938 @@
+{
+  "_que_es": "Material del piloto de la E.M. Alfonsina Storni, 2° A (ciclo 2026), transcripto y estructurado desde los documentos que entregó la escuela (programas escaneados + material por materia), verificado contra los originales. Base para cargar unidades, clases, criterios y biblioteca. Todo va en BORRADOR hasta que cada docente lo valide: ver \"revision\".",
+  "_fuente": "Carpeta \"2° Año A ESC ALFONSINA STORNI\" del Drive del piloto (descargada el 2026-10-01).",
+  "_no_incluye": "Las páginas del libro de texto de Lengua ni los poemas protegidos: solo su referencia.",
+  "materias": [
+    {
+      "materia": "Matemática",
+      "docentes": [
+        {
+          "nombre": "González, Giuliana",
+          "fuente": "Programa de 2° \"A\" (PDF 'Programas Alfonsina Storni Lengua, Matemática y Físico Química', p. 5: 'DOCENTE: GIULIANA GONZALEZ') y secuencia 'Sistema sexagesimal' (MATEMATICA/MATEMÁTICAS - 2A - AS.pdf, p. 1: 'Docente: González, Giuliana')"
+        },
+        {
+          "nombre": "Villagra, Fátima Natalia",
+          "fuente": "Programa Anual de Matemática (mismo PDF de programas, p. 3). El curso dice 'Curso: 2do año', sin división. No queda claro si da clases en 2° A. La plataforma no la tiene cargada."
+        }
+      ],
+      "programa": {
+        "fundamentacion": "[Solo está en el Programa Anual de Villagra, Fátima Natalia ('2do año', sin división). El programa de González para 2° A no tiene fundamentación. Los objetivos, la metodología y la evaluación de este bloque también salen de ese programa.] La educación matemática es fundamental para el desarrollo integral de los estudiantes, ya que les proporciona herramientas y habilidades para resolver problemas, tomar decisiones informadas y entender el mundo que los rodea. Por ello es necesario hacer el enfoque en proporcionar a los estudiantes una educación matemática sólida y relevante para su futuro académico y profesional. Podemos enumerar situaciones en las que la Matemática nos permite comunicarnos: -leer comprensivamente un periódico. -interpretar una factura de compras o una declaración de impuestos. -comprender una oferta comercial o un presupuesto del taller mecánico. - comprender un informe de divulgación científica. Es de gran importancia desarrollar habilidades y competencias matemáticas que les permitan resolver problemas y tomar decisiones informadas en su vida cotidiana por lo que en esta área se plantea fomentar el pensamiento crítico, la creatividad y la resolución de problemas, proporcionando una base sólida en matemáticas para que los estudiantes puedan acceder a carreras y estudios superiores en áreas como la ciencia, la tecnología, la ingeniería y las matemáticas o puedan insertarse en la sociedad en un ámbito laboral teniendo los conocimientos básicos para poder ejecutar dicha tarea",
+        "objetivos": [
+          "Reconocer los diferentes conjuntos de números",
+          "Resolver cálculos con números enteros combinando las cuatro operaciones.",
+          "Calcular potencias de números enteros.",
+          "Resolver ecuaciones que involucren enteros.",
+          "Transformar números decimales en fracciones.",
+          "Operar con fracciones.",
+          "Representar puntos en el plano.",
+          "Reconocer diferentes figuras y sus elementos"
+        ],
+        "metodologia": "[Programa Anual de Villagra] Identificar las expresiones que corresponden a números enteros. Resolver cálculos con números enteros. Plantear y discutir problemas de la vida real que involucren números enteros. Representación de una fracción. Realizar cálculos con fracciones. Graficar diferentes ángulos y reconocer su clasificación. Ubicar puntos en el plano. Leer diferentes gráficos en los ejes cartesianos.",
+        "evaluacion_general": "[Programa Anual de Villagra] Evaluación: Trabajo en clases. Entrega de trabajos prácticos, de los mismos, aprobar la evaluación trimestral y tener carpeta completa. Participación y cooperación en clase. || [Planificación de González, 2° A, p. 6: columna de evaluación cortada por el borde del escaneo] Fila sin trimestre visible (contenidos del Eje 2): - Evaluaciones escritas semi-estructuradas e[…] individuales. - Trabajos prácticos. - Resolución de ejer[…] el pizarrón. - Carpeta y Tareas […]. Fila 3° Trimestre (Eje 3): - Evaluaciones semi-estructu[…] individuales. - Trabajos prá[…] - Resolución […] el pizarrón. - Carpeta y […]",
+        "bibliografia": [
+          "Logikamente – Juan Pablo Pisano. (programa de González, 2° A, p. 6; transcripto tal cual figura)",
+          "Diseño curricular jurisdiccional (programa de Villagra)",
+          "NAP (programa de Villagra)",
+          "Editorial Puerto de Palos 2 (programa de Villagra)",
+          "Editorial Santillana 2 (programa de Villagra)"
+        ]
+      },
+      "unidades": [
+        {
+          "numero": "Eje temático N°1",
+          "titulo": "Números enteros",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Números enteros: Definición",
+            "Recta numérica",
+            "Orden",
+            "Valor absoluto",
+            "Operaciones: suma, resta, multiplicación y división",
+            "Potenciación",
+            "Radicación",
+            "Operaciones combinadas",
+            "Ecuaciones de primer grado con una incógnita",
+            "Aplicación de la propiedad distributiva en la resolución de ecuaciones (en el original: 'distrivutiva')"
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "Programa de González, 2° A (PDF de programas, p. 5). En el PDF no está la fila de este eje en la tabla de planificación (trimestre, fechas, capacidades, evaluación): falta la primera hoja de la tabla."
+        },
+        {
+          "numero": "Eje temático N°2",
+          "titulo": "Ángulos",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Ángulos: Definición",
+            "Clasificación",
+            "Bisectriz de un ángulo",
+            "Operaciones: suma, resta, multiplicación y división",
+            "Ángulos complementarios",
+            "Ángulos suplementarios",
+            "Ángulos determinados por dos rectas cortados por una transversal: alternos internos, alternos externos, correspondientes y conjugados",
+            "Ecuaciones de primer grado con una incógnita"
+          ],
+          "objetivos": [
+            "[comienzo ilegible] … como fuente de aprendizaje e insumo en la búsqueda de un resultado.",
+            "Resolver correctamente ejercicios con expresiones algebraicas."
+          ],
+          "estrategias_actividades": null,
+          "evaluacion": "- Evaluaciones escritas semi-estructuradas e[…] individuales.\n- Trabajos prácticos.\n- Resolución de ejer[…] el pizarrón.\n- Carpeta y Tareas […]\n(columna cortada a la derecha en el escaneo)",
+          "fuente": "Contenidos: programa de González, p. 5. Capacidades y evaluación: fila de arriba de la tabla de la p. 6. Está cortada y no se ven el trimestre, el eje ni las fechas. La asigné al Eje 2 porque sus contenidos coinciden (complementarios, suplementarios, rectas cortadas por una transversal, ecuaciones). Por descarte sería el 2° trimestre (el 3° es el Eje 3), pero el documento no lo dice."
+        },
+        {
+          "numero": null,
+          "titulo": "Sistema sexagesimal",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Sistema sexagesimal: definición (sistema de medición de base 60; se usa para medir la amplitud de los ángulos y el tiempo; unidad fundamental: el grado sexagesimal)",
+            "Equivalencias fundamentales: 1° → 60′; 1′ → 60″; 1° → 3600″ (60 . 60)",
+            "Operaciones con grados, minutos y segundos: suma, resta, multiplicación y división"
+          ],
+          "objetivos": [
+            "Identificar y diferenciar grados, minutos y segundos.",
+            "Comprender las equivalencias.",
+            "Aplicar correctamente las conversiones."
+          ],
+          "estrategias_actividades": "Definición y equivalencias. Un ejemplo resuelto en columnas para cada operación. Una actividad final con α, β, γ y λ que usa las cuatro operaciones.",
+          "evaluacion": null,
+          "fuente": "MATEMATICA/MATEMÁTICAS - 2A - AS.pdf, pp. 1–3 (González, Giuliana). El documento la llama 'Contenido de la unidad a desarrollar: Sistema sexagesimal'. En el programa no aparece como unidad: es la parte 'Operaciones: suma, resta, multiplicación y división' del Eje temático N°2 (Ángulos). No tiene fecha, trimestre ni ciclo lectivo."
+        },
+        {
+          "numero": "Eje temático N°3",
+          "titulo": "Superficie y perímetro",
+          "trimestre": 3,
+          "fechas": "07/09/2026 – 04/12/2026",
+          "contenidos": [
+            "Superficie y perímetro: Definición – Fórmulas",
+            "Triángulos: Clasificación según sus lados y según sus ángulos",
+            "Cuadriláteros: Clasificación",
+            "Polígonos regulares: Definición – Clasificación",
+            "Superficie y perímetro: Situaciones problemáticas",
+            "Ecuaciones de primer grado con una incógnita"
+          ],
+          "objetivos": [
+            "Comunicar información matemática (propia o ajena) en forma clara y ordenada.",
+            "Valorar el intercambio de ideas como fuente de aprendizaje e insumo en la búsqueda de un resultado.",
+            "Resolver correctamente ejercicios con expresiones algebraicas."
+          ],
+          "estrategias_actividades": null,
+          "evaluacion": "- Evaluaciones semi-estructu[…] individuales.\n- Trabajos prá[…]\n- Resolución […] el pizarrón.\n- Carpeta y […]\n(columna cortada a la derecha en el escaneo)",
+          "fuente": "Programa de González, p. 5 (Eje temático N°3). Tabla de planificación, p. 6, fila '3° Trimestre | Eje N.° 3 | 07/09/2026 – 04/12/2026'. Es el único eje con trimestre y fechas escritos."
+        },
+        {
+          "numero": "Unidad 1 (programa de Villagra)",
+          "titulo": "Números enteros",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Uso de los números enteros en contextos cotidianos",
+            "Representación de los números enteros en la recta numérica",
+            "Propiedades de los números enteros",
+            "Orden y Valor absoluto",
+            "Operaciones fundamentales de los números enteros",
+            "Cálculos con números enteros combinando las cuatro operaciones",
+            "Supresión de paréntesis",
+            "Potencias con base entera y exponente natural",
+            "Propiedades de la potencia",
+            "Radicación propiedades",
+            "Ejercicios combinados con potencia y raíces",
+            "Lenguaje coloquial y simbólico",
+            "Ecuaciones",
+            "Inecuaciones con números enteros"
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "NO CARGAR PARA 2° A SIN CONFIRMAR. Programa Anual de Villagra, Fátima Natalia ('Curso: 2do año', sin división), p. 3. No trae trimestres ni fechas."
+        },
+        {
+          "numero": "Unidad 2 (programa de Villagra)",
+          "titulo": "Número racional y sus diferentes escrituras",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Expresiones decimales exactas y periódicas",
+            "Pasajes de una expresión a otra",
+            "Operaciones con racionales y con números decimales",
+            "Potencias de fracciones con exponente entero",
+            "Ángulos entre paralelas cortadas por una transversal"
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "NO CARGAR PARA 2° A SIN CONFIRMAR. Programa Anual de Villagra, p. 4. No trae trimestres ni fechas."
+        },
+        {
+          "numero": "Unidad 3 (programa de Villagra)",
+          "titulo": "Triángulo",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "Triángulo: Clasificación según sus lados y ángulos",
+            "Propiedades de los triángulos",
+            "Puntos notables de los triángulos",
+            "Criterios de congruencia",
+            "Construcción de triángulos",
+            "Teorema de Pitágoras",
+            "Resolución de problemas",
+            "Paralelogramos",
+            "Construcción trapecios y romboides (así en el original, sin puntuación)",
+            "Perímetro y área de figuras planas",
+            "Elementos fundamentales de la geometría",
+            "Circunferencia y círculo",
+            "Área sombreada"
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "NO CARGAR PARA 2° A SIN CONFIRMAR. Programa Anual de Villagra, p. 4. No trae trimestres ni fechas. Por cómo está puntuado el original ('Paralelogramos. Construcción trapecios y romboides perímetro y área de figuras planas.') no se sabe bien dónde cortar cada contenido."
+        }
+      ],
+      "criterios_por_trimestre": [
+        {
+          "trimestre": 3,
+          "criterios": "- Evaluaciones semi-estructu[…] individuales.\n- Trabajos prá[…]\n- Resolución […] el pizarrón.\n- Carpeta y […]",
+          "fuente": "Planificación de González, p. 6, fila '3° Trimestre | Eje N.° 3', columna de evaluación. El borde del escaneo corta la columna. Por la fila de arriba, lo que falta sería 'Evaluaciones escritas semi-estructuradas e… individuales', 'Trabajos prácticos', 'Resolución de ejer[cicios en] el pizarrón' y 'Carpeta y Tareas …', pero no se ve. Son instrumentos, no criterios redactados. No publicar hasta que la docente pase la columna completa."
+        },
+        {
+          "trimestre": null,
+          "criterios": "- Evaluaciones escritas semi-estructuradas e[…] individuales.\n- Trabajos prácticos.\n- Resolución de ejer[…] el pizarrón.\n- Carpeta y Tareas […]",
+          "fuente": "Planificación de González, p. 6, fila de arriba cortada (contenidos del Eje 2). No se ve a qué trimestre corresponde; por descarte sería el 2°. Confirmar."
+        },
+        {
+          "trimestre": null,
+          "criterios": "Trabajo en clases. Entrega de trabajos prácticos, de los mismos, aprobar la evaluación trimestral y tener carpeta completa. Participación y cooperación en clase.",
+          "fuente": "Programa Anual de Villagra ('2do año', sin división), p. 4, 'Evaluación'. Es general, no separa por trimestre. Antes de usarlo, confirmar si este programa corresponde a 2° A."
+        }
+      ],
+      "material_didactico": [
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\MATEMATICA\\MATEMÁTICAS - 2A - AS.pdf",
+          "titulo": "Sistema sexagesimal",
+          "unidad_relacionada": "Sistema sexagesimal (Eje temático N°2: Ángulos — operaciones)",
+          "tipo": "Secuencia/apunte de la docente: teoría, ejemplos resueltos y actividad (3 páginas)",
+          "para_estudiantes": true,
+          "clases": [
+            {
+              "titulo": "Sistema sexagesimal: definición y equivalencias",
+              "objetivos": [
+                "Identificar y diferenciar grados, minutos y segundos.",
+                "Comprender las equivalencias."
+              ],
+              "contenido_md": "## Sistema sexagesimal\n\n**Definición:**\n\nEl sistema sexagesimal, es un sistema de medición cuya base es 60. Se utiliza principalmente para medir la amplitud de los ángulos y también el tiempo.\n\nEn la medida de ángulos, la unidad fundamental es el grado sexagesimal **(°)**.\n\n**Equivalencias fundamentales:**\n\n- **1° → 60′**\n- **1′ → 60″**\n- **1° → 3600″** (60 . 60)"
+            },
+            {
+              "titulo": "Operaciones con grados, minutos y segundos: suma y resta",
+              "objetivos": [
+                "Aplicar correctamente las conversiones."
+              ],
+              "contenido_md": "## Operaciones con grados, minutos y segundos\n\n### Suma\n\n- Se suman por columnas\n- Si los segundos son mayor o igual a 60, se pasan a minutos\n- Si los minutos son mayor o igual a 60, se pasan a grados\n\nEjemplo:\n\n```\n    25°    35′    40″\n  + 17°    50′    30″\n  -------------------\n    42°    85′    70″\n     1°  +  1′   -60″\n  -------------------\n    43°    86′    10″\n          -60′\n          ----\n           26′\n```\n\n= 43° 26′ 10″\n\n### Resta\n\n- Si no alcanza, se pide prestado\n\n```\n    47°    79′    75″\n    48°    20′    15″\n  - 16°    35′    40″\n  -------------------\n    31°    44′    35″\n```\n\n(En el ejemplo se tacha 48° 20′ 15″ y se escribe arriba 47° 79′ 75″.)\n\n= 31° 44′ 35″"
+            },
+            {
+              "titulo": "Operaciones con grados, minutos y segundos: multiplicación y división. Actividad",
+              "objetivos": [
+                "Aplicar correctamente las conversiones."
+              ],
+              "contenido_md": "### Multiplicación\n\n- Multiplicar por separado los grados, minutos y segundos\n- Recordar las equivalencias\n\n```\n    15°    25′    32″\n            x 3\n  -------------------\n    45°    75′    96″\n  + 1°  +   1′   -60″\n  -------------------\n    46°    76′    36″\n          -60′\n          ----\n           16′\n```\n\n= 46° 16′ 36″\n\n### División\n\n- Dividir primero los grados por el número indicado\n- Si queda un resto de grados, convertir a minutos\n- Si queda un resto de minutos, convertir a segundos\n\n```\n    46°    16′    36″  | 3\n                       |________________\n    16°   +60′   +60″     15°  25′  32″\n          ----   ----\n     1°    76′    96″\n           16′    06″\n            1′     0\n```\n\n= 15° 25′ 32″\n\n## Actividad\n\nDados: α = 12° 24′ 35″ ; β = 15° 34′ 45″ ; γ = 23° 45′ 55″ ; λ = 58° 22′ 45″\n\nHallar:\n\n- α + β\n- λ − α\n- 4 · γ\n- λ : 3"
+            }
+          ],
+          "notas": "Lo escribió la docente; no tiene páginas de libros. Sirve para estudiantes: el encabezado (escuela, docente, 'Que el alumno logre') es de planificación, pero no tiene datos sensibles. Las 3 clases son una propuesta mía: el documento es una secuencia corrida, sin clases, fechas, actividades intermedias ni cierre. La única actividad es la del final y usa las cuatro operaciones. No inventé cierres ni actividades. Cambios respecto del original, para que los confirme la docente: (1) unifiqué las primas (′ y ″; en el original aparecen ’, ’’, ′′); (2) corregí dos erratas: en la suma el original dice '= 43° 26′10′' y el procedimiento da 10″; en la división dice '16′ 06′' y corresponde 06″; (3) en la actividad separé los cuatro cálculos. En el original van separados por ';' y en lugar de '4 · γ' dice '4. γ' (el punto es el signo de multiplicar); además faltaba el ';' entre γ y λ. El documento no trae las respuestas. Para la biblioteca: al sacar el texto del PDF se pierden las columnas de los ejemplos y las flechas ('1° → 60’' queda '1° 60’'), así que el resumen, las placas, el quiz y el podcast de la IA pueden leer mal los procedimientos. Conviene revisar lo que genere o cargar también el texto de estas clases. Etiquetas posibles: sistema sexagesimal, ángulos, grados minutos y segundos, operaciones con ángulos."
+        },
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf (pp. 5–6)",
+          "titulo": "Programa y planificación anual de Matemática 2° A — González (incompleto)",
+          "unidad_relacionada": null,
+          "tipo": "Programa (3 ejes temáticos) y planificación anual en tabla por trimestre (incompleta)",
+          "para_estudiantes": false,
+          "clases": [],
+          "notas": "Es planificación del docente, no material de estudio. De acá salen las unidades (ejes), el 3° trimestre con sus fechas, las capacidades y los instrumentos de evaluación. Falta la primera hoja de la tabla: títulos de las columnas, la fila del 1° trimestre/Eje 1 y el comienzo de la fila del Eje 2. La p. 6 está torcida y la columna de evaluación queda cortada. En el margen izquierdo de la p. 6 se ven restos de otra hoja doblada ('…mér', '…ltip'); podría ser la parte que falta, pero no se lee."
+        },
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf (pp. 3–4)",
+          "titulo": "Programa Anual de Matemática 2do año — Villagra",
+          "unidad_relacionada": null,
+          "tipo": "Programa anual (fundamentación, objetivos, 3 unidades, metodología, evaluación, bibliografía)",
+          "para_estudiantes": false,
+          "clases": [],
+          "notas": "Es planificación del docente. Tiene otra docente (Villagra, Fátima Natalia), el curso dice '2do año' sin división y los contenidos no son los mismos que en el programa de González para 2° A. No trae trimestres ni fechas. Hasta que la escuela diga si aplica a 2° A, conviene usarlo solo como referencia."
+        }
+      ],
+      "comparacion_con_lo_cargado": {
+        "coincide": [
+          "Docente: Giuliana González, asignada a Matemática de 2° A (ensureTeacher 'Giuliana', 'González'). Coincide con el programa de 2° \"A\" y con la secuencia.",
+          "Unidad 'Sistema sexagesimal': coincide con 'Contenido de la unidad a desarrollar: Sistema sexagesimal'.",
+          "Clase 1: la definición (base 60, ángulos y tiempo, grado sexagesimal como unidad) y las tres equivalencias (1° = 60′, 1′ = 60″, 1° = 3600″) están casi textuales.",
+          "Las reglas de la suma (por columnas; 60″ pasan a minutos; 60′ pasan a grados), de la multiplicación y de la división coinciden en lo esencial.",
+          "Los cuatro resultados de los ejemplos coinciden con el documento: 43° 26′ 10″, 31° 44′ 35″, 46° 16′ 36″, 15° 25′ 32″. El seed corrige bien la errata 10′ → 10″, pero no lo avisa.",
+          "Los valores de α, β, γ y λ de la actividad coinciden.",
+          "Los objetivos de la clase 1 ('Identificar y diferenciar grados, minutos y segundos', 'Comprender las equivalencias fundamentales') son casi los del documento."
+        ],
+        "diferencias": [
+          "Trimestre: el seed publica la unidad y los criterios en el 2° trimestre (getTerm(storni, 2)). La secuencia no tiene fecha ni trimestre. En el programa, el sexagesimal cae en el Eje 2, y su fila en la tabla no muestra el trimestre. Como asignar trimestre publica el temario, quedó visible para estudiantes y familias sin respaldo en el documento.",
+          "Ejemplos: el seed deja solo la cuenta y el resultado (p. ej. '25° 35′ 40″ + 17° 50′ 30″ = 43° 26′ 10″'). El documento muestra el procedimiento en columnas: 42° 85′ 70″ → +1′ −60″ → 86′ −60′ → 26′; en la resta, pedir prestado 48° 20′ 15″ → 47° 79′ 75″; en la división, los restos pasan a la columna siguiente (+60′, +60″). Se pierde justo lo que se enseña.",
+          "Actividad: el seed escribe 'Hallar: α + β · λ − α · 4 · γ · λ : 3'. Usa '·' para separar, que en matemática es el signo de multiplicar, así que se lee como una sola expresión. El original separa los cuatro cálculos con ';': 'α + β ; λ − α ; 4. γ ; λ: 3'. Para el estudiante es un error de contenido.",
+          "Frases agregadas: 'se pide prestado a la unidad de orden superior' (el original dice 'Si no alcanza, se pide prestado'); 'Recordar las equivalencias para reagrupar' (el original: 'Recordar las equivalencias').",
+          "Los objetivos de las clases 2 y 3 están reescritos: 'Aplicar correctamente las conversiones al sumar y restar medidas sexagesimales' y 'Multiplicar y dividir medidas sexagesimales aplicando las equivalencias'. El original tiene un solo objetivo: 'Aplicar correctamente las conversiones.'",
+          "Cambios de forma: '1° → 60′' pasa a '1° = 60′'; 'mayor o igual' pasa a 'mayores o iguales'; 'Comprender las equivalencias' pasa a '…equivalencias fundamentales'.",
+          "La separación en 3 clases la hizo el seed; el documento no separa clases.",
+          "Orden: 'Sistema sexagesimal' queda como unidad 1 y única de Matemática. En el programa de González es parte del Eje 2, que va después de Números enteros (Eje 1).",
+          "El seed está en el repo en supabase/seed-contenido-escuelas.ts (MATE_SEXAGESIMAL desde la línea ~129; unidad y criterios en las líneas ~452–461)."
+        ],
+        "falta_en_lo_cargado": [
+          "Eje temático N°1, Números enteros (programa de González, 2° A).",
+          "El resto del Eje temático N°2, Ángulos: definición, clasificación, bisectriz, complementarios, suplementarios, ángulos entre dos rectas cortadas por una transversal, ecuaciones. Solo se cargó la parte de operaciones (sexagesimal).",
+          "Eje temático N°3, Superficie y perímetro (triángulos, cuadriláteros, polígonos regulares, situaciones problemáticas, ecuaciones). Es el único con trimestre y fechas escritos (3° trimestre, 07/09/2026 – 04/12/2026) y es lo que se está dando ahora.",
+          "Las capacidades de la planificación: 'Comunicar información matemática (propia o ajena) en forma clara y ordenada', 'Valorar el intercambio de ideas como fuente de aprendizaje…', 'Resolver correctamente ejercicios con expresiones algebraicas'.",
+          "Los instrumentos de evaluación que sí trae el documento: evaluaciones (escritas) semi-estructuradas individuales, trabajos prácticos, resolución de ejercicios en el pizarrón, carpeta y tareas.",
+          "La bibliografía: Logikamente – Juan Pablo Pisano.",
+          "El Programa Anual de Villagra: no se menciona en ningún lado. Hay que saber si aplica a 2° A.",
+          "Los procedimientos en columnas de los cuatro ejemplos.",
+          "En lo que vi del seed, el PDF de la secuencia no se sube como material de biblioteca (library_materials) para estudiantes."
+        ],
+        "sobra_o_inventado_en_lo_cargado": [
+          "Los 4 criterios de evaluación de Matemática (2° trimestre) no salen de ningún documento: '· Diferencia grados, minutos y segundos y aplica las equivalencias…', '· Resuelve sumas y restas reagrupando correctamente…', '· Resuelve multiplicaciones y divisiones convirtiendo los restos.', '· Presenta el procedimiento completo, no solo el resultado.' Los tres primeros convierten en criterios los objetivos y pasos de la secuencia. El cuarto no está en ningún documento. Además se publican para estudiantes y familias.",
+          "La asignación al 2° trimestre: no figura en ningún documento.",
+          "Los agregados de redacción ('a la unidad de orden superior', 'para reagrupar') y los objetivos reescritos de las clases 2 y 3.",
+          "En la parte de Matemática no hay actividades 'con IA' ni nada parecido. Las actividades con IA del mismo seed son de Lengua (el encabezado del seed dice que vienen del documento de Lengua); hay que revisarlas contra ese documento, fuera de este análisis."
+        ]
+      },
+      "inconsistencias": [
+        "En el mismo PDF hay dos programas de Matemática de 2° año con docentes distintas. Villagra ('Curso: 2do año', sin división) tiene: U1 enteros, con inecuaciones; U2 racionales, decimales y fracciones, y ángulos entre paralelas; U3 triángulos, con Pitágoras, congruencia y puntos notables, paralelogramos, circunferencia y círculo, área sombreada. González (2° 'A') tiene: Eje 1 enteros; Eje 2 ángulos, con clasificación, bisectriz, operaciones, complementarios y suplementarios; Eje 3 superficie y perímetro, triángulos, cuadriláteros, polígonos regulares. González no incluye números racionales ni fracciones. Villagra no incluye bisectriz, operaciones con ángulos ni polígonos regulares.",
+        "Programa de Villagra: los objetivos ('Representar puntos en el plano') y la metodología ('Ubicar puntos en el plano. Leer diferentes gráficos en los ejes cartesianos', 'Graficar diferentes ángulos y reconocer su clasificación') no tienen contenido en ninguna unidad. No hay plano cartesiano ni clasificación de ángulos; solo 'ángulos entre paralelas'.",
+        "La tabla de planificación de González está incompleta. Faltan la primera hoja (títulos de columnas, 1° trimestre/Eje 1 y el comienzo de la fila del Eje 2) y el final de la columna de evaluación, que el borde del escaneo corta en las dos filas visibles.",
+        "La fila del Eje 2 no muestra trimestre ni fechas. Solo por descarte (el 3° trimestre es el Eje 3) se puede suponer que es el 2° trimestre, pero no está escrito.",
+        "Fechas: según la planificación, el 3° trimestre va del 07/09/2026 al 04/12/2026. El calendario que la plataforma crea por defecto (migración 024) lo pone del 14/09 al 11/12/2026. La planificación de Físico-Química de la misma escuela pone el 1° trimestre del 05/03 al 30/05/2026, contra 02/03–05/06 por defecto. Si los academic_terms de la Storni quedaron con las fechas por defecto, no coinciden con las de la escuela.",
+        "Las capacidades que se ven son las mismas en la fila del Eje 2 y en la del Eje 3, son genéricas y hablan de 'expresiones algebraicas', que no aparecen como contenido en ningún eje (sí aparecen las ecuaciones de primer grado).",
+        "'Ecuaciones de primer grado con una incógnita' se repite en los tres ejes. Parece un contenido que atraviesa el año, no un error, pero conviene confirmarlo.",
+        "La secuencia 'Sistema sexagesimal' se presenta como 'unidad a desarrollar', pero en el programa no es una unidad sino parte del Eje 2. Tampoco tiene ciclo lectivo, fecha ni trimestre.",
+        "Erratas en la secuencia: '= 43° 26′10′' (debería ser 10″); '16′ 06′' en la división (debería ser 06″); en la actividad falta el ';' entre γ y λ; '4. γ' usa el punto como signo de multiplicar y se puede confundir con un número de ítem.",
+        "Erratas menores en los programas: 'distrivutiva', 'fuentede', 'Triangulo', 'circulo', puntos que faltan ('Supresión de paréntesis Potencias', 'exponente entero Ángulos'), 'Construcción trapecios y romboides perímetro…' sin puntuación. La secuencia dice 'Matemáticas' y el programa 'Matemática'.",
+        "La bibliografía no coincide entre los dos programas: 'Logikamente – Juan Pablo Pisano.' en el de González; Diseño curricular jurisdiccional, NAP, Puerto de Palos 2 y Santillana 2 en el de Villagra.",
+        "La bibliografía del programa de González dice solo 'Logikamente – Juan Pablo Pisano.' (p. 6, debajo de la tabla). El documento no aclara si Logikamente es el título del libro o la editorial, ni da título completo ni edición; se transcribe tal cual, sin interpretarlo."
+      ],
+      "preguntas_para_la_escuela": [
+        "¿Quién da Matemática en 2° A: Giuliana González o Fátima Natalia Villagra? El Programa Anual de Villagra ('2do año') ¿es de 2° B o de otra división? ¿Cuál programa vale para 2° A?",
+        "¿Nos pueden mandar la hoja de la planificación anual de González que falta (la primera de la tabla, con los títulos de las columnas, el 1° trimestre/Eje 1 y el comienzo del Eje 2) y la columna de evaluación completa, que en el escaneo sale cortada?",
+        "¿El Eje 1 va en el 1° trimestre y el Eje 2 en el 2°? ¿Con qué fechas exactas?",
+        "¿En qué trimestre y en qué fechas se dio la secuencia 'Sistema sexagesimal'? ¿La cargamos como unidad aparte (como la llama la docente) o como clases dentro del Eje 2 (Ángulos)?",
+        "¿Cuáles son las fechas oficiales de los tres trimestres de la Storni en 2026? En la planificación de Matemática el 3° va del 07/09 al 04/12, distinto del calendario que hoy tiene la plataforma por defecto.",
+        "¿Qué criterios de evaluación quieren que vean estudiantes y familias en cada trimestre? El documento de 2° A solo trae instrumentos (evaluaciones semi-estructuradas, trabajos prácticos, pizarrón, carpeta y tareas). ¿Suman también lo del programa de Villagra ('aprobar la evaluación trimestral y tener carpeta completa')?",
+        "¿Hay secuencias o material para el Eje 1 (números enteros) y para el Eje 3 (superficie y perímetro, que se está dando ahora en el 3° trimestre)?",
+        "¿La docente confirma las dos correcciones (10′ → 10″ en la suma y 06′ → 06″ en la división) y que '4. γ' quiere decir 4 · γ?",
+        "¿Podemos compartir la secuencia 'Sistema sexagesimal' con los estudiantes en la biblioteca, para que la IA arme resumen, placas, quiz y podcast?",
+        "¿Cuál es el título y la edición del libro de Juan Pablo Pisano (Logikamente) que usan en clase? Si se suben páginas, conviene citarlas o resumirlas en lugar de subirlas completas.",
+        "¿La secuencia es del ciclo lectivo 2026? (no lo dice)"
+      ],
+      "derechos_de_autor": [
+        "El material de Matemática no tiene páginas escaneadas de libros. La secuencia 'Sistema sexagesimal' la escribió la docente y se puede cargar completa con su autorización.",
+        "Los programas citan libros de texto con derechos: el libro de Juan Pablo Pisano (Logikamente), Editorial Puerto de Palos 2 y Editorial Santillana 2. Si más adelante la docente sube páginas o capítulos de esos libros, no conviene reproducirlos completos en la plataforma, ni darlos enteros a la IA para que arme resúmenes, quizzes o podcasts del libro: mejor citarlos, resumirlos o poner un enlace.",
+        "El Diseño curricular jurisdiccional y los NAP son documentos oficiales públicos: se pueden citar y enlazar."
+      ],
+      "datos_personales": [
+        "Los documentos de Matemática no tienen datos de estudiantes.",
+        "Aparecen los nombres de dos docentes (González, Giuliana; Villagra, Fátima Natalia), solo como autoras. Villagra no está cargada en la plataforma; no darla de alta ni mostrarla hasta que la escuela confirme su rol en 2° A.",
+        "El seed de la compañera inscribe una lista ALUMNOS_2A con códigos MAT2A-xx. Según el comentario del repo son 'Nombres de prueba' (no viene de estos documentos). Cuando se cargue la nómina real, hay que tratarla como datos de menores."
+      ]
+    },
+    {
+      "materia": "Físico-Química",
+      "docentes": [
+        {
+          "nombre": "María Eugenia Jiménez",
+          "fuente": "Planificación anual 2026 (Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf, p. 7: “Docente: Jiménez, María Eugenia – Nieto, María Gabriela”) y apunte de la docente (FISICO-QUIMICA/ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf, p. 1: “PROFESORA: MARIA EUGENIA JIMENEZ”, curso 2° “A”)"
+        },
+        {
+          "nombre": "María Gabriela Nieto",
+          "fuente": "Solo en la planificación anual 2026 (p. 7), que es para 2° A y B. No figura en el apunte de 2° A: puede ser la docente de 2° B o una co-docente (preguntar)."
+        }
+      ],
+      "programa": {
+        "fundamentacion": "La enseñanza de Física y Química en el segundo año del Ciclo Básico del Nivel Secundario cumple un rol fundamental en la formación científica y ciudadana de los estudiantes. En esta etapa, se busca despertar el interés por el conocimiento del mundo natural a través de la indagación, el pensamiento crítico y la comprensión de fenómenos cotidianos mediante modelos científicos.\n\nDe acuerdo con el Diseño Curricular Jurisdiccional de Tucumán, se promueve una enseñanza de las ciencias que parta de situaciones significativas, propiciando el desarrollo de capacidades como la observación, la formulación de preguntas e hipótesis, la experimentación, el análisis de datos y la elaboración de conclusiones. En este sentido, la Física y la Química no se presentan como disciplinas cerradas, sino como saberes dinámicos y construidos históricamente, en permanente revisión. Asimismo, se promueve la articulación con otras áreas del conocimiento, la incorporación de recursos tecnológicos y la realización de actividades prácticas que permitan aplicar conceptos teóricos, favoreciendo así una enseñanza activa, contextualizada y participativa. Finalmente, se busca contribuir al desarrollo del pensamiento científico, la curiosidad, la actitud reflexiva y la valoración del trabajo colaborativo, sentando las bases para futuros aprendizajes en el Ciclo Orientado y fomentando una ciudadanía crítica y comprometida con los desafíos sociales y ambientales del presente.",
+        "objetivos": [
+          "Adquirir vocabulario específico del espacio curricular.",
+          "Comprender y analizar trabajos experimentales sencillos.",
+          "Interpretar fenómenos vinculados a la naturaleza.",
+          "Trabajar con problemas, modelos, gráficos, tabla periódica, fórmulas y símbolos.",
+          "Reconocer la existencia de fuerzas e interpretarlas.",
+          "Aprender a estudiar y aplicar técnicas de estudio."
+        ],
+        "metodologia": null,
+        "evaluacion_general": null,
+        "bibliografia": [
+          "Ciencias Naturales 1 – Serie Conecta 2.0 – Editorial SM – año 2017.",
+          "Físico-Química II – Editorial Tinta Fresca – año 2019. (En el escaneo “Tinta Fresca” está borroso; se lee “Presca”.)",
+          "Físico-Química III – Serie Santillana en Línea – Editorial Santillana – año 2018. (El último dígito del año está borroso; parece 8.)"
+        ]
+      },
+      "unidades": [
+        {
+          "numero": null,
+          "titulo": "Magnitudes y fuerzas",
+          "trimestre": 1,
+          "fechas": "05/03/2026 al 30/05/2026",
+          "contenidos": [
+            "Mediciones: concepto. Magnitudes. Sistema Internacional métrico (SI), sistema métrico legal argentino (SIMELA). Conversión de unidades. Ejercicios de aplicación.",
+            "Fuerza: concepto de fuerza. Representación de fuerzas, uso de vectores para representar fuerzas. Diagrama de fuerzas. Fuerza resultante. Unidades de medida. Sistema de fuerzas colineales y concurrentes."
+          ],
+          "objetivos": [
+            "Que el alumno conozca los sistemas métricos y qué medidas estándares comprenden.",
+            "Que el alumno aplique de manera práctica y en la vida diaria los contenidos relacionados a las mediciones.",
+            "Que el alumno comprenda teórica y prácticamente cómo se desarrolla un sistema de fuerzas."
+          ],
+          "estrategias_actividades": null,
+          "evaluacion": "Participación en clase. Acatamiento a las normas institucionales. Trabajos prácticos individuales y grupales. Control de carpetas. Evaluación trimestral teórica-práctica escrita.",
+          "fuente": "Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf, p. 8 (Planificación anual 2026 de FQ, “Página 2 / 5”), tabla “3. Planificación de contenidos”, fila 1° Trimestre. El documento no numera las unidades. No hay material didáctico de esta unidad."
+        },
+        {
+          "numero": null,
+          "titulo": "Soluciones",
+          "trimestre": 2,
+          "fechas": "02/06/2026 al 05/09/2026 (la fecha es común a las dos unidades del 2° trimestre)",
+          "contenidos": [
+            "Sistemas materiales homogéneos.",
+            "Soluciones. Soluto y solvente. Fases y componentes. Tipos de soluciones por su estado de agregación. Concentración de soluciones.",
+            "Fraccionamiento de los componentes de una solución: destilación, destilación fraccionada, evaporación, cristalización.",
+            "Clasificación de las soluciones en función de la concentración y la temperatura saturada, sobresaturada."
+          ],
+          "objetivos": [
+            "Interpretación de sistemas homogéneos.",
+            "Diferenciación entre “soluto” y “solvente”.",
+            "Comparación entre los diferentes métodos de separación de componentes de una solución."
+          ],
+          "estrategias_actividades": null,
+          "evaluacion": "Participación en clase. Trabajos prácticos individual y grupal. Control de carpetas. Trabajo de investigación de los métodos de separación de las soluciones. Exposición oral. (La evaluación figura una sola vez para las dos unidades del 2° trimestre.)",
+          "fuente": "Programas…pdf, p. 9 (Planificación anual de FQ, página 3 de 5), fila 2° Trimestre. La fila trae “Soluciones” y “Cabios físicos y químicos” juntas, con objetivos y contenidos en una sola celda: el reparto entre las dos unidades lo hice por tema (los 3 primeros objetivos y los 4 primeros contenidos son de soluciones); el documento no lo separa. No hay material didáctico de esta unidad."
+        },
+        {
+          "numero": null,
+          "titulo": "Cambios físicos y químicos",
+          "trimestre": 2,
+          "fechas": "02/06/2026 al 05/09/2026 (la fecha es común a las dos unidades del 2° trimestre)",
+          "contenidos": [
+            "Diferenciación entre los fenómenos físicos y químicos.",
+            "Procesos reversibles e irreversibles."
+          ],
+          "objetivos": [
+            "Interpretación y diferenciación de los fenómenos físicos y químicos.",
+            "Clasificación entre el proceso reversible e irreversible."
+          ],
+          "estrategias_actividades": "Según el apunte de la docente (“Desarrollo de la unidad didáctica”, Tema: Transformaciones físicas y químicas, pp. 1–2): explicación de fenómenos físicos y químicos y de procesos reversibles e irreversibles con ejemplos cotidianos; actividades: cuadro comparativo de transformaciones físicas y químicas, y clasificar 7 situaciones como fenómeno físico (FF) o químico (FQ).",
+          "evaluacion": "Participación en clase. Trabajos prácticos individual y grupal. Control de carpetas. Trabajo de investigación de los métodos de separación de las soluciones. Exposición oral. (La evaluación figura una sola vez para las dos unidades del 2° trimestre.)",
+          "fuente": "Programas…pdf, p. 9, fila 2° Trimestre (en el original: “Cabios físicos y químicos”, errata por “Cambios”). Contenidos y objetivos repartidos por tema (los 2 últimos de cada columna). Desarrollada en FISICO-QUIMICA/ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf, pp. 1–2."
+        },
+        {
+          "numero": null,
+          "titulo": "El átomo",
+          "trimestre": 3,
+          "fechas": "08/09/2026 al 05/12/2026",
+          "contenidos": [
+            "El átomo. Partículas subatómicas: electrones, protones, neutrones. Ubicación de las partículas subatómicas.",
+            "Número atómico y número de masa.",
+            "Noción de elemento químico. Símbolos químicos.",
+            "Introducción a la tabla periódica. Grupo y período.",
+            "Clasificación de elementos químicos en metales y no metales."
+          ],
+          "objetivos": [
+            "Identificación de las partículas subatómicas.",
+            "Interpretación de los números atómicos y másicos.",
+            "Conocimiento de los símbolos químicos.",
+            "Estudio e interpretación de la tabla periódica.",
+            "Comparación de las características de los elementos químicos.",
+            "Representación de fuerzas, mediante el uso de vectores.",
+            "Medición de fuerzas."
+          ],
+          "estrategias_actividades": "Según el apunte de la docente (“Desarrollo de la unidad didáctica”, Tema: Tabla periódica de los elementos, pp. 2–5): definición, historia y evolución de la tabla periódica; características de un elemento químico (nombre, símbolo, Z, A, N = A − Z); clasificación y distribución de metales, no metales, gases nobles y metaloides; actividad “Análisis de los elementos”: completar un cuadro (Z, P, e, A, N, nombre, símbolo, período, grupo y clasificación) para 5 elementos.",
+          "evaluacion": "Trabajos prácticos individuales y grupales. Control de carpetas. Participación en clase. Evaluación trimestral semiestructurada.",
+          "fuente": "Programas…pdf, p. 10 (Planificación anual de FQ, página 4 de 5), fila 3° Trimestre. Los dos últimos objetivos (fuerzas) no tienen contenidos que los respalden en este trimestre: se transcriben igual y se consultan. Desarrollada parcialmente en FISICO-QUIMICA/ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf, pp. 2–5 (solo la parte de la tabla periódica)."
+        }
+      ],
+      "criterios_por_trimestre": [
+        {
+          "trimestre": 1,
+          "criterios": "· Participación en clase.\n· Acatamiento a las normas institucionales.\n· Trabajos prácticos individuales y grupales.\n· Control de carpetas.\n· Evaluación trimestral teórica-práctica escrita.",
+          "fuente": "Planificación anual 2026, p. 8, columna “Evaluación”, fila 1° Trimestre (unidad “Magnitudes y fuerzas”)."
+        },
+        {
+          "trimestre": 2,
+          "criterios": "· Participación en clase.\n· Trabajos prácticos individual y grupal.\n· Control de carpetas.\n· Trabajo de investigación de los métodos de separación de las soluciones.\n· Exposición oral.",
+          "fuente": "Planificación anual 2026, p. 9, columna “Evaluación”, fila 2° Trimestre (unidades “Soluciones” y “Cambios físicos y químicos”)."
+        },
+        {
+          "trimestre": 3,
+          "criterios": "· Trabajos prácticos individuales y grupales.\n· Control de carpetas.\n· Participación en clase.\n· Evaluación trimestral semiestructurada.",
+          "fuente": "Planificación anual 2026, p. 10, columna “Evaluación”, fila 3° Trimestre (unidad “El átomo”)."
+        }
+      ],
+      "material_didactico": [
+        {
+          "archivo": "FISICO-QUIMICA/ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf — pp. 1–2 (hasta las Actividades)",
+          "titulo": "Transformaciones físicas y químicas",
+          "unidad_relacionada": "Cambios físicos y químicos",
+          "tipo": "Apunte de la docente con actividades (“Desarrollo de la unidad didáctica”)",
+          "para_estudiantes": true,
+          "clases": [
+            {
+              "titulo": "Transformaciones físicas y químicas",
+              "objetivos": [
+                "Interpretación y diferenciación de los fenómenos físicos y químicos."
+              ],
+              "contenido_md": "Las transformaciones de la materia se dividen en dos grandes grupos, según si cambia o no la identidad química de las sustancias: transformaciones físicas y transformaciones químicas.\n\n### ¿Qué es un fenómeno físico?\n\nUn fenómeno físico es un cambio que experimenta un cuerpo o una sustancia sin que se transforme en una sustancia nueva.\n\nPuede cambiar su forma, tamaño, estado o aspecto, pero su composición física sigue siendo la misma.\n\nEjemplos:\n\n1. El hielo se derrite y se transforma en agua.\n2. Cortar una hoja de papel.\n3. Romper un vaso.\n\n### ¿Qué es un fenómeno químico?\n\nUn fenómeno químico es un cambio en el que se forman una o más sustancias nuevas, con propiedades diferentes a las originales.\n\nEjemplos:\n\n1. Quemar un papel.\n2. Oxidación de un hierro.\n3. La digestión de los alimentos."
+            },
+            {
+              "titulo": "Procesos reversibles e irreversibles",
+              "objetivos": [
+                "Clasificación entre el proceso reversible e irreversible."
+              ],
+              "contenido_md": "### Procesos reversibles\n\nSon aquellos cambios que pueden volver a su estado inicial.\n\nEjemplos:\n\n1. Hielo → agua → hielo.\n2. Estirar un resorte y dejarlo volver a su forma.\n\n### Procesos irreversibles\n\nSon aquellos que no pueden volver fácilmente al estado inicial.\n\nEjemplos:\n\n1. Quemar madera.\n2. Descomposición de una fruta.\n\n### Actividades\n\n**1)** Realizar un cuadro comparativo, con las características principales de los fenómenos o transformaciones físicas y químicas.\n\n| Transformaciones físicas | Transformaciones químicas |\n|---|---|\n| | |\n| | |\n| | |\n| | |\n\n**2)** Indica si cada situación corresponde a un **fenómeno físico (FF)** o **fenómeno químico (FQ)**:\n\na) Derretimiento de un cubito de hielo. ___\n\nb) Combustión de una vela. ___\n\nc) Cortar una manzana. ___\n\nd) Cocinar una torta. ___\n\ne) Congelar agua. ___\n\nf) Quemar un papel. ___\n\ng) Congelar agua. ___"
+            }
+          ],
+          "notas": "El apunte no divide en clases ni trae objetivos: la división sigue sus propios subtítulos (“Tema: Transformaciones físicas y químicas” y “Procesos reversibles e irreversibles”) y los objetivos son los del 2° trimestre de la planificación (p. 9). Las dos actividades cierran todo el tema (son sobre físicos/químicos), por eso quedan al final de la segunda clase, como en el documento. No hay “cierre” en el original. Solo corregí tildes y erratas evidentes (“mas”, “n cubito”); los posibles errores de contenido (“composición física”, ítems e) y g) repetidos) quedan como están y van en inconsistencias. Para la biblioteca: el PDF trae los dos temas juntos (la p. 2 tiene el final de este y el comienzo del otro); conviene partirlo en dos o subirlo entero relacionado a una sola unidad. Sugerencia de carga: título “Transformaciones físicas y químicas”, unidad “Cambios físicos y químicos”, etiquetas: fenómenos físicos, fenómenos químicos, procesos reversibles, procesos irreversibles; compartir con estudiantes: sí (confirmar con la docente)."
+        },
+        {
+          "archivo": "FISICO-QUIMICA/ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf — pp. 2 (último bloque) a 5",
+          "titulo": "Tabla periódica de los elementos",
+          "unidad_relacionada": "El átomo",
+          "tipo": "Apunte de la docente con actividad (“Desarrollo de la unidad didáctica”)",
+          "para_estudiantes": true,
+          "clases": [
+            {
+              "titulo": "La tabla periódica: definición, historia y evolución",
+              "objetivos": [
+                "Estudio e interpretación de la tabla periódica."
+              ],
+              "contenido_md": "**Definición:** la tabla periódica de los elementos es un cuadro que organiza todos los elementos químicos conocidos según sus propiedades físicas y su número atómico.\n\n### Historia y evolución de la tabla periódica\n\nDoscientos años atrás, los químicos necesitaron establecer un criterio con el cual ordenar el gran número de elementos que ya se había descubierto. Para ordenar los elementos, en 1869 Dimitri Mendeléiev preveía la existencia de elementos no conocidos hasta la fecha. Mendeléiev organizó la clasificación para los 60 elementos conocidos hasta esa fecha y figuraban huecos, que serían ocupados por los elementos descubiertos próximamente. La clasificación de Mendeléiev presentaba un problema: los elementos estaban ubicados según las masas atómicas crecientes. Los ordenó en cinco filas horizontales llamadas “periodos” y en ocho columnas llamadas “grupos”.\n\nEn 1890 fue descubierta una familia de gases que no reaccionaban con ningún otro elemento. Se los llamó gases nobles o formales.\n\nEn 1910, Moseley realizó una serie de experimentos en los cuales observó las propiedades de los elementos que varían periódicamente según su número atómico.\n\nEs por ello que la tabla de Mendeléiev fue organizada por Werner, quien organizó los elementos según el número atómico creciente en periodos y grupos. Actualmente tiene 7 periodos y 18 grupos."
+            },
+            {
+              "titulo": "Características de un elemento químico",
+              "objetivos": [
+                "Conocimiento de los símbolos químicos.",
+                "Interpretación de los números atómicos y másicos."
+              ],
+              "contenido_md": "### Características de un elemento químico\n\n- *Nombre del elemento:* carbono, cloro, etc.\n- *Símbolo del elemento:* corresponde a la primera inicial del nombre en latín o griego.\n\nEjemplo: hidrógeno = H; oxígeno = O.\n\nExisten otros símbolos que no parecen tener relación con su nombre.\n\nEjemplo: plata = Ag; potasio = K.\n\n- *Número atómico (**Z**):* representa la cantidad de protones y el número de orden de un elemento en la tabla periódica.\n- *Número de masa o masa atómica (**A**):* es la masa total de protones y neutrones en un solo átomo y puede calcularse: **A = Z + N**\n\nPara calcular neutrones, debemos: **N = A − Z**\n\n**Casillero de un elemento en la tabla periódica** (figura del apunte, con el hierro como ejemplo):\n\n| Rótulo | Dato en el casillero |\n|---|---|\n| Número atómico | 26 |\n| Símbolo químico | Fe |\n| Nombre del elemento | Hierro |\n| Masa atómica | 55.847 |"
+            },
+            {
+              "titulo": "Clasificación de los elementos: metales, no metales y gases nobles",
+              "objetivos": [
+                "Comparación de las características de los elementos químicos.",
+                "Estudio e interpretación de la tabla periódica."
+              ],
+              "contenido_md": "Los elementos de la tabla periódica se clasifican en:\n\n- Metales\n- No metales\n- Gases nobles o inertes\n\n### Distribución en la tabla periódica\n\n*(En el apunte hay un esquema de la tabla periódica coloreado por tipo de elemento: metales en verde claro, no metales en salmón y metaloides en verde oscuro a lo largo de una línea escalonada roja; grupos 1 a 18, con los grupos B (3 a 12) como elementos de transición; periodos 1 a 7; los gases nobles en la última columna; y abajo, lantánidos y actínidos como elementos de transición interna.)*\n\n- Los **metales**: ocupan la zona izquierda y central, abarcando la gran mayoría de la tabla.\n- Los **no metales**: se ubican en la zona superior derecha de la tabla periódica, justo por encima de la línea escalonada.\n- **Gases nobles:** forman la última columna vertical a la extrema derecha de la tabla, correspondiente al grupo 18.\n- **Metaloides** o **semimetales**: se encuentran justo sobre la línea en zigzag que sirve de frontera entre los metales y no metales.\n\n### Características de los metales, no metales y gases nobles\n\n| Metales | No metales | Gases nobles |\n|---|---|---|\n| Son buenos conductores del calor y la electricidad. Se oxidan. Tienen brillo intenso. Son maleables y dúctiles. Son sólidos a excepción del mercurio, que es líquido. | Son malos conductores del calor y la electricidad. Se reducen. Son electronegativos. La mayoría se encuentra en estado sólido. | Se ubican en el grupo 18. Los átomos tienen 8 electrones de valencia. No se combinan con ningún otro elemento. Solo a temperaturas exigentes pueden reaccionar. |\n\n### Actividad: análisis de los elementos\n\nCompletar el cuadro con las características de los elementos químicos.\n\n| Z | P | e | A | N | Nombre | Símbolo | Periodo | Grupo | Metales | No metales | Gases |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n| 3 | | | | | | | | | | | |\n| | | | | | | | | | | | |\n| 47 | | | | | | | | | | | |\n| | | | | | | | 3 | 18 | | | |\n| | | | | | | Zn | | | | | |"
+            }
+          ],
+          "notas": "El apunte no divide en clases ni trae objetivos: la división sigue sus subtítulos (definición e historia / características de un elemento / clasificación, distribución y características, con la actividad al final) y los objetivos son los del 3° trimestre de la planificación (p. 10). No hay “cierre” en el original. Solo corregí tildes y erratas evidentes (numero, organizo, realizo, observo, hidrogeno, “fue descubierto una familia”, “en a zona”, “inerte”, “Tiene brillo”, “semi metales”, “d ellos”); los posibles errores de contenido (“gases nobles o formales”, A como “masa atómica”, fechas de la historia, fila vacía del cuadro, etc.) quedan como están y van en inconsistencias, para que la docente decida antes de que la IA genere resumen, placas y quiz a partir de este texto. El cuadro de la actividad conserva la fila vacía y la fila que da solo período 3 y grupo 18 (el alumno tiene que deducir el elemento). Las dos figuras (casillero del hierro y esquema coloreado) no se pueden reproducir en texto: conviene subir el PDF original o las imágenes (ver derechos de autor). Sugerencia de carga en biblioteca: título “Tabla periódica de los elementos”, unidad “El átomo”, etiquetas: tabla periódica, elementos químicos, número atómico, número másico, símbolos químicos, metales, no metales, gases nobles, metaloides; compartir con estudiantes: sí (confirmar con la docente)."
+        },
+        {
+          "archivo": "Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf — pp. 7 a 11 (Planificación anual 2026 de Físico-Química, 5 páginas)",
+          "titulo": "Planificación anual 2026 — Físico-Química (2° A y B)",
+          "unidad_relacionada": null,
+          "tipo": "Planificación anual (fundamentación, objetivos generales, unidades por trimestre, bibliografía)",
+          "para_estudiantes": false,
+          "clases": [],
+          "notas": "Uso interno del docente: de acá salen las unidades, los trimestres, las fechas y los criterios. Las páginas son fotos de una pantalla con el PDF abierto (en la p. 8 se ve el visor “Página 2 / 5”). El documento está completo: p. 7 = 1/5 (fundamentación y objetivos), p. 8 = 2/5 (1° trimestre), p. 9 = 3/5 (2° trimestre), p. 10 = 4/5 (3° trimestre), p. 11 = 5/5 (bibliografía). Las pp. 9 a 11 no tienen encabezado institucional; se atribuyen a FQ por contenido y continuidad. No tiene apartado de metodología ni de evaluación general. No conviene subirlo a la biblioteca compartida con estudiantes; el temario que ven estudiantes y familias ya sale de las unidades."
+        }
+      ],
+      "comparacion_con_lo_cargado": {
+        "coincide": [
+          "Asignación de Físico-Química de 2° A a María Eugenia Jiménez: coincide con el apunte de la docente.",
+          "Clases “Transformaciones físicas y químicas” y “Procesos reversibles e irreversibles”: definiciones, ejemplos y las dos actividades coinciden en lo sustancial con las pp. 1–2 del apunte.",
+          "La unidad de transformaciones va en el 2° trimestre: coincide con la planificación (unidad “Cambios físicos y químicos”, 2° trimestre).",
+          "Clase de historia de la tabla periódica: resume en lo sustancial la p. 3 (Mendeléiev 1869, 60 elementos, huecos, orden por masas atómicas, 5 filas y 8 columnas, gases nobles en 1890, Moseley 1910, Werner, 7 periodos y 18 grupos).",
+          "Clase de características y clasificación: coincide en lo sustancial con las pp. 3–4 (nombre, símbolo, Z, A, N = A − Z, distribución y propiedades de metales, no metales, gases nobles y metaloides).",
+          "En Físico-Química no hay actividades “con IA” agregadas: las clases de FQ del seed no mencionan IA. Las actividades y el criterio “con IA” del seed son de Lengua, y hay que revisarlos contra el documento de Lengua."
+        ],
+        "diferencias": [
+          "Unidades: el seed usa como unidades los dos “Temas” del apunte (“Transformaciones físicas y químicas” y “Tabla periódica de los elementos”). La planificación tiene 4 unidades: “Magnitudes y fuerzas” (1°), “Soluciones” y “Cambios físicos y químicos” (2°) y “El átomo” (3°). El título del documento es “Cambios físicos y químicos”, no “Transformaciones…”.",
+          "Trimestre mal asignado: “Tabla periódica de los elementos” se cargó en el 2° trimestre (termId t2Storni, orden 2). En la planificación, la tabla periódica es contenido de “El átomo”, que es del 3° trimestre (08/09 al 05/12/2026).",
+          "Criterios del 2° trimestre: el seed carga 4 criterios propios y los publica (is_published: true, visibles para estudiantes y familias). La planificación enuncia otros: participación en clase, trabajos prácticos individual y grupal, control de carpetas, trabajo de investigación de los métodos de separación de las soluciones y exposición oral.",
+          "Actividad del cuadro de elementos: el seed pide completarlo “para Z = 3, Z = 47, Z = 18 y el Zn”. El apunte da Z = 3, una fila vacía, Z = 47, una fila con solo período 3 y grupo 18 (sin Z: el alumno tiene que deducir el elemento) y el símbolo Zn. El seed regala el dato que el alumno tenía que encontrar y omite la fila vacía.",
+          "Actividad FF/FQ: el seed saca el ítem g) (repite “Congelar agua”) y corrige “n cubito” sin avisar; quedan 6 ítems en vez de 7.",
+          "Correcciones o cambios silenciosos en el texto: “composición física” pasa a “composición”; “gases nobles o formales” a “gases nobles”; “Oxidación de un hierro” a “oxidación del hierro”; “Número de masa o masa atómica (A)” a “Número de masa (A)”; “Solo a temperaturas exigentes pueden reaccionar” a “salvo en condiciones exigentes”; “Werner organizó” a “Werner reorganizó”. Se pierden la frase inicial “Doscientos años atrás…” y que Mendeléiev “preveía la existencia de elementos no conocidos”.",
+          "División en clases: la hizo la compañera (el apunte no divide en clases). En el seed, la segunda clase de la tabla junta características, distribución, propiedades y la actividad; yo la separé en dos, siguiendo los subtítulos del apunte.",
+          "Fechas: el seed usa los trimestres por defecto de la plataforma (2° trimestre: 08/06 al 11/09/2026), pero la planificación de la escuela dice 02/06 al 05/09/2026 (y 05/03–30/05 y 08/09–05/12 para los otros)."
+        ],
+        "falta_en_lo_cargado": [
+          "Unidad “Magnitudes y fuerzas” (1° trimestre, 05/03 al 30/05/2026): objetivos y contenidos (mediciones, SI, SIMELA, conversión de unidades, fuerzas, vectores, diagrama de fuerzas, resultante, sistemas colineales y concurrentes).",
+          "Unidad “Soluciones” (2° trimestre): sistemas homogéneos, soluto y solvente, tipos y concentración, métodos de fraccionamiento, clasificación por concentración y temperatura.",
+          "Unidad “El átomo” (3° trimestre) como tal, con lo que el apunte no cubre: partículas subatómicas y su ubicación, noción de elemento químico.",
+          "Criterios de evaluación del 1° y del 3° trimestre (y los verdaderos del 2°).",
+          "Objetivos de la planificación como objetivos de unidad y de clase (el seed usa objetivos redactados).",
+          "Fundamentación, objetivos generales y bibliografía de la planificación.",
+          "Docente María Gabriela Nieto (figura en la planificación de 2° A y B).",
+          "Material de biblioteca: el seed no carga el PDF de la docente como library_material, así que no hay resumen, placas, quiz ni podcast a partir de él.",
+          "Las dos figuras del apunte (casillero del hierro y esquema coloreado de la tabla) y la tabla de 4 filas para completar del cuadro comparativo."
+        ],
+        "sobra_o_inventado_en_lo_cargado": [
+          "Los 4 criterios del 2° trimestre no están en ningún documento: “Distingue fenómenos físicos de químicos y los justifica con ejemplos propios”, “Clasifica procesos en reversibles e irreversibles”, “Lee la tabla periódica: ubica un elemento por su número atómico y calcula sus neutrones (N = A − Z)” y “Presenta en tiempo y forma el cuadro comparativo y el cuadro de análisis de elementos”. Además se publican, y el de la tabla periódica es de un tema del 3° trimestre.",
+          "Objetivos de clase redactados por la compañera, que no están en el apunte ni con esa redacción en la planificación: “Distinguir un fenómeno físico de uno químico según si cambia la identidad química de la sustancia”, “Reconocer ejemplos cotidianos de cada tipo de transformación”, “Clasificar procesos según puedan o no volver a su estado inicial”, “Reconocer la tabla periódica como una organización de los elementos según sus propiedades y su número atómico”, “Ubicar históricamente los aportes de Mendeléiev, Moseley y Werner”, “Identificar nombre, símbolo, número atómico y número de masa de un elemento”, “Calcular neutrones a partir de N = A − Z” y “Distinguir metales, no metales, gases nobles y metaloides por su ubicación y propiedades”. Son razonables, pero no son de la escuela.",
+          "“Z = 18” en la consigna de la actividad: el apunte no lo da.",
+          "No hay nada “con IA” inventado en Físico-Química."
+        ]
+      },
+      "inconsistencias": [
+        "Docentes y cursos: la planificación es para “2° A y B” con dos docentes (Jiménez y Nieto); el apunte es solo de 2° “A” y solo nombra a Jiménez.",
+        "3° trimestre: los objetivos incluyen “Representación de fuerzas, mediante el uso de vectores” y “Medición de fuerzas”, pero los contenidos del trimestre no tienen nada de fuerzas (las fuerzas son contenido del 1° trimestre). Parece un resto copiado.",
+        "2° trimestre: las dos unidades (“Soluciones” y “Cabios [sic] físicos y químicos”) comparten una sola fila: mismas fechas, objetivos, contenidos y evaluación, sin orden ni reparto entre ellas.",
+        "La tabla periódica es contenido de “El átomo” (3° trimestre, desde el 08/09/2026), pero el seed de la compañera la cargó en el 2° trimestre. El apunte trae los dos temas juntos y sin fechas.",
+        "El apunte y la planificación no cubren lo mismo en “El átomo”. El apunte desarrolla temas que la planificación no nombra: historia de la tabla, gases nobles, metaloides y propiedades (conductividad, electronegatividad, electrones de valencia). A la vez, no desarrolla lo que la planificación sí pone: partículas subatómicas y su ubicación, y noción de elemento químico.",
+        "Fechas: los trimestres de la planificación (05/03–30/05, 02/06–05/09 y 08/09–05/12/2026) no coinciden con los academic_terms por defecto de la plataforma (02/03–05/06, 08/06–11/09 y 14/09–11/12/2026). Hay 6 días de diferencia en cada borde, salvo el inicio del 1° trimestre, que difiere en 3 días (05/03 contra 02/03). Además, los tres cortes terminan en sábado y quedan días sin trimestre (lunes 01/06 y lunes 07/09).",
+        "Apunte, número másico: define A como “Número de masa o masa atómica”, y la figura del hierro muestra la masa atómica 55.847. La actividad pide A y N: con un valor decimal, N = A − Z no da un número entero si no se redondea.",
+        "Apunte, actividad del cuadro: pide la columna “e” (electrones), pero el texto no explica cómo obtenerla. Además, una de las cinco filas está completamente vacía, sin ningún dato para identificar el elemento.",
+        "Apunte, actividad FF/FQ: los ítems e) y g) son iguales (“Congelar agua”).",
+        "Apunte, posibles errores de redacción: “su composición física sigue siendo la misma” (¿química?) y “gases nobles o formales” (¿inertes?; más abajo dice “Gases nobles o inerte”).",
+        "Apunte, posibles errores de contenido para revisar con la docente antes de que la IA los repita en resúmenes y quizzes: “Doscientos años atrás” no cuadra con 1869; los experimentos de Moseley suelen fecharse en 1913, no en 1910; que Werner reorganice la tabla “por ello”, después de Moseley, no cuadra con la cronología usual (su tabla larga es de 1905); “8 electrones de valencia” no vale para todos los gases nobles (el helio tiene 2); “No se combinan con ningún otro elemento” se contradice con la frase que sigue (“pueden reaccionar”); y que la mayoría de los no metales sea sólida es discutible.",
+        "Planificación del 2° trimestre: “Clasificación de las soluciones en función de la concentración y la temperatura saturada, sobresaturada” no menciona las insaturadas (parece incompleto).",
+        "La planificación no tiene apartado de metodología ni de evaluación general: la evaluación aparece solo por trimestre, y lo que enuncia son instrumentos (participación, TP, carpeta, evaluación trimestral) más que criterios de logro.",
+        "Bibliografía: “Tinta Fresca” está borroso en la foto (se lee “Presca”) y el año del libro de Santillana podría ser 2013 o 2018."
+      ],
+      "preguntas_para_la_escuela": [
+        "¿Quién dicta Físico-Química en 2° A: solo María Eugenia Jiménez, o también María Gabriela Nieto? ¿Nieto es la docente de 2° B?",
+        "¿Cuáles son las fechas oficiales de los trimestres 2026 de la escuela? La planificación usa 05/03–30/05, 02/06–05/09 y 08/09–05/12; la plataforma trae por defecto 02/03–05/06, 08/06–11/09 y 14/09–11/12.",
+        "En el 2° trimestre, ¿en qué orden se dieron “Soluciones” y “Cambios físicos y químicos”? ¿Está bien el reparto de objetivos y contenidos que hicimos por tema?",
+        "En el 3° trimestre aparecen dos objetivos de fuerzas (“Representación de fuerzas mediante vectores” y “Medición de fuerzas”) sin contenidos de fuerzas. ¿Es un error de copia del 1° trimestre o se retoman las fuerzas?",
+        "¿Hay apuntes, trabajos prácticos u otro material de “Magnitudes y fuerzas”, de “Soluciones” y de la parte de “El átomo” sobre partículas subatómicas?",
+        "¿La columna “Evaluación” es lo que quieren mostrar como criterios a estudiantes y familias, o tienen criterios más específicos (qué se espera que el alumno logre, ponderación)? Los criterios que había cargado la compañera no salen de sus documentos: ¿la docente los quiere adoptar o se reemplazan?",
+        "¿El apunte “Desarrollo de la unidad didáctica” se puede compartir con los estudiantes en la biblioteca? ¿Prefieren partirlo en dos PDF, uno por tema?",
+        "Revisión del apunte: ¿“gases nobles o formales” quiso decir “inertes”? ¿“composición física” quiso decir “química”? ¿A es el número másico (entero) o la masa atómica (55.847)? ¿Qué dato va en la fila vacía del cuadro de elementos? ¿El ítem g) repetido iba a ser otra situación?",
+        "¿Revisan con la docente las fechas y datos de la historia de la tabla (Moseley 1910, Werner después de Moseley, “doscientos años atrás”) y lo de los 8 electrones de valencia de los gases nobles, antes de que la IA genere resúmenes y quizzes a partir del texto?",
+        "En el cuadro de la actividad se pide la columna “e” (electrones): ¿se explicó en clase cómo obtenerla (en el átomo neutro, igual a los protones)? El apunte no lo dice.",
+        "¿De dónde salen las dos figuras del apunte (casillero del hierro y esquema coloreado de la tabla periódica)? ¿Son propias o tomadas de un libro o de internet?",
+        "Hoy (01/10/2026) el 1° y el 2° trimestre ya terminaron. ¿Publicamos igual sus unidades en el temario (como historial) o solo la del 3° trimestre?",
+        "¿La planificación y el apunte valen igual para 2° B? Está fuera del piloto, pero sirve para más adelante."
+      ],
+      "derechos_de_autor": [
+        "El material de FQ no incluye páginas de libros de texto. La bibliografía cita tres libros: Ciencias Naturales 1 (Serie Conecta 2.0, SM, 2017), Físico-Química II (Tinta Fresca, 2019) y Físico-Química III (Santillana en Línea, Santillana, 2018). Si la docente sube después páginas escaneadas de esos libros, conviene no reproducirlas completas en la plataforma: citarlas, resumirlas o enlazarlas.",
+        "El apunte de la docente trae dos figuras sin fuente: el casillero del hierro con rótulos y el esquema coloreado de la tabla periódica (metales, no metales, metaloides). Parecen tomadas de terceros (un libro o internet). Antes de compartir el PDF en la biblioteca, o de usarlo para generar materiales, conviene confirmar su origen; si no, rehacerlas o usar una tabla periódica de licencia libre.",
+        "La sección “Historia y evolución de la tabla periódica” no cita fuente. Si fuera una transcripción de alguno de los libros de la bibliografía, conviene citarlo."
+      ],
+      "datos_personales": [
+        "Nombres de docentes: María Eugenia Jiménez (en la planificación y en el apunte) y María Gabriela Nieto (solo en la planificación). Son datos profesionales y hacen falta para las asignaciones.",
+        "Los documentos de Físico-Química no tienen datos de estudiantes.",
+        "El seed inscribe 6 estudiantes de prueba en 2° A (ALUMNOS_2A). El archivo los declara como nombres de prueba, porque todavía no hay nómina real cargada. No hay que mezclarlos con la carga real del piloto, y conviene confirmar que no coinciden con alumnos reales.",
+        "Las fotos de pantalla de la planificación (pp. 7 a 11) no muestran otros datos personales: solo el documento y el visor de PDF."
+      ]
+    },
+    {
+      "materia": "Lengua",
+      "docentes": [],
+      "programa": {
+        "fundamentacion": null,
+        "objetivos": [],
+        "metodologia": null,
+        "evaluacion_general": null,
+        "bibliografia": [
+          "Folino Evangelina, Jurado Mónica, Wolffson Adriana. 2010. Lengua en Red 8. Buenos Aires, Argentina. Ed AZ.",
+          "Naps: núcleos de aprendizaje prioritarios.",
+          "Plastani, Carla, Arturi Michelle, Carranza, Fernando y otros. 2016. Lengua y Literatura 1. Buenos Aires, Argentina. Ed Mandioca.",
+          "Raia, Matías, Laglaive Marysol y otros. 2018. Lengua y Literatura 3. Buenos Aires, Argentina. Ed Mandioca."
+        ]
+      },
+      "unidades": [
+        {
+          "numero": "1",
+          "titulo": "Unidad 1",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "El Género Fantástico. La vacilación en el lector. Fantástico Puro, Extraño y diferencia con el Maravilloso. Lo Verosímil. Vacíos e indicios. Narradores. Personajes y su clasificación. Descripciones.",
+            "Cuento y Novela: diferencias y similitudes. Lectura de cuentos Fantásticos, Extraños y Maravillosos.",
+            "La comunicación: Funciones del Lenguaje. Función predominante. Los mensajes y su intención.",
+            "Género Epistolar: Las Cartas: Formales e Informales.",
+            "Clases de palabras: sustantivos, adjetivos, artículos, verboides, adverbios, locuciones adverbiales. Preposiciones. Pronombres: personales, posesivos, demostrativos, exclamativos, interrogativos.",
+            "Sintaxis: oraciones Bimembres, Unimembres. Modificadores, objetos, circunstanciales. La Voz Activa y la Voz Pasiva."
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "Programa de contenidos, pág. 1 del PDF 'Programas Alfonsina Storni Lengua, Matemática y Físico Química.pdf'. El programa no le pone nombre a la unidad, por eso va 'Unidad 1'. La fila de esta unidad en la planificación no llegó, así que no hay objetivos, estrategias, evaluación ni fechas. Solo se agregaron espacios que faltaban después de punto ('Fantástico.la', 'predominante.Los')."
+        },
+        {
+          "numero": "2",
+          "titulo": "Unidad 2",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "La novela Realista: “Rafaela” Mariana Furiasse. Personajes. Narradores. Su relación con los Ejes de la ESI.",
+            "El cuento Realista. Verosimilitud. Acciones primarias y secundarias. Indicios.",
+            "Los textos: Expositivo-Explicativos. Elementos Paratextuales. Recursos, estructura.",
+            "El verbo: accidentes del verbo: modo, persona, tiempo y número. Formas no conjugadas del verbo. Paradigma de la conjugación regular. Verbos regulares e irregulares.",
+            "Sintaxis: los Predicativos Subjetivos: Obligatorios y No Obligatorios."
+          ],
+          "objetivos": [],
+          "estrategias_actividades": null,
+          "evaluacion": null,
+          "fuente": "Programa de contenidos, pág. 1 del PDF de programas. Sin nombre de unidad en el original. La fila de esta unidad en la planificación no llegó, así que no hay objetivos, estrategias, evaluación ni fechas."
+        },
+        {
+          "numero": "3",
+          "titulo": "Unidad 3",
+          "trimestre": null,
+          "fechas": null,
+          "contenidos": [
+            "La poesía: la musicalidad. Los recursos poéticos. Música y Poesía.",
+            "Textos Argumentativos: La Publicidad y la Propaganda. La orientación al destinatario.",
+            "Textos Instructivos. Organización. Paratextos.",
+            "Sintaxis: Complemento Régimen.",
+            "Ortografía: reglas de acentuación. Acentuación de monosílabos. El punto y la mayúscula. Usos de la y y la x. Usos de s y h."
+          ],
+          "objetivos": [
+            "… y propagandas.",
+            "Elaborar textos instructivos.",
+            "Analizar oraciones y distinguir las funciones de las palabras.",
+            "Utilizar de manera adecuada las reglas ortográficas."
+          ],
+          "estrategias_actividades": "… -Análisis del discurso. -Elaboración de textos.",
+          "evaluacion": "… grupales. -Trabajo en pizarra -Evaluaciones",
+          "fuente": "Contenidos: programa de contenidos, pág. 1 del PDF de programas. Objetivos, estrategias y evaluación: pág. 2 del mismo PDF, que es solo el final de la tabla de planificación (fila de la Unidad 3, cortada arriba y sin títulos de columnas). Los contenidos de esa fila coinciden con el programa. Los objetivos salen de la 1ª columna, que no tiene título visible pero trae frases en infinitivo; el primero está cortado arriba en el escaneo y solo se lee '… y propagandas.'. Las estrategias salen de la 4ª columna y la evaluación de la 5ª; las dos están sin título visible y cortadas arriba. No se puede confirmar si la 5ª es la columna de evaluación o la de recursos. La 2ª columna está vacía en este tramo. La secuencia didáctica 'Persuasión y Palabra Poética' (Word) desarrolla los dos primeros contenidos de esta unidad."
+        }
+      ],
+      "criterios_por_trimestre": [],
+      "material_didactico": [
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\LENGUA\\Unidad Didáctica Publicidad y Propaganda. Poesía. .docx",
+          "titulo": "Unidad Didáctica: Persuasión y Palabra Poética",
+          "unidad_relacionada": "Unidad 3",
+          "tipo": "secuencia didáctica (planificación de 6 clases del docente)",
+          "para_estudiantes": false,
+          "clases": [
+            {
+              "titulo": "Publicidad y Propaganda: ¿Qué nos quieren convencer?",
+              "objetivos": [],
+              "contenido_md": "**Conceptos:** finalidad, emisor, target, tipos de avisos.\n\n### Inicio\n- **Actividad con IA: Exploración inicial.** Consigna para el alumno (en la plataforma): “Escribí 3 ejemplos de frases o imágenes que ves en publicidades y 3 en propagandas. Luego pedile a la IA que te explique: ¿en qué se diferencian por su objetivo?”\n- **Puesta en común:** construimos el cuadro en el pizarrón.\n\n### Desarrollo\n- Lectura del texto base: definiciones y el target (destinatario).\n- **Actividad con IA — Análisis de destinatario.** Consigna: “Imaginá este aviso: imagen de jóvenes en una fiesta de disfraces, música, frases sobre diversión. Pedile a la IA que identifique el target y justifique su respuesta con argumentos.”\n- **Debate:** ¿Coincidimos con lo que dice la IA? ¿Qué otros destinatarios podría tener?\n\n### Cierre\n- **Registro:** cuadro comparativo publicidad ↔ propaganda.\n- **Tarea:** pensar un producto o una causa para la próxima clase."
+            },
+            {
+              "titulo": "Recursos Persuasivos: ¿Cómo nos convencen?",
+              "objetivos": [],
+              "contenido_md": "**Recursos:** imágenes, imperativos, preguntas retóricas, eslóganes, exageraciones.\n\n### Inicio\n- Recordamos los recursos del texto: imperativos, preguntas retóricas, exageraciones, juegos de palabras, imágenes icónicas, planos.\n\n### Desarrollo\n- **Actividad con IA: Identificación y creación.**\n  - **Parte 1 — Reconocer:** “Pegá este eslogan: ‘Para un planeta vivo, cuidá el agua’. Pedile a la IA que identifique qué recurso(s) usa y qué efecto busca en el receptor.”\n  - **Parte 2 — Crear:** “Elegí un producto o una causa social. Pedile a la IA que te proponga 3 eslóganes diferentes usando al menos 2 recursos persuasivos distintos.”\n  - **Parte 3 — Seleccionar y justificar:** Elegí el mejor eslogan y explicá por qué te parece el más efectivo.\n- **Puesta en común:** cada estudiante comparte su elección y justificación.\n\n### Cierre\n- **Reflexión:** ¿Todos los eslóganes que generó la IA te parecieron buenos? ¿Por qué elegiste ese y no los otros? → La IA propone, vos decidís."
+            },
+            {
+              "titulo": "¿Qué es la poesía? Palabras que cantan",
+              "objetivos": [],
+              "contenido_md": "**Conceptos:** función estética, rima consonante/asonante, verso libre. **Poema:** “Viaje”, de Alfonsina Storni.\n\n### Inicio\n- **Pregunta disparadora:** ¿En qué se diferencia un aviso de un poema? ¿Para qué se escriben?\n\n### Desarrollo\n- Lectura en voz alta de “Viaje”, de Alfonsina Storni.\n- **Actividad con IA. Comparación y profundización:**\n  - **Consigna 1:** “Leé el poema ‘Viaje’ de Alfonsina Storni. Pedile a la IA que te diga qué sentimientos transmite y qué imágenes sensoriales reconoce.”\n  - **Consigna 2: Rima y verso:** “Explicá con ejemplos la diferencia entre rima consonante, rima asonante y verso libre. Usá palabras sencillas.”\n  - **Consigna 3: Vínculo poesía-publicidad:** “¿Qué tienen en común un eslogan publicitario y un poema? ¿Por qué ambos usan rima y frases breves?”\n- **Debate:** ¿Qué coincidencias y diferencias encontraron entre su lectura y lo que respondió la IA?\n\n### Cierre\n- **Cuaderno:** 3 ideas sobre la poesía + diferencia entre rima consonante y asonante."
+            },
+            {
+              "titulo": "Recursos Semánticos: el sentido de las palabras",
+              "objetivos": [],
+              "contenido_md": "**Recursos:** imágenes sensoriales, personificación, comparación, metáfora, pregunta retórica. **Poema:** “Gato negro” — M. C. Ramos.\n\n### Inicio\n- Recordamos: los recursos semánticos juegan con el significado de las palabras.\n\n### Desarrollo\n- Lectura de “Gato negro”, de María Cristina Ramos.\n- **Actividad con IA. Análisis de recursos.** Consigna paso a paso:\n  1. “Buscá en el poema ‘Gato negro’ al menos 2 ejemplos de: personificación, comparación, metáfora e imágenes sensoriales. Pedile a la IA que te ayude a explicarlos.”\n  2. “¿Qué significa en el poema ‘brasas que te asedian, su mirada dura’? ¿Es una metáfora? ¿Qué compara?”\n  3. “Escribí una oración con una personificación y otra con una metáfora. Pedile a la IA que te diga si lo hiciste bien y te dé un ejemplo más.”\n- **Puesta en común:** construimos un mural digital con los hallazgos.\n\n### Cierre\n- **Reflexión:** ¿Por qué la poesía usa estos recursos? ¿Qué pasaría si los quitáramos y dijéramos las cosas de forma directa?"
+            },
+            {
+              "titulo": "Miradas al crepúsculo: Neruda y Fernández Moreno",
+              "objetivos": [],
+              "contenido_md": "**Poemas:** “Crepúsculo” — Fernández Moreno / “Poema X” — Neruda.\n\n### Inicio\n- “El crepúsculo: ese momento entre el día y la noche. Cada poeta lo mira diferente. ¿Cómo lo describirías vos?”\n\n### Desarrollo\n- Lectura de ambos poemas.\n- **Actividad con IA: Análisis comparativo.** Consigna: “Analizá los dos poemas y respondé con ayuda de la IA:\n  - ¿Cuál tiene rima y cuál es verso libre?\n  - ¿Qué recursos semánticos encontrás en cada uno? (comparación, metáfora, personificación, pregunta retórica)\n  - ¿Qué sentimiento predomina en cada poema?\n  - ¿En qué se parecen y en qué se diferencian?”\n- **Actividad individual:** elegí el poema que más te gustó y escribí 3 líneas explicando por qué.\n\n### Cierre\n- Compartimos preferencias. Destacamos: “La IA te ayuda a analizar, pero tu opinión y tu gusto son únicos.”"
+            },
+            {
+              "titulo": "¡Creamos con IA!",
+              "objetivos": [],
+              "contenido_md": "**Producción y reflexión final**\n\n### Inicio\n- Recordamos todo lo aprendido: publicidad, propaganda, recursos persuasivos, rima, comparación, metáfora, personificación.\n\n### Desarrollo\nElegí UNA propuesta con ayuda de la IA:\n\n**Crear un aviso persuasivo.** Pasos con IA:\n1. “Quiero hacer una [publicidad de un producto / propaganda sobre una causa]. Ayudame a definir el objetivo y el target.”\n2. “Proponé 3 opciones de eslogan usando al menos 2 recursos persuasivos.”\n3. “Escribí el texto completo del aviso: título, eslogan, texto breve. Incluí un imperativo o una pregunta retórica.”\n4. **Revisión personal:** Modificá lo que no te guste. La IA te da ideas, el resultado final es tuyo.\n\n**Escribir un poema breve.** Pasos con IA:\n1. “Quiero escribir un poema sobre [la luna, la tarde, mi barrio, un sentimiento, un animal]. Ayudame a pensar imágenes sensoriales.”\n2. “Proponé 4 versos usando al menos dos recursos: comparación, metáfora, personificación o rima.”\n3. “Ajustá el poema a lo que vos sentís. Cambiá palabras, agregá o quitá versos.”\n4. **Versión final:** Escribí el poema con tus cambios. Es tu creación, la IA solo te acompañó.\n\n### Cierre\n**Reflexión sobre el uso de IA.** Preguntas para compartir:\n- ¿Qué te aportó la IA en tu proceso de creación?\n- ¿Cambiarías algo de lo que te propuso? ¿Por qué?\n- ¿La IA puede reemplazar tu voz y tu forma de ver el mundo? ¿Por qué?"
+            }
+          ],
+          "notas": "Es la planificación del docente (6 clases), no un texto para que lean los estudiantes; por eso para_estudiantes = false. Las clases sí se pueden cargar como planning_classes (las ven estudiantes y familias cuando la unidad tiene trimestre): las consignas están escritas para el alumno. Se puede cargar como unidad aparte 'Persuasión y Palabra Poética' (así lo hizo el seed) o como clases de la Unidad 3; hay que definirlo con la escuela. Objetivos de la unidad, tal cual: (1) Distinguir publicidad y propaganda por su finalidad, emisor y destinatario. (2) Reconocer recursos persuasivos y poéticos; usarlos en producciones propias. (3) Aprovechar la IA como herramienta de búsqueda, análisis, creación y revisión de textos. (4) Desarrollar pensamiento crítico: comparar, cuestionar y valorar lo que la IA produce. (5) Leer y analizar poemas de Alfonsina Storni, Neruda, Fernández Moreno y M. C. Ramos. El documento NO trae objetivos por clase: por eso van vacíos. Si la plataforma los necesita, hay que pedírselos a la docente o usar los de la unidad. Encabezado del Word: Materia: Lengua · Curso: 2° A · Escuela Municipal Alfonsina Storni Secundaria · 'Fuente: Material adjuntado'. No tiene docente, fechas ni ciclo lectivo. Relación con el PDF: el 'texto base' de la Clase 1 y los recursos de la Clase 2 están en la pág. 1 del PDF; las Clases 3 y 4 se apoyan en las págs. 2-3; los poemas están en las págs. 5-8. El 'cuadro' de la Clase 1 no viene en el documento. Las actividades con IA están en el Word original, no las agregó quien hizo la carga. Algunas consignas van entre comillas como pedidos para la IA, y otras son instrucciones para el estudiante. Hay casos ambiguos: el paso 3 del poema en la Clase 6 y la Consigna 2 de la Clase 3. Solo corregí las mayúsculas que quedaron sueltas por los saltos de línea ('Diversión', 'Identifique', '¿Por Qué', 'De forma directa', 'Vos', 'Únicos', 'Retórica', 'Pensar', 'Objetivo', 'Hiciste', 'Compara') y un espacio que faltaba ('comparación,Metáfora'). También pasé a listas las consignas numeradas del Word y uní palabras que la extracción había pegado ('Inicio:•', 'Desarrollo•', 'finalInicio'). Lo demás es el texto del documento."
+        },
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\LENGUA\\Publicidad y Propaganda. Poesía.pdf (págs. 1 a 4)",
+          "titulo": "La publicidad y la propaganda · La poesía y los recursos poéticos (páginas de libro de texto)",
+          "unidad_relacionada": "Unidad 3",
+          "tipo": "material de lectura teórico (páginas de libro de texto escaneadas con CamScanner)",
+          "para_estudiantes": true,
+          "clases": [],
+          "notas": "Material de lectura para estudiantes (es el 'texto base' de las clases), pero por derechos de autor conviene no compartir el escaneo completo (ver derechos_de_autor). Contenido: pág. 1 'La publicidad y la propaganda': definiciones, emisores, 'La orientación al destinatario' (target), 'Tipos de avisos' y un cuadro de recursos visuales (imágenes icónicas, metáforas visuales, planos) y lingüísticos (apelación al destinatario, preguntas retóricas, exageraciones, juegos de palabras o eslóganes); sirve para las Clases 1 y 2. Pág. 2 (pág. 83 del libro): 'La poesía', yo lírico, verso y estrofa, recursos sonoros (rima consonante y asonante, métrica, verso libre). Pág. 3: recursos semánticos (imágenes sensoriales, personificación, comparación, metáfora, pregunta retórica). Estas dos páginas sirven para las Clases 3 y 4. Pág. 4: 'La poesía en contexto' y 'Poesía y música' (lira, canciones, Serrat y Machado). Corresponde al contenido 'Música y Poesía' del programa, pero ninguna clase del Word lo trabaja directamente; solo la Consigna 3 de la Clase 3 toma el vínculo entre poesía y publicidad. Faltan elementos que el texto menciona: [FIG. 07], los avisos que comenta (la fiesta de disfraces), los recuadros [L] y [M] y los anexos de las págs. 159 y 167. Las págs. 2 a 4 son del capítulo '05. La poesía y la fábula' (Bloque I) de la serie 'Prácticas del Lenguaje'. La editorial no se ve. La pág. 1 tiene un pie cortado ('…GUAJE 2]' o '…GUAJE 21') y puede ser de otro tomo. Para la IA de la plataforma (resumen, placas, quiz, podcast) conviene partir de un resumen propio de la docente y no del escaneo del libro."
+        },
+        {
+          "archivo": "C:\\Users\\Matías Lujan\\Desktop\\2° Año A ESC ALFONSINA STORNI\\LENGUA\\Publicidad y Propaganda. Poesía.pdf (págs. 5 a 8)",
+          "titulo": "Miradas nocturnas: Gato negro, Crepúsculo, Poema X y Viaje (antología de poemas del libro de texto)",
+          "unidad_relacionada": "Unidad 3",
+          "tipo": "antología de poemas (páginas de libro de texto escaneadas con CamScanner)",
+          "para_estudiantes": true,
+          "clases": [],
+          "notas": "Son los poemas que se leen en las clases: 'Viaje' de Alfonsina Storni (Clase 3; pág. 8 del PDF), 'Gato negro' de María Cristina Ramos (Clase 4; pág. 6, pág. 79 del libro, con glosario), 'Crepúsculo' de Baldomero Fernández Moreno y 'Poema X' de Pablo Neruda (Clase 5; pág. 7, pág. 80 del libro 'Prácticas del Lenguaje 1'). La pág. 5 del PDF es un recorte ampliado de la mitad derecha de la pág. 7: 'Poema X' aparece dos veces. Si se sube tal cual, la IA lo procesa duplicado. 'Crepúsculo' (paraíso, sumiso, fronda), 'Poema X' (poniente) y 'Viaje' (desmesurada, enarca) tienen palabras con asterisco, pero su glosario no está en lo escaneado. El único glosario escaneado es el de 'Gato negro' (pág. 79 del libro). 'Viaje' figura como 'Disponible en la biblioteca virtual Ciudad Seva'. 'Crepúsculo' y 'Viaje' son, probablemente, de dominio público y se podrían transcribir como texto propio; 'Gato negro' y 'Poema X' no (ver derechos_de_autor)."
+        }
+      ],
+      "comparacion_con_lo_cargado": {
+        "coincide": [
+          "El seed carga para Lengua de 2° A (E.M. Alfonsina Storni) una unidad titulada 'Persuasión y Palabra Poética'. Es el mismo título del Word de la escuela.",
+          "Las 6 clases del seed tienen los mismos títulos y el mismo orden que el Word, salvo cambios de mayúsculas.",
+          "Los poemas y autores de cada clase coinciden: 'Viaje' en la 3, 'Gato negro' en la 4, 'Crepúsculo' y 'Poema X' en la 5.",
+          "Las actividades 'con IA' del seed no son un invento de la compañera: están en el Word de la escuela, y el seed las resume.",
+          "Los cierres de las clases 1, 3, 4 y 5 y el inicio de la 5 coinciden casi palabra por palabra.",
+          "El comentario del seed dice que el documento de Lengua no nombra docente, y es así: ningún documento de Lengua lo nombra."
+        ],
+        "diferencias": [
+          "Las consignas están resumidas o dichas con otras palabras. En la Clase 3 las tres consignas quedan en una sola línea sin el texto literal. En la Clase 1 se pierde 'con argumentos'. En la Clase 4 las consignas numeradas pasan a un párrafo.",
+          "Objetivos por clase: el seed le pone a cada clase objetivos redactados a partir de los objetivos generales y de las líneas 'Conceptos/Recursos'. El Word no trae objetivos por clase. Por ejemplo, el de la Clase 4 ('Identificar personificación, comparación, metáfora e imágenes sensoriales') deja afuera la pregunta retórica, que el Word sí nombra.",
+          "Trimestre: el seed publica la unidad en el 2° trimestre (termId t2Storni). Ningún documento de Lengua dice trimestre ni fechas, y en el programa estos contenidos son de la Unidad 3.",
+          "Docente: el seed asigna Lengua a un usuario que ya existía (pablo.leiva@ensenia.edu.ar) como provisorio. Ese nombre no está en los documentos.",
+          "Formato: el seed junta cada momento de la clase en un párrafo separado por '·'. El Word usa listas y consignas numeradas.",
+          "El seed toma la secuencia del Word como la única unidad de Lengua. En el programa, en cambio, es una parte de la Unidad 3."
+        ],
+        "falta_en_lo_cargado": [
+          "Las Unidades 1 y 2 del programa, completas.",
+          "Los otros tres contenidos de la Unidad 3: Textos instructivos (organización, paratextos), Sintaxis: complemento régimen y Ortografía (acentuación, monosílabos, punto y mayúscula, usos de y/x y s/h).",
+          "La bibliografía del programa.",
+          "Los 5 objetivos de la unidad didáctica tal como están. El seed los reparte y reescribe en las clases, y 'Aprovechar la IA como herramienta de búsqueda, análisis, creación y revisión de textos' y 'Leer y analizar poemas de…' no aparecen.",
+          "Clase 1: la aclaración 'Consigna para el alumno (en la plataforma)'.",
+          "Clase 2: el Inicio (repaso de los recursos del texto: imperativos, preguntas retóricas, exageraciones, juegos de palabras, imágenes icónicas, planos) y la puesta en común ('cada estudiante comparte su elección y justificación').",
+          "Clase 3: el texto literal de las tres consignas (por ejemplo, 'Usá palabras sencillas').",
+          "Clase 4: la línea 'Recursos: imágenes sensoriales, personificación, comparación, metáfora, pregunta retórica', el Inicio ('Recordamos: los recursos semánticos juegan con el significado de las palabras') y la lectura del poema como paso del Desarrollo.",
+          "Clase 6: el subtítulo 'Producción y reflexión final', el Inicio (repaso de todo lo aprendido), la frase 'La IA te da ideas, el resultado final es tuyo', el paso 4 del poema ('Versión final: Escribí el poema con tus cambios. Es tu creación, la IA solo te acompañó') y los '¿Por qué?' de las preguntas de cierre.",
+          "El material de lectura (PDF con las páginas del libro y los poemas): no está cargado como material de biblioteca ni aparece referenciado."
+        ],
+        "sobra_o_inventado_en_lo_cargado": [
+          "Los 4 criterios de evaluación de Lengua del 2° trimestre ('Distingue publicidad de propaganda por finalidad, emisor y destinatario', 'Reconoce recursos persuasivos y semánticos en textos e imágenes', 'Produce un aviso o un poema propio aplicando al menos dos recursos', 'Valora críticamente lo que la IA propone: elige, corrige y justifica su decisión') no están en ningún documento. Se parecen a los objetivos del Word, pero la escuela no los dio como criterios. Como los ven estudiantes y familias, no habría que publicarlos sin que la docente los valide.",
+          "La asignación al 2° trimestre: publica la unidad en el temario sin que ningún documento lo respalde.",
+          "El docente provisorio de Lengua (pablo.leiva@ensenia.edu.ar).",
+          "Los objetivos por clase: los redactó la compañera, no son literales del documento.",
+          "Aclaración: las actividades con IA no son un agregado del seed, porque están en el Word. Lo que sí conviene confirmar es si el Word lo escribió la docente: dice 'Fuente: Material adjuntado' y 'Consigna para el alumno (en la plataforma)', y no tiene nombre ni fecha. Parece armado a partir del PDF para cargarlo en la plataforma, quizás con ayuda de IA."
+        ]
+      },
+      "inconsistencias": [
+        "La planificación anual de Lengua llegó incompleta. El PDF de programas tiene 11 páginas: 2 de Lengua y el resto de Matemática y Físico-Química. De Lengua solo está el programa de contenidos y el final de la tabla de planificación (fila de la Unidad 3, cortada arriba, sin títulos de columnas) con la bibliografía. Faltan el encabezado, las filas de las Unidades 1 y 2, las fechas y los trimestres. En Físico-Química la tabla sí trae 'Período Trimestral' y fechas, y en lo que llegó de la de Matemática se ve '3° Trimestre' con sus fechas.",
+        "El programa de contenidos de Lengua no tiene encabezado: no dice escuela, espacio curricular, curso, docente ni ciclo lectivo. Los de Matemática y Físico-Química sí lo tienen. Que es de Lengua de 2° A se deduce por el contenido y por el nombre del archivo y de la carpeta.",
+        "El título del Word ('Unidad Didáctica: Persuasión y Palabra Poética') no coincide con el nombre del archivo ('Unidad Didáctica Publicidad y Propaganda. Poesía.').",
+        "La secuencia del Word cubre solo 2 de los 5 contenidos de la Unidad 3: poesía, y publicidad y propaganda. No hay clases ni material para Textos instructivos, Complemento régimen ni Ortografía, ni para las Unidades 1 y 2.",
+        "Cambia el orden: en el programa la Unidad 3 empieza por la poesía y sigue con publicidad y propaganda. El Word hace al revés: publicidad y propaganda en las clases 1-2 y poesía en las 3-6.",
+        "El libro de texto del PDF (pie '[PRÁCTICAS DEL LENGUAJE 1]', capítulo '05. La poesía y la fábula') no figura en la bibliografía del programa, que cita Lengua en Red 8, Lengua y Literatura 1 y 3 de Mandioca y los NAP. Además, la página de publicidad tiene otro pie ('…GUAJE 2]' o '…GUAJE 21') y podría ser de otro tomo de la serie.",
+        "Clase 4: la consigna pide buscar en 'Gato negro' al menos 2 comparaciones. El poema, tal como está en el PDF (pág. 79 del libro), no tiene comparaciones con 'como' o 'cual'. El ejemplo de comparación que da el libro es de 'Poema X' ('como un perro herido').",
+        "Clase 3: la Consigna 1 pide reconocer imágenes sensoriales en 'Viaje', pero las imágenes sensoriales se presentan recién en la Clase 4 (recursos semánticos).",
+        "Clase 2: la línea 'Recursos' (imágenes, imperativos, preguntas retóricas, eslóganes, exageraciones) no coincide del todo con el repaso del Inicio (imperativos, preguntas retóricas, exageraciones, juegos de palabras, imágenes icónicas, planos).",
+        "Hay consignas escritas como pedidos para la IA (entre comillas) que en realidad son tareas del estudiante. Por ejemplo, el paso 3 del poema en la Clase 6 ('Ajustá el poema a lo que vos sentís…') y la Consigna 2 de la Clase 3 ('Explicá con ejemplos…'). No queda claro quién lo hace.",
+        "El PDF repite contenido: la pág. 5 es un recorte ampliado de la mitad derecha de la pág. 7, así que 'Poema X' aparece dos veces.",
+        "Faltan cosas que los textos mencionan: [FIG. 07] y los avisos de la página de publicidad, entre ellos la 'fiesta de disfraces' en la que se basa la Clase 1. También los recuadros [L] y [M], los anexos de las págs. 159 y 167 y el glosario de 'Crepúsculo', 'Poema X' y 'Viaje' (hay palabras con asterisco sin definición: paraíso, sumiso y fronda en 'Crepúsculo'; poniente en 'Poema X'; desmesurada y enarca en 'Viaje'). El único glosario escaneado es el de 'Gato negro'.",
+        "Puede haber un tema repetido: la Unidad 1 incluye 'verboides' dentro de clases de palabras y la Unidad 2 incluye 'formas no conjugadas del verbo', que son lo mismo. Puede ser a propósito.",
+        "En la bibliografía, el número de 'Lengua y Literatura 3' aparece sobreescrito a mano en el original.",
+        "En la planificación de la Unidad 3, el primer objetivo está cortado arriba en el escaneo: solo se lee '… y propagandas.'. Lo mismo pasa con las columnas de estrategias ('… -Análisis del discurso.') y de evaluación o recursos ('… grupales.').",
+        "El seed pone la unidad en el 2° trimestre, pero ningún documento de Lengua da trimestre ni fechas. Físico-Química fija 1°: 05/03 al 30/05, 2°: 02/06 al 05/09 y 3°: 08/09 al 05/12/2026. Matemática fija el 3° del 07/09 al 04/12/2026; sus fechas del 1° y 2° no se ven en lo escaneado. Las dos materias no coinciden en el 3° (hay un día de diferencia al empezar y al terminar). Con cualquiera de los dos calendarios, si la secuencia se está dando ahora (01/10/2026) caería en el 3° trimestre, que además sería lo esperable para una 'Unidad 3'. Es una suposición y hay que confirmarlo.",
+        "El Word no tiene docente, fechas ni ciclo lectivo. Dice 'Fuente: Material adjuntado' y habla de 'consigna para el alumno (en la plataforma)': parece armado a partir del PDF pensando en la plataforma, no como planificación firmada por la docente."
+      ],
+      "preguntas_para_la_escuela": [
+        "¿Quién dicta Lengua en 2° A? Ningún documento lo dice, y en la carga de prueba quedó un docente provisorio.",
+        "¿Pueden mandar la planificación anual de Lengua completa? Solo llegó la última página (fila de la Unidad 3 y bibliografía). Faltan el encabezado, los títulos de las columnas, las Unidades 1 y 2, las fechas y los trimestres.",
+        "¿En qué trimestre se da cada unidad (1, 2 y 3)? ¿Qué fechas de trimestre usa Lengua? Lo preguntamos porque Físico-Química y Matemática no ponen las mismas fechas para el 3° trimestre.",
+        "¿Las unidades tienen nombre? El programa solo dice 'Unidad 1', 'Unidad 2' y 'Unidad 3'.",
+        "¿Cuáles son los criterios de evaluación de Lengua en cada trimestre? No figuran en ningún documento: la planificación solo menciona '…grupales', 'Trabajo en pizarra' y 'Evaluaciones'.",
+        "La secuencia 'Persuasión y Palabra Poética', ¿la escribió la docente? ¿La aprueba tal como está, con las actividades con IA? ¿En qué fechas se da?",
+        "¿La cargamos como una unidad aparte o como las clases de la Unidad 3?",
+        "Las consignas dicen que el estudiante usa 'la IA en la plataforma'. ¿Con qué herramienta lo van a hacer? ¿Qué herramienta usan para el 'mural digital' de la Clase 4?",
+        "¿De qué libro son las páginas del PDF (título, editorial y año)? ¿Los estudiantes tienen el libro? ¿Les parece bien que no subamos el escaneo completo y pongamos en su lugar un resumen propio con la referencia al libro?",
+        "¿Tienen clases o material para Textos instructivos, Complemento régimen y Ortografía (Unidad 3)? ¿Y para las Unidades 1 y 2: cuentos fantásticos, extraños y maravillosos, la novela 'Rafaela', el cuento realista y los textos expositivo-explicativos?",
+        "¿Tienen el glosario de 'Crepúsculo', 'Poema X' y 'Viaje' y las imágenes de los avisos (FIG. 07, la publicidad de la fiesta de disfraces)?",
+        "En la Clase 4, ¿qué comparaciones esperan que encuentren en 'Gato negro'? ¿O esa parte de la consigna debería apuntar a 'Poema X'?",
+        "¿Cuál es el primer objetivo de la Unidad 3? En el escaneo está cortado y solo se lee '… y propagandas.'.",
+        "¿Confirman la bibliografía? El número de 'Lengua y Literatura 3' está sobreescrito.",
+        "¿Confirman que el programa de contenidos (sin encabezado) es el de 2° año 2026?"
+      ],
+      "derechos_de_autor": [
+        "PDF págs. 1 a 4: páginas de un libro de texto comercial (serie 'Prácticas del Lenguaje', capítulo '05. La poesía y la fábula', pág. 83 y siguientes; la de publicidad y propaganda puede ser de otro tomo; la editorial no se ve). No conviene subir el escaneo completo compartido con estudiantes, ni usarlo de base para el resumen, las placas, el quiz y el podcast de la IA, porque eso lo reproduce y lo redistribuye. Es mejor citar título y página, hacer un resumen propio de la docente o remitir al libro físico.",
+        "'Gato negro', de María Cristina Ramos (en Desierto de mar y otros poemas, Ediciones SM, 2013): poema de una autora viva, protegido. No hay que reproducirlo completo: se pueden citar algunos versos, como el que usa la Clase 4, o remitir al libro.",
+        "'Poema X', de Pablo Neruda (en 20 poemas de amor y una canción desesperada, Losada): está protegido, porque Neruda murió en 1973. No reproducirlo completo; citar unos versos o enlazar a una fuente autorizada.",
+        "'Crepúsculo', de Baldomero Fernández Moreno (murió en 1950), y 'Viaje', de Alfonsina Storni (murió en 1938): probablemente sean de dominio público en Argentina (la Ley 11.723 protege 70 años después de la muerte del autor) y se podrían transcribir. Conviene confirmarlo. Las ilustraciones, el diseño, el glosario y las biografías del libro siguen protegidos.",
+        "Los versos de Antonio Machado citados en la pág. 4 son de dominio público, pero el epígrafe y el texto que los rodea son del libro.",
+        "La novela 'Rafaela', de Mariana Furiasse (Unidad 2), está protegida. Si la escuela la manda, no hay que reproducirla completa.",
+        "Los libros de la bibliografía (Lengua en Red 8, Lengua y Literatura 1 y 3) solo se citan; no llegaron páginas de ellos."
+      ],
+      "datos_personales": [
+        "Los documentos de Lengua no traen datos de estudiantes ni nombres de docentes.",
+        "Las páginas del libro incluyen fotos y biografías de autores (María Cristina Ramos, Baldomero Fernández Moreno, Pablo Neruda) y una foto de stock de una chica recitando (FIG. 19). Son figuras públicas o imágenes del libro, no gente del curso, pero están protegidas por los derechos del libro.",
+        "El seed de la compañera usa el email 'pablo.leiva@ensenia.edu.ar' para el docente de Lengua (no figura en los documentos) e inscribe a los estudiantes de una lista ALUMNOS_2A, que no está en el fragmento que leí. Hay que verificar de dónde salen esos nombres y que se carguen con el consentimiento que corresponda."
+      ]
+    }
+  ],
+  "revision": {
+    "listo_para_cargar": [
+      "Cómo leer esta lista: 'listo' quiere decir que se puede cargar en BORRADOR tal cual está, sin tocar el texto. En unidades, borrador es sin trimestre; en criterios, is_published = false. Publicar es otra decisión y depende de las preguntas de abajo. Ojo: hoy una unidad de la plataforma solo guarda título, orden y trimestre. Contenidos, capacidades, fechas, estrategias y evaluación de la unidad no tienen dónde ir; ver sugerencias.",
+      "Asignaciones docentes respaldadas por los documentos: Giuliana González en Matemática de 2° A (programa de 2° \"A\" y secuencia) y María Eugenia Jiménez en Físico-Química de 2° A (planificación y apunte). Se pueden dar de alta con el flujo normal de cuentas (admin-usuarios), no con el seed.",
+      "Físico-Química, las 4 unidades de la planificación anual 2026, con título, orden y trimestre: 'Magnitudes y fuerzas' (1°), 'Soluciones' (2°), 'Cambios físicos y químicos' (2°) y 'El átomo' (3°). Es la única materia con la planificación completa (5 de 5 páginas) y con trimestre en cada unidad. El orden entre las dos del 2° trimestre lo pusimos nosotros.",
+      "Físico-Química, criterios por trimestre (1°, 2° y 3°): texto literal de la columna 'Evaluación'. Cada uno ocupa muy por debajo de los 4000 caracteres. En el temario se muestran como texto plano con saltos de línea, así que el formato '· ítem' por renglón se ve bien. Cargarlos sin publicar hasta que la docente confirme que eso es lo que quiere mostrar.",
+      "Físico-Química, 2 clases de 'Cambios físicos y químicos' ('Transformaciones físicas y químicas' y 'Procesos reversibles e irreversibles'): texto del apunte con solo tildes y erratas obvias corregidas, objetivos tomados de la planificación del 2° trimestre y las dos actividades. Se cargan como están; las dudas de contenido (ítem g repetido, 'composición física') se resuelven después con la docente.",
+      "Físico-Química, 3 clases de tabla periódica dentro de 'El átomo' (3° trimestre). Se cargan como planning_classes en borrador. Antes de generar material con IA hay que revisar los errores de contenido marcados.",
+      "Matemática, la unidad 'Eje temático N°3: Superficie y perímetro' con trimestre 3. Es la única con trimestre y fechas escritos (07/09–04/12/2026) y es lo que se está dando ahora. Por ahora no tiene clases.",
+      "Matemática, las 3 clases de 'Sistema sexagesimal' en la versión de la estructura: procedimientos en columnas y la actividad separada en cuatro cálculos. Reemplazan la versión del seed, que tiene la actividad mal escrita. Van en borrador, en una unidad sin trimestre, hasta que se decida trimestre y ubicación. Las dos erratas corregidas (10′ → 10″, 06′ → 06″) quedan señaladas para que la docente las confirme.",
+      "Matemática, 'Eje temático N°1: Números enteros' y 'Eje temático N°2: Ángulos' como unidades en borrador (sin trimestre), con el título del programa de González.",
+      "Lengua, las 3 unidades del programa ('Unidad 1', 'Unidad 2', 'Unidad 3') y las 6 clases de 'Persuasión y Palabra Poética' con el texto completo del Word: hoy el seed las resume y les saca partes. Todo en borrador, y solo cuando haya un docente de Lengua a quien asignarlas (ver lo que falta).",
+      "Biblioteca, sin compartir con estudiantes: 'Sistema sexagesimal' (MATEMÁTICAS - 2A - AS.pdf, 342 KB). Lo escribió la docente y no tiene contenido de terceros. Se puede compartir apenas ella lo autorice.",
+      "Biblioteca, sin compartir: el apunte de Físico-Química (ESCUELA ALFONSINA STORNI SECUNDARIA (1).pdf, 623 KB). No conviene compartirlo hasta saber de dónde salen las dos figuras y corregir los errores de contenido.",
+      "Bibliografía de las tres materias, transcripta: se puede guardar como referencia, aunque la plataforma no tiene un campo para ella (ver sugerencias)."
+    ],
+    "falta_para_cargar": [
+      "Calendario de la escuela: las fechas oficiales de los 3 trimestres 2026 de la Storni. Físico-Química dice 05/03–30/05, 02/06–05/09 y 08/09–05/12. Matemática pone el 3° del 07/09 al 04/12. La plataforma trae por defecto 02/03–05/06, 08/06–11/09 y 14/09–11/12. La plataforma admite un solo calendario por escuela y no tiene pantalla para editarlo: hay que corregirlo con SQL a mano en academic_terms antes de publicar unidades, criterios o notas.",
+      "Docente de Lengua: ningún documento lo nombra. planning_units y library_materials exigen un docente (teacher_id obligatorio), así que sin esa persona no se puede cargar nada de Lengua. Usar un docente provisorio ajeno, como hizo el seed con pablo.leiva@ensenia.edu.ar, deja la materia a nombre de otra persona.",
+      "Rol de Fátima Natalia Villagra (programa de Matemática de '2do año', sin división) y de María Gabriela Nieto (planificación de Físico-Química de '2° A y B'). Hasta saberlo no se dan de alta, y el programa de Villagra no se carga para 2° A.",
+      "Trimestre de cada unidad que no lo trae: Matemática Eje 1 y Eje 2 (y la secuencia sexagesimal) y Lengua Unidades 1, 2 y 3 (y la secuencia 'Persuasión y Palabra Poética'). Sin trimestre quedan en borrador y estudiantes y familias no las ven.",
+      "Decisión de estructura: ¿las secuencias van como unidad aparte o como clases dentro de la unidad del programa? Son 'Sistema sexagesimal' (parte del Eje 2) y 'Persuasión y Palabra Poética' (parte de la Unidad 3). Si quedan como unidad aparte, el temario muestra dos unidades que se pisan.",
+      "Decisión: ¿publicar las unidades del 1° y 2° trimestre, que ya terminaron (hoy es 01/10/2026), como historial, o solo las del 3°?",
+      "Hojas que no llegaron. Matemática: la primera hoja de la tabla de planificación de González (títulos de columnas, Eje 1 y comienzo del Eje 2) y la columna de evaluación, que sale cortada. Lengua: la planificación anual casi completa (encabezado, columnas, Unidades 1 y 2, fechas, trimestres) y el primer objetivo de la Unidad 3, que está cortado.",
+      "Criterios de evaluación de Matemática y de Lengua. Matemática solo tiene instrumentos cortados por el escaneo; Lengua no tiene nada. Además hay que saber si la docente de Físico-Química quiere mostrar esos instrumentos como criterios. Los 12 criterios del seed (4 por materia) no salen de ningún documento: hay que validarlos o reemplazarlos.",
+      "Clases y material de las unidades vacías: Matemática Eje 1 y Eje 3 (en curso). Físico-Química: 'Magnitudes y fuerzas', 'Soluciones' y la parte de 'El átomo' sobre partículas subatómicas y noción de elemento. Lengua: Unidades 1 y 2, y en la Unidad 3 textos instructivos, complemento régimen y ortografía. Si no, estudiantes y familias ven 'Sin clases cargadas todavía'.",
+      "Respuestas o solucionario de las actividades (sexagesimal, FF/FQ, cuadro de elementos). Ningún documento las trae, y el quiz de práctica que arma la IA no tendría con qué verificarse.",
+      "Confirmación de la docente de Físico-Química sobre los errores del apunte, antes de compartirlo o de generar resumen, placas, quiz y podcast: 'gases nobles o formales', 'composición física', A como masa atómica 55.847, fila vacía del cuadro, ítem g repetido, columna 'e' sin explicar, fechas de la historia de la tabla y los 8 electrones de valencia.",
+      "Lengua: un texto propio de la docente (resumen) que reemplace las páginas escaneadas del libro como base de la biblioteca y de la IA. También faltan los glosarios de 'Crepúsculo', 'Poema X' y 'Viaje', y las imágenes de los avisos (FIG. 07, la fiesta de disfraces) en que se apoya la Clase 1.",
+      "Físico-Química: el origen de las dos figuras del apunte (casillero del hierro y esquema coloreado de la tabla), o una versión propia o con licencia libre.",
+      "Archivos que hay que partir. El PDF de programas pesa 14,6 MB: pasa el tope de 11 MB de la biblioteca y del 'Importar programa', y además mezcla tres materias. Conviene partirlo por materia. También conviene partir el apunte de Físico-Química en dos (uno por tema) y el PDF de Lengua en teoría (págs. 1–4) y poemas (págs. 5–8), sacando la pág. 5, que duplica 'Poema X'.",
+      "Nómina real de 2° A (nombre, apellido, DNI) y familias vinculadas, para dar de alta con admin-usuarios. Hoy solo existen los 6 nombres de prueba del seed.",
+      "Ciclo lectivo de las secuencias: ni la de sexagesimal, ni el apunte de Físico-Química, ni el Word de Lengua dicen año ni fecha.",
+      "No correr supabase/seed-contenido-escuelas.ts como está. Según el estado al 30/09, en producción la Storni no tiene cursos, así que el seed no está cargado. Si se corre, publica todo en el 2° trimestre y deja criterios inventados visibles para las familias, entre otros problemas (ver riesgos)."
+    ],
+    "preguntas_para_la_escuela": [
+      "[Docentes] Lengua: ¿quién dicta Lengua en 2° A? Ningún documento lo dice.",
+      "[Docentes] Matemática: ¿la da Giuliana González o Fátima Natalia Villagra? El Programa Anual de Villagra ('2do año', sin división), ¿es de 2° B o de otra división? ¿Cuál programa vale para 2° A?",
+      "[Docentes] Físico-Química: ¿María Gabriela Nieto co-dicta 2° A con María Eugenia Jiménez o es la docente de 2° B? Fuera del piloto: ¿la planificación y el apunte valen igual para 2° B?",
+      "[Calendario] ¿Cuáles son las fechas oficiales de los tres trimestres 2026 de la escuela? Físico-Química usa 05/03–30/05, 02/06–05/09 y 08/09–05/12; Matemática pone el 3° del 07/09 al 04/12. ¿Hay una sola fecha para toda la escuela?",
+      "[Calendario] El 1° y el 2° trimestre ya terminaron. ¿Publicamos igual sus unidades en el temario, como historial, o solo las del 3°?",
+      "[Documentos faltantes] Matemática: ¿nos mandan la primera hoja de la planificación de González (títulos de columnas, 1° trimestre/Eje 1, comienzo del Eje 2) y la columna de evaluación completa, que en el escaneo sale cortada?",
+      "[Documentos faltantes] Lengua: ¿nos mandan la planificación anual completa (encabezado, columnas, Unidades 1 y 2, fechas y trimestres)? ¿Cuál es el primer objetivo de la Unidad 3? Solo se lee '… y propagandas.'. ¿Las unidades tienen nombre? ¿El programa sin encabezado es el de 2° año 2026?",
+      "[Trimestres y orden] Matemática: ¿el Eje 1 va en el 1° trimestre y el Eje 2 en el 2°, con qué fechas? ¿En qué trimestre y fechas se dio 'Sistema sexagesimal'? 'Ecuaciones de primer grado' aparece en los tres ejes: ¿es un contenido de todo el año?",
+      "[Trimestres y orden] Lengua: ¿en qué trimestre va cada unidad? 'Persuasión y Palabra Poética', ¿en qué fechas se da? ¿Se está dando ahora, en el 3°?",
+      "[Trimestres y orden] Físico-Química: en el 2° trimestre, ¿en qué orden se dieron 'Soluciones' y 'Cambios físicos y químicos'? ¿Está bien cómo repartimos por tema los objetivos y contenidos? Los objetivos de fuerzas que aparecen en el 3° trimestre, ¿son un error de copia del 1°?",
+      "[Cómo cargar las secuencias] ¿Cargamos 'Sistema sexagesimal' y 'Persuasión y Palabra Poética' como unidades aparte, como las llaman las docentes, o como clases dentro del Eje 2 y de la Unidad 3 del programa?",
+      "[Criterios de evaluación] ¿Qué criterios quieren que vean estudiantes y familias en cada trimestre y materia? Matemática solo trae instrumentos (evaluaciones semi-estructuradas, trabajos prácticos, pizarrón, carpeta y tareas): ¿suman lo del programa de Villagra? Lengua no trae nada. Físico-Química: ¿la columna 'Evaluación' es lo que quieren mostrar, o hay criterios de logro o ponderación? Los criterios que cargó la compañera no salen de sus documentos: ¿las docentes los adoptan o los reemplazamos?",
+      "[Revisión de contenido · Matemática] ¿La docente confirma las correcciones 10′ → 10″ (suma) y 06′ → 06″ (división), y que '4. γ' quiere decir 4 · γ? ¿Tiene las respuestas de la actividad?",
+      "[Revisión de contenido · Físico-Química] Del apunte: ¿'gases nobles o formales' quiso decir 'inertes'? ¿'composición física' quiso decir 'química'? ¿A es el número másico (entero) o la masa atómica (55.847)? ¿Qué dato va en la fila vacía del cuadro? ¿El ítem g) repetido iba a ser otra situación? ¿Cómo se obtiene la columna 'e'? ¿Revisa la historia de la tabla (Moseley 1910, Werner después de Moseley, 'doscientos años atrás') y los '8 electrones de valencia' antes de que la IA los repita? En la planificación, ¿falta 'insaturadas' en la clasificación de soluciones?",
+      "[Revisión de contenido · Lengua] La secuencia 'Persuasión y Palabra Poética', ¿la escribió la docente? ¿La aprueba como está, con las actividades con IA? En la Clase 4, ¿qué comparaciones esperan que encuentren en 'Gato negro'? ¿O la consigna apunta a 'Poema X'? En la Clase 3 se piden imágenes sensoriales antes de verlas en la Clase 4: ¿está bien así? En las consignas ambiguas (Clase 3, Consigna 2; Clase 6, paso 3), ¿quién hace la tarea, el estudiante o la IA?",
+      "[Material que falta] ¿Hay clases, apuntes o trabajos prácticos para: Matemática Eje 1 y Eje 3 (en curso); Físico-Química 'Magnitudes y fuerzas', 'Soluciones' y partículas subatómicas; Lengua Unidades 1 y 2 (fantástico, 'Rafaela', cuento realista, expositivos) y, en la Unidad 3, textos instructivos, complemento régimen y ortografía? ¿Tienen el glosario de 'Crepúsculo', 'Poema X' y 'Viaje' y las imágenes de los avisos (FIG. 07, la fiesta de disfraces)?",
+      "[Herramientas] Las consignas de Lengua dicen que el estudiante usa 'la IA en la plataforma'. ¿Con qué herramienta lo van a hacer? ¿Y el 'mural digital' de la Clase 4?",
+      "[Biblioteca y derechos de autor] ¿Podemos compartir con los estudiantes las secuencias propias (sexagesimal y el apunte de Físico-Química, partido en dos) para que la IA arme resumen, placas, quiz y podcast?",
+      "[Biblioteca y derechos de autor] ¿De qué libro son las páginas escaneadas de Lengua (título, editorial, año)? ¿Los estudiantes lo tienen? ¿Les parece bien que en lugar del escaneo carguemos un resumen propio con la referencia? ¿De dónde salen las figuras y la historia de la tabla periódica del apunte de Físico-Química? ¿Qué título y edición tiene el libro de Juan Pablo Pisano (Logikamente)?",
+      "[Bibliografía] ¿Nos confirman el número de 'Lengua y Literatura 3' (está sobreescrito), la editorial 'Tinta Fresca' (se lee borroso) y el año del libro de Santillana (¿2013 o 2018?)?",
+      "[Datos personales] ¿Quién nos manda la nómina real de 2° A, con DNI y familias? ¿La escuela tiene el consentimiento de las familias para crear cuentas de estudiantes menores?"
+    ],
+    "riesgos": [
+      "[Contenido inventado o mal ubicado] Si se corre el seed de la compañera tal cual: publica todas las unidades en el 2° trimestre sin respaldo en los documentos; publica 12 criterios que la escuela no dio (is_published: true, visibles para familias); pone 'Tabla periódica' en el 2° trimestre cuando es del 3°; y deja Lengua a nombre de un docente ajeno.",
+      "[Contenido inventado o mal ubicado] El seed también tiene errores de contenido para el estudiante. La actividad de Matemática queda como 'α + β · λ − α · 4 · γ · λ : 3', que se lee como una sola cuenta. En el cuadro de Físico-Química aparece 'Z = 18', que es justo el dato que el alumno tenía que deducir.",
+      "[Cuentas y datos personales] El seed crea cuentas de docentes reales (Jiménez, González) con un dominio ficticio y una contraseña fija que está escrita en el repo. También inscribe 6 estudiantes con nombres verosímiles (ALUMNOS_2A) que se pueden confundir con alumnos reales. No usarlo en producción: dar de alta por admin-usuarios y no mezclar la nómina real con la de prueba.",
+      "[Publicación] Asignar trimestre publica la unidad al instante. Si se carga directo con trimestre, estudiantes y familias ven contenido sin validar. Conviene cargar todo en borrador y los criterios con is_published = false, y publicar recién con el visto bueno de cada docente.",
+      "[Calendario] Si se dejan las fechas por defecto, o las de una sola materia, el temario y la libreta muestran trimestres que no son los de la escuela. La libreta usa esos trimestres para la regla 5/4 de avisos a familias ('se lleva la materia a diciembre'), así que un error de fechas puede terminar en un aviso oficial a una familia.",
+      "[Derechos de autor] Lengua, PDF págs. 1–4: páginas de un libro de texto comercial. Subirlas a la biblioteca y compartirlas las redistribuye. Además, al procesarlas, el PDF se manda a un servicio de IA externo para sacar el texto. Usar un resumen propio con la cita.",
+      "[Derechos de autor] Poemas protegidos: 'Gato negro' (María Cristina Ramos, autora viva) y 'Poema X' (Neruda, protegido hasta 2043). No transcribirlos completos ni darlos a la IA para quiz o podcast; citar unos versos o remitir al libro. 'Viaje' (Storni) y 'Crepúsculo' (Fernández Moreno) serían de dominio público, pero el diseño, el glosario, las fotos y las biografías del libro no.",
+      "[Derechos de autor] Las figuras del apunte de Físico-Química no tienen fuente y la historia de la tabla periódica tampoco cita de dónde sale. Los programas citan libros con derechos (Pisano, Puerto de Palos, Santillana, SM, Tinta Fresca, Mandioca): si más adelante suben páginas, no reproducirlas completas. 'Rafaela', de Furiasse, está protegida.",
+      "[Contenido dudoso que la IA amplifica] El apunte de Físico-Química tiene errores probables. Ejemplos: 'gases nobles o formales', A como masa atómica 55.847 (con eso N = A − Z no da entero), Moseley en 1910, el orden de Werner, '8 electrones de valencia' para todos los gases nobles, 'no se combinan' seguido de 'pueden reaccionar'. El resumen, las placas y el quiz de la IA los van a dar por ciertos, y como no hay solucionario nadie lo nota.",
+      "[Contenido dudoso] Hay consignas que no funcionan con el material. En Lengua se piden comparaciones en 'Gato negro', que no tiene. En Matemática el sexagesimal tiene dos erratas. En Físico-Química el cuadro tiene una fila sin datos y un ítem repetido. Si se publican así, el estudiante se traba.",
+      "[Contenido mezclado] Cargar para 2° A el programa de Villagra mete en el temario contenidos que González no da (racionales, Pitágoras, círculo).",
+      "[Contenido no validado] El Word de Lengua parece armado para la plataforma ('Fuente: Material adjuntado', 'Consigna para el alumno (en la plataforma)'), sin docente ni fecha. Publicarlo como planificación de la escuela sin que la docente lo apruebe es presentar como de la escuela algo que no está validado.",
+      "[Menores e IA] Las consignas de Lengua mandan a los estudiantes a 'pedirle a la IA'. Si lo hacen con herramientas externas y cuentas personales, son menores usando servicios con límites de edad y con sus datos. Conviene que lo hagan dentro de la plataforma, o aclararlo con la escuela.",
+      "[Datos personales] Los documentos no tienen datos de estudiantes. Los nombres de docentes son datos profesionales y se necesitan para las asignaciones, pero Villagra y Nieto no se dan de alta ni se muestran hasta que la escuela confirme su rol. La nómina real es de menores: alta por DNI, con el consentimiento que corresponda y sin sacarla de la plataforma.",
+      "[Expectativa de la escuela] Matemática está dando el Eje 3 y no tiene clases ni material, y Lengua no tiene docente. En el piloto, estudiantes y familias pueden ver unidades vacías justo en lo que se está dando."
+    ],
+    "sugerencias_plataforma": [
+      "Ejes temáticos en lugar de unidades: planning_units no tiene un campo de número ni de tipo, así que 'Eje temático N°1' tiene que ir dentro del título. Se puede resolver con una convención de títulos ('Eje 1 · Números enteros') o con un campo 'rótulo' opcional.",
+      "La unidad solo guarda título, orden y trimestre. No tiene lugar para los contenidos del programa, los objetivos o capacidades de la unidad, las estrategias ni la evaluación de la unidad, que es lo que traen las tres planificaciones. Arreglo rápido: cargar cada contenido del programa como una clase con solo título, así el temario muestra la lista de contenidos. Arreglo de fondo: sumar a planning_units un campo de descripción o contenidos y otro de objetivos.",
+      "El temario que ven estudiantes y familias muestra solo el título de la unidad, los títulos de las clases y sus objetivos. NO muestra el contenido de las clases (explicaciones, ejemplos, actividades, consignas): eso lo ve solo el docente. Las consignas de Lengua escritas 'para el alumno (en la plataforma)' y los ejercicios de sexagesimal no le llegan al estudiante por el temario. Tienen que salir como actividad o como material de biblioteca. Hay que decidirlo, o mostrar el contenido en el temario.",
+      "No hay fechas por unidad ni por clase. Físico-Química pone rango de fechas por trimestre y Matemática por eje (07/09–04/12); no hay cronograma de clases. Si la escuela lo pide, habría que sumar fechas a planning_units o a planning_classes.",
+      "Calendario: un solo juego de trimestres por escuela, y no hay pantalla para editarlo (solo se lee o se crea con las fechas por defecto; corregirlo es SQL a mano). Las dos materias no coinciden en las fechas del 3° trimestre y quedan días sueltos entre trimestres (01/06, 07/09). Conviene una pantalla de dirección para editar las fechas.",
+      "Una unidad pertenece a un solo trimestre. No hay unidades que crucen trimestres, ni contenidos que atraviesen el año ('Ecuaciones de primer grado' en los tres ejes de Matemática), ni una fila de planificación con dos unidades que comparten objetivos y evaluación (Soluciones + Cambios físicos y químicos).",
+      "Criterios: un solo texto plano por materia × curso × trimestre, que se muestra con saltos de línea pero sin formato markdown. No separa criterios de instrumentos ni tiene ponderación, y no hay 'evaluación general' anual. Las escuelas mandan instrumentos ('trabajos prácticos, carpeta, evaluación trimestral'), no criterios de logro.",
+      "No hay lugar para el programa anual: fundamentación, objetivos generales, metodología y bibliografía no tienen tabla. Opciones: subir el programa a la biblioteca como material no compartido, o sumar una tabla de programa por materia × curso × año con esos campos y la bibliografía.",
+      "Biblioteca: al subir un archivo desde la pantalla no se puede elegir la unidad relacionada (unit_name solo lo completa el material que se genera desde IALab) ni vincularlo a una clase (class_id solo se completa desde 'Armar módulo'). La descripción se completa después, editando. Además la unidad se guarda por nombre (texto), así que si se renombra la unidad se pierde el vínculo. Sumar un selector de unidad o clase al subir, guardado por id.",
+      "Biblioteca: un archivo es un solo material, con una sola unidad. El apunte de Físico-Química trae dos temas de dos trimestres, y el PDF de Lengua trae teoría y antología con una página duplicada. Hay que partir los archivos antes de subirlos; no se pueden asignar rangos de páginas.",
+      "Límites de archivo: máximo 11 MB en la biblioteca y en 'Importar programa'. El PDF de programas pesa 14,6 MB y no entra. Las imágenes del bucket solo pueden ser PNG o JPEG. El video va solo como enlace de YouTube, no como archivo subido.",
+      "'Importar programa' espera una materia por documento y devuelve unidades y clases con objetivos, sin trimestre, fechas, contenidos ni bibliografía. El PDF de la escuela trae tres materias y dos programas de Matemática, así que no sirve importarlo directo: hay que partirlo, y aun así se pierden trimestres y fechas.",
+      "El texto que la IA saca del PDF se lee con visión y anda con escaneos, pero puede desordenar los procedimientos en columnas (sexagesimal) y no 'lee' las figuras (casillero del hierro, esquema de la tabla). Conviene que el docente pueda revisar y pegar el texto limpio antes de generar resumen, placas, quiz y podcast (al cambiar ese texto se borran el quiz y la guía ya generados), y que la plataforma avise cuando el material no trae respuestas para verificar el quiz.",
+      "Docentes compartidos: varios docentes pueden tener la misma materia y curso, pero cada unidad tiene un solo dueño y cada docente ve solo sus unidades. Si Jiménez y Nieto co-dictan, no ven la planificación de la otra.",
+      "Lengua sin docente: unidades y materiales necesitan un docente asignado, así que no se puede cargar una materia 'a cargo de la escuela' mientras se define quién la dicta. Podría servir un dueño institucional (dirección) para carga provisoria.",
+      "Una planificación para 2° A y B (Físico-Química): la plataforma guarda unidades por curso, así que para 2° B habría que duplicarlas. No hay una planificación compartida entre divisiones.",
+      "Objetivos de clase: las secuencias de Lengua y Físico-Química no traen objetivos por clase. Si se dejan vacíos, el temario muestra solo el título. Si se usan los de la unidad, se repiten en cada clase. Un campo de objetivos por unidad lo resolvería."
+    ]
+  }
+}
