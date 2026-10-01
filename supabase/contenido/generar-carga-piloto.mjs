@@ -23,6 +23,8 @@
  * objetivos de sus clases (no el contenido), así que las unidades sin
  * material llevan una clase solo-título por cada contenido del programa.
  *
+ * Genera también piloto-2-lengua-storni.sql (ver abajo).
+ *
  *   node supabase/contenido/generar-carga-piloto.mjs
  */
 
@@ -258,3 +260,93 @@ ORDER BY s.name, sb.name, u.sort_order;
 const salida = path.join(AQUI, 'piloto-vaciar-y-cargar-storni.sql');
 fs.writeFileSync(salida, sql);
 console.log('ok', salida, `(${unidadesFQ.length + unidadesMat.length} unidades, ${[...unidadesFQ, ...unidadesMat].reduce((n, u) => n + u.clases.length, 0)} clases, ${criteriosFQ.length} criterios)`);
+
+// ═══ Paso 2: Lengua ═══
+// Ningún documento nombra a la docente de Lengua. La cuenta se crea desde la
+// app (Administración → Personal → docente, con el email de abajo) y este
+// SQL le asigna Lengua de 2° A y le carga el material. Cuando se sepa quién
+// es, se le corrigen nombre y DNI a esa misma cuenta (o se pasan las
+// unidades a la cuenta real con un UPDATE de teacher_id).
+//
+// Las 3 unidades van en borrador: el programa no dice trimestre. La
+// secuencia "Persuasión y Palabra Poética" desarrolla los dos primeros
+// contenidos de la Unidad 3 (poesía; publicidad y propaganda), así que sus
+// 6 clases van ahí en su orden, en el lugar de esos dos contenidos.
+const LENGUA_EMAIL = 'lengua.storni@ensenia.edu.ar';
+const len = materia('Lengua');
+const lenU = n => {
+  const u = len.unidades.find(x => x.numero === String(n));
+  if (!u) throw new Error(`No está la Unidad ${n} de Lengua`);
+  return u;
+};
+const secuencia = deMaterial(material(len, 'Unidad Didáctica: Persuasión y Palabra Poética'));
+const u3 = lenU(3);
+if (!/^La poesía/.test(u3.contenidos[0]) || !/Publicidad y la Propaganda/.test(u3.contenidos[1])) {
+  throw new Error('Los dos primeros contenidos de la Unidad 3 de Lengua no son los que desarrolla la secuencia');
+}
+const unidadesLen = [
+  { comentario: 'Lengua Unidad 1 · borrador (el programa no dice trimestre)',
+    titulo: lenU(1).titulo, orden: 1, trimestreVar: 'NULL', clases: soloTitulo(lenU(1).contenidos) },
+  { comentario: 'Lengua Unidad 2 · borrador',
+    titulo: lenU(2).titulo, orden: 2, trimestreVar: 'NULL', clases: soloTitulo(lenU(2).contenidos) },
+  { comentario: 'Lengua Unidad 3 · borrador; las 6 clases de la secuencia en el lugar de poesía y publicidad',
+    titulo: u3.titulo, orden: 3, trimestreVar: 'NULL', clases: [...secuencia, ...soloTitulo(u3.contenidos.slice(2))] },
+];
+
+const sqlLengua = `-- ═══════════════════════════════════════════════════════════════════
+-- Piloto · paso 2: Lengua del 2° A de la Storni
+-- (generado por supabase/contenido/generar-carga-piloto.mjs; no editar a mano)
+--
+-- ANTES de correrlo: crear la cuenta de la docente desde la app
+--   Administración → Alfonsina Storni → Personal → Sumar persona → Docente
+--   Nombre: Docente · Apellido: Lengua · Email: ${LENGUA_EMAIL}
+--
+-- Qué hace (si algo falla, no cambia nada):
+--  1. Busca esa cuenta y verifica que sea docente de la Storni.
+--  2. Le asigna Lengua de 2° A.
+--  3. Carga las 3 unidades del programa, en borrador, con la secuencia
+--     "Persuasión y Palabra Poética" (6 clases) dentro de la Unidad 3.
+-- Se puede correr más de una vez: reemplaza las unidades de Lengua de 2° A.
+-- ═══════════════════════════════════════════════════════════════════
+
+DO $lengua$
+DECLARE
+  v_as uuid; v_curso uuid; v_len uuid; v_doc uuid; v_u uuid; n int;
+BEGIN
+  SELECT count(*) INTO n FROM schools WHERE name = ${lit(STORNI)};
+  IF n <> 1 THEN RAISE EXCEPTION 'Tiene que haber exactamente una escuela "%", hay %', ${lit(STORNI)}, n; END IF;
+  SELECT id INTO v_as FROM schools WHERE name = ${lit(STORNI)};
+  SELECT id INTO v_curso FROM courses WHERE school_id = v_as AND name = '2° A';
+  IF v_curso IS NULL THEN RAISE EXCEPTION 'No está el 2° A de la Storni: corré primero piloto-vaciar-y-cargar-storni.sql'; END IF;
+  SELECT id INTO v_len FROM subjects WHERE school_id = v_as AND name = 'Lengua';
+  IF v_len IS NULL THEN RAISE EXCEPTION 'No está la materia Lengua de la Storni'; END IF;
+
+  SELECT id INTO v_doc FROM profiles WHERE email = ${lit(LENGUA_EMAIL)};
+  IF v_doc IS NULL THEN
+    RAISE EXCEPTION 'No encuentro la cuenta %: creala primero desde la app (Personal → Sumar persona → Docente)', ${lit(LENGUA_EMAIL)};
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM school_memberships WHERE user_id = v_doc AND school_id = v_as AND role = 'docente') THEN
+    RAISE EXCEPTION 'La cuenta % no es docente de la Storni', ${lit(LENGUA_EMAIL)};
+  END IF;
+
+  INSERT INTO teacher_assignments (teacher_id, subject_id, course_id) VALUES (v_doc, v_len, v_curso)
+  ON CONFLICT (teacher_id, subject_id, course_id) DO NOTHING;
+
+  DELETE FROM planning_units WHERE subject_id = v_len AND course_id = v_curso;
+${unidadesLen.map(u => sqlUnidad({ ...u, materiaVar: 'v_len', docenteVar: 'v_doc' })).join('\n')}
+END
+$lengua$;
+
+-- ── Resultado: las tres materias del 2° A, con su docente ──
+SELECT sb.name AS materia, p.first_name || ' ' || p.last_name AS docente, p.email,
+       u.sort_order AS orden, u.title AS unidad, COALESCE(t.number::text, 'borrador') AS trimestre,
+       (SELECT count(*) FROM planning_classes pc WHERE pc.unit_id = u.id) AS clases
+FROM planning_units u
+JOIN subjects sb ON sb.id = u.subject_id
+JOIN profiles p ON p.id = u.teacher_id
+LEFT JOIN academic_terms t ON t.id = u.term_id
+ORDER BY sb.name, u.sort_order;
+`;
+const salidaLen = path.join(AQUI, 'piloto-2-lengua-storni.sql');
+fs.writeFileSync(salidaLen, sqlLengua);
+console.log('ok', salidaLen, `(${unidadesLen.length} unidades, ${unidadesLen.reduce((n, u) => n + u.clases.length, 0)} clases)`);
