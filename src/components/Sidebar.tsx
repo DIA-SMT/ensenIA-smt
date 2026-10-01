@@ -20,14 +20,14 @@ const CLAVE_COLAPSADA = 'estudia_barra_colapsada';
 /** id válido para aria-labelledby: sin espacios ni tildes. */
 const idGrupo = (g: string) => 'nav-g-' + g.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
+/**
+ * El isologo de la Municipalidad (las dos hojas y el punto amarillo), el
+ * mismo de los íconos de la app. Es el original: no se redibuja ni se tiñe
+ * con el color del rol. public/isologo.png es transparente, sacado del
+ * ícono de 512 conservando sus tres colores exactos.
+ */
 export function LogoMark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * 1.2} viewBox="0 0 40 48" fill="none" aria-hidden="true" focusable="false">
-      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16C21 13 23 10.5 26 9.5C32 7 37 12 37 19C37 30 20 46 20 46Z" fill="var(--acento)" />
-      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16Z" fill="#FFFFFF" opacity="0.18" />
-      <circle cx="20" cy="5" r="4.5" fill="#F5B82E" />
-    </svg>
-  );
+  return <img src="/isologo.png" width={size} height={size} alt="" aria-hidden="true" className="logo-mark" />;
 }
 
 interface SidebarProps {

@@ -25,6 +25,8 @@
   min-height: 44px;
 }
 .sidebar-header svg { flex-shrink: 0; }
+/* El isologo (Sidebar.tsx → LogoMark): imagen, no se estira ni se achica */
+.logo-mark { display: block; flex-shrink: 0; object-fit: contain; }
 .logo-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .logo-title {
   font-size: 1rem;

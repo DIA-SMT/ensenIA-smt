@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #005FA3 0%, #00A8FF 100%);
+  background: linear-gradient(135deg, #0166FF 0%, #2DB0FF 100%)  /* los azules del isologo */;
   color: white;
   font-size: 18px;
   font-weight: 700;

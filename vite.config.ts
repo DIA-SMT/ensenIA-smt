@@ -15,6 +15,8 @@ export default defineConfig({
       includeAssets: [
         'favicon-32.png', 'favicon-96.png', 'apple-touch-icon.png',
         'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
+        // Los logos de la interfaz (menú, barra, login): sin conexión también
+        'isologo.png', 'Logo_SMT_blanco.png',
       ],
       manifest: {
         name: 'SMT EstudIA',
