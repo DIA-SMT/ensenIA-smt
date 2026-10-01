@@ -414,9 +414,8 @@ async function main() {
   const gonzalez = await ensureTeacher(storni, 'Giuliana', 'González', 'GG');
   // El documento de Lengua no nombra docente: queda a cargo del docente de
   // la escuela hasta que la dirección indique quién la dicta.
-  const { data: leiva } = await import('./seed-material-real').then(m =>
-    m.db.from('profiles').select('id').eq('email', 'pablo.leiva@ensenia.edu.ar').single());
-  const lenguaDocente = leiva!.id as string;
+  // Lo creaba seed-storni.ts, que ya no corre (seed.ts crea la Storni).
+  const lenguaDocente = await ensureTeacher(storni, 'Pablo', 'Leiva', 'PL');
 
   await ensureAssignment(jimenez, fq, curso2A);
   await ensureAssignment(gonzalez, mateS, curso2A);
