@@ -36,14 +36,16 @@
   --bg-input: #FFFFFF;
 
   /* ── Acento del rol ──
-     Por defecto (login, carga) el azul institucional. Cada rol lo pisa en
-     [data-rol]. Valores explícitos, sin color-mix(): los iPhone viejos que
-     suelen heredar los chicos (iOS 15) no lo entienden. */
-  --acento: #0369A1;            /* 5.9:1 */
-  --acento-rgb: 3, 105, 161;
-  --acento-hover: #075985;
-  --acento-claro: #7DB9DC;      /* solo bordes y rellenos */
-  --acento-suave: #EAF3F9;      /* fondo de lo activo */
+     Por defecto (login, carga, superadmin) el azul del isologo municipal
+     (#0166FF; el celeste #2DB0FF y el amarillo #F4DC00 son los otros dos
+     colores del logo). Cada rol lo pisa en [data-rol]. Valores explícitos,
+     sin color-mix(): los iPhone viejos que suelen heredar los chicos
+     (iOS 15) no lo entienden. */
+  --acento: #0166FF;            /* 4.8:1 */
+  --acento-rgb: 1, 102, 255;
+  --acento-hover: #0050CC;      /* 6.6:1 */
+  --acento-claro: #2DB0FF;      /* solo bordes y rellenos */
+  --acento-suave: #EAF3FF;      /* fondo de lo activo */
 
   /* ── Cyan Accent (Primary) — ahora sigue al rol ── */
   --cyan-bright: var(--acento);

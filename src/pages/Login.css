@@ -28,27 +28,25 @@
   justify-content: center;
   gap: var(--space-5);
   padding: clamp(32px, 6vw, 88px);
-  /* Azul tinta, más profundo que cualquiera de los cuatro colores de rol:
-     así los cuatro se distinguen encima. */
-  background: #0B2F4E;
+  /* Azul del logo llevado a tinta: más profundo que cualquiera de los
+     cuatro colores de rol, así los cuatro se distinguen encima. */
+  background: #062B6B;
   color: #FFFFFF;
 }
 .login-marca::before {
   content: '';
   position: absolute; inset: 0; z-index: -1;
   background:
-    radial-gradient(70% 60% at 100% 0%, rgba(3, 105, 161, 0.75), transparent 62%),
-    radial-gradient(60% 70% at 0% 100%, rgba(109, 40, 217, 0.35), transparent 65%);
+    radial-gradient(70% 60% at 100% 0%, rgba(1, 102, 255, 0.85), transparent 62%),
+    radial-gradient(60% 70% at 0% 100%, rgba(45, 176, 255, 0.35), transparent 65%);
 }
 html[data-contraste="alto"] .login-marca::before { display: none; }
 
-.login-marca-logo {
-  width: 64px; height: 64px;
-  display: grid; place-items: center;
-  border-radius: var(--radius-xl);
-  background: #FFFFFF;
-  color: #0369A1;
-  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.45);
+.login-ciudad {
+  display: block;
+  width: auto;
+  height: clamp(48px, 4vw + 28px, 72px);
+  align-self: flex-start;
 }
 .login-title {
   font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.5rem);
@@ -56,7 +54,7 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
   letter-spacing: -0.045em;
   line-height: 1;
 }
-.login-title span { color: #BAE6FD; }
+.login-title span { color: #F4DC00; }   /* el amarillo del logo */
 .login-subtitle { font-size: 1.125rem; line-height: 1.45; max-width: 30ch; color: rgba(255, 255, 255, 0.94); }
 
 .login-roles { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -80,7 +78,7 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
 
 .login-promesas { list-style: none; display: flex; flex-direction: column; gap: var(--space-3); max-width: 44ch; }
 .login-promesas li { display: flex; align-items: flex-start; gap: var(--space-3); font-size: 0.9375rem; line-height: 1.45; color: rgba(255, 255, 255, 0.94); }
-.login-promesas svg { flex-shrink: 0; margin-top: 2px; color: #BAE6FD; }
+.login-promesas svg { flex-shrink: 0; margin-top: 2px; color: #2DB0FF; }
 .login-promesas strong { color: #FFFFFF; }
 
 /* ── Formulario ── */
@@ -197,12 +195,10 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
     padding: calc(28px + env(safe-area-inset-top)) 20px 28px;
     border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
   }
-  .login-marca { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; row-gap: 10px; align-items: center; }
-  .login-marca-logo { width: 48px; height: 48px; border-radius: var(--radius-lg); }
-  .login-marca-logo svg { width: 28px; height: auto; }
+  .login-ciudad { height: 40px; }
   .login-title { font-size: 2rem; }
-  .login-subtitle { grid-column: 1 / -1; font-size: 0.9375rem; max-width: none; }
-  .login-roles { grid-column: 1 / -1; gap: 6px; }
+  .login-subtitle { font-size: 0.9375rem; max-width: none; }
+  .login-roles { gap: 6px; }
   .login-roles li { font-size: 0.75rem; padding: 4px 10px 4px 6px; }
   .login-roles li::before { width: 10px; height: 10px; }
   /* Las promesas se quedan en escritorio: en el celular, primero entrar. */

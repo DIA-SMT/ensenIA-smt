@@ -4,16 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck } from 'lucide-react';
 import './Login.css';
 
-function LogoMark({ size = 40 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * 1.2} viewBox="0 0 40 48" fill="none" aria-hidden="true" focusable="false">
-      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16C21 13 23 10.5 26 9.5C32 7 37 12 37 19C37 30 20 46 20 46Z" fill="currentColor" />
-      <path d="M20 46C20 46 3 30 3 19C3 12 8 7 14 9.5C17 10.5 19 13 20 16Z" fill="#FFFFFF" opacity="0.2" />
-      <circle cx="20" cy="5" r="4.5" fill="#F5B82E" />
-    </svg>
-  );
-}
-
 /**
  * Cuentas de demostración. Solo con VITE_DEMO_LOGIN=true: Vite reemplaza la
  * variable al compilar y, apagada, las contraseñas ni llegan al bundle (en
@@ -69,7 +59,9 @@ export default function Login() {
       <main className="login-layout">
         {/* ── Marca ── */}
         <section className="login-marca" aria-labelledby="login-titulo">
-          <div className="login-marca-logo"><LogoMark size={40} /></div>
+          {/* El logo de la ciudad, tal cual lo usa la Municipalidad (blanco sobre azul) */}
+          <img className="login-ciudad" src="/Logo_SMT_blanco.png" width={507} height={206}
+            alt="Ciudad de San Miguel de Tucumán" />
           <h1 className="login-title" id="login-titulo">SMT Estud<span>IA</span></h1>
           <p className="login-subtitle">La plataforma de las escuelas municipales de San Miguel de Tucumán.</p>
 
