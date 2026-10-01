@@ -4,10 +4,12 @@
 --
 -- ANTES de correrlo: crear la cuenta de la docente desde la app
 --   Administración → Alfonsina Storni → Personal → Sumar persona → Docente
---   Nombre: Docente · Apellido: Lengua · Email: lengua.storni@ensenia.edu.ar
+--   (cualquier nombre y email).
 --
 -- Qué hace (si algo falla, no cambia nada):
---  1. Busca esa cuenta y verifica que sea docente de la Storni.
+--  1. Busca la docente de Lengua: la que ya tenga asignada Lengua de 2° A
+--     o, si no, la única docente de la Storni que no es Jiménez ni González.
+--     Si hay más de una posible, frena y dice cuáles.
 --  2. Le asigna Lengua de 2° A.
 --  3. Carga las 3 unidades del programa, en borrador, con la secuencia
 --     "Persuasión y Palabra Poética" (6 clases) dentro de la Unidad 3.
@@ -16,7 +18,7 @@
 
 DO $lengua$
 DECLARE
-  v_as uuid; v_curso uuid; v_len uuid; v_doc uuid; v_u uuid; n int;
+  v_as uuid; v_curso uuid; v_len uuid; v_doc uuid; v_u uuid; n int; v_emails text;
 BEGIN
   SELECT count(*) INTO n FROM schools WHERE name = 'Escuela Municipal Alfonsina Storni Secundaria';
   IF n <> 1 THEN RAISE EXCEPTION 'Tiene que haber exactamente una escuela "%", hay %', 'Escuela Municipal Alfonsina Storni Secundaria', n; END IF;
@@ -26,12 +28,23 @@ BEGIN
   SELECT id INTO v_len FROM subjects WHERE school_id = v_as AND name = 'Lengua';
   IF v_len IS NULL THEN RAISE EXCEPTION 'No está la materia Lengua de la Storni'; END IF;
 
-  SELECT id INTO v_doc FROM profiles WHERE email = 'lengua.storni@ensenia.edu.ar';
-  IF v_doc IS NULL THEN
-    RAISE EXCEPTION 'No encuentro la cuenta %: creala primero desde la app (Personal → Sumar persona → Docente)', 'lengua.storni@ensenia.edu.ar';
+  -- ¿Ya tiene Lengua de 2° A asignada desde la app?
+  SELECT count(*), min(teacher_id::text)::uuid INTO n, v_doc
+  FROM teacher_assignments WHERE subject_id = v_len AND course_id = v_curso;
+  IF n > 1 THEN
+    RAISE EXCEPTION 'Lengua de 2° A tiene % docentes asignadas: dejá una sola desde Personal', n;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM school_memberships WHERE user_id = v_doc AND school_id = v_as AND role = 'docente') THEN
-    RAISE EXCEPTION 'La cuenta % no es docente de la Storni', 'lengua.storni@ensenia.edu.ar';
+  IF n = 0 THEN
+    -- Si no, la única docente de la Storni que no es Jiménez ni González
+    SELECT count(*), min(m.user_id::text)::uuid, string_agg(p.email, ', ') INTO n, v_doc, v_emails
+    FROM school_memberships m JOIN profiles p ON p.id = m.user_id
+    WHERE m.school_id = v_as AND m.role = 'docente'
+      AND p.email NOT IN ('mariaeugenia.jimenez@ensenia.edu.ar', 'giuliana.gonzalez@ensenia.edu.ar');
+    IF n = 0 THEN
+      RAISE EXCEPTION 'No hay docente de Lengua: creala primero desde la app (Personal → Sumar persona → Docente)';
+    ELSIF n > 1 THEN
+      RAISE EXCEPTION 'Hay % docentes que podrían ser la de Lengua (%): asignale Lengua de 2° A desde Personal a la que corresponda y volvé a correrlo', n, v_emails;
+    END IF;
   END IF;
 
   INSERT INTO teacher_assignments (teacher_id, subject_id, course_id) VALUES (v_doc, v_len, v_curso)

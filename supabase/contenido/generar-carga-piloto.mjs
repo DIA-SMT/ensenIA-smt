@@ -263,8 +263,9 @@ console.log('ok', salida, `(${unidadesFQ.length + unidadesMat.length} unidades, 
 
 // ═══ Paso 2: Lengua ═══
 // Ningún documento nombra a la docente de Lengua. La cuenta se crea desde la
-// app (Administración → Personal → docente, con el email de abajo) y este
-// SQL le asigna Lengua de 2° A y le carga el material. Cuando se sepa quién
+// app (Administración → Personal → docente) y este SQL la encuentra sola:
+// la que ya tenga asignada Lengua de 2° A o, si no, la única docente de la
+// Storni que no es Jiménez ni González. Le asigna Lengua y le carga el material. Cuando se sepa quién
 // es, se le corrigen nombre y DNI a esa misma cuenta (o se pasan las
 // unidades a la cuenta real con un UPDATE de teacher_id).
 //
@@ -272,7 +273,6 @@ console.log('ok', salida, `(${unidadesFQ.length + unidadesMat.length} unidades, 
 // secuencia "Persuasión y Palabra Poética" desarrolla los dos primeros
 // contenidos de la Unidad 3 (poesía; publicidad y propaganda), así que sus
 // 6 clases van ahí en su orden, en el lugar de esos dos contenidos.
-const LENGUA_EMAIL = 'lengua.storni@ensenia.edu.ar';
 const len = materia('Lengua');
 const lenU = n => {
   const u = len.unidades.find(x => x.numero === String(n));
@@ -299,10 +299,12 @@ const sqlLengua = `-- ═══════════════════�
 --
 -- ANTES de correrlo: crear la cuenta de la docente desde la app
 --   Administración → Alfonsina Storni → Personal → Sumar persona → Docente
---   Nombre: Docente · Apellido: Lengua · Email: ${LENGUA_EMAIL}
+--   (cualquier nombre y email).
 --
 -- Qué hace (si algo falla, no cambia nada):
---  1. Busca esa cuenta y verifica que sea docente de la Storni.
+--  1. Busca la docente de Lengua: la que ya tenga asignada Lengua de 2° A
+--     o, si no, la única docente de la Storni que no es Jiménez ni González.
+--     Si hay más de una posible, frena y dice cuáles.
 --  2. Le asigna Lengua de 2° A.
 --  3. Carga las 3 unidades del programa, en borrador, con la secuencia
 --     "Persuasión y Palabra Poética" (6 clases) dentro de la Unidad 3.
@@ -311,7 +313,7 @@ const sqlLengua = `-- ═══════════════════�
 
 DO $lengua$
 DECLARE
-  v_as uuid; v_curso uuid; v_len uuid; v_doc uuid; v_u uuid; n int;
+  v_as uuid; v_curso uuid; v_len uuid; v_doc uuid; v_u uuid; n int; v_emails text;
 BEGIN
   SELECT count(*) INTO n FROM schools WHERE name = ${lit(STORNI)};
   IF n <> 1 THEN RAISE EXCEPTION 'Tiene que haber exactamente una escuela "%", hay %', ${lit(STORNI)}, n; END IF;
@@ -321,12 +323,23 @@ BEGIN
   SELECT id INTO v_len FROM subjects WHERE school_id = v_as AND name = 'Lengua';
   IF v_len IS NULL THEN RAISE EXCEPTION 'No está la materia Lengua de la Storni'; END IF;
 
-  SELECT id INTO v_doc FROM profiles WHERE email = ${lit(LENGUA_EMAIL)};
-  IF v_doc IS NULL THEN
-    RAISE EXCEPTION 'No encuentro la cuenta %: creala primero desde la app (Personal → Sumar persona → Docente)', ${lit(LENGUA_EMAIL)};
+  -- ¿Ya tiene Lengua de 2° A asignada desde la app?
+  SELECT count(*), min(teacher_id::text)::uuid INTO n, v_doc
+  FROM teacher_assignments WHERE subject_id = v_len AND course_id = v_curso;
+  IF n > 1 THEN
+    RAISE EXCEPTION 'Lengua de 2° A tiene % docentes asignadas: dejá una sola desde Personal', n;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM school_memberships WHERE user_id = v_doc AND school_id = v_as AND role = 'docente') THEN
-    RAISE EXCEPTION 'La cuenta % no es docente de la Storni', ${lit(LENGUA_EMAIL)};
+  IF n = 0 THEN
+    -- Si no, la única docente de la Storni que no es Jiménez ni González
+    SELECT count(*), min(m.user_id::text)::uuid, string_agg(p.email, ', ') INTO n, v_doc, v_emails
+    FROM school_memberships m JOIN profiles p ON p.id = m.user_id
+    WHERE m.school_id = v_as AND m.role = 'docente'
+      AND p.email NOT IN (${lit(JIMENEZ)}, ${lit(GONZALEZ)});
+    IF n = 0 THEN
+      RAISE EXCEPTION 'No hay docente de Lengua: creala primero desde la app (Personal → Sumar persona → Docente)';
+    ELSIF n > 1 THEN
+      RAISE EXCEPTION 'Hay % docentes que podrían ser la de Lengua (%): asignale Lengua de 2° A desde Personal a la que corresponda y volvé a correrlo', n, v_emails;
+    END IF;
   END IF;
 
   INSERT INTO teacher_assignments (teacher_id, subject_id, course_id) VALUES (v_doc, v_len, v_curso)
