@@ -291,7 +291,7 @@ class Formulario:
         self.c.save()
 
 
-def relevamiento(archivo, escuela, curso, materias, docentes):
+def relevamiento(archivo, escuela, curso, materias, docentes, material=None):
     f = Formulario(archivo, escuela)
     f.portada(curso, materias)
 
@@ -401,8 +401,21 @@ def relevamiento(archivo, escuela, curso, materias, docentes):
     f.opciones('¿Hace falta una autorización de las familias para que los estudiantes usen la plataforma?', ['Sí', 'No', 'No sabemos'])
     f.pregunta('Si hace falta, ¿hay un modelo o lo armamos? ¿Quién lo gestiona?', lineas=2)
 
-    # 8 ─ Arranque
-    f.seccion(8, 'Arranque')
+    # 8 ─ Material (solo si ya revisamos lo que mandó la escuela)
+    n = 8
+    if material:
+        f.seccion(n, 'Sobre el material que nos enviaron',
+                  'Revisamos los programas y el material del Drive. Estas preguntas son para terminar de cargarlo bien: '
+                  'varias son para cada docente. Si es más fácil, las charlamos en persona.')
+        for tema, preguntas in material:
+            f.subtitulo(tema)
+            for q in preguntas:
+                f.pregunta(q, lineas=2)
+        n += 1
+
+    # Arranque: va entero en una página (si no, la firma queda sola en la última)
+    f.lugar(280)
+    f.seccion(n, 'Arranque')
     f.pregunta('Días y horarios posibles para una capacitación con docentes y directivos (presencial o virtual)', lineas=2)
     f.fila([('Fecha en que les gustaría empezar con los estudiantes', 0.6, ''), ('¿Capacitación presencial o virtual?', 0.4, '')])
     f.pregunta('¿Qué les gustaría que la plataforma resuelva, o qué les preocupa?', lineas=4)
@@ -413,6 +426,43 @@ def relevamiento(archivo, escuela, curso, materias, docentes):
 
 if __name__ == '__main__':
     salida = os.path.join(AQUI)
+    # Preguntas que salen de revisar el material de la Storni (supabase/contenido/storni-2a.json)
+    material_storni = [
+        ('Docentes', [
+            'Lengua: ¿quién dicta Lengua en 2° A? No figura en ningún documento.',
+            'Matemática: en el material hay dos programas de 2° año, uno de Giuliana González (2° "A") y otro de Fátima Natalia Villagra (sin división). ¿Cuál vale para 2° A? ¿El de Villagra es de otra división?',
+            'Físico-Química: la planificación es de 2° A y B y nombra a María Eugenia Jiménez y a María Gabriela Nieto. ¿Las dos dan clase en 2° A, o Nieto es la docente de 2° B?',
+        ]),
+        ('Calendario y trimestres', [
+            '¿Cuáles son las fechas oficiales de los tres trimestres 2026? Físico-Química usa 05/03–30/05, 02/06–05/09 y 08/09–05/12; Matemática pone el 3° del 07/09 al 04/12.',
+            'Matemática: ¿el Eje 1 (números enteros) va en el 1.er trimestre y el Eje 2 (ángulos) en el 2.º? ¿En qué trimestre se dio "Sistema sexagesimal"? "Ecuaciones de primer grado" aparece en los tres ejes: ¿se trabaja todo el año?',
+            'Lengua: ¿en qué trimestre va cada unidad? La secuencia "Persuasión y Palabra Poética", ¿se está dando ahora, en el 3.er trimestre?',
+            'Físico-Química: en el 2.º trimestre, ¿en qué orden se dieron "Soluciones" y "Cambios físicos y químicos"? Los objetivos de fuerzas que aparecen en el 3.er trimestre, ¿son un error de copia del 1.º?',
+            'El 1.º y el 2.º trimestre ya terminaron. ¿Quieren que sus unidades se vean igual en el temario de estudiantes y familias, como historial, o solo las del 3.º?',
+        ]),
+        ('Documentos que faltan o llegaron cortados', [
+            'Matemática: falta la primera hoja de la planificación de González (títulos de columnas, 1.er trimestre / Eje 1) y la columna de evaluación sale cortada en el escaneo. ¿Nos la pueden mandar?',
+            'Lengua: de la planificación anual solo llegó el programa de contenidos (sin encabezado) y el final de la tabla de la Unidad 3. ¿Nos mandan la planificación completa? ¿Las unidades tienen nombre?',
+            '¿Hay clases, apuntes o trabajos prácticos para lo que todavía no tiene material? Matemática: Eje 1 y Eje 3 (en curso). Físico-Química: "Magnitudes y fuerzas", "Soluciones" y partículas subatómicas. Lengua: Unidades 1 y 2, y en la Unidad 3 textos instructivos, complemento régimen y ortografía.',
+        ]),
+        ('Criterios de evaluación', [
+            '¿Qué criterios de evaluación quieren que vean estudiantes y familias en cada trimestre y materia? Matemática y Físico-Química traen instrumentos (evaluaciones, trabajos prácticos, carpeta, participación); Lengua no trae. Si tienen criterios de logro o ponderaciones, nos sirven.',
+        ]),
+        ('Revisión de contenido (para cada docente)', [
+            'Matemática (Sistema sexagesimal): ¿confirman las correcciones 10′ → 10″ en la suma y 06′ → 06″ en la división, y que "4. γ" es 4 por γ? ¿Tienen las respuestas de la actividad?',
+            'Físico-Química (apunte): ¿"gases nobles o formales" quiso decir "inertes"? ¿"composición física" quiso decir "química"? ¿A es el número másico (entero) o la masa atómica (55,847)? ¿Qué dato va en la fila vacía del cuadro? El ítem g) repite "Congelar agua": ¿iba otra situación? ¿Cómo se obtiene la columna de electrones?',
+            'Físico-Química (apunte): ¿pueden revisar la historia de la tabla periódica (Moseley en 1910, Werner después de Moseley, "doscientos años atrás") y lo de los 8 electrones de valencia? La plataforma arma resúmenes y preguntas con IA a partir del apunte, y repetiría un error.',
+            'Lengua (Persuasión y Palabra Poética): ¿la escribió la docente y la aprueba como está, con las actividades con IA? En la Clase 4 se piden comparaciones en "Gato negro": ¿cuáles esperan que encuentren, o la consigna era sobre "Poema X"? En la Clase 3 se piden imágenes sensoriales antes de verlas en la Clase 4: ¿está bien así?',
+            'Lengua: las consignas dicen que el estudiante usa "la IA en la plataforma" y un "mural digital". ¿Con qué herramientas lo piensan hacer?',
+        ]),
+        ('Biblioteca y derechos de autor', [
+            '¿Podemos compartir con los estudiantes los apuntes propios de las docentes (Sistema sexagesimal y el de Físico-Química), para que la plataforma arme resumen, placas de estudio, preguntas de práctica y podcast?',
+            'Lengua: ¿de qué libro son las páginas escaneadas (título, editorial, año)? ¿Los estudiantes lo tienen? En vez de subir el escaneo, ¿les parece que carguemos un resumen con la referencia al libro? Los poemas de autores con derechos vigentes (Neruda, María Cristina Ramos) no se pueden reproducir completos.',
+            'Físico-Química: ¿de dónde salen las figuras (casillero del hierro y esquema de la tabla) y la historia de la tabla periódica del apunte?',
+            'Bibliografía: ¿nos confirman el título y la edición del libro de Juan Pablo Pisano (Logikamente), el número de "Lengua y Literatura" (está corregido a mano), la editorial "Tinta Fresca" (se lee borroso) y el año del libro de Santillana?',
+        ]),
+    ]
+
     piloto = [
         ('Relevamiento piloto - E.M. Gabriela Mistral.pdf', 'Escuela Municipal Gabriela Mistral Secundaria', '3° A',
          {'Matemática': 'Nehemías Francisco Martínez'}),
@@ -421,5 +471,6 @@ if __name__ == '__main__':
     ]
     for archivo, escuela, curso, docentes in piloto:
         ruta = os.path.join(salida, archivo)
-        relevamiento(ruta, escuela, curso, ['Matemática', 'Físico-Química', 'Lengua'], docentes)
+        material = material_storni if 'Storni' in escuela else None
+        relevamiento(ruta, escuela, curso, ['Matemática', 'Físico-Química', 'Lengua'], docentes, material)
         print('ok', ruta)
