@@ -72,10 +72,6 @@ export default function Login() {
           <h1 className="login-title" id="login-titulo">SMT Estud<span>IA</span></h1>
           <p className="login-subtitle">La plataforma de las escuelas municipales de San Miguel de Tucumán.</p>
 
-          <p className="login-demo-note">
-            <span className="login-demo-chip">DEMO</span>
-            Plataforma en demostración · los datos son de prueba
-          </p>
 
           <ul className="login-roles" aria-label="Quiénes la usan">
             <li className="rol-direccion">Dirección</li>

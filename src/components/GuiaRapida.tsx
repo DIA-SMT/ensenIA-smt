@@ -108,15 +108,15 @@ export default function GuiaRapida({ onClose }: { onClose: () => void }) {
           </div>
 
           <button className="guia-about-toggle" onClick={() => setShowAbout(v => !v)}>
-            <Info size={14} /> Sobre esta demo {showAbout ? '▴' : '▾'}
+            <Info size={14} /> Sobre SMT EstudIA {showAbout ? '▴' : '▾'}
           </button>
 
           {showAbout && (
             <div className="guia-about">
               <p>
-                <strong>SMT EstudIA está en etapa de demostración</strong> para las escuelas municipales
+                <strong>SMT EstudIA está en prueba piloto</strong> en las escuelas municipales
                 <strong> Gabriela Mistral</strong> y <strong>Alfonsina Storni</strong> (San Miguel de Tucumán).
-                Las personas y los datos que ves son de prueba.
+                Si algo no funciona como esperás, avisale a la escuela: nos ayuda a mejorarla.
               </p>
               <ul>
                 <li><strong>Pedagogía primero:</strong> la tecnología acompaña la clase, no la reemplaza. La IA guía y pregunta; nunca hace la tarea por el estudiante.</li>

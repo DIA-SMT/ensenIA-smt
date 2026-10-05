@@ -248,9 +248,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, []);
 
-  // global: "Cerrar sesión" cierra la cuenta en todos los dispositivos.
-  // local: solo este (el vencimiento de 12 h de esta compu).
-  const cerrarSesion = useCallback(async (alcance: 'global' | 'local') => {
+  // Cierra la sesión de ESTE dispositivo: el docente que sale de la compu
+  // de la escuela sigue con la sesión abierta en su celular.
+  const logout = useCallback(async () => {
     clearProfileCache();
     setUser(null);
     setSchool(null);
@@ -259,14 +259,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // quedar disponibles para el próximo usuario.
     soltarDatosLocales();
     try {
-      await supabase.auth.signOut({ scope: alcance });
+      await supabase.auth.signOut({ scope: 'local' });
     } catch (err) {
       console.error('signOut falló (¿sin conexión?):', err);
     }
     navigate('/login');
   }, [navigate]);
-
-  const logout = useCallback(() => cerrarSesion('global'), [cerrarSesion]);
 
   // Vencimiento de la sesión del personal (ver DURACION_SESION_PERSONAL_MS).
   // Se revisa al cargar, con un timer y al volver a la pestaña: con la
@@ -287,7 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (restante <= 0) {
         terminado = true;
         try { sessionStorage.setItem(SESION_VENCIDA_KEY, '1'); } catch { /* sin storage: sale sin aviso */ }
-        void cerrarSesion('local');
+        void logout();
         return;
       }
       timer = setTimeout(revisar, restante + 1000);
@@ -301,7 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer);
       document.removeEventListener('visibilitychange', alVolver);
     };
-  }, [user?.id, rolActual, cerrarSesion]);
+  }, [user?.id, rolActual, logout]);
 
   const refreshProfile = useCallback(async () => {
     const id = currentUserIdRef.current;
