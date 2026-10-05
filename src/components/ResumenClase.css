@@ -1,0 +1,47 @@
+/* Resumen de la clase en vivo */
+
+.rc { display: flex; flex-direction: column; gap: var(--space-4); }
+.rc-volver { align-self: flex-start; }
+
+.rc-head { display: flex; flex-direction: column; gap: 4px; }
+.rc-etiqueta { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--acento); }
+.rc-head h2 { font-size: 1.375rem; line-height: 1.25; }
+.rc-head p { display: flex; align-items: center; gap: 6px; margin: 0; }
+.rc-head p:first-of-type::first-letter { text-transform: uppercase; }
+.rc-material { color: var(--text-secondary); }
+
+.rc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
+.rc-tile { display: flex; flex-direction: column; gap: 2px; padding: var(--space-4); }
+.rc-tile-label { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.rc-tile strong { font-size: 1.625rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.rc-tile-sub { font-size: 0.8125rem; color: var(--text-subtle); }
+
+.rc-bloque { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+.rc-bloque h3 { display: flex; align-items: center; gap: var(--space-2); font-size: 1rem; }
+.rc-bloque h3 svg { color: var(--acento); }
+.rc-bloque-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.rc-acciones { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.rc-informe { line-height: 1.6; }
+
+.rc-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rc-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--bg-elevated); font-size: 0.875rem;
+}
+.rc-chip.alerta { background: var(--warning-light); color: var(--warning-ink); }
+
+.rc-actividades { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: var(--space-3); }
+.rc-actividades li { display: flex; flex-direction: column; gap: 2px; }
+.rc-act-tipo { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
+.rc-act-pregunta { font-weight: 600; overflow-wrap: anywhere; }
+.rc-act-datos { font-size: 0.875rem; color: var(--text-secondary); }
+
+.rc-nota { font-size: 0.875rem; margin: 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--warning-light); color: var(--warning-ink); }
+
+.rc-tabla-wrap { overflow-x: auto; }
+.rc-tabla { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.rc-tabla th { text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.rc-tabla td { padding: 8px; border-bottom: 1px solid var(--border-color); }
+.rc-tabla tr:last-child td { border-bottom: 0; }
+.rc-tabla tr.rc-sin td { color: var(--text-subtle); }

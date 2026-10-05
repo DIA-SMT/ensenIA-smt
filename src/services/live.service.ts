@@ -261,6 +261,51 @@ export function materialParaVisor(m: MaterialDeClase): LibraryMaterial {
   };
 }
 
+// ── Resumen de la clase (042) ──
+
+export interface ResumenClase {
+  sesion: { id: string; titulo: string; inicio: string; fin: string | null; minutos: number; ai_summary: string | null };
+  material: { tipo: 'tema' | 'material'; titulo: string; unidad?: string } | null;
+  totales: { curso: number; conectados: number; participaron: number; actividades: number; invitados: number; medallas: number };
+  actividades: {
+    orden: number; tipo: LiveActivityKind; pregunta: string | null; dirigida: boolean; grupal: boolean;
+    respondieron: number; aciertos: number | null; correcta: string | null;
+  }[];
+  alumnos: {
+    id: string; nombre: string; conectado: boolean; respuestas: number; preguntas: number;
+    aciertos: number; reacciones: number; medallas: number;
+  }[];
+  reacciones: { emoji: string; n: number }[];
+  animo: { estado: string; n: number }[];
+  medallas: { medalla: string; n: number }[];
+}
+
+export async function getLiveSessionSummary(sessionId: string): Promise<ResumenClase | null> {
+  const { data, error } = await supabase.rpc('live_session_summary', { p_session: sessionId });
+  if (error) {
+    if (error.code === 'PGRST202') throw new Error('Falta correr la migración 042_resumen_clase_en_vivo.sql en Supabase.');
+    throw error;
+  }
+  return (data as unknown as ResumenClase | null) ?? null;
+}
+
+export async function saveLiveSessionReport(sessionId: string, informe: string): Promise<void> {
+  const { error } = await supabase.from('live_sessions').update({ ai_summary: informe }).eq('id', sessionId);
+  if (error) throw error;
+}
+
+/** Las últimas clases que terminó el docente (para volver a ver su resumen). */
+export async function getMyPastSessions(teacherId: string, limit = 8): Promise<LiveSession[]> {
+  const { data } = await supabase
+    .from('live_sessions')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .eq('status', 'ended')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []).map(mapSession);
+}
+
 // ── Sesión + actividad actual (lo pollean docente y estudiante) ──
 
 /**

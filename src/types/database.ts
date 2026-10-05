@@ -2845,6 +2845,7 @@ export type Database = {
           material_id: string | null
           class_id: string | null
           material_visible: boolean
+          ai_summary: string | null
           reactions_enabled: boolean
           school_id: string
           status: string
@@ -2862,6 +2863,7 @@ export type Database = {
           material_id?: string | null
           class_id?: string | null
           material_visible?: boolean
+          ai_summary?: string | null
           reactions_enabled?: boolean
           school_id: string
           status?: string
@@ -2879,6 +2881,7 @@ export type Database = {
           material_id?: string | null
           class_id?: string | null
           material_visible?: boolean
+          ai_summary?: string | null
           reactions_enabled?: boolean
           school_id?: string
           status?: string
@@ -3189,6 +3192,10 @@ export type Database = {
         Returns: Json
       }
       live_class_material: {
+        Args: { p_session: string }
+        Returns: Json
+      }
+      live_session_summary: {
         Args: { p_session: string }
         Returns: Json
       }

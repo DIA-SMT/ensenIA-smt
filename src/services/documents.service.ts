@@ -220,6 +220,20 @@ export async function summarizeDocument(input: { text?: string; pdfBase64?: stri
   return summary;
 }
 
+/** Informe de una clase en vivo, escrito por la IA a partir de sus números. */
+export async function classReport(datos: string): Promise<string> {
+  try {
+    const { summary } = await callProcessDocument<{ summary: string }>({ mode: 'class_report', text: datos });
+    return summary;
+  } catch (err) {
+    // La función del servidor todavía no tiene este modo (falta desplegarla)
+    if (err instanceof Error && /\(400\)/.test(err.message)) {
+      throw new Error('Para el informe con IA hay que desplegar la función process-document actualizada.');
+    }
+    throw err;
+  }
+}
+
 export async function importProgram(input: {
   pdfBase64?: string;
   text?: string;

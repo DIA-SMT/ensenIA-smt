@@ -24,7 +24,7 @@ import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
     getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds, setLiveMaterial,
-    getCorrectResponders,
+    getCorrectResponders, getMyPastSessions,
     LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
@@ -33,6 +33,7 @@ import { getMaterialsByTeacher } from '../services/library.service';
 import { getPlanningByTeacher } from '../services/planning.service';
 import MaterialEnVivo from '../components/MaterialEnVivo';
 import PremiarEnVivo from '../components/PremiarEnVivo';
+import ResumenClase from '../components/ResumenClase';
 import ElegirMaterial, { type EleccionMaterial } from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
@@ -85,6 +86,9 @@ export default function ClaseEnVivo() {
     // Medallas: el diálogo (con quiénes vienen marcados) y el aviso de que salió
     const [premiar, setPremiar] = useState<{ titulo: string; preseleccion: string[] } | null>(null);
     const [avisoPremio, setAvisoPremio] = useState('');
+    // Resumen: el de la clase que se acaba de terminar, o una anterior
+    const [resumenId, setResumenId] = useState<string | null>(null);
+    const [pasadas, setPasadas] = useState<LiveSession[]>([]);
 
     const pollRef = useRef<number | null>(null);
 
@@ -147,6 +151,13 @@ export default function ClaseEnVivo() {
         // Corre una vez por pedido: session y assignments se leen en ese momento
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, session === undefined, pedidoMaterial, pedidoTema]);
+
+    // Sin clase andando: las últimas que terminó, para volver a ver su resumen
+    const sinClase = session === null || session?.status === 'ended';
+    useEffect(() => {
+        if (!user || !sinClase || resumenId) return;
+        getMyPastSessions(user.id).then(setPasadas).catch(console.error);
+    }, [user, sinClase, resumenId]);
 
     // Con la clase viva, carga el curso (para nombres) y sus grupos
     useEffect(() => {
@@ -231,9 +242,10 @@ export default function ClaseEnVivo() {
 
     const handleEnd = async () => {
         if (!session) return;
-        if (!window.confirm('¿Terminar la clase en vivo? Los estudiantes vuelven a su pantalla normal.')) return;
+        if (!window.confirm('¿Terminar la clase en vivo? Los estudiantes vuelven a su pantalla normal y vas a ver el resumen de la clase.')) return;
         try {
             await endLiveSession(session.id);
+            setResumenId(session.id);
             setSession(null);
             setActivity(null);
             setResults(null);
@@ -349,6 +361,11 @@ export default function ClaseEnVivo() {
         return <div className="cv-container"><p className="text-secondary">Cargando...</p></div>;
     }
 
+    // ── Render: resumen de una clase terminada ──
+    if (resumenId) {
+        return <ResumenClase sessionId={resumenId} onVolver={() => setResumenId(null)} />;
+    }
+
     // ── Render: sin clase en vivo → iniciar ──
     if (!session || session.status !== 'live') {
         return (
@@ -390,6 +407,24 @@ export default function ClaseEnVivo() {
                         </p>
                     </div>
                 </div>
+                {pasadas.length > 0 && (
+                    <section className="card cv-pasadas" aria-labelledby="cv-pasadas-titulo">
+                        <h3 id="cv-pasadas-titulo">Clases anteriores</h3>
+                        <ul>
+                            {pasadas.map(p => (
+                                <li key={p.id}>
+                                    <span className="cv-pasada-texto">
+                                        <strong>{p.title}</strong>
+                                        <span className="text-xs text-subtle">
+                                            {new Date(p.createdAt).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </span>
+                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setResumenId(p.id)}>Ver resumen</button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
                 {assignments[assignmentIdx] && (
                     <ElegirMaterial
                         abierto={eligiendoInicial}

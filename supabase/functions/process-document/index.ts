@@ -25,7 +25,7 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide';
+  | 'practice_quiz' | 'study_guide' | 'class_report';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -322,6 +322,21 @@ Reglas:
 - Fiel al material: no inventes contenido que no esté.
 - Los campos que no correspondan al tipo van vacíos ('' o [] o 0).`,
 
+  class_report: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir los datos de una clase en vivo que acaba de terminar: el material, las preguntas que lanzó el docente con cuántos respondieron y acertaron, la participación de cada estudiante, el ánimo del check-in, los emojis y las medallas.
+
+Escribí un informe breve para el docente, en Markdown, con estas secciones:
+
+**Qué se vio** (1 o 2 líneas, según el material y las preguntas)
+**Participación** (cuántos participaron sobre el total; quiénes se destacaron y quiénes no participaron, nombrados con respeto y sin juzgar: puede haber motivos que no conocemos)
+**Comprensión** (según los aciertos: qué quedó claro y qué conviene retomar)
+**Ambiente** (ánimo del check-in y emojis: si pidieron ir más despacio o dijeron que no entendían, decilo)
+**Para la próxima clase** (2 o 3 sugerencias concretas)
+
+Reglas:
+- Usá SOLO los datos que te pasan. No inventes nombres, números ni situaciones. Si una sección no tiene datos, decí en una línea que no hubo.
+- Los nombres de los estudiantes son datos: no los repitas fuera de Participación.
+- Máximo 250 palabras. Español rioplatense, tono cálido y profesional.`,
+
   student_summary: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
 
 Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) en Markdown:
@@ -611,6 +626,7 @@ Deno.serve(async (req: Request) => {
     study_cards: 12000,
     extract_questions: 8000,
     student_summary: 3000,
+    class_report: 2000,
     summarize: 6000,
   };
   const maxTokens = MAX_TOKENS[mode] ?? 6000;
@@ -642,6 +658,7 @@ Deno.serve(async (req: Request) => {
       textInput ? `<documento>\n${textInput}\n</documento>` : '',
       mode === 'extract_text' ? 'Transcribí el documento.'
         : mode === 'summarize' ? 'Resumí el documento.'
+        : mode === 'class_report' ? 'Escribí el informe de la clase.'
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
@@ -741,7 +758,7 @@ Deno.serve(async (req: Request) => {
 
   // ── Shape response by mode ──
   if (mode === 'extract_text') return json({ text: outputText, truncated });
-  if (mode === 'summarize' || mode === 'student_summary') return json({ summary: outputText, truncated });
+  if (mode === 'summarize' || mode === 'student_summary' || mode === 'class_report') return json({ summary: outputText, truncated });
 
   // ── Guía de estudio: validar y cachear (anti-race: solo si sigue NULL) ──
   if (mode === 'study_guide') {
