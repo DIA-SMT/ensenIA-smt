@@ -251,7 +251,9 @@ export function materialParaVisor(m: MaterialDeClase): LibraryMaterial {
     tags: [], uploadedAt: '', isSharedWithStudents: false,
   };
   if (m.tipo === 'tema') {
-    return { ...base, description: m.unidad, fileType: 'doc', fileName: '', storagePath: null, extractedText: textoDeMaterial(m) };
+    // Sin el "# título" del principio: el visor ya lo muestra arriba
+    const cuerpo = textoDeMaterial(m).replace(/^# .*\n+/, '');
+    return { ...base, description: m.unidad, fileType: 'doc', fileName: '', storagePath: null, extractedText: cuerpo };
   }
   return {
     ...base, description: m.descripcion ?? '', fileType: m.file_type as FileType, fileName: m.file_name,

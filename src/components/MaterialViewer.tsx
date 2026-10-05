@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, FileText, ExternalLink, Loader2, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -100,7 +101,9 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   // Formato que no se puede mostrar, o falló al mostrarlo
   const sinVistaPrevia = conArchivo && !esLink && !cargando && !seVe;
 
-  return (
+  // En el body: un ancestro con transform (la animación de entrada de las
+  // páginas) lo dejaba atrapado debajo de la barra de arriba y la de abajo.
+  return createPortal(
     <div className={`em-modal-overlay ${proyectar ? 'mv-overlay-proyector' : ''}`} onClick={onClose}>
       <div className={`em-modal mv-modal ${proyectar ? 'mv-proyector' : ''}`} role="dialog" aria-label={material.title} onClick={e => e.stopPropagation()}>
         <div className="em-modal-header">
@@ -198,5 +201,5 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }
