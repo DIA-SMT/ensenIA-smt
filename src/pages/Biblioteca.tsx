@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText,
+  Headphones, ScanText, Eye,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
@@ -16,6 +16,7 @@ import {
 import { parseYouTubeId, youTubeThumbnail } from '../lib/youtube';
 import { transcribeYouTube } from '../services/documents.service';
 import VideoModal from '../components/VideoModal';
+import MaterialViewer from '../components/MaterialViewer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
@@ -110,6 +111,7 @@ export default function Biblioteca() {
   const [videoSaving, setVideoSaving] = useState(false);
   const [videoError, setVideoError] = useState('');
   const [playing, setPlaying] = useState<LibraryMaterial | null>(null);
+  const [viendo, setViendo] = useState<LibraryMaterial | null>(null);
   const [transcribingId, setTranscribingId] = useState<string | null>(null);
 
   // Renombrar
@@ -225,8 +227,9 @@ export default function Biblioteca() {
   const handleDownload = async (mat: LibraryMaterial) => {
     if (!mat.storagePath) return;
     try {
-      const url = await getSignedUrl(mat.storagePath);
-      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = await getSignedUrl(mat.storagePath, mat.fileName || mat.title);
+      a.click();
     } catch (err) {
       console.error(err);
     }
@@ -543,8 +546,8 @@ export default function Biblioteca() {
                       </button>
                     )}
                     {mat.storagePath && (
-                      <button className="mat-action-btn" title="Ver / Descargar" onClick={() => handleDownload(mat)}>
-                        <Download size={14} /> Ver
+                      <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
+                        <Eye size={14} /> Ver
                       </button>
                     )}
                     {sinTexto && (
@@ -628,6 +631,11 @@ export default function Biblioteca() {
           )}
         </div>
       </main>
+
+      {/* ── Modal: ver el material acá adentro ── */}
+      {viendo && (
+        <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} />
+      )}
 
       {/* ── Modal: ver video ── */}
       {playing?.videoUrl && (

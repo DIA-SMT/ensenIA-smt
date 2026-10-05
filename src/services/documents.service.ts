@@ -30,8 +30,10 @@ export async function uploadFile(teacherId: string, file: File): Promise<UploadR
   return { storagePath, fileSizeBytes: file.size };
 }
 
-export async function getSignedUrl(storagePath: string): Promise<string> {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(storagePath, 3600);
+/** Link temporal al archivo. Con `descargarComo`, el navegador lo baja con ese nombre en vez de abrirlo. */
+export async function getSignedUrl(storagePath: string, descargarComo?: string): Promise<string> {
+  const { data, error } = await supabase.storage.from(BUCKET)
+    .createSignedUrl(storagePath, 3600, descargarComo ? { download: descargarComo } : undefined);
   if (error || !data) throw new Error('No se pudo generar el enlace de descarga.');
   return data.signedUrl;
 }
@@ -62,16 +64,33 @@ export async function extractDocxText(file: Blob): Promise<string> {
   return result.value.trim();
 }
 
+/** pdf.js bajo demanda: pesa, y solo hace falta al leer o mostrar un PDF. */
+export async function cargarPdfjs() {
+  const pdfjs = await import('pdfjs-dist');
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  }
+  return pdfjs;
+}
+
+/**
+ * Un Word como HTML para verlo en la plataforma, con títulos, listas,
+ * tablas e imágenes. Se limpia antes de mostrarlo: un .docx puede traer
+ * links con código y lo abren estudiantes.
+ */
+export async function wordAHtml(file: Blob): Promise<string> {
+  const [mammoth, { default: DOMPurify }] = await Promise.all([import('mammoth'), import('dompurify')]);
+  const { value } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  return DOMPurify.sanitize(value);
+}
+
 /**
  * El texto que trae adentro un PDF digital (exportado de Word, de una web…),
  * leído en el navegador con pdf.js: instantáneo y sin gastar IA. Un escaneo
  * no trae texto, o apenas la marca de agua de la app que lo escaneó.
  */
 export async function extractPdfTextLayer(file: Blob): Promise<{ text: string; pages: number }> {
-  const pdfjs = await import('pdfjs-dist');
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
-  }
+  const pdfjs = await cargarPdfjs();
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   try {
     const paginas: string[] = [];

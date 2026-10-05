@@ -53,3 +53,50 @@
 .mv-texto summary:hover { color: var(--text-primary); }
 
 .mv-texto[open] summary { margin-bottom: var(--space-2); }
+
+.mv-acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 480px) {
+  .mv-solo-ancho { display: none; }
+}
+
+/* PDF dibujado con pdf.js: una página debajo de la otra */
+.mv-pdf-paginas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mv-pdf-pagina {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+/* Word convertido a HTML: se lee como un documento */
+.mv-word {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.mv-word h1, .mv-word h2, .mv-word h3 { margin: 1.2em 0 0.5em; line-height: 1.3; }
+.mv-word p { margin: 0 0 0.75em; }
+.mv-word ul, .mv-word ol { margin: 0 0 0.75em; padding-left: 1.5em; }
+.mv-word img { max-width: 100%; height: auto; }
+.mv-word table { border-collapse: collapse; width: 100%; margin: 0 0 0.75em; display: block; overflow-x: auto; }
+.mv-word td, .mv-word th { border: 1px solid #ccc; padding: 4px 8px; vertical-align: top; }
+
+@media (max-width: 480px) {
+  .mv-word { padding: var(--space-4); }
+}
