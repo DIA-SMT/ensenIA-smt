@@ -66,3 +66,33 @@ export async function getConsumoIA(dias: number): Promise<ConsumoIA> {
   }
   return data as unknown as ConsumoIA;
 }
+
+/** Lo gastado en OpenRouter según OpenRouter (función consumo-ia). */
+export interface GastoOpenRouter {
+  usd: { hoy: number | null; semana: number | null; mes: number | null; total: number | null };
+  limite: number | null;
+  restante: number | null;
+  reinicio: string | null;
+  consultado: string;
+}
+
+/** null si la función consumo-ia todavía no está desplegada. */
+export async function getGastoOpenRouter(): Promise<GastoOpenRouter | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('No hay sesión activa.');
+  let resp: Response;
+  try {
+    resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/consumo-ia`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: '{}',
+    });
+  } catch {
+    // Una función que no existe puede responder sin CORS: el navegador lo ve como error de red
+    return null;
+  }
+  if (resp.status === 404) return null;
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json.error || `No se pudo consultar el gasto (${resp.status}).`);
+  return json as GastoOpenRouter;
+}

@@ -10,8 +10,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Activity, AlertCircle, Info } from 'lucide-react';
-import { getConsumoIA, type ConsumoIA as Datos } from '../../services/consumo-ia.service';
+import { Activity, AlertCircle, Info, Wallet } from 'lucide-react';
+import { getConsumoIA, getGastoOpenRouter, type ConsumoIA as Datos, type GastoOpenRouter } from '../../services/consumo-ia.service';
 import './Admin.css';
 import './ConsumoIA.css';
 
@@ -26,9 +26,12 @@ const FUNCION: Record<string, string> = {
   documentos: 'Documentos (lectura, resúmenes, placas)', podcast: 'Podcast',
 };
 
+// Cada cuánto se renueva el tope de la clave en OpenRouter
+const REINICIO: Record<string, string> = { daily: 'por día', weekly: 'por semana', monthly: 'por mes' };
+
 const num = (n: number) => n.toLocaleString('es-AR');
 const usd = (n: number | null | undefined) =>
-  n == null ? '—' : `US$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
+  n == null ? '—' : `US$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: n < 1 ? 3 : 2 })}`;
 const fechaCorta = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 const modeloCorto = (m: string | null) => (m ?? '—').replace(/^[a-z-]+\//, '');
@@ -38,6 +41,22 @@ export default function ConsumoIA() {
   const [datos, setDatos] = useState<Datos | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
+  // undefined: cargando · null: la función consumo-ia no está desplegada
+  const [gasto, setGasto] = useState<GastoOpenRouter | null | undefined>(undefined);
+  const [gastoError, setGastoError] = useState('');
+
+  // El gasto de OpenRouter no depende del período: se pide una vez
+  useEffect(() => {
+    let cancelado = false;
+    getGastoOpenRouter()
+      .then(g => { if (!cancelado) setGasto(g); })
+      .catch(err => {
+        if (cancelado) return;
+        setGasto(null);
+        setGastoError(err instanceof Error ? err.message : 'No se pudo consultar el gasto.');
+      });
+    return () => { cancelado = true; };
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -81,6 +100,36 @@ export default function ConsumoIA() {
 
       {datos && t && (
         <>
+          <section className="card cia-bloque" aria-labelledby="cia-gasto-titulo">
+            <h3 id="cia-gasto-titulo" className="cia-gasto-titulo"><Wallet size={17} aria-hidden="true" /> Gasto en dinero</h3>
+            {gasto === undefined && <p className="text-secondary text-sm">Consultando a OpenRouter…</p>}
+            {gasto === null && (
+              <div className="adm-aviso" role="status">
+                <Info size={15} aria-hidden="true" />
+                <span>{gastoError || 'Para ver lo gastado en dólares hay que desplegar la función consumo-ia en Supabase.'}</span>
+              </div>
+            )}
+            {gasto && (
+              <>
+                <div className="cia-tiles cia-tiles-dinero">
+                  {([['Hoy', gasto.usd.hoy], ['Esta semana', gasto.usd.semana], ['Este mes', gasto.usd.mes], ['Total', gasto.usd.total]] as const).map(([label, v]) => (
+                    <div key={label} className="cia-tile cia-tile-plano">
+                      <span className="cia-tile-label">{label}</span>
+                      <strong className="cia-tile-valor">{usd(v)}</strong>
+                    </div>
+                  ))}
+                </div>
+                <p className="cia-nota">
+                  Según OpenRouter, con la clave de la plataforma. Días, semanas (desde el lunes) y meses en hora UTC.
+                  {gasto.limite != null
+                    ? ` Tope de la clave: ${usd(gasto.limite)}${gasto.reinicio ? ` ${REINICIO[gasto.reinicio] ?? `(${gasto.reinicio})`}` : ''} · disponible: ${usd(gasto.restante)}.`
+                    : ' La clave no tiene tope de gasto.'}
+                  {hayCosto && t.costo_usd != null && ` En el período elegido, las llamadas registradas suman ${usd(t.costo_usd)}.`}
+                </p>
+              </>
+            )}
+          </section>
+
           <section className="cia-tiles" aria-label="Resumen">
             <div className="card cia-tile">
               <span className="cia-tile-label">Usos</span>
@@ -97,19 +146,14 @@ export default function ConsumoIA() {
               <strong className="cia-tile-valor">{num(t.tokens)}</strong>
               <span className="cia-tile-sub">entrada + salida</span>
             </div>
-            <div className="card cia-tile">
-              <span className="cia-tile-label">Costo</span>
-              <strong className="cia-tile-valor">{hayCosto ? usd(t.costo_usd ?? 0) : '—'}</strong>
-              <span className="cia-tile-sub">{hayCosto ? `hoy ${usd(t.costo_hoy_usd ?? 0)}` : 'todavía sin registro'}</span>
-            </div>
           </section>
 
           {!hayCosto && (
             <div className="adm-aviso" role="status">
               <Info size={15} aria-hidden="true" />
               <span>
-                El costo en dólares y el detalle por función se registran desde que se despliegan las
-                funciones de IA actualizadas. Hasta entonces se ven los usos y los tokens.
+                El detalle por función, por modelo y por persona en dólares se registra desde que se
+                despliegan las funciones de IA actualizadas. Hasta entonces se ven los usos y los tokens.
               </span>
             </div>
           )}
