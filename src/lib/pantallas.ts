@@ -78,6 +78,7 @@ export const cargadores = {
   // Gestión de escuelas: superadmin (todas) y dirección (la suya)
   '/admin':               () => import('../pages/admin/AdminEscuelas'),
   '/admin/escuelas/:id':   () => import('../pages/admin/GestionEscuela'),
+  '/admin/consumo-ia':     () => import('../pages/admin/ConsumoIA'),
   '/mi-escuela':          () => import('../pages/admin/GestionEscuela'),
 } satisfies Record<string, Cargador>;
 

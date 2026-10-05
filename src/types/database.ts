@@ -3175,6 +3175,10 @@ export type Database = {
         Args: { p_school: string }
         Returns: undefined
       }
+      ia_consumption: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       ensure_academic_terms: {
         Args: { p_school_id: string; p_year: number }
         Returns: Database["public"]["Tables"]["academic_terms"]["Row"][]

@@ -118,6 +118,7 @@ function App() {
                     la base (migración de membresías); acá solo se enruta. */}
                 {ruta('/admin', ['superadmin'])}
                 {ruta('/admin/escuelas/:id', ['superadmin'])}
+                {ruta('/admin/consumo-ia', ['superadmin'])}
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

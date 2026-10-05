@@ -72,6 +72,7 @@ const DIRECTOR: ItemNav[] = [
 // El superadmin administra escuelas y cuentas: no usa la app como aula.
 const SUPERADMIN: ItemNav[] = [
   { ruta: '/admin', etiqueta: 'Escuelas', icono: Building2, grupo: 'Administración', enBarra: true, claves: 'escuelas directores usuarios cuentas alta' },
+  { ruta: '/admin/consumo-ia', etiqueta: 'Consumo de IA', icono: Activity, grupo: 'Administración', enBarra: true, claves: 'gasto costo tokens uso inteligencia artificial dólares' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', enBarra: true, claves: 'configuración accesibilidad letra contraste datos' },
 ];
 
