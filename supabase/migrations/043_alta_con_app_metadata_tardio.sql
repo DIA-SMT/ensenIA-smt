@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 040 — Alta de usuarios: el app_metadata llega después del INSERT
+-- 043 — Alta de usuarios: el app_metadata llega después del INSERT
 --
 -- auth.admin.createUser({ app_metadata }) inserta el usuario en
 -- auth.users solo con { provider, providers } y escribe el resto del
