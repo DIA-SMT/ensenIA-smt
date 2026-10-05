@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User, School } from '../types';
+import type { User, School, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
 import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
 import { toLoginEmail } from '../lib/dni';
@@ -25,6 +25,32 @@ import { setDuenioCola } from '../services/offline-queue.service';
  */
 
 const PROFILE_CACHE_KEY = 'ensenia_profile_cache_v1';
+
+/**
+ * El personal de la escuela usa computadoras compartidas: su sesión se
+ * cierra sola a las 12 h de haber entrado (alcanza para la jornada y no
+ * queda abierta para el que se sienta después). Estudiantes y familias
+ * entran desde su celular y no vencen.
+ */
+const DURACION_SESION_PERSONAL_MS = 12 * 60 * 60 * 1000;
+const ROLES_CON_VENCIMIENTO: UserRole[] = ['docente', 'director', 'superadmin'];
+/** La pantalla de login lo lee para explicar por qué hay que volver a entrar. */
+export const SESION_VENCIDA_KEY = 'ensenia_sesion_vencida';
+
+/**
+ * Cuándo se entró con usuario y clave en ESTA sesión. Viaja en el token
+ * (claim amr) y no cambia al renovarse cada hora; si falta, el último
+ * ingreso de la cuenta.
+ */
+function inicioDeSesion(accessToken: string, ultimoIngreso?: string): number | null {
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const marcas = (payload.amr ?? []).map((a: { timestamp?: number }) => a.timestamp).filter(Boolean) as number[];
+    if (marcas.length) return Math.min(...marcas) * 1000;
+  } catch { /* token raro: se usa el último ingreso */ }
+  const t = ultimoIngreso ? Date.parse(ultimoIngreso) : NaN;
+  return Number.isNaN(t) ? null : t;
+}
 
 interface ProfileCache {
   user: User;
@@ -222,7 +248,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, []);
 
-  const logout = useCallback(async () => {
+  // global: "Cerrar sesión" cierra la cuenta en todos los dispositivos.
+  // local: solo este (el vencimiento de 12 h de esta compu).
+  const cerrarSesion = useCallback(async (alcance: 'global' | 'local') => {
     clearProfileCache();
     setUser(null);
     setSchool(null);
@@ -231,12 +259,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // quedar disponibles para el próximo usuario.
     soltarDatosLocales();
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: alcance });
     } catch (err) {
       console.error('signOut falló (¿sin conexión?):', err);
     }
     navigate('/login');
   }, [navigate]);
+
+  const logout = useCallback(() => cerrarSesion('global'), [cerrarSesion]);
+
+  // Vencimiento de la sesión del personal (ver DURACION_SESION_PERSONAL_MS).
+  // Se revisa al cargar, con un timer y al volver a la pestaña: con la
+  // compu suspendida los timers se frenan.
+  const rolActual = user?.role;
+  useEffect(() => {
+    if (!rolActual || !ROLES_CON_VENCIMIENTO.includes(rolActual)) return;
+    let terminado = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const revisar = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (terminado || !session) return;
+      const inicio = inicioDeSesion(session.access_token, session.user.last_sign_in_at);
+      if (inicio === null) return;
+      const restante = inicio + DURACION_SESION_PERSONAL_MS - Date.now();
+      clearTimeout(timer);
+      if (restante <= 0) {
+        terminado = true;
+        try { sessionStorage.setItem(SESION_VENCIDA_KEY, '1'); } catch { /* sin storage: sale sin aviso */ }
+        void cerrarSesion('local');
+        return;
+      }
+      timer = setTimeout(revisar, restante + 1000);
+    };
+
+    void revisar();
+    const alVolver = () => { if (document.visibilityState === 'visible') void revisar(); };
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      terminado = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [user?.id, rolActual, cerrarSesion]);
 
   const refreshProfile = useCallback(async () => {
     const id = currentUserIdRef.current;

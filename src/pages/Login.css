@@ -154,6 +154,18 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
 }
 .login-error svg { flex-shrink: 0; margin-top: 2px; }
 
+/* Por qué hay que volver a entrar (sesión de 12 h del personal) */
+.login-aviso {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: var(--warning-ink);
+  font-size: 0.875rem; font-weight: 550;
+}
+.login-aviso svg { flex-shrink: 0; margin-top: 2px; }
+
 /* ── Demo ── */
 .login-demo { padding-top: var(--space-5); border-top: 1px solid var(--border-color); }
 .login-demo-title {
