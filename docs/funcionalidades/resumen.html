@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMT EstudIA · Resumen</title>
+<link rel="stylesheet" href="estilos.css">
+<style>
+  /* Versión corta: mismas piezas que el documento completo, más aire */
+  .tapa { background: radial-gradient(120% 90% at 100% 0%, #045586 0%, transparent 60%), linear-gradient(180deg, #0b2f4e, #1b2f6e); color: #fff; border-radius: 4mm; padding: 9mm 9mm 8mm; display: flex; gap: 7mm; align-items: center; }
+  .tapa .txt { flex: 1; display: flex; flex-direction: column; gap: 3mm; }
+  .tapa .logo { width: 12mm; height: 12mm; border-radius: 3mm; background: #fff; display: flex; align-items: center; justify-content: center; }
+  .tapa h1 { color: #fff; font-size: 30pt; margin: 0; }
+  .tapa h1 span { color: #7cc4ff; }
+  .tapa p { color: #dbe6f3; font-size: 11pt; line-height: 1.4; }
+  .tapa .cel { width: 40mm; flex-shrink: 0; border-color: #000; }
+  .tapa .meta { font-size: 8pt; color: #c9d6e6; }
+  .tapa .meta b { color: #fff; }
+  .bloque { display: flex; flex-direction: column; gap: 2.4mm; }
+  .bloque > p { font-size: 9.4pt; }
+  .tarjeta .lista li { font-size: 8.6pt; }
+  .tit-sec { font-size: 14pt; font-weight: 800; color: var(--c); display: flex; align-items: center; gap: 2.4mm; }
+  .tit-sec .num { background: var(--c); color: #fff; border-radius: 99px; padding: .4mm 2.4mm; font-size: 8pt; }
+  .vivo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3mm; }
+  /* El aire va antes de cada sección, no entre su título y su contenido */
+  .repartir > .tit-sec + * { margin-top: 0 !important; }
+  .cifra strong { font-size: 13.5pt; }
+  .repartir > .lead + .vivo-grid { margin-top: 0 !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 1 · TAPA Y QUÉ ES ═══════════ -->
+<section class="pagina s-navy repartir">
+  <div class="tapa">
+    <div class="txt">
+      <div class="logo"><img src="../../public/isologo.png" alt="" style="width:8mm"></div>
+      <h1>SMT Estud<span>IA</span></h1>
+      <p>La plataforma con inteligencia artificial de las escuelas municipales de San Miguel de Tucumán: para gestionar la escuela, enseñar mejor y acompañar a cada estudiante.</p>
+      <div class="meta"><b>Dirección de Inteligencia Artificial</b> · Municipalidad de San Miguel de Tucumán · Octubre de 2026</div>
+    </div>
+    <div class="cel"><img src="img/cel-mis-actividades.png" alt=""></div>
+  </div>
+
+  <div class="bloque">
+    <h2>Una sola plataforma para toda la escuela</h2>
+    <p>SMT EstudIA reúne en un mismo lugar lo que hoy está repartido entre cuadernos, planillas, grupos de WhatsApp y la memoria de cada docente: <b>qué se enseña, cómo le va a cada chico, cómo se siente y qué hace la escuela cuando algo no anda bien</b>. Está en prueba piloto en <b>2° A de la E.M. Alfonsina Storni</b> y <b>3° A de la E.M. Gabriela Mistral</b>, con el material real de cada curso. Funciona en cualquier celular, con pocos datos, y cada escuela ve solo lo suyo.</p>
+  </div>
+
+  <div class="bloque">
+    <h2>Cada uno ve lo que le corresponde</h2>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:2.6mm">
+      <div class="tarjeta top s-dir"><h3 style="color:var(--dir)">Dirección</h3><p>El estado de la escuela sin pedir informes, y las alertas hasta que se resuelven.</p></div>
+      <div class="tarjeta top s-doc"><h3 style="color:var(--doc)">Docentes</h3><p>Su día ordenado, actividades en un minuto, libreta y clase en vivo con su material.</p></div>
+      <div class="tarjeta top s-est"><h3 style="color:var(--est)">Estudiantes</h3><p>Lo que tienen que hacer, práctica con IA y el material para leer sin descargar.</p></div>
+      <div class="tarjeta top s-fam"><h3 style="color:var(--fam)">Familias</h3><p>Avisos de la escuela, citaciones y las notas de sus hijos, a tiempo.</p></div>
+      <div class="tarjeta top s-navy"><h3 style="color:var(--navy)">Administración</h3><p>Escuelas y cuentas desde la plataforma, y el gasto de IA a la vista.</p></div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <h2>Tres ejes</h2>
+    <div class="g3">
+      <div class="tarjeta borde"><h3>Gestión eficiente</h3><p>Los números se arman solos con lo que pasa cada día. Las alertas llegan, se siguen y se cierran con un resultado.</p></div>
+      <div class="tarjeta borde"><h3>IA segura</h3><p>Ayuda a planificar, practicar y preguntar en clase, con reglas escritas de lo que no hace: no hace la tarea, no inventa y no guarda secretos cuando un chico está en riesgo.</p></div>
+      <div class="tarjeta borde"><h3>Trazabilidad</h3><p>Cada nota, aviso, señal de bienestar e intervención queda asentada con fecha, autor y resultado.</p></div>
+    </div>
+  </div>
+
+  <div class="pie"><span>SMT EstudIA · Resumen de funcionalidades</span><b>1</b></div>
+</section>
+
+<!-- ═══════════ 2 · DIRECCIÓN Y DOCENTES ═══════════ -->
+<section class="pagina s-dir repartir">
+  <div class="tit-sec s-dir"><span class="num">01</span>Para la dirección</div>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Tablero de dirección</div><img src="img/tablero.png" alt=""></div></div>
+    <ul class="lista">
+      <li><b>Tablero con seis indicadores</b> que se actualizan solos: estudiantes en riesgo, avance del programa, bienestar, uso docente, respuesta de familias y tiempos de corrección. Detrás de cada número, los nombres.</li>
+      <li><b>Mapa de la escuela</b> por curso y materia, para saber dónde mirar primero.</li>
+      <li><b>Alertas que no se pierden:</b> nacen solas, tienen dueño y resultado, y si nadie las toma suben a la dirección.</li>
+      <li><b>Comunicados y citaciones</b> a las familias con acuse de lectura, y la <b>normativa</b> de la escuela cargada en la plataforma.</li>
+    </ul>
+  </div>
+
+  <div class="g2">
+    <div><div class="marco"><div class="barra"><i></i><i></i><i></i>Alertas</div><img src="img/alertas.png" alt=""></div></div>
+    <div><div class="marco"><div class="barra"><i></i><i></i><i></i>Libreta del trimestre</div><img src="img/libreta.png" alt=""></div></div>
+  </div>
+
+  <div class="tit-sec s-doc" style="--c:var(--doc)"><span class="num">02</span>Para los docentes</div>
+  <div class="fila centro">
+    <ul class="lista" style="--c:var(--doc)">
+      <li><b>Mi día:</b> la clase que sigue, lo pendiente y lo que llega de la escuela.</li>
+      <li><b>Actividad rápida:</b> curso, tema del programa y preguntas que se corrigen solas, en un minuto, con QR para el aula.</li>
+      <li><b>Libreta del trimestre:</b> nota sugerida, temario y criterios. Al publicar, avisa a la familia si la nota está en riesgo.</li>
+      <li><b>Resultados y fichas:</b> qué les costó a los chicos en cada actividad y todo lo de cada estudiante en un solo lugar.</li>
+      <li><b>Biblioteca:</b> sube su apunte —Word, PDF o páginas escaneadas— y de ahí salen resúmenes, placas de estudio y podcast. Los chicos lo leen sin descargar.</li>
+    </ul>
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Actividad rápida</div><img src="img/actividad-rapida.png" alt=""></div></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Resumen de funcionalidades</span><b>2</b></div>
+</section>
+
+<!-- ═══════════ 3 · CLASE EN VIVO E IA ═══════════ -->
+<section class="pagina s-vivo repartir">
+  <div class="tit-sec"><span class="num">03</span>Clase en vivo</div>
+  <p class="lead">El docente da su clase como siempre y, cuando quiere, <b>lanza una pregunta, una encuesta o una nube de palabras</b>: los chicos responden desde el celular y los resultados aparecen en vivo, también en el proyector.</p>
+  <div class="vivo-grid">
+    <div class="tarjeta"><h3>Con el material del curso</h3><p>Elige un tema de su temario o un apunte de la biblioteca, lo proyecta y lo muestra en los celulares solo mientras dura la clase.</p></div>
+    <div class="tarjeta"><h3>Preguntas con IA</h3><p>La IA arma preguntas sobre ese material en segundos, y el docente las lanza con un toque.</p></div>
+    <div class="tarjeta"><h3>Medallas y resumen</h3><p>Reconoce a quien se destaca en el momento y, al terminar, ve quién participó, qué se entendió y cómo estuvo el clima.</p></div>
+  </div>
+  <div class="fila centro">
+    <div class="ancho-60">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Clase en vivo · maqueta</div>
+        <div class="mq">
+          <div class="card"><div class="row sp"><div class="row"><span class="dot"></span><span class="t">Lengua · 2° A</span><span class="s">· 18/24 conectados</span></div><div class="row"><span class="btn">Proyectar</span><span class="btn">Medalla</span><span class="btn">Terminar</span></div></div></div>
+          <div class="card">
+            <div class="row sp"><span class="badge ia">✅ Pregunta rápida</span><span class="s">17/24 respondieron</span></div>
+            <span class="t g">¿Qué es la rima consonante?</span>
+            <div><div class="bar-lbl"><span>Coinciden vocales y consonantes</span><b>12</b></div><div class="bar ok"><i style="width:71%"></i></div></div>
+            <div><div class="bar-lbl"><span>Coinciden solo las vocales</span><b>4</b></div><div class="bar"><i style="width:24%"></i></div></div>
+            <div class="row"><span class="btn p">Revelar respuesta</span><span class="btn">Premiar a los que acertaron</span></div>
+          </div>
+          <div class="card"><div class="row sp"><span class="t">📖 ¿Qué es la poesía? Palabras que cantan</span><span class="btn e">✨ Preguntas con IA</span></div></div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta con datos de ejemplo.</p>
+    </div>
+    <div class="cel" style="flex:0 0 26%">
+      <div class="mq">
+        <div class="card"><div class="row"><span class="dot"></span><span class="t">Lengua · 2° A</span></div></div>
+        <div class="card"><span class="t">¿Qué es la rima consonante?</span><div class="opt sel">Coinciden vocales y consonantes</div><div class="opt">Coinciden solo las vocales</div></div>
+        <div class="card"><div class="row sp"><span class="s">Material de la clase</span><span class="btn p">Abrir</span></div></div>
+        <div class="card"><span style="font-size:10pt">👏 💡 😮 🐢 ❓</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tit-sec" style="--c:var(--ia)"><span class="num">04</span>Inteligencia artificial con límites</div>
+  <div class="fila">
+    <div class="bloque" style="--c:var(--ia)">
+      <p>La IA <b>ayuda, no reemplaza</b>: arma clases a partir del programa, actividades, evaluaciones, resúmenes y preguntas; las decisiones las toma el docente. <b>Migue</b>, el asistente de la escuela, responde con la normativa que cargó la dirección y dice de dónde sale.</p>
+      <p>Cada persona tiene un tope diario de uso, y cada consulta queda registrada.</p>
+    </div>
+    <div class="nota" style="--c:var(--ia);flex:0 0 46%"><span class="rot">Lo que la IA no hace</span>
+      <ul class="lista x"><li>No le hace la tarea al estudiante.</li><li>No inventa normas ni datos.</li><li>No guarda secretos si un chico está en riesgo: avisa a la escuela.</li><li>No pone notas: sugiere, y el docente decide.</li></ul>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Resumen de funcionalidades</span><b>3</b></div>
+</section>
+
+<!-- ═══════════ 4 · ESTUDIANTES, FAMILIAS, CUIDADO ═══════════ -->
+<section class="pagina s-est repartir">
+  <div class="fila">
+    <div class="bloque">
+      <div class="tit-sec"><span class="num">05</span>Estudiantes</div>
+      <p>Desde el celular, aun con pocos datos: <b>qué tienen que hacer y cuándo vence</b>, práctica con IA a partir del material de sus materias, la clase en vivo y Migue para entender un tema o contar cómo están. Lo que escriben se guarda solo, y si se corta internet, la entrega sale cuando vuelve la señal. <b>Sin rankings:</b> la racha y las medallas son personales.</p>
+    </div>
+    <div class="bloque" style="--c:var(--fam)">
+      <div class="tit-sec"><span class="num">06</span>Familias</div>
+      <p>Reciben en el celular los <b>comunicados y citaciones</b> de la escuela y confirman con un toque. Ven las notas y el temario de sus hijos, y les llega un <b>aviso cuando una materia está en riesgo</b>, mientras todavía se puede levantar. Solo ven lo que la escuela publicó.</p>
+    </div>
+  </div>
+  <div class="g4" style="width:86%;align-self:center">
+    <div class="cel"><img src="img/cel-mis-actividades.png" alt=""></div>
+    <div class="cel"><img src="img/cel-estudiar.png" alt=""></div>
+    <div class="cel"><img src="img/cel-comunicados.png" alt=""></div>
+    <div class="cel"><img src="img/cel-mis-hijos.png" alt=""></div>
+  </div>
+
+  <div class="fila">
+    <div class="bloque" style="--c:var(--bien)">
+      <div class="tit-sec"><span class="num">07</span>Bienestar</div>
+      <p>Lo que un chico cuenta y preocupa <b>llega a un adulto de la escuela el mismo día</b>: por un check-in de cómo se siente o por algo que le dice a Migue. El seguimiento del equipo queda registrado y separado de lo que el chico puede leer.</p>
+    </div>
+    <div class="bloque" style="--c:var(--navy)">
+      <div class="tit-sec"><span class="num">08</span>Administración</div>
+      <p>La Municipalidad da de alta <b>escuelas, cursos y cuentas</b> desde la plataforma —los chicos y las familias entran con su DNI— y ve <b>cuánto se usa y cuánto cuesta la IA</b>, sin exponer a ningún estudiante.</p>
+    </div>
+  </div>
+
+  <div class="g4" style="--c:var(--datos)">
+    <div class="cifra"><strong>En la base</strong><span>el control de acceso: cada uno ve lo suyo aunque intente otra cosa</span></div>
+    <div class="cifra"><strong>2 escuelas</strong><span>con datos separados</span></div>
+    <div class="cifra"><strong>Sin conexión</strong><span>sigue andando en lo que ya se abrió</span></div>
+    <div class="cifra"><strong>0</strong><span>publicidad o rastreadores</span></div>
+  </div>
+
+  <div class="nota"><span class="rot">En una frase</span><p>SMT EstudIA no digitaliza la escuela: la conecta. El trabajo que los docentes ya hacen —planificar, evaluar, dar clase, acompañar— queda a la vista de quien lo necesita, cuando lo necesita. <b>Dirección ve el conjunto, la familia deja de enterarse tarde, y ningún chico depende de que alguien se acuerde.</b></p></div>
+  <div class="pie"><span>SMT EstudIA · Dirección de Inteligencia Artificial · Municipalidad de San Miguel de Tucumán</span><b>4</b></div>
+</section>
+
+</body>
+</html>
