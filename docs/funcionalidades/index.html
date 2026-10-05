@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMT EstudIA · Funcionalidades</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<!-- ═══════════ 1 · PORTADA ═══════════ -->
+<section class="pagina portada">
+  <div class="dentro">
+    <div class="logo"><img src="../../public/isologo.png" alt="" style="width:10mm"></div>
+    <h1>SMT Estud<span>IA</span></h1>
+    <p class="bajada">La plataforma con inteligencia artificial de las escuelas municipales de San Miguel de Tucumán: para gestionar la escuela, enseñar mejor y acompañar a cada estudiante.</p>
+    <div class="pastillas">
+      <span>Gestión eficiente del establecimiento</span>
+      <span>IA segura para docentes y estudiantes</span>
+      <span>Trazabilidad del rendimiento y del bienestar</span>
+      <span>Clase en vivo con el material del curso</span>
+    </div>
+    <div class="capturas">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>SMT EstudIA · Mi día</div><img src="img/mi-dia.png" alt=""></div>
+      <div class="cel"><img src="img/cel-mis-actividades.png" alt=""></div>
+    </div>
+    <div class="novedad"><b>Novedades de octubre:</b> clase en vivo con el material del curso, preguntas armadas por la IA, medallas y resumen al terminar · biblioteca que lee PDF escaneados y Word y muestra todo sin descargar · gestión de escuelas y cuentas por DNI · consumo de IA a la vista.</div>
+    <div class="base">
+      <div><b>Dirección de Inteligencia Artificial</b>Municipalidad de San Miguel de Tucumán</div>
+      <div style="text-align:right"><b>Documento de funcionalidades</b>Octubre de 2026 · prueba piloto</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 2 · QUÉ ES ═══════════ -->
+<section class="pagina s-navy">
+  <div class="sec"><span class="num">01</span>Qué es</div>
+  <h1>Una sola plataforma para toda la escuela</h1>
+  <p class="lead">SMT EstudIA reúne en un mismo lugar lo que hoy está repartido entre cuadernos, planillas, grupos de WhatsApp y la memoria de cada docente: <b>qué se enseña, cómo le va a cada chico, cómo se siente y qué hace la escuela cuando algo no anda bien</b>. Está en prueba piloto en <b>2° A de la E.M. Alfonsina Storni</b> y <b>3° A de la E.M. Gabriela Mistral</b>, con el material real de cada curso, y cada escuela ve solo sus propios datos.</p>
+
+  <h2>Cinco miradas sobre los mismos datos</h2>
+  <p style="font-size:8.8pt;margin-top:-2mm">Cada persona entra con su usuario y ve solo lo que le corresponde. La pantalla toma el color de su rol: en una computadora compartida se ve enseguida de quién es la sesión abierta.</p>
+  <div class="roles" style="display:grid;grid-template-columns:repeat(5,1fr);gap:2.6mm">
+    <div class="tarjeta top s-dir"><h3 style="color:var(--dir)">Dirección</h3><p>Tablero con seis indicadores, mapa de riesgo, alertas que se siguen, familias, normativa y la gestión de su escuela.</p></div>
+    <div class="tarjeta top s-doc"><h3 style="color:var(--doc)">Docentes</h3><p>Su día ordenado, actividades en un minuto, libreta, biblioteca, <b>clase en vivo con su material</b> y herramientas de IA.</p></div>
+    <div class="tarjeta top s-est"><h3 style="color:var(--est)">Estudiantes</h3><p>Lo que tienen que entregar, práctica con IA, material para leer sin descargar, la clase en vivo en el celular y Migue.</p></div>
+    <div class="tarjeta top s-fam"><h3 style="color:var(--fam)">Familias</h3><p>Comunicados y citaciones, las notas y el temario de sus hijos, y avisos a tiempo cuando una materia necesita refuerzo.</p></div>
+    <div class="tarjeta top s-navy"><h3 style="color:var(--navy)">Administración</h3><p>La Municipalidad da de alta escuelas, cursos y cuentas, y ve cuánto se usa y cuánto cuesta la IA.</p></div>
+  </div>
+
+  <h2>Tres ejes</h2>
+  <div class="g3">
+    <div class="tarjeta borde"><h3>Gestión eficiente</h3><p>La dirección conoce el estado de la escuela sin pedir informes: los números se arman solos con lo que pasa cada día, y las alertas se siguen hasta cerrarse.</p></div>
+    <div class="tarjeta borde"><h3>IA segura</h3><p>Ayuda a planificar, practicar, preguntar en clase y consultar protocolos, con reglas escritas: no hace la tarea, no inventa normas y no guarda secretos cuando un chico está en riesgo.</p></div>
+    <div class="tarjeta borde"><h3>Trazabilidad</h3><p>Cada nota, aviso a una familia, señal de bienestar, clase en vivo e intervención queda asentada con fecha, autor y resultado.</p></div>
+  </div>
+
+  <div class="nota"><span class="rot">Pensada para la escuela real</span><p>Funciona en celulares con pocos datos y sigue andando sin conexión en lo que ya se abrió. Se lee con letra grande o contraste alto, se usa completa con teclado y no tiene publicidad ni rastreadores.</p></div>
+
+  <h2>Contenido</h2>
+  <div class="indice">
+    <div><span>Dirección · El tablero</span><b>3</b></div>
+    <div><span>Dirección · Dónde mirar primero</span><b>4</b></div>
+    <div><span>Dirección · Alertas que no se pierden</span><b>5</b></div>
+    <div><span>Dirección · Familias y normativa</span><b>6</b></div>
+    <div><span>Docentes · Mi día y Actividad rápida</span><b>7</b></div>
+    <div><span>Docentes · Libreta y regla 5/4</span><b>8</b></div>
+    <div><span>Docentes · Resultados y fichas</span><b>9</b></div>
+    <div><span>Docentes · Biblioteca y material <span class="n">NUEVO</span></span><b>10</b></div>
+    <div><span>Clase en vivo · Cómo funciona <span class="n">NUEVO</span></span><b>11</b></div>
+    <div><span>Clase en vivo · El material de la clase <span class="n">NUEVO</span></span><b>12</b></div>
+    <div><span>Clase en vivo · Medallas y resumen <span class="n">NUEVO</span></span><b>13</b></div>
+    <div><span>Inteligencia artificial con límites</span><b>14</b></div>
+    <div><span>Estudiantes</span><b>15</b></div>
+    <div><span>Familias</span><b>16</b></div>
+    <div><span>Bienestar y cuidado</span><b>17</b></div>
+    <div><span>Administración y consumo de IA <span class="n">NUEVO</span></span><b>18</b></div>
+    <div><span>Datos y seguridad</span><b>19</b></div>
+    <div><span>Accesibilidad y ahorro de datos</span><b>20</b></div>
+    <div><span>Resumen, funcionalidad por funcionalidad</span><b>21</b></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>2</b></div>
+</section>
+
+<!-- ═══════════ 3 · TABLERO ═══════════ -->
+<section class="pagina repartir s-dir">
+  <div class="sec"><span class="num">02</span>Dirección · El tablero</div>
+  <h1>El estado de la escuela en una pantalla</h1>
+  <p class="lead">La directora abre SMT EstudIA y ve cómo está su escuela <b>sin pedir un solo informe</b>. Los indicadores se calculan con lo que pasa en la plataforma —entregas, notas, check-ins, comunicados— y se actualizan solos.</p>
+  <div class="marco"><div class="barra"><i></i><i></i><i></i>Tablero de dirección</div><img src="img/tablero.png" alt=""></div>
+  <h2>Los seis indicadores</h2>
+  <div class="g3">
+    <div class="punto"><h3><span class="n">1</span>En riesgo</h3><p>Porcentaje de estudiantes con dos o más señales a la vez: entregas vencidas, puntajes bajos, check-ins negativos, días sin actividad o alertas sin atender.</p></div>
+    <div class="punto"><h3><span class="n">2</span>Cobertura curricular</h3><p>Cuántas de las clases planificadas en el programa ya se dieron, por materia y por curso.</p></div>
+    <div class="punto"><h3><span class="n">3</span>Pulso de bienestar</h3><p>Proporción de check-ins emocionales positivos de la semana. Con menos de cinco respuestas no muestra porcentaje: con tan pocos datos engañaría.</p></div>
+    <div class="punto"><h3><span class="n">4</span>Adopción docente</h3><p>Docentes que usaron la plataforma en los últimos 14 días, y la lista de quiénes necesitan acompañamiento.</p></div>
+    <div class="punto"><h3><span class="n">5</span>Respuesta de familias</h3><p>Qué parte de los comunicados se leyó y cuántas citaciones se respondieron dentro de las 72 horas.</p></div>
+    <div class="punto"><h3><span class="n">6</span>Latencia de devolución</h3><p>Cuánto tarda, en la mediana, una entrega en volver corregida al estudiante.</p></div>
+  </div>
+  <div class="g2">
+    <div class="nota"><span class="rot">Detrás de cada número, los nombres</span><p>"Ver detalle" despliega quiénes están detrás del indicador —qué estudiantes, qué materias, qué docentes— y un clic lleva a la ficha del curso. El número sirve para decidir por dónde empezar, no para quedarse en el promedio.</p></div>
+    <div class="nota"><span class="rot">Parte del día</span><p>Arriba del tablero, lo que pasó en las últimas 24 horas: alertas escaladas y nuevas, check-ins negativos, entregas recibidas y las citaciones de las próximas 48 horas. Con "Redactar con IA" se convierte en un texto para compartir con el equipo.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>3</b></div>
+</section>
+
+<!-- ═══════════ 4 · DÓNDE MIRAR PRIMERO ═══════════ -->
+<section class="pagina s-dir">
+  <div class="sec"><span class="num">02</span>Dirección · Dónde mirar primero</div>
+  <h1>Del mapa de la escuela a la ficha de cada curso</h1>
+  <p class="lead">El tablero dice <b>cuánto</b>; el mapa dice <b>dónde</b>. Y la ficha del curso muestra, estudiante por estudiante, qué está pasando y qué hay pendiente.</p>
+  <div class="fila">
+    <div class="ancho-55">
+      <h2>Mapa institucional</h2>
+      <p style="font-size:9pt;margin:1.4mm 0 2.4mm">Una grilla que cruza cada curso con cada materia. El color de cada celda marca dónde está el problema: rojo donde hay más estudiantes en riesgo, verde donde el curso va bien, gris donde todavía no hay datos. Tres vistas: riesgo académico, cobertura del programa y entregas.</p>
+      <div class="marco"><img src="img/mapa.png" alt=""></div>
+      <p class="pie-foto">Mapa curso × materia: ahí donde aparece rojo conviene mirar primero. Un clic en una celda abre la ficha del curso.</p>
+    </div>
+    <div>
+      <h2>Del número al nombre</h2>
+      <div class="marco" style="margin-top:2mm"><img src="img/detalle-riesgo.png" alt=""></div>
+      <p class="pie-foto">El "En riesgo" abierto: la lista de estudiantes, con su curso y cuántas señales tiene cada uno.</p>
+    </div>
+  </div>
+  <div class="fila">
+    <div class="ancho-45"><div class="marco"><div class="barra"><i></i><i></i><i></i>Ficha del curso</div><img src="img/ficha-curso.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Nómina con estado real</h3><p>Cada estudiante con su estado según las señales que registra la plataforma, y su promedio de las notas publicadas en el trimestre.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Avance del programa</h3><p>Por materia, cuántas clases del programa se dieron: se ve a tiempo si un curso se atrasa.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Lo pendiente</h3><p>Entregas sin corregir, notas del trimestre, materias que van a diciembre y alertas abiertas.</p></div>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div class="ancho-45"><div class="marco"><div class="barra"><i></i><i></i><i></i>Equipo docente</div><img src="img/equipo-docente.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3>Equipo docente</h3><p>Por cada docente: sus materias, clases de hoy, cantidad de estudiantes y su última actividad real en la plataforma. La dirección acompaña a quien lo necesita y puede dejarle un reconocimiento que el docente ve en su inicio.</p></div>
+      <div class="nota"><span class="rot">Bitácora de accesos</span><p>Cada vez que alguien abre la ficha de un estudiante queda registrado quién y cuándo.</p></div>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>4</b></div>
+</section>
+
+<!-- ═══════════ 5 · ALERTAS ═══════════ -->
+<section class="pagina repartir s-dir">
+  <div class="sec"><span class="num">02</span>Dirección · Alertas</div>
+  <h1>Alertas que no se pierden</h1>
+  <p class="lead">Cuando algo le pasa a un chico, la plataforma no se limita a avisar: <b>sigue el caso hasta que alguien lo resuelve</b>, y si nadie lo toma, sube a la dirección.</p>
+  <div class="flujo">
+    <div class="paso"><b>Señal</b><span>nota, check-in, silencio</span></div><div class="flecha">→</div>
+    <div class="paso c"><b>Abierta</b><span>llega al docente</span></div><div class="flecha">→</div>
+    <div class="paso c"><b>En seguimiento</b><span>con nota de lo que hizo</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Cerrada</b><span>con resultado</span></div><div class="flecha">·</div>
+    <div class="paso" style="border-color:#f59e0b;background:#fffbeb"><b>Escala a dirección</b><span>nadie la toma en 72 h</span></div>
+  </div>
+  <p class="pie-foto" style="margin-top:-2mm">El ciclo de una alerta. Nace sola, alguien la toma, deja escrito qué hizo y la cierra con un resultado. Si queda sin tocar más allá del plazo que fijó la escuela, escala.</p>
+  <div class="marco"><div class="barra"><i></i><i></i><i></i>Alertas · vista del docente (la dirección ve las de toda la escuela)</div><img src="img/alertas.png" alt=""></div>
+  <div class="g2">
+    <div class="punto"><h3><span class="n">1</span>Se generan solas</h3><p>Por notas en la franja de riesgo, por check-ins negativos repetidos, por las señales de Migue y por abandono silencioso: un estudiante que no aparece hace 14 días. Esta última se revisa todos los días.</p></div>
+    <div class="punto"><h3><span class="n">2</span>Tienen dueño y resultado</h3><p>Quien interviene la pasa a seguimiento y deja escrito qué hizo. Al cerrarla elige el resultado: resuelta, derivada a un equipo externo o cerrada sin cambios.</p></div>
+    <div class="punto"><h3><span class="n">3</span>Escalan</h3><p>Cada hora, la plataforma busca alertas que llevan más de 72 horas sin atención y las sube a la dirección, marcadas como escaladas.</p></div>
+    <div class="punto"><h3><span class="n">4</span>Umbrales propios</h3><p>Cada escuela decide cuándo avisar: la nota de riesgo y la de desaprobación, los días sin actividad (de 3 a 60), los check-ins negativos y las horas para escalar (de 12 a 336).</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>5</b></div>
+</section>
+
+<!-- ═══════════ 6 · FAMILIAS Y NORMATIVA ═══════════ -->
+<section class="pagina repartir s-dir">
+  <div class="sec"><span class="num">02</span>Dirección · Comunidad</div>
+  <h1>Comunicación con familias y normativa de la escuela</h1>
+  <p class="lead">La escuela le escribe a las familias desde la plataforma y <b>sabe quién leyó y quién confirmó</b>. Y sus reglamentos y protocolos dejan de ser un PDF que nadie encuentra.</p>
+  <div class="fila">
+    <div class="ancho-60"><div class="marco"><div class="barra"><i></i><i></i><i></i>Comunicación con familias</div><img src="img/familias.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Comunicados</h3><p>A todas las familias de la escuela o a la de un estudiante en particular. Cada uno muestra cuántas familias lo leyeron.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Citaciones</h3><p>Con fecha, hora y lugar. La familia responde "Asistiré" o "No puedo" desde el celular, y la escuela lo ve al instante.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Avisos automáticos</h3><p>Cuando una nota entra en riesgo, el aviso a la familia sale solo, con el nombre de la materia.</p></div>
+      <div class="punto"><h3><span class="n">4</span>Comunicaciones internas</h3><p>La dirección también escribe al equipo docente, y queda registrado quién lo leyó.</p></div>
+    </div>
+  </div>
+  <div class="fila">
+    <div class="ancho-60"><div class="marco"><div class="barra"><i></i><i></i><i></i>Normativa y protocolos</div><img src="img/normativa.png" alt=""></div>
+      <div class="nota" style="margin-top:3mm"><span class="rot">Normativa y protocolos</span><p>La dirección escribe sus reglamentos y protocolos en la plataforma, en lenguaje claro, ordenados por categoría (reglamento, protocolo, circular) y con buscador. Esa normativa es la que usa Migue para responderle al equipo: la escuela escribe el protocolo una vez y el asistente lo responde siempre, citando de dónde sale.</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2mm">
+      <div class="cel" style="width:44mm"><img src="img/cel-tablero.png" alt=""></div>
+      <p class="pie-foto" style="text-align:center"><b>También en el celular.</b> Los indicadores pasan a dos columnas y el menú queda abajo, al alcance del pulgar.</p>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>6</b></div>
+</section>
+
+<!-- ═══════════ 7 · MI DÍA Y ACTIVIDAD RÁPIDA ═══════════ -->
+<section class="pagina s-doc">
+  <div class="sec"><span class="num">03</span>Docentes · Mi día y Actividad rápida</div>
+  <h1>El día del docente, ordenado</h1>
+  <p class="lead">Al entrar, el docente ve <b>lo que tiene ahora y lo que tiene pendiente</b>. Y puede crear y publicar una actividad para su curso en un minuto, desde la computadora o desde el celular.</p>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Mi día</div><img src="img/mi-dia.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Ahora y lo que sigue</h3><p>La clase en curso o la próxima, con cuenta regresiva ("en 20 min"), aula y cantidad de estudiantes, y la línea de todas las clases del día, según el horario del curso.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Contadores que llevan a la tarea</h3><p>Entregas para corregir, alertas abiertas, estudiantes y clases de la semana: cada número abre la pantalla donde se resuelve.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Lo que llega de la escuela</h3><p>Avisos de dirección, reconocimientos al docente y sus notas rápidas.</p></div>
+    </div>
+  </div>
+  <div class="marco"><div class="barra"><i></i><i></i><i></i>Actividad rápida</div><img src="img/actividad-rapida.png" alt=""></div>
+  <div class="g2">
+    <div class="punto"><h3><span class="n">1</span>Cuatro pasos marcados</h3><p>Curso, tema, preguntas y publicar. Arriba se ve qué está hecho y qué falta.</p></div>
+    <div class="punto"><h3><span class="n">2</span>El tema sale del programa</h3><p>"Lo que sigue en tu programa" sugiere las clases que <b>todavía no se dieron</b>: un toque y la IA arma la actividad con ese tema.</p></div>
+    <div class="punto"><h3><span class="n">3</span>Así la ven tus estudiantes</h3><p>A la derecha, la actividad tal como les va a llegar. Se puede editar antes de publicar, o escribirla a mano.</p></div>
+    <div class="punto"><h3><span class="n">4</span>Cuestionario y QR</h3><p>La IA propone preguntas que se corrigen solas. Al publicar aparece un QR para proyectar en el aula: el estudiante lo escanea y cae directo en la actividad.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>7</b></div>
+</section>
+
+<!-- ═══════════ 8 · LIBRETA ═══════════ -->
+<section class="pagina repartir s-doc">
+  <div class="sec"><span class="num">03</span>Docentes · Libreta</div>
+  <h1>La libreta del trimestre y la regla 5/4</h1>
+  <p class="lead">El docente carga las notas del trimestre en un solo lugar. Al publicarlas, la plataforma hace el resto: <b>avisa a la familia, registra quién se lleva la materia y actualiza el tablero de dirección</b>.</p>
+  <div class="marco"><div class="barra"><i></i><i></i><i></i>Libreta del trimestre</div><img src="img/libreta.png" alt=""></div>
+  <div class="flujo">
+    <div class="paso c"><b>Docente</b><span>publica la nota</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Regla 5 / 4</b><span>umbrales que fija cada escuela</span></div><div class="flecha">→</div>
+    <div class="paso"><b>≤ 5 · Aviso a la familia</b><span>mientras todavía se puede levantar</span></div><div class="flecha">→</div>
+    <div class="paso"><b>≤ 4 · Va a diciembre</b><span>queda asentado y dirección lo ve</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Siempre · Tablero</b><span>indicadores y mapa al día</span></div>
+  </div>
+  <p class="pie-foto" style="margin-top:-2mm">Un solo gesto del docente dispara todo lo demás. Si después corrige la nota hacia arriba, el aviso se desdice y la alerta se cierra sola.</p>
+  <div class="g3">
+    <div class="tarjeta"><h3>Nota sugerida</h3><p>La plataforma calcula una nota con las entregas corregidas del trimestre. El docente decide: la acepta, la cambia o la deja en blanco.</p></div>
+    <div class="tarjeta"><h3>Temario y criterios</h3><p>En la misma libreta, cada unidad se ubica en un trimestre y los criterios de evaluación se publican, para que estudiantes y familias sepan qué se da y cómo se evalúa. Sin trimestre, la unidad queda en borrador.</p></div>
+    <div class="tarjeta"><h3>Clases grabadas</h3><p>El docente pega un link de YouTube, Drive o Meet y lo cuelga del tema del temario al que corresponde. Los videos de YouTube se ven en su modo de privacidad.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>8</b></div>
+</section>
+
+<!-- ═══════════ 9 · RESULTADOS Y FICHAS ═══════════ -->
+<section class="pagina repartir s-doc">
+  <div class="sec"><span class="num">03</span>Docentes · Resultados y fichas</div>
+  <h1>Qué aprendieron, qué les costó, cómo están</h1>
+  <p class="lead">Cada actividad deja información útil para la próxima clase, y cada estudiante tiene una ficha con todo lo que se sabe de él <b>en un solo lugar</b>, en vez de en la cabeza de cada docente.</p>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Resultados de la actividad</div><img src="img/resultados.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Quién entregó y cómo le fue</h3><p>Estado de cada estudiante, puntaje del cuestionario autocorregible y devolución del docente, con reacciones rápidas de un toque.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Qué les costó</h3><p>Por pregunta, cuántos acertaron: se ve qué tema conviene retomar. La huella digital muestra cuándo la abrieron y cuánto tiempo le dedicaron.</p></div>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Estudiantes · ficha</div><img src="img/ficha-estudiante.png" alt=""></div></div>
+    <div>
+      <h2>La ficha del estudiante</h2>
+      <ul class="lista" style="margin-top:2mm">
+        <li>Notas publicadas en la libreta, por materia y trimestre.</li>
+        <li>Check-ins emocionales recientes y observaciones del equipo docente: la información que antes quedaba en la cabeza de cada uno.</li>
+        <li>Medallas, nivel de estudio y racha en el Modo Estudio.</li>
+        <li>Familias vinculadas y citación directa desde la ficha.</li>
+        <li>Resumen con IA para la reunión con la familia, armado solo con datos reales de la plataforma.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Buscador</div><img src="img/buscador.png" alt=""></div></div>
+    <div class="punto"><h3>Buscar o ir a cualquier lado</h3><p>Con Ctrl K (o la lupa en el celular) se busca una pantalla, un estudiante, un curso o un ajuste de lectura. Encuentra aunque se escriba sin tildes: "juan perez" encuentra a Juan Pérez. El docente solo encuentra a los estudiantes de sus cursos.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>9</b></div>
+</section>
+
+<!-- ═══════════ 10 · BIBLIOTECA (NUEVO) ═══════════ -->
+<section class="pagina s-doc">
+  <div class="sec"><span class="num">03</span>Docentes · Biblioteca y material <span class="nuevo">Nuevo</span></div>
+  <h1>El material se sube una vez y rinde para todo</h1>
+  <p class="lead">El docente sube su apunte —un Word, un PDF digital o <b>páginas escaneadas del libro</b>— y la plataforma lee el texto. Desde ahí salen el resumen, las placas de estudio, el podcast, el uso en el Laboratorio IA y la clase en vivo. <b>Y se ve dentro de la plataforma, sin descargar nada.</b></p>
+
+  <div class="flujo">
+    <div class="paso c"><b>Sube el material</b><span>Word, PDF o video</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Se lee el texto</b><span>al instante, o con IA si es un escaneo</span></div><div class="flecha">→</div>
+    <div class="paso"><b>"Texto listo"</b><span>o el motivo y "Reintentar"</span></div><div class="flecha">→</div>
+    <div class="paso c"><b>Rinde para todo</b><span>placas, podcast, IA Lab, en vivo</span></div>
+  </div>
+
+  <div class="fila">
+    <div class="ancho-55">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Biblioteca docente · maqueta</div>
+        <div class="mq">
+          <div class="card">
+            <div class="row"><span class="t">La poesía y los recursos poéticos</span></div>
+            <div class="row"><span class="badge c">Lengua</span><span class="s">2,7 MB · PDF escaneado</span><span class="badge ok">Texto listo</span></div>
+            <div class="row linea"><span class="btn">Ver</span><span class="btn">Resumen IA</span><span class="btn">Crear placas</span><span class="btn">Crear podcast</span><span class="btn">Usar en IA Lab</span><span class="btn">En vivo</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="t">Secuencia: Persuasión y palabra poética</span></div>
+            <div class="row"><span class="badge c">Lengua</span><span class="s">140 KB · Word</span><span class="badge ok">Texto listo</span><span class="badge w">Compartido</span></div>
+            <div class="row linea"><span class="btn">Ver</span><span class="btn">Placas (12)</span><span class="btn">Podcast</span><span class="btn">En vivo</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="t">Guía de lectura — unidad 2</span></div>
+            <div class="row"><span class="badge c">Lengua</span><span class="s">5,1 MB · PDF escaneado</span><span class="badge r">No se pudo leer</span></div>
+            <div class="s" style="color:#b91c1c">La lectura con IA no llegó a terminar (se cortó la conexión). Probá de nuevo.</div>
+            <div class="row linea"><span class="btn">Ver</span><span class="btn p">Reintentar</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta de la pantalla, con datos de ejemplo.</p>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Lee cualquier apunte</h3><p>Un Word o un PDF digital se leen en el navegador, al instante y sin gastar IA. Si el PDF es un escaneo, la IA transcribe las páginas.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Nunca falla en silencio</h3><p>Si algo no se pudo leer, la tarjeta dice por qué en palabras simples y ofrece "Reintentar", sin volver a subir el archivo.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Ver, no descargar</h3><p>"Ver" abre el material en la plataforma: el PDF página por página (también en el celular), el Word con su formato, el video de YouTube embebido. El docente tiene aparte "Descargar".</p></div>
+      <div class="punto"><h3><span class="n">4</span>Placas y podcast</h3><p>La IA arma placas para repasar en el celular —conceptos, tarjetas para dar vuelta y preguntas— y un podcast de 2 a 3 minutos para escuchar con auriculares.</p></div>
+    </div>
+  </div>
+
+  <div class="fila centro">
+    <div style="flex:0 0 30%">
+      <div class="cel">
+        <div class="barra-cel"><span>Publicidad y propaganda</span><span class="s">✕</span></div>
+        <div class="mq" style="gap:1.6mm">
+          <div class="pdfpag"><div class="l" style="width:70%;height:2mm;background:#334155"></div><div class="l"></div><div class="l" style="width:85%"></div><div class="l" style="width:40%;background:#93c5fd"></div><div class="l" style="width:90%"></div></div>
+          <div class="pdfpag"><div class="l" style="width:55%;height:2mm;background:#334155"></div><div class="l"></div><div class="l" style="width:75%"></div></div>
+          <span class="s" style="text-align:center">Página 2 de 8</span>
+        </div>
+      </div>
+    </div>
+    <div class="puntos">
+      <h2>Se ve igual en cualquier pantalla</h2>
+      <p>Antes, en muchos celulares el PDF no se veía y se descargaba solo. Ahora la plataforma dibuja cada página, así que el estudiante lee el apunte —incluso un escaneo de 8 páginas— sin bajar nada y sin salir de la app. El Word se muestra con sus títulos, listas, tablas e imágenes, y el texto queda disponible para buscar o copiar una cita.</p>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="nota"><span class="rot">Armar módulo</span><p>El docente escribe un tema o elige uno de su planificación, y la IA arma el módulo completo: de ahí salen las placas, el podcast, una actividad para entregar y una pregunta para lanzar en la clase en vivo.</p></div>
+    <div class="nota"><span class="rot">Compartido con criterio</span><p>Cada material se comparte con los estudiantes de la materia cuando el docente quiere. Para trabajarlo en una clase no hace falta compartirlo para siempre: la clase en vivo lo muestra solo mientras dura.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>10</b></div>
+</section>
+
+<!-- ═══════════ 11 · CLASE EN VIVO: CÓMO FUNCIONA (NUEVO) ═══════════ -->
+<section class="pagina s-vivo">
+  <div class="sec"><span class="num">04</span>Clase en vivo · Cómo funciona <span class="nuevo">Nuevo en el documento</span></div>
+  <h1>La clase de siempre, con el celular como forma de participar</h1>
+  <p class="lead">El docente da su clase como siempre y, cuando lo necesita, <b>lanza una actividad desde la compu, la tablet o el celular</b>. Los estudiantes responden desde su celular y todos ven los resultados crecer en vivo. Sin instalar nada y con muy pocos datos.</p>
+  <div class="fila">
+    <div class="ancho-60">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Clase en vivo · panel del docente · maqueta</div>
+        <div class="mq">
+          <div class="card"><div class="row sp"><div class="row"><span class="dot"></span><span class="t">Lengua · 2° A</span></div><div class="row"><span class="btn">Invitados</span><span class="btn">Proyectar</span><span class="btn">Emojis</span><span class="btn">Terminar</span></div></div></div>
+          <div class="card">
+            <div class="row sp"><span class="t">En la sala · <span class="s">18/24 conectados</span></span><div class="row"><span class="btn">Grupos (4)</span><span class="btn">Medalla</span></div></div>
+            <div class="row"><span class="chip"><span class="dot on"></span>Abril S.</span><span class="chip"><span class="dot on"></span>Benjamín R.</span><span class="chip"><span class="dot on"></span>Camila H.</span><span class="chip"><span class="dot on"></span>Dante I.</span><span class="chip off"><span class="dot" style="background:#cbd5e1"></span>Emilia P.</span><span class="chip"><span class="dot on"></span>Felipe O.</span><span class="chip"><span class="dot on"></span>Guadalupe V.</span><span class="chip">+ 11</span></div>
+          </div>
+          <div class="card">
+            <div class="row sp"><span class="badge ia">✅ Pregunta rápida</span><span class="s">17/24 respondieron</span></div>
+            <span class="t g">¿Qué es la rima consonante?</span>
+            <div><div class="bar-lbl"><span>Coinciden vocales y consonantes desde la última vocal acentuada</span><b>12</b></div><div class="bar ok"><i style="width:71%"></i></div></div>
+            <div><div class="bar-lbl"><span>Coinciden solo las vocales</span><b>4</b></div><div class="bar"><i style="width:24%"></i></div></div>
+            <div><div class="bar-lbl"><span>No hay coincidencia de sonidos</span><b>1</b></div><div class="bar"><i style="width:6%"></i></div></div>
+            <div class="row"><span class="btn p">Revelar respuesta</span><span class="btn">Cerrar actividad</span></div>
+          </div>
+          <div class="card"><span class="t">+ Lanzar actividad</span>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.2mm">
+              <div class="kind"><b>💙 Check-in</b>¿Cómo vienen?</div><div class="kind"><b>✅ Pregunta rápida</b>con una correcta</div><div class="kind"><b>📊 Encuesta</b>opinión del curso</div>
+              <div class="kind"><b>🧩 Multi-selección</b>varias opciones</div><div class="kind"><b>☁️ Nube de palabras</b>crece en pantalla</div><div class="kind"><b>💬 Respuesta libre</b>ideas y dudas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta de la pantalla, con nombres y datos de ejemplo.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2mm">
+      <div class="cel" style="width:52mm">
+        <div class="barra-cel"><span>Clase en vivo</span><span class="s">🔔</span></div>
+        <div class="mq">
+          <div class="card"><div class="row"><span class="dot"></span><span class="t">Lengua · 2° A</span></div><span class="s">Tus respuestas son anónimas para tus compañeros</span></div>
+          <div class="card">
+            <span class="badge ia" style="align-self:flex-start">✅ Pregunta rápida</span>
+            <span class="t">¿Qué es la rima consonante?</span>
+            <div class="opt sel">Coinciden vocales y consonantes desde la última vocal acentuada</div>
+            <div class="opt">Coinciden solo las vocales</div>
+            <div class="opt">No hay coincidencia de sonidos</div>
+            <span class="s">Podés cambiarla hasta que se cierre</span>
+          </div>
+          <div class="card"><div class="row sp"><span style="font-size:11pt">👏 💡 😮 🔥 🐢 ❓</span></div><span class="s">"Más despacio" y "No entiendo" le llegan al docente</span></div>
+        </div>
+        <div class="nav-cel"><span class="a">Mi escuela</span><span>Estudiar</span><span>Materiales</span><span>Migue</span></div>
+      </div>
+      <p class="pie-foto" style="text-align:center"><b>En el celular del estudiante.</b> Aparece sola cuando el docente la lanza.</p>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div class="ancho-55">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Proyectar · maqueta</div>
+        <div class="mq" style="background:#0b1220;color:#fff;flex-direction:row;align-items:center;gap:4mm;padding:4mm">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1.4mm"><div class="qr"></div><b style="font-size:10pt;letter-spacing:.2em">K7P4Q2</b><span style="font-size:6pt;color:#94a3b8">Escaneá o tipeá el código</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2mm">
+            <b style="font-size:11pt">¿Qué es la rima consonante?</b>
+            <div><div class="bar-lbl"><span>Vocales y consonantes</span><b>12</b></div><div class="bar ok"><i style="width:71%"></i></div></div>
+            <div><div class="bar-lbl"><span>Solo vocales</span><b>4</b></div><div class="bar"><i style="width:24%"></i></div></div>
+            <span style="font-size:6.4pt;color:#94a3b8">17 de 24 respondieron · 18 en la sala</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3>Para la pantalla del aula</h3><p>Con la notebook conectada al proyector, "Proyectar" muestra en grande lo que la sala tiene que ver: el QR y el código para entrar mientras no hay actividad, y los resultados creciendo cuando la hay.</p></div>
+      <div class="punto"><h3>Liviana para el celular</h3><p>Cada respuesta pesa unos pocos cientos de bytes: funciona con datos móviles escasos y sin instalar ninguna app.</p></div>
+    </div>
+  </div>
+  <div class="g3">
+    <div class="punto"><h3><span class="n">1</span>Seis formas de participar</h3><p>Check-in de cómo vienen, pregunta rápida con respuesta para revelar, encuesta, multi-selección, nube de palabras y respuesta libre.</p></div>
+    <div class="punto"><h3><span class="n">2</span>Quién está, de verdad</h3><p>El docente ve quién está conectado y puede mandarle una pregunta a un solo estudiante, o pedir una respuesta por grupo cuando hay pocos celulares.</p></div>
+    <div class="punto"><h3><span class="n">3</span>A la pantalla del aula</h3><p>"Proyectar" pone en grande el QR para entrar y los resultados. La sala se puede abrir a invitados sin cuenta, con un código de seis letras.</p></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>11</b></div>
+</section>
+
+<!-- ═══════════ 12 · CLASE EN VIVO: MATERIAL (NUEVO) ═══════════ -->
+<section class="pagina s-vivo">
+  <div class="sec"><span class="num">04</span>Clase en vivo · El material de la clase <span class="nuevo">Nuevo</span></div>
+  <h1>La clase en vivo trabaja con el material del curso</h1>
+  <p class="lead">Al iniciar la clase, el docente elige <b>con qué trabaja hoy</b>: un tema de su temario —con el contenido de la clase— o un material de su biblioteca. Lo proyecta, lo muestra en los celulares y la IA saca preguntas de ahí para lanzar con un toque.</p>
+  <div class="fila">
+    <div class="ancho-55">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Material de la clase · maqueta</div>
+        <div class="mq">
+          <div class="card">
+            <div class="row sp"><span class="t">📖 Material de la clase</span><span class="btn">Cambiar</span></div>
+            <span class="t g">¿Qué es la poesía? Palabras que cantan</span>
+            <span class="s">Tema del temario · Unidad 3</span>
+            <div class="row"><span class="btn">Proyectar</span><span class="btn p">✓ Lo ven en los celulares</span><span class="btn e">✨ Preguntas con IA</span></div>
+            <span class="s">Los estudiantes lo ven solo mientras dure esta clase. Al terminarla, deja de estar disponible.</span>
+          </div>
+          <div class="card">
+            <div class="row sp"><span class="t">1. ¿En qué se diferencia un aviso publicitario de un poema?</span><span class="btn p">Lanzar</span></div>
+          </div>
+          <div class="card">
+            <div class="row sp"><span class="t">2. ¿Qué caracteriza al verso libre?</span><span class="btn p">✓ Lanzada</span></div>
+            <span class="s">· No sigue una métrica ni una rima fija (correcta) · Siempre tiene la misma cantidad de sílabas · Repite las mismas palabras en cada verso</span>
+          </div>
+          <div class="card">
+            <div class="row sp"><span class="t">3. ¿Qué sentimientos transmite el poema "Viaje"?</span><span class="btn p">Lanzar</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta con un tema real del temario de Lengua de 2° A y preguntas de ejemplo.</p>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Del temario o de la biblioteca</h3><p>La lista muestra los temas de esa materia y curso —marcados "con contenido" o "solo título"— y los materiales de la biblioteca. Desde la Biblioteca, el botón "En vivo" abre la clase con ese material ya elegido.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Proyectar</h3><p>Pantalla completa con letra grande: el contenido del tema, el PDF página por página, el Word o el video, para leer desde el fondo del aula.</p></div>
+      <div class="punto"><h3><span class="n">3</span>En los celulares, solo durante la clase</h3><p>Los estudiantes del curso lo abren mientras dura la clase. No queda compartido para siempre —importa con páginas de un libro—: al terminar, se corta. Lo garantiza la base de datos, no la pantalla.</p></div>
+      <div class="punto"><h3><span class="n">4</span>Preguntas con IA</h3><p>En unos segundos, la IA arma de 3 a 5 preguntas <b>sobre ese material</b>: opción múltiple con la correcta marcada o respuesta abierta. El docente lanza la que quiere con un toque. Si el tema tiene solo el título, la plataforma lo dice y no inventa.</p></div>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div style="flex:0 0 30%">
+      <div class="cel">
+        <div class="barra-cel"><span>Clase en vivo</span><span class="s">🔔</span></div>
+        <div class="mq">
+          <div class="card"><div class="row"><span class="dot"></span><span class="t">Lengua · 2° A</span></div></div>
+          <div class="card"><span class="s">Atendé a la clase 😄 — cuando tu docente lance una actividad, aparece sola acá.</span></div>
+          <div class="card"><div class="row sp"><div><span class="s">Material de la clase</span><br><b>¿Qué es la poesía? Palabras que cantan</b></div><span class="btn p">Abrir</span></div></div>
+          <div class="card md"><span class="t">Consigna 1</span><p>Leé el poema "Viaje", de Alfonsina Storni. ¿Qué sentimientos transmite? ¿Qué imágenes podés reconocer?</p></div>
+        </div>
+        <div class="nav-cel"><span class="a">Mi escuela</span><span>Estudiar</span><span>Materiales</span><span>Migue</span></div>
+      </div>
+    </div>
+    <div class="puntos">
+      <h2>Lo que ve el estudiante</h2>
+      <p>Cuando el docente toca "Mostrar en los celulares", en la pantalla de la clase aparece "Material de la clase · Abrir". Lo puede leer mientras responde una actividad y volver a la consigna cuando quiera.</p>
+      <p>Al terminar la clase deja de estar disponible: es la forma de trabajar con páginas de un libro sin repartir copias.</p>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>12</b></div>
+</section>
+
+<!-- ═══════════ 13 · CLASE EN VIVO: MEDALLAS Y RESUMEN (NUEVO) ═══════════ -->
+<section class="pagina s-vivo">
+  <div class="sec"><span class="num">04</span>Clase en vivo · Medallas y resumen <span class="nuevo">Nuevo</span></div>
+  <h1>Reconocer en el momento y saber qué pasó</h1>
+  <p class="lead">Durante la clase el docente puede <b>dar medallas</b> —a uno, a varios o a los que acertaron— y el celular del chico lo festeja en el momento. Al terminar, la plataforma arma <b>el resumen de la clase</b>: participación, comprensión, ambiente y un informe escrito por la IA.</p>
+  <div class="fila">
+    <div class="ancho-60">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Resumen de la clase · maqueta</div>
+        <div class="mq">
+          <div class="card"><span class="s" style="color:#0166ff;font-weight:800;letter-spacing:.08em">RESUMEN DE LA CLASE</span><span class="t g">Lengua · 2° A</span><span class="s">Martes 14 de octubre, 10:10 · 48 min · 📖 ¿Qué es la poesía? Palabras que cantan</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.4mm">
+            <div class="tile"><span>Participaron</span><b>21/24</b><span>88% del curso</span></div>
+            <div class="tile"><span>Se conectaron</span><b>22/24</b><span>en sus celulares</span></div>
+            <div class="tile"><span>Actividades</span><b>4</b><span>lanzadas</span></div>
+            <div class="tile"><span>Medallas</span><b>5</b><span>🌟 🧠 🙋</span></div>
+          </div>
+          <div class="card md"><span class="t">✨ Informe de la clase</span>
+            <p><b>Qué se vio.</b> La poesía y sus recursos a partir de "Viaje", de Alfonsina Storni.</p>
+            <p><b>Participación.</b> 21 de 24 participaron. Abril, Dante y Guadalupe respondieron todo. No participaron Emilia, Ian y Juana: conviene acercarse sin señalarlos.</p>
+            <p><b>Comprensión.</b> La rima consonante quedó clara (71% acertó). El verso libre costó más (45%): conviene retomarlo con ejemplos.</p>
+            <p><b>Ambiente.</b> En el check-in la mayoría vino "Bien"; hubo 3 "más despacio" a mitad de clase.</p>
+          </div>
+          <div class="card"><span class="t">Actividades</span>
+            <div class="row sp"><span>✅ ¿Qué es la rima consonante?</span><span class="s">17 respondieron · <b>12 acertaron</b> (71%)</span></div>
+            <div class="row sp"><span>✅ ¿Qué caracteriza al verso libre?</span><span class="s">20 respondieron · <b>9 acertaron</b> (45%)</span></div>
+            <div class="row sp"><span>☁️ Una palabra para el poema</span><span class="s">19 respondieron</span></div>
+          </div>
+          <div class="card" style="background:#fffbeb;border-color:#fde68a"><span class="s" style="color:#92400e"><b>No participaron (3):</b> Emilia Paz, Ian Molina, Juana Ledesma.</span></div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta con nombres y datos de ejemplo.</p>
+      <div class="marco" style="margin-top:3mm"><div class="barra"><i></i><i></i><i></i>Premiar a los que acertaron (12) · maqueta</div>
+        <div class="mq">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.2mm">
+            <div class="medal sel"><span>🌟</span><b>¡Crack!</b>Te la re bancaste</div><div class="medal"><span>✨</span><b>Aura +1</b>Subiste tu aura</div><div class="medal"><span>🧠</span><b>¡Qué genio!</b>Respuesta brillante</div><div class="medal"><span>🙋</span><b>Siempre presente</b>Participación</div>
+          </div>
+          <div class="row"><span class="chip" style="border-color:#f59e0b;background:#fffbeb">☑ Abril Sosa</span><span class="chip" style="border-color:#f59e0b;background:#fffbeb">☑ Dante Ibáñez</span><span class="chip" style="border-color:#f59e0b;background:#fffbeb">☑ Guadalupe Vera</span><span class="chip">☐ Felipe Ortiz</span><span class="chip" style="border-color:#f59e0b;background:#fffbeb">+ 9</span></div>
+          <div class="row sp"><span class="s">Dedicatoria: "por cómo explicaron la rima"</span><span class="btn p">Dar a 12</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3mm">
+      <div class="cel" style="width:50mm;align-self:center">
+        <div class="mq" style="background:rgba(15,23,42,.55);min-height:62mm;justify-content:center">
+          <div class="card" style="align-items:center;text-align:center;padding:4mm 3mm">
+            <span style="font-size:22pt;line-height:1">🌟</span>
+            <span class="t">¡Recibiste «¡Crack!»!</span>
+            <span class="s">De Paula Medina · Te la re bancaste</span>
+            <span class="s" style="font-style:italic">"Por cómo leíste el poema en voz alta"</span>
+            <span class="btn p">¡Gracias!</span>
+          </div>
+        </div>
+      </div>
+      <p class="pie-foto" style="text-align:center"><b>El festejo en el celular.</b> La medalla suma experiencia y queda en su perfil.</p>
+      <div class="puntos">
+        <div class="punto"><h3><span class="n">1</span>Premiar a los que acertaron</h3><p>Al revelar una pregunta, un botón abre el diálogo de medallas con los que eligieron la correcta ya marcados.</p></div>
+        <div class="punto"><h3><span class="n">2</span>El resumen se arma solo</h3><p>Duración y material, quiénes se conectaron y participaron, cada pregunta con sus aciertos, el ánimo del check-in, los emojis y las medallas.</p></div>
+        <div class="punto"><h3><span class="n">3</span>Informe con IA</h3><p>Un texto corto con qué se vio, quiénes participaron, qué quedó claro y qué retomar, y sugerencias para la próxima clase. Usa solo los datos de la clase y queda guardado.</p></div>
+        <div class="punto"><h3><span class="n">4</span>Clases anteriores</h3><p>Desde el inicio de Clase en vivo se vuelve al resumen de cualquier clase.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="nota"><span class="rot">De una clase a la siguiente</span><p>El resumen muestra qué pregunta costó más y quién no participó: es el punto de partida de la clase siguiente, sin que el docente tenga que tomar nota mientras da clase. Y como queda guardado, se puede volver a mirar cuando se arma el temario o se prepara una reunión.</p></div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>13</b></div>
+</section>
+
+<!-- ═══════════ 14 · IA CON LÍMITES ═══════════ -->
+<section class="pagina repartir s-ia">
+  <div class="sec"><span class="num">05</span>Inteligencia artificial</div>
+  <h1>Inteligencia artificial con límites claros</h1>
+  <p class="lead">La IA de SMT EstudIA <b>ayuda, no reemplaza</b>. Prepara, resume, propone y responde; las decisiones las toman el docente y el equipo de la escuela. Cada herramienta tiene reglas escritas de lo que puede y no puede hacer.</p>
+  <div class="fila centro">
+    <div class="ancho-55"><div class="marco"><div class="barra"><i></i><i></i><i></i>Laboratorio IA</div><img src="img/laboratorio-ia.png" alt=""></div></div>
+    <div class="puntos">
+      <h2>Laboratorio IA del docente</h2>
+      <div class="punto"><h3><span class="n">1</span>Del programa a las clases</h3><p>El docente sube su programa anual en PDF o Word —incluso escaneado— y la IA lo convierte en unidades y clases listas para trabajar.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Cinco herramientas</h3><p>Generar una actividad, armar una evaluación, resumir un documento, preparar una presentación y evaluar un oral, con el material de la biblioteca como contexto.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Y en el resto de la plataforma</h3><p>Armar módulo, placas y podcast del material, preguntas para la clase en vivo, informe de la clase y resumen para la reunión con la familia.</p></div>
+    </div>
+  </div>
+  <div class="fila centro">
+    <div>
+      <h2>Migue, el asistente de la escuela</h2>
+      <p style="margin-top:1.6mm">Responde con la <b>normativa que cargó esa dirección</b> y dice de dónde sale ("Consultó: Protocolo ante ausencias prolongadas"). Si no encuentra una norma, lo dice en lugar de inventarla.</p>
+      <p style="margin-top:1.6mm"><b>Tres Migue en una misma puerta.</b> Al equipo le explica protocolos y circuitos; al estudiante lo ayuda a estudiar y lo escucha; a la familia le orienta sobre convivencia. Qué versión le toca a cada uno lo decide el servidor según el rol, no la pantalla.</p>
+    </div>
+    <div class="ancho-45"><div class="marco"><img src="img/migue-respuesta.png" alt=""></div></div>
+  </div>
+  <div class="g3">
+    <div class="cifra"><strong>50 por día</strong><span>usos de IA por docente, entre el Laboratorio y los documentos</span></div>
+    <div class="cifra"><strong>60 por día</strong><span>mensajes a Migue por persona; para estudiantes, cuatro veces más, para que lo que cuenten siempre pase por la alerta</span></div>
+    <div class="cifra"><strong>Cada llamada</strong><span>queda registrada: quién, cuándo, qué función, qué modelo y cuánto costó</span></div>
+  </div>
+  <div class="nota"><span class="rot">Lo que la IA no hace</span>
+    <div class="g2" style="gap:1.4mm 6mm;margin-top:1mm">
+      <ul class="lista x"><li>No le hace la tarea al estudiante: le muestra cómo se piensa y lo deja intentar.</li><li>No inventa normas: si no está en la normativa de la escuela, lo dice.</li><li>No promete secreto: si un chico cuenta algo que preocupa, se lo dice y avisa a la escuela.</li></ul>
+      <ul class="lista x"><li>No diagnostica ni reemplaza al equipo de orientación.</li><li>No opina del desempeño de un chico cuando habla con su familia.</li><li>No pone notas ni inventa datos: sugiere, y el docente decide qué se publica.</li></ul>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>14</b></div>
+</section>
+
+<!-- ═══════════ 15 · ESTUDIANTES ═══════════ -->
+<section class="pagina s-est">
+  <div class="sec"><span class="num">06</span>Estudiantes</div>
+  <h1>Para estudiantes: lo que sigue, a mano</h1>
+  <p class="lead">Los chicos usan SMT EstudIA desde el celular, muchas veces con pocos datos. Todo está pensado para eso: <b>lo importante primero</b>, el menú abajo al alcance del pulgar, y lo que ya abrieron sigue andando sin conexión. Entran con su <b>DNI</b> y la clave que les da la escuela.</p>
+  <div class="g4" style="width:84%;align-self:center">
+    <div><div class="cel"><img src="img/cel-mis-actividades.png" alt=""></div><p class="pie-foto"><b>Lo que sigue.</b> Cuántas actividades le quedan, cuál hacer primero y cuándo vence.</p></div>
+    <div><div class="cel"><img src="img/cel-actividad.png" alt=""></div><p class="pie-foto"><b>Cómo llega.</b> Al empezar puede decir cómo se siente con un toque. Es opcional y no afecta la nota.</p></div>
+    <div><div class="cel"><img src="img/cel-estudiar.png" alt=""></div><p class="pie-foto"><b>Modo Estudio.</b> Práctica con IA a partir del material de sus materias, racha y logros personales.</p></div>
+    <div><div class="cel"><img src="img/cel-migue.png" alt=""></div><p class="pie-foto"><b>Migue.</b> Para entender un tema o para contar cómo está. Avisa desde el principio que no guarda secretos.</p></div>
+  </div>
+  <div class="g2">
+    <div class="punto"><h3>Actividades que no se pierden</h3><p>Lo que escribe se guarda solo mientras trabaja. Si se corta internet, la entrega queda esperando y se envía sola cuando vuelve la señal.</p></div>
+    <div class="punto"><h3>La clase en vivo, en su celular</h3><p>Cuando su docente abre una clase en vivo, le aparece el aviso para entrar. Responde, manda emojis, abre el material de la clase si el docente lo muestra y recibe sus medallas en el momento.</p></div>
+    <div class="punto"><h3>Material sin descargas</h3><p>Apuntes, guías y videos se leen dentro de la plataforma —el PDF página por página, también en el celular—, con placas, podcast y guía de repaso hechas por la IA.</p></div>
+    <div class="punto"><h3>Sin ranking</h3><p>La racha, el nivel y las medallas son personales: nadie se compara con nadie. Las medallas se las dan sus docentes, desde su ficha o en la clase en vivo.</p></div>
+  </div>
+  <div class="fila">
+    <div class="g2" style="flex:0 0 40%">
+      <div><div class="cel"><img src="img/cel-biblioteca.png" alt=""></div><p class="pie-foto"><b>Biblioteca.</b> Practicar, guía, placas o ver: sin descargar nada.</p></div>
+      <div><div class="cel"><img src="img/cel-vocacional.png" alt=""></div><p class="pie-foto"><b>Vocacional.</b> Preguntas simples sobre lo que le gusta hacer.</p></div>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3>Orientación vocacional</h3><p>No es un test que le dice qué estudiar: le muestra por dónde le tira para tener con quién conversarlo. Él decide si lo comparte.</p></div>
+      <div class="nota"><span class="rot">Con el QR del aula</span><p>El docente proyecta el QR de la actividad o de la clase en vivo; el estudiante lo escanea y cae directo ahí. Si no tenía la sesión abierta, entra una vez y sigue derecho.</p></div>
+      <div class="nota"><span class="rot">Su código en cada materia</span><p>Cada estudiante tiene un código propio en cada materia (por ejemplo, LEN2A-07), que ve en su inicio.</p></div>
+    </div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>15</b></div>
+</section>
+
+<!-- ═══════════ 16 · FAMILIAS ═══════════ -->
+<section class="pagina repartir s-fam">
+  <div class="sec"><span class="num">07</span>Familias</div>
+  <h1>Para las familias: enterarse a tiempo</h1>
+  <p class="lead">La familia deja de enterarse en el boletín, cuando ya no hay margen. Recibe los avisos de la escuela en el celular y ve las notas y el temario de sus hijos. <b>Todo lo que ve sale de lo que la escuela publicó.</b> Entra con su DNI.</p>
+  <div class="fila">
+    <div class="g2" style="flex:0 0 56%">
+      <div><div class="cel"><img src="img/cel-comunicados.png" alt=""></div><p class="pie-foto"><b>Comunicados y citaciones.</b> Lo pendiente de confirmar aparece primero.</p></div>
+      <div><div class="cel"><img src="img/cel-mis-hijos.png" alt=""></div><p class="pie-foto"><b>Mis hijos.</b> El resumen del trimestre, las notas del año y el temario.</p></div>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Comunicados</h3><p>Al abrir un comunicado, la escuela sabe que llegó. No hace falta mandar la nota en el cuaderno y esperar la firma.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Citaciones</h3><p>Con día, hora y lugar. La familia confirma "Asistiré" o avisa "No puedo" con un toque.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Mis hijos</h3><p>Por cada hijo, el promedio del último trimestre publicado, las materias para reforzar y las que van a diciembre; después, las notas del año y el temario de cada trimestre.</p></div>
+      <div class="punto"><h3><span class="n">4</span>Avisos a tiempo</h3><p>Cuando una nota queda en la franja de riesgo, el aviso llega mientras la materia todavía se puede levantar.</p></div>
+      <div class="punto"><h3><span class="n">5</span>Migue para familias</h3><p>Orienta sobre las normas de convivencia de la escuela y cómo acompañar, sin opinar sobre el desempeño del hijo.</p></div>
+    </div>
+  </div>
+  <div class="flujo">
+    <div class="paso c"><b>Docente</b><span>publica un 5</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Aviso</b><span>llega al celular</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Lo abre</b><span>queda el acuse</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Confirma</b><span>si hay citación</span></div><div class="flecha">→</div>
+    <div class="paso c"><b>Dirección</b><span>lo ve</span></div>
+  </div>
+  <p class="pie-foto" style="margin-top:-2mm">Cada paso queda registrado con fecha: la escuela sabe si el aviso llegó, sin llamar a nadie.</p>
+  <div class="nota"><span class="rot">Solo datos reales</span><p>La plataforma no le muestra a la familia ningún número que no haya cargado la escuela: si todavía no hay notas publicadas, lo dice, en lugar de mostrar un promedio.</p></div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>16</b></div>
+</section>
+
+<!-- ═══════════ 17 · BIENESTAR ═══════════ -->
+<section class="pagina repartir s-bien">
+  <div class="sec"><span class="num">08</span>Bienestar y cuidado</div>
+  <h1>El bienestar también deja rastro</h1>
+  <p class="lead">Lo que un chico cuenta y preocupa <b>llega a un adulto de la escuela el mismo día</b>. Y lo que el equipo hace con esa información queda registrado, pero separado de lo que el chico puede leer.</p>
+  <div class="flujo">
+    <div class="paso c"><b>El chico escribe</b><span>algo que preocupa</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Migue conversa</b><span>escucha y responde</span></div><div class="flecha">+</div>
+    <div class="paso"><b>Clasificador aparte</b><span>no obedece al mensaje</span></div><div class="flecha">→</div>
+    <div class="paso c"><b>Señal al equipo</b><span>con el motivo y la frase</span></div><div class="flecha">→</div>
+    <div class="paso"><b>Le avisa al chico</b><span>solo si quedó guardada</span></div>
+  </div>
+  <p class="pie-foto" style="margin-top:-2mm">La alerta emocional. El clasificador corre separado del chat: si el mensaje pide "no le digas a nadie", igual evalúa. Y Migue solo dice "ya avisé" si la señal efectivamente se guardó.</p>
+  <div class="marco"><img src="img/seguimiento.png" alt=""></div>
+  <p class="pie-foto" style="margin-top:-2mm">Así la ve el equipo: el motivo, la frase que la disparó y el seguimiento que fueron dejando. El estudiante no ve ese seguimiento.</p>
+  <div class="g2">
+    <div class="punto"><h3><span class="n">1</span>Check-in emocional</h3><p>Una fila de emojis al empezar y al terminar cada actividad, y en la clase en vivo cuando el docente lo lanza. Se puede saltear siempre. Dos check-ins negativos en una semana generan una alerta (la escuela puede ajustarlo).</p></div>
+    <div class="punto"><h3><span class="n">2</span>Señal derivada de Migue</h3><p>Si algo de lo que escribe un chico indica riesgo, queda una señal con el motivo para el equipo. Si el clasificador no pudo evaluar, deja una señal "sin clasificar" para que la revise una persona: nunca falla en silencio.</p></div>
+    <div class="punto"><h3><span class="n">3</span>Seguimiento del equipo</h3><p>Lo que orientación y los docentes escriben sobre un caso vive aparte de lo que el estudiante puede leer. El chico ve que la escuela lo acompaña; no ve las notas internas.</p></div>
+    <div class="punto"><h3><span class="n">4</span>Pulso en el tablero</h3><p>Dirección ve cómo se sienten los cursos esta semana, sin exponer a nadie: el porcentaje aparece recién con suficientes respuestas.</p></div>
+  </div>
+  <h2>Quién ve qué del bienestar de un chico</h2>
+  <table>
+    <tr><th></th><th>El estudiante</th><th>Su familia</th><th>Sus docentes</th><th>Dirección</th><th>Administración</th></tr>
+    <tr><td>Check-ins emocionales</td><td>Los suyos</td><td>No</td><td>Sí</td><td>Sí</td><td>No</td></tr>
+    <tr><td>Señal derivada de Migue</td><td>La suya</td><td>No</td><td>Sí</td><td>Sí</td><td>No</td></tr>
+    <tr><td>Seguimiento del caso</td><td>No</td><td>No</td><td>Sí</td><td>Sí</td><td>No</td></tr>
+    <tr><td>Conversación con Migue</td><td>La suya</td><td>No</td><td>No</td><td>Solo la frase que motivó la señal</td><td>No</td></tr>
+  </table>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>17</b></div>
+</section>
+
+<!-- ═══════════ 18 · ADMINISTRACIÓN (NUEVO) ═══════════ -->
+<section class="pagina s-navy">
+  <div class="sec"><span class="num">09</span>Administración y consumo de IA <span class="nuevo">Nuevo</span></div>
+  <h1>Cada escuela se arma desde la plataforma</h1>
+  <p class="lead">La Municipalidad da de alta escuelas y cuentas <b>desde la propia plataforma</b>, sin planillas ni pedidos técnicos. Cada dirección gestiona la suya. Y lo que se usa y se gasta en inteligencia artificial está a la vista.</p>
+  <div class="fila">
+    <div class="ancho-55">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Gestión de la escuela · maqueta</div>
+        <div class="mq">
+          <div class="card"><span class="t g">E.M. Alfonsina Storni</span>
+            <div class="tabs"><span>Cursos y materias</span><span class="a">Personal</span><span>Estudiantes</span><span>Familias</span><span>Datos</span></div>
+            <div class="row sp"><span class="t">Docentes</span><span class="btn p">+ Sumar persona</span></div>
+            <div class="row sp linea"><div class="row"><span class="av">PM</span><span><b>Paula Medina</b><br><span class="s">Lengua · 2° A</span></span></div><div class="row"><span class="btn">Asignar materia</span><span class="btn">Nueva clave</span></div></div>
+            <div class="row sp linea"><div class="row"><span class="av">RG</span><span><b>Rocío Gauna</b><br><span class="s">Matemática · 2° A</span></span></div><div class="row"><span class="btn">Asignar materia</span><span class="btn">Nueva clave</span></div></div>
+            <div class="row sp linea"><div class="row"><span class="av">MT</span><span><b>Martín Toledo</b><br><span class="s">Físico-Química · 2° A</span></span></div><div class="row"><span class="btn">Asignar materia</span><span class="btn">Nueva clave</span></div></div>
+          </div>
+          <div class="card" style="border-color:#bae6fd;background:#f0f9ff">
+            <span class="t">Cuenta creada: Abril Sosa · 2° A</span>
+            <span class="s">Usuario: <b>su DNI</b> · Clave inicial: <b>generada por la plataforma</b> · la cambia al entrar</span>
+            <div class="row"><span class="btn">Copiar</span><span class="btn">Imprimir para entregar</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta de la pantalla, con nombres de ejemplo.</p>
+    </div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Escuelas, cursos y materias</h3><p>El superadmin crea cada escuela y entra a armarla: cursos, materias, dirección, docentes con sus materias, estudiantes y familias.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Cuentas por DNI</h3><p>Al estudiante se lo da de alta con su DNI y su curso; la plataforma genera la clave inicial y la pide cambiar al primer ingreso. "Nueva clave" la regenera si alguien la olvida.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Una persona, varias escuelas</h3><p>Un docente puede trabajar en dos escuelas, o ser docente en una y director en otra: elige la escuela activa arriba y ve solo lo de esa.</p></div>
+      <div class="punto"><h3><span class="n">4</span>La dirección gestiona la suya</h3><p>Desde "Mi escuela", la dirección arma cursos y cuentas de su escuela. No crea directores ni ve otras escuelas.</p></div>
+    </div>
+  </div>
+  <div class="fila">
+    <div class="ancho-55">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Consumo de IA · maqueta</div>
+        <div class="mq">
+          <div class="card"><span class="t">💳 Gasto en dinero</span>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.4mm">
+              <div class="tile"><span>Hoy</span><b>US$ 0,84</b></div><div class="tile"><span>Esta semana</span><b>US$ 3,10</b></div><div class="tile"><span>Este mes</span><b>US$ 9,75</b></div><div class="tile"><span>Total</span><b>US$ 21,40</b></div>
+            </div>
+            <span class="s">Según el proveedor de IA · tope de la clave: US$ 30,00 por mes · disponible: US$ 20,25</span>
+          </div>
+          <div class="card"><span class="t">Usos por día</span><div class="bars-dia"><i style="height:20%"></i><i style="height:35%"></i><i style="height:28%"></i><i style="height:52%"></i><i style="height:61%"></i><i style="height:15%"></i><i style="height:8%"></i><i style="height:44%"></i><i style="height:70%"></i><i style="height:66%"></i><i style="height:81%"></i><i style="height:58%"></i><i style="height:12%"></i><i style="height:9%"></i><i style="height:73%"></i><i style="height:90%"></i></div></div>
+        </div>
+      </div>
+      <p class="pie-foto">Maqueta con cifras de ejemplo.</p>
+    </div>
+    <div class="puntos">
+      <h2>Consumo de IA</h2>
+      <div class="punto"><p>El superadmin ve <b>cuánto se gastó en dólares</b> —hoy, en la semana, en el mes y en total— según el propio proveedor de IA, y el tope de gasto de la cuenta.</p></div>
+      <div class="punto"><p>Usos y tokens por día, por escuela y por rol; y el detalle <b>por función y por modelo</b>: chat, Migue, detección de riesgo, documentos, podcast.</p></div>
+      <div class="nota"><span class="rot">Sin exponer a los chicos</span><p>Por persona aparecen solo docentes y dirección. Estudiantes y familias se ven sumados: cuánto usa Migue un chico dice mucho de él.</p></div>
+    </div>
+  </div>
+  <div class="marco"><div class="barra"><i></i><i></i><i></i>Consumo de IA · por función y modelo · maqueta</div>
+    <div class="mq"><div class="card">
+      <table>
+        <tr><th>Función</th><th>Modelo</th><th>Llamadas</th><th>Tokens</th><th>Costo</th></tr>
+        <tr><td>Laboratorio IA (chat)</td><td>claude-sonnet</td><td>214</td><td>1.180.400</td><td>US$ 4,12</td></tr>
+        <tr><td>Migue</td><td>claude-sonnet</td><td>356</td><td>842.900</td><td>US$ 2,95</td></tr>
+        <tr><td>Documentos (lectura, resúmenes, placas)</td><td>claude-haiku</td><td>97</td><td>610.200</td><td>US$ 0,88</td></tr>
+        <tr><td>Migue · detección de riesgo</td><td>claude-haiku</td><td>148</td><td>96.300</td><td>US$ 0,11</td></tr>
+        <tr><td>Podcast</td><td>voz</td><td>9</td><td>21.600 caracteres de voz</td><td>según plan de voz</td></tr>
+      </table>
+    </div></div>
+  </div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>18</b></div>
+</section>
+
+<!-- ═══════════ 19 · DATOS Y SEGURIDAD ═══════════ -->
+<section class="pagina s-datos">
+  <div class="sec"><span class="num">10</span>Datos y seguridad</div>
+  <h1>Datos cuidados</h1>
+  <p class="lead">SMT EstudIA maneja datos de chicos y chicas de 13 a 18 años. Por eso la protección no depende de la pantalla: <b>está en la base de datos</b>. Y la plataforma tiene que poder usarla cualquiera, con cualquier celular.</p>
+  <div class="g4">
+    <div class="cifra"><strong>63 / 63</strong><span>tablas con control de acceso en la base de datos, con 195 reglas</span></div>
+    <div class="cifra"><strong>2</strong><span>escuelas con datos separados: una docente de una no alcanza los de la otra</span></div>
+    <div class="cifra"><strong>12 h</strong><span>dura la sesión del personal: en una compu compartida no queda abierta para el que sigue</span></div>
+    <div class="cifra"><strong>0</strong><span>rastreadores, publicidad o analítica de terceros</span></div>
+  </div>
+  <div class="g3">
+    <div class="punto"><h3><span class="n">1</span>Cada uno ve lo suyo</h3><p>El control de acceso se aplica en la base, no en la pantalla: un estudiante no puede leer datos de otro aunque lo intente. Se prueba cuenta por cuenta, sobre una copia de la base con todas sus reglas.</p></div>
+    <div class="punto"><h3><span class="n">2</span>Compu compartida</h3><p>Si entra otra persona en la misma computadora, se borra lo que la anterior dejó guardado. Al cerrar sesión, también. "Cerrar sesión" cierra ese dispositivo y no saca al docente de su celular.</p></div>
+    <div class="punto"><h3><span class="n">3</span>Sin rastreadores</h3><p>No hay publicidad, ni analítica de terceros, ni tipografías o librerías cargadas de otros servidores: nadie ajeno a la plataforma sigue lo que hace cada persona.</p></div>
+  </div>
+  <div class="fila">
+    <div class="ancho-45">
+      <div class="marco"><div class="barra"><i></i><i></i><i></i>Entrada · maqueta</div>
+        <div class="mq" style="flex-direction:row;padding:0;background:#fff">
+          <div style="flex:1;background:linear-gradient(160deg,#0b2f4e,#2b2a7a);color:#fff;padding:3mm;display:flex;flex-direction:column;gap:1.4mm">
+            <img src="../../public/isologo.png" alt="" style="width:6mm;background:#fff;border-radius:1.4mm;padding:.6mm">
+            <b style="font-size:10pt">SMT Estud<span style="color:#7cc4ff">IA</span></b>
+            <span style="font-size:6pt;color:#c9d6e6">La plataforma de las escuelas municipales de San Miguel de Tucumán.</span>
+            <div class="row"><span class="chip" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">Dirección</span><span class="chip" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">Docentes</span><span class="chip" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">Estudiantes</span><span class="chip" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">Familias</span></div>
+          </div>
+          <div style="flex:1;padding:4mm 3mm;display:flex;flex-direction:column;gap:1.4mm">
+            <b style="font-size:9pt">Entrar</b>
+            <span class="s">Con el usuario y la contraseña que te dio la escuela.</span>
+            <span class="s" style="font-weight:700;color:#334155">Email o DNI</span><div class="opt" style="color:#94a3b8">Tu email, o tu DNI si sos estudiante</div>
+            <span class="s" style="font-weight:700;color:#334155">Contraseña</span><div class="opt">&nbsp;</div>
+            <span class="btn p" style="text-align:center">Entrar</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="puntos">
+      <h2>Una entrada, cuatro colores</h2>
+      <div class="punto"><h3><span class="n">1</span>Usuario propio</h3><p>El personal entra con su email; estudiantes y familias, con su DNI. La clave inicial la genera la plataforma y se cambia al primer ingreso. No hay cuentas compartidas.</p></div>
+      <div class="punto"><h3><span class="n">2</span>El color dice de quién es</h3><p>Dirección en azul marino, docentes en azul, estudiantes en violeta, familias en verde. Si una sesión quedó abierta, se nota.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Salir borra lo guardado</h3><p>Al cerrar sesión, o cuando vencen las 12 horas del personal, se borra del dispositivo lo que la app guardó para usar sin conexión.</p></div>
+    </div>
+  </div>
+  <h2>Quién ve qué</h2>
+  <table>
+    <tr><th></th><th>Estudiante</th><th>Familia</th><th>Docente</th><th>Dirección</th><th>Otra escuela</th></tr>
+    <tr><td>Notas publicadas</td><td>Las suyas</td><td>Las de sus hijos</td><td>Las de sus materias</td><td>Las de su escuela</td><td>Nada</td></tr>
+    <tr><td>Entregas de actividades</td><td>Las suyas</td><td>No</td><td>Las de sus actividades</td><td>Las de su escuela</td><td>Nada</td></tr>
+    <tr><td>Material de la biblioteca</td><td>El compartido de sus materias, y el de la clase en vivo mientras dura</td><td>No</td><td>El suyo</td><td>El de su escuela</td><td>Nada</td></tr>
+    <tr><td>Conversaciones con Migue</td><td>La suya</td><td>La suya</td><td>La suya</td><td>La suya</td><td>Nada</td></tr>
+    <tr><td>Normativa</td><td>La dirigida a la comunidad</td><td>La dirigida a la comunidad</td><td>Toda la publicada</td><td>La carga y la edita</td><td>Nada</td></tr>
+  </table>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>19</b></div>
+</section>
+
+<!-- ═══════════ 20 · ACCESIBILIDAD ═══════════ -->
+<section class="pagina s-datos">
+  <div class="sec"><span class="num">10</span>Accesibilidad y ahorro de datos</div>
+  <h1>Que la pueda usar cualquiera, con cualquier celular</h1>
+  <p class="lead">En la escuela hay chicos con celulares viejos, planes prepagos, dificultades para leer letra chica o que usan lector de pantalla. La plataforma se adapta a cada persona, y <b>cada uno lo elige en su propio dispositivo</b>.</p>
+  <div class="fila centro">
+    <div class="ancho-60"><div class="marco"><div class="barra"><i></i><i></i><i></i>Accesibilidad y datos</div><img src="img/accesibilidad.png" alt=""></div></div>
+    <div class="puntos">
+      <div class="punto"><h3><span class="n">1</span>Letra grande o muy grande</h3><p>Toda la app escala, no solo los títulos.</p></div>
+      <div class="punto"><h3><span class="n">2</span>Contraste alto</h3><p>Textos más oscuros, bordes marcados y enlaces subrayados.</p></div>
+      <div class="punto"><h3><span class="n">3</span>Menos movimiento</h3><p>Apaga las animaciones; si el celular ya lo pide, se respeta solo.</p></div>
+      <div class="punto"><h3><span class="n">4</span>Ahorro de datos</h3><p>Se prende solo si el celular lo tiene activado: baja cada pantalla recién al abrirla y pide confirmación antes de un video.</p></div>
+    </div>
+  </div>
+  <div class="fila">
+    <div style="flex:0 0 30%"><div class="cel"><img src="img/cel-letra-grande.png" alt=""></div><p class="pie-foto"><b>Letra muy grande.</b> La misma pantalla del estudiante: todo crece junto y nada se corta.</p></div>
+    <div class="puntos">
+      <div class="nota"><span class="rot">Liviana de verdad</span><p>Cada rol baja solo sus pantallas, y cada una recién cuando se abre. Lo pesado —leer un PDF, mostrar un escaneo— se descarga solo si alguien lo usa. En septiembre, la primera visita de un estudiante bajaba casi la mitad de datos que la versión anterior.</p></div>
+      <div class="nota"><span class="rot">Sin conexión</span><p>Desde la primera visita, la plataforma guarda en el dispositivo las pantallas de cada rol. Un estudiante puede seguir trabajando sin señal en lo que ya abrió y entregar: lo que hizo se envía solo cuando vuelve la conexión, y siempre con su propia sesión.</p></div>
+      <div class="punto"><h3>Revisada pantalla por pantalla</h3><p>Una auditoría automática recorre las pantallas de los cuatro roles, en celular y en computadora, contra los criterios WCAG 2.2 AA: contraste, botones con nombre, campos con etiqueta, títulos en orden y áreas táctiles. Se usa entera con teclado, con foco siempre visible y anuncios de cada cambio de pantalla.</p></div>
+      <div class="punto"><h3>Pensada para el pulgar</h3><p>Los botones del celular miden al menos 44 píxeles y el menú está abajo, con el nombre de cada sección escrito.</p></div>
+    </div>
+  </div>
+  <div class="nota"><span class="rot">Los números no mienten</span><p>Si un dato no existe, la pantalla lo dice. Un porcentaje con muy pocas respuestas no se muestra, y nada que la escuela no haya cargado aparece como si fuera real.</p></div>
+  <div class="pie"><span>SMT EstudIA · Documento de funcionalidades</span><b>20</b></div>
+</section>
+
+<!-- ═══════════ 21 · RESUMEN ═══════════ -->
+<section class="pagina repartir s-navy">
+  <div class="sec"><span class="num">11</span>Resumen</div>
+  <h1>Funcionalidad por funcionalidad</h1>
+  <p class="lead">Todo lo que hace SMT EstudIA hoy, en una página. <b style="color:#b45309">Lo nuevo de octubre, en ámbar.</b></p>
+  <div class="g2" style="gap:3.4mm 7mm">
+    <div class="col-res s-dir"><h3>Dirección</h3><ul class="lista">
+      <li><b>Tablero</b> con seis indicadores y el detalle con nombres.</li>
+      <li><b>Parte del día</b>, con redacción opcional por IA.</li>
+      <li><b>Mapa curso × materia</b> de riesgo, cobertura y entregas.</li>
+      <li><b>Ficha del curso</b> y <b>equipo docente</b> con reconocimientos.</li>
+      <li><b>Alertas</b> con ciclo de vida, escalamiento y umbrales propios.</li>
+      <li><b>Comunicados, citaciones y normativa</b>, con acuse de lectura.</li>
+      <li style="color:#b45309"><b>Mi escuela:</b> cursos, materias y cuentas de su escuela.</li>
+    </ul></div>
+    <div class="col-res s-doc"><h3>Docentes</h3><ul class="lista">
+      <li><b>Mi día</b>, <b>Actividad rápida</b> con QR y <b>resultados</b> con "qué les costó".</li>
+      <li><b>Libreta</b> con nota sugerida y regla 5/4; <b>temario y criterios</b>.</li>
+      <li><b>Ficha del estudiante</b> con observaciones y resumen IA.</li>
+      <li style="color:#b45309"><b>Biblioteca</b> que lee Word, PDF y escaneos, y muestra todo sin descargar.</li>
+      <li style="color:#b45309"><b>Placas, podcast y Armar módulo</b> desde el material.</li>
+    </ul></div>
+    <div class="col-res s-vivo"><h3>Clase en vivo</h3><ul class="lista">
+      <li><b>Seis actividades</b>, presencia real, pregunta dirigida, grupos y emojis.</li>
+      <li><b>Proyector</b> e <b>invitados</b> con código de seis letras.</li>
+      <li style="color:#b45309"><b>Material de la clase:</b> proyectarlo y mostrarlo en los celulares mientras dura.</li>
+      <li style="color:#b45309"><b>Preguntas con IA</b> desde el material, con un toque.</li>
+      <li style="color:#b45309"><b>Medallas en vivo</b> y <b>resumen</b> con informe al terminar.</li>
+    </ul></div>
+    <div class="col-res s-ia"><h3>Inteligencia artificial</h3><ul class="lista">
+      <li><b>Laboratorio IA:</b> programa anual a clases y cinco herramientas.</li>
+      <li><b>Migue</b> con tres caras y la <b>normativa de la escuela</b>, citada.</li>
+      <li><b>Clasificador de riesgo</b> separado del chat.</li>
+      <li><b>Uso medido:</b> topes diarios y registro de cada llamada.</li>
+    </ul></div>
+    <div class="col-res s-est"><h3>Estudiantes</h3><ul class="lista">
+      <li><b>Mis actividades</b> con autoguardado y entrega sin conexión.</li>
+      <li><b>Check-in emocional</b> opcional; <b>Modo Estudio</b> sin ranking.</li>
+      <li><b>Biblioteca, orientación vocacional y Migue</b>.</li>
+      <li style="color:#b45309"><b>Clase en vivo</b> en el celular, con el material y las medallas.</li>
+    </ul></div>
+    <div class="col-res s-fam"><h3>Familias</h3><ul class="lista">
+      <li><b>Comunicados y citaciones</b> con confirmación.</li>
+      <li><b>Mis hijos:</b> resumen, notas del año y temario.</li>
+      <li><b>Avisos automáticos</b> cuando la nota todavía se puede levantar.</li>
+      <li><b>Migue</b> para dudas de convivencia.</li>
+    </ul></div>
+    <div class="col-res s-navy"><h3>Administración</h3><ul class="lista">
+      <li style="color:#b45309"><b>Escuelas, cursos, materias y cuentas</b> desde la plataforma.</li>
+      <li style="color:#b45309"><b>Alta por DNI</b> con clave inicial y una persona en varias escuelas.</li>
+      <li style="color:#b45309"><b>Consumo de IA:</b> gasto en dólares, usos y detalle por función.</li>
+    </ul></div>
+    <div class="col-res s-datos"><h3>Para todos</h3><ul class="lista">
+      <li><b>Control de acceso en la base de datos</b>, por escuela y rol.</li>
+      <li><b>Color por rol</b> y limpieza en computadoras compartidas.</li>
+      <li style="color:#b45309"><b>Sesión de 12 h</b> para el personal; cerrar sesión por dispositivo.</li>
+      <li><b>Accesibilidad</b>, liviana y sin conexión, <b>sin publicidad ni rastreadores</b>.</li>
+    </ul></div>
+  </div>
+  <div class="nota"><span class="rot">En una frase</span><p>SMT EstudIA no digitaliza la escuela: la conecta. El trabajo que los docentes ya hacen —planificar, evaluar, dar clase, acompañar— queda a la vista de quien lo necesita, cuando lo necesita. <b>Dirección ve el conjunto, la familia deja de enterarse tarde, y ningún chico depende de que alguien se acuerde.</b></p></div>
+  <p class="pie-foto">Capturas tomadas en la plataforma con cuentas y datos de demostración (septiembre de 2026). Las pantallas nuevas de octubre se muestran como maquetas con datos de ejemplo.</p>
+  <div class="pie"><span>SMT EstudIA · Dirección de Inteligencia Artificial · Municipalidad de San Miguel de Tucumán</span><b>21</b></div>
+</section>
+
+</body>
+</html>
