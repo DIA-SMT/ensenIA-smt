@@ -55,11 +55,80 @@ export function fileToBase64(file: File | Blob): Promise<string> {
 }
 
 /** DOCX → texto plano, client-side (sin gastar IA). */
-export async function extractDocxText(file: File): Promise<string> {
+export async function extractDocxText(file: Blob): Promise<string> {
   const mammoth = await import('mammoth');
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer });
   return result.value.trim();
+}
+
+/**
+ * El texto que trae adentro un PDF digital (exportado de Word, de una web…),
+ * leído en el navegador con pdf.js: instantáneo y sin gastar IA. Un escaneo
+ * no trae texto, o apenas la marca de agua de la app que lo escaneó.
+ */
+export async function extractPdfTextLayer(file: Blob): Promise<{ text: string; pages: number }> {
+  const pdfjs = await import('pdfjs-dist');
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  }
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  try {
+    const paginas: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const { items } = await (await doc.getPage(i)).getTextContent();
+      paginas.push(items.map(it => ('str' in it ? it.str + (it.hasEOL ? '\n' : ' ') : '')).join(''));
+    }
+    return { text: paginas.join('\n\n').replace(/[ \t]+\n/g, '\n').trim(), pages: doc.numPages };
+  } finally {
+    doc.destroy();
+  }
+}
+
+// Una página de texto real tiene más de mil letras; un escaneo, ninguna o
+// la marca de agua ("Scanned with CamScanner").
+const MIN_LETRAS_POR_PAGINA = 200;
+
+/**
+ * El texto de un material, que es lo que usan placas, podcast e IA Lab.
+ * Word y PDF digital se leen en el navegador; un PDF escaneado lo
+ * transcribe la IA mirando las páginas (tarda, y la pestaña tiene que
+ * quedar abierta mientras tanto). Si falla, el error trae un mensaje para
+ * mostrarle al docente.
+ */
+export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc', title?: string): Promise<string> {
+  if (tipo === 'doc') {
+    const text = await extractDocxText(file).catch(() => {
+      throw new Error('No se pudo abrir el Word. Si es un .doc viejo, guardalo como .docx o PDF y subilo de nuevo.');
+    });
+    if (!text) throw new Error('Este Word no tiene texto (puede que sean solo imágenes). Exportalo como PDF y subilo de nuevo.');
+    return text;
+  }
+
+  // PDF digital: alcanza con el texto que trae adentro
+  try {
+    const { text, pages } = await extractPdfTextLayer(file);
+    if (text.replace(/\s/g, '').length >= MIN_LETRAS_POR_PAGINA * pages) return text;
+  } catch (err) {
+    // PDF raro o protegido: que lo intente la IA
+    console.warn('pdf.js no pudo leer el PDF:', err);
+  }
+
+  // PDF escaneado: lo transcribe la IA
+  let text: string;
+  try {
+    text = await extractPdfText(await fileToBase64(file), title);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    // Sin conexión o la función cortó por tiempo: el mensaje del navegador
+    // ("Failed to fetch", "Error … (504)") no le dice nada al docente.
+    if (!msg || /fetch|network|\((5\d\d)\)/i.test(msg)) {
+      throw new Error('La lectura con IA no llegó a terminar (se cortó la conexión o el archivo es muy largo). Probá de nuevo; si sigue fallando, subilo en partes más chicas.');
+    }
+    throw err;
+  }
+  if (!text.trim()) throw new Error('La IA no encontró texto en este PDF. ¿Las páginas se ven bien al abrirlo?');
+  return text.trim();
 }
 
 // ── Edge function process-document ──

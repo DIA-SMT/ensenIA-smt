@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones,
+  Headphones, ScanText,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
 import {
-  uploadFile, getSignedUrl, removeFile, fileToBase64, extractDocxText,
-  extractPdfText, summarizeDocument, updateMaterial, formatFileSize,
+  uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
+  summarizeDocument, updateMaterial, formatFileSize,
   generateStudyCards, generatePodcast,
 } from '../services/documents.service';
 import { parseYouTubeId, youTubeThumbnail } from '../lib/youtube';
@@ -52,8 +52,17 @@ export default function Biblioteca() {
   const [uplError, setUplError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Procesamiento de texto en curso (por material)
+  // Procesamiento de texto en curso (por material) y por qué falló
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [textErrors, setTextErrors] = useState<Record<string, string>>({});
+
+  // La lectura de un escaneo corre en esta pestaña: si se va, se corta
+  useEffect(() => {
+    if (processingIds.size === 0) return;
+    const avisar = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', avisar);
+    return () => window.removeEventListener('beforeunload', avisar);
+  }, [processingIds]);
 
   // Resumen IA
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
@@ -156,12 +165,6 @@ export default function Biblioteca() {
       const subject = subjectsList.find(s => s.id === uplSubjectId);
       const { storagePath, fileSizeBytes } = await uploadFile(user.id, uplFile);
 
-      // DOCX: el texto se extrae al instante en el navegador (gratis)
-      let extractedText: string | undefined;
-      if (uplFile.type === DOCX_MIME) {
-        try { extractedText = await extractDocxText(uplFile); } catch { /* opcional */ }
-      }
-
       const material = await createMaterial({
         title: uplTitle.trim(),
         description: '',
@@ -177,31 +180,43 @@ export default function Biblioteca() {
       await updateMaterial(material.id, {
         storagePath,
         fileSizeBytes,
-        ...(extractedText ? { extractedText } : {}),
         isSharedWithStudents: uplShare,
       });
 
       setShowUpload(false);
       refresh();
 
-      // PDF: extracción con IA en segundo plano (visión, sirve para escaneos)
-      if (uplFile.type === 'application/pdf') {
-        setProcessingIds(prev => new Set(prev).add(material.id));
-        try {
-          const base64 = await fileToBase64(uplFile);
-          const text = await extractPdfText(base64, uplTitle.trim());
-          await updateMaterial(material.id, { extractedText: text });
-        } catch (err) {
-          console.error('Extracción de texto falló:', err);
-        } finally {
-          setProcessingIds(prev => { const n = new Set(prev); n.delete(material.id); return n; });
-          refresh();
-        }
-      }
+      // Word y PDF: leer el texto para que la IA pueda usarlo
+      void leerTexto({ ...material, storagePath }, uplFile);
     } catch (err) {
       setUplError(err instanceof Error ? err.message : 'Error subiendo el material.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  /** Lee el texto de un Word o PDF: al subirlo, o con "Leer texto" si quedó sin. */
+  const leerTexto = async (mat: Pick<LibraryMaterial, 'id' | 'title' | 'fileType' | 'storagePath'>, file?: Blob) => {
+    const tipo = mat.fileType;
+    if (tipo !== 'pdf' && tipo !== 'doc') return;
+    if (!file && !mat.storagePath) return;
+    setProcessingIds(prev => new Set(prev).add(mat.id));
+    setTextErrors(prev => { const n = { ...prev }; delete n[mat.id]; return n; });
+    try {
+      let blob = file;
+      if (!blob) {
+        const resp = await fetch(await getSignedUrl(mat.storagePath!));
+        if (!resp.ok) throw new Error('No se pudo bajar el archivo para leerlo. Probá de nuevo.');
+        blob = await resp.blob();
+      }
+      const text = await leerTextoDeArchivo(blob, tipo, mat.title);
+      await updateMaterial(mat.id, { extractedText: text });
+    } catch (err) {
+      console.error('No se pudo leer el texto:', err);
+      setTextErrors(prev => ({ ...prev, [mat.id]: err instanceof Error ? err.message : 'No se pudo leer el texto.' }));
+    } finally {
+      setProcessingIds(prev => { const n = new Set(prev); n.delete(mat.id); return n; });
+      refresh();
     }
   };
 
@@ -457,6 +472,9 @@ export default function Biblioteca() {
           {filtered.map(mat => {
             const Icon = fileIcons[mat.fileType] || FileText;
             const processing = processingIds.has(mat.id);
+            // Word o PDF subido que quedó sin texto: se puede volver a leer
+            const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
+            const textError = textErrors[mat.id];
             return (
               <div key={mat.id} className="card biblioteca-card">
                 {mat.videoUrl && parseYouTubeId(mat.videoUrl) ? (
@@ -481,15 +499,26 @@ export default function Biblioteca() {
                     {mat.unitName && <span className="badge badge-neutral">{mat.unitName}</span>}
                     <span className="mat-size">{mat.fileSize}</span>
                     {processing && (
-                      <span className="badge badge-ia"><Loader2 size={11} className="spin" /> Leyendo texto...</span>
+                      <span className="badge badge-ia" title="No cierres ni cambies de pantalla hasta que termine">
+                        <Loader2 size={11} className="spin" /> Leyendo texto...
+                      </span>
                     )}
                     {!processing && mat.extractedText && (
                       <span className="badge badge-success" title="La IA puede usar este documento">Texto listo</span>
+                    )}
+                    {!processing && sinTexto && (
+                      <span className={`badge ${textError ? 'badge-danger' : 'badge-neutral'}`}
+                        title="Sin texto, la IA no puede hacer placas, podcast ni usarlo en IA Lab">
+                        {textError ? 'No se pudo leer' : 'Sin texto'}
+                      </span>
                     )}
                     {mat.isSharedWithStudents && (
                       <span className="badge badge-warning" title="Visible para estudiantes de la materia">Compartido</span>
                     )}
                   </div>
+                  {!processing && sinTexto && textError && (
+                    <p className="mat-text-error" role="alert">{textError}</p>
+                  )}
                   <div className="mat-tags">
                     {mat.tags.slice(0, 3).map(tag => (
                       <span key={tag} className="mat-tag">{tag}</span>
@@ -516,6 +545,18 @@ export default function Biblioteca() {
                     {mat.storagePath && (
                       <button className="mat-action-btn" title="Ver / Descargar" onClick={() => handleDownload(mat)}>
                         <Download size={14} /> Ver
+                      </button>
+                    )}
+                    {sinTexto && (
+                      <button
+                        className="mat-action-btn"
+                        title="Lee el texto del archivo para que la IA pueda hacer placas, podcast y usarlo en IA Lab"
+                        onClick={() => leerTexto(mat)}
+                        disabled={processing}
+                      >
+                        {processing
+                          ? <><Loader2 size={14} className="spin" /> Leyendo...</>
+                          : <><ScanText size={14} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
                       </button>
                     )}
                     <button
