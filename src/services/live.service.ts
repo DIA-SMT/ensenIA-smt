@@ -373,6 +373,18 @@ export async function getMyLiveResponse(
   return (data?.payload as Record<string, unknown>) ?? null;
 }
 
+/** Quiénes eligieron la opción correcta de una pregunta rápida. */
+export async function getCorrectResponders(activityId: string, correctId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('live_responses')
+    .select('student_id')
+    .eq('activity_id', activityId)
+    .eq('payload->>opcion', correctId);
+  if (error) throw error;
+  // Los invitados sin cuenta (012) responden sin student_id: no tienen perfil donde guardar una medalla
+  return (data ?? []).map(r => r.student_id).filter((id): id is string => Boolean(id));
+}
+
 // ── Reacciones ──
 
 export async function sendLiveReaction(sessionId: string, studentId: string, emoji: string): Promise<void> {

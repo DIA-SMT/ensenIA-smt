@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { Radio, Send, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId } from '../services/activities.service';
@@ -21,8 +22,9 @@ import {
 } from '../services/live.service';
 import MaterialViewer from '../components/MaterialViewer';
 import { getMyGroup, type CourseGroup } from '../services/groups.service';
+import { getNewestAwardSince } from '../services/awards.service';
 import { LiveResultsView } from './ClaseEnVivo';
-import { FEELING_META, type Student, type CheckinFeeling } from '../types';
+import { FEELING_META, AWARD_META, type Student, type CheckinFeeling, type StudentAward } from '../types';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -50,6 +52,13 @@ export default function ClaseEnVivoAlumno() {
     // para cuidar datos y batería.
     const lastBeatAt = useRef(0);
     const [myGroup, setMyGroup] = useState<CourseGroup | null>(null);
+
+    // Medallas que llegan durante la clase: se festejan en el momento. Solo
+    // las nuevas desde que abrió esta pantalla, y se pregunta cada ~8 s (no
+    // en cada poll) para cuidar datos.
+    const medallasDesde = useRef(new Date().toISOString());
+    const ultimaRevisionMedallas = useRef(0);
+    const [festejo, setFestejo] = useState<StudentAward | null>(null);
 
     // Material de la clase: solo si el docente lo muestra (y mientras dure la clase)
     const [material, setMaterial] = useState<MaterialDeClase | null>(null);
@@ -81,6 +90,15 @@ export default function ClaseEnVivoAlumno() {
             if (Date.now() - lastBeatAt.current > 30_000) {
                 lastBeatAt.current = Date.now();
                 sendHeartbeat(session.id, student.id).catch(console.error);
+            }
+
+            if (Date.now() - ultimaRevisionMedallas.current > 8_000) {
+                ultimaRevisionMedallas.current = Date.now();
+                getNewestAwardSince(student.id, medallasDesde.current).then(a => {
+                    if (!a) return;
+                    medallasDesde.current = a.createdAt;
+                    setFestejo(a);
+                }).catch(console.error);
             }
 
             // Cambió la actividad → resetear respuesta local y traer la mía si existe
@@ -353,6 +371,24 @@ export default function ClaseEnVivoAlumno() {
                             : 'Atendé a la clase 😄 — cuando tu docente lance una actividad, aparece sola acá.'}
                     </p>
                 </div>
+            )}
+
+            {/* ¡Medalla! (se la dio el docente durante la clase) */}
+            {festejo && createPortal(
+                <div className="cv-festejo" role="status" aria-live="polite">
+                    <div className="cv-festejo-card animate-scale">
+                        <span className="cv-festejo-emoji" aria-hidden="true">{AWARD_META[festejo.badgeCode]?.emoji ?? '🏅'}</span>
+                        <h3>¡Recibiste «{AWARD_META[festejo.badgeCode]?.label ?? 'una medalla'}»!</h3>
+                        <p className="text-sm text-secondary">
+                            {festejo.teacherName ? `De ${festejo.teacherName}` : 'De tu docente'}
+                            {AWARD_META[festejo.badgeCode]?.description ? ` · ${AWARD_META[festejo.badgeCode].description}` : ''}
+                        </p>
+                        {festejo.message && <p className="cv-festejo-msg">“{festejo.message}”</p>}
+                        <p className="text-xs text-subtle">Suma 25 de experiencia y queda en tu perfil.</p>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setFestejo(null)}>¡Gracias!</button>
+                    </div>
+                </div>,
+                document.body,
             )}
 
             {/* Material de la clase (lo muestra el docente) */}

@@ -13,7 +13,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
-    UsersRound, Target, X, BookOpen,
+    UsersRound, Target, X, BookOpen, Medal,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -24,6 +24,7 @@ import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
     getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds, setLiveMaterial,
+    getCorrectResponders,
     LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
@@ -31,11 +32,12 @@ import {
 import { getMaterialsByTeacher } from '../services/library.service';
 import { getPlanningByTeacher } from '../services/planning.service';
 import MaterialEnVivo from '../components/MaterialEnVivo';
+import PremiarEnVivo from '../components/PremiarEnVivo';
 import ElegirMaterial, { type EleccionMaterial } from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
-import { FEELING_META, type Subject, type CheckinFeeling, type Student } from '../types';
+import { FEELING_META, AWARD_META, type Subject, type CheckinFeeling, type Student } from '../types';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -80,6 +82,9 @@ export default function ClaseEnVivo() {
     /** Pregunta dirigida: si está, lo que se lance va solo a este estudiante. */
     const [targetStudent, setTargetStudent] = useState<Student | null>(null);
     const [groupMode, setGroupMode] = useState(false);
+    // Medallas: el diálogo (con quiénes vienen marcados) y el aviso de que salió
+    const [premiar, setPremiar] = useState<{ titulo: string; preseleccion: string[] } | null>(null);
+    const [avisoPremio, setAvisoPremio] = useState('');
 
     const pollRef = useRef<number | null>(null);
 
@@ -309,6 +314,24 @@ export default function ClaseEnVivo() {
         setResults(null);
     };
 
+    /** Los que eligieron la correcta; en modo grupal, todo su grupo. */
+    const premiarAcertaron = async () => {
+        if (!activity?.config.correctId) return;
+        try {
+            let ids = await getCorrectResponders(activity.id, activity.config.correctId);
+            if (activity.config.groupMode) {
+                const delGrupo = groups.filter(g => g.memberIds.some(id => ids.includes(id))).flatMap(g => g.memberIds);
+                ids = [...new Set([...ids, ...delGrupo])];
+            }
+            setPremiar({
+                titulo: ids.length ? `Premiar a los que acertaron (${ids.length})` : 'Nadie acertó todavía: elegí a quién premiar',
+                preseleccion: ids,
+            });
+        } catch {
+            setPremiar({ titulo: 'Dar medalla', preseleccion: [] });
+        }
+    };
+
     const handleReveal = async () => {
         if (!activity) return;
         await setActivityStatus(activity.id, 'revealed').catch(console.error);
@@ -497,7 +520,12 @@ export default function ClaseEnVivo() {
                     <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
                         👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
                     </button>
+                    <button className="btn btn-outline btn-sm" disabled={students.length === 0}
+                        onClick={() => setPremiar({ titulo: 'Dar medalla', preseleccion: targetStudent ? [targetStudent.id] : [] })}>
+                        <Medal size={14} aria-hidden="true" /> Medalla
+                    </button>
                 </div>
+                {avisoPremio && <p className="cv-aviso-premio" role="status">{avisoPremio}</p>}
                 <div className="cv-people-chips">
                     {students.map(s => {
                         const online = onlineIds.has(s.id);
@@ -569,6 +597,11 @@ export default function ClaseEnVivo() {
                         {activity.kind === 'quiz' && activity.status === 'active' && (
                             <button className="btn btn-primary btn-sm" onClick={handleReveal}>
                                 <Eye size={14} /> Revelar respuesta
+                            </button>
+                        )}
+                        {activity.kind === 'quiz' && activity.status === 'revealed' && (
+                            <button className="btn btn-primary btn-sm" onClick={premiarAcertaron}>
+                                <Medal size={14} aria-hidden="true" /> Premiar a los que acertaron
                             </button>
                         )}
                         <button className="btn btn-outline btn-sm" onClick={handleCloseActivity}>
@@ -715,6 +748,24 @@ export default function ClaseEnVivo() {
                     results={results}
                     connected={connected}
                     onClose={() => setProjecting(false)}
+                />
+            )}
+
+            {premiar && (
+                <PremiarEnVivo
+                    titulo={premiar.titulo}
+                    students={students}
+                    onlineIds={onlineIds}
+                    preseleccion={premiar.preseleccion}
+                    teacherId={user.id}
+                    subjectId={session.subjectId}
+                    onClose={() => setPremiar(null)}
+                    onListo={(n, code) => {
+                        setPremiar(null);
+                        const m = AWARD_META[code];
+                        setAvisoPremio(`${m?.emoji ?? '🏅'} ${m?.label ?? 'Medalla'} para ${n} estudiante${n !== 1 ? 's' : ''}: les aparece ahora en el celular.`);
+                        window.setTimeout(() => setAvisoPremio(''), 6000);
+                    }}
                 />
             )}
 
