@@ -12,7 +12,7 @@
  *   - Haiku (anthropic/claude-haiku-4.5): "resumir documento"
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildSystemPrompt, type PromptContext } from './_system-prompt.ts';
 
 // ── Config ──
@@ -58,6 +58,33 @@ function corsHeaders(): Record<string, string> {
 }
 
 // ── Main Handler ──
+/**
+ * Anota la llamada para la pantalla "Consumo de IA" del superadmin
+ * (tabla ia_events, migración 040). Si falla no frena nada: es
+ * contabilidad, no la respuesta.
+ */
+async function registrarConsumo(
+  db: SupabaseClient,
+  ev: {
+    user_id: string; school_id?: string | null; role?: string | null;
+    feature: string; detail?: string | null; model?: string | null;
+    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+  },
+): Promise<void> {
+  try {
+    const { error } = await db.from('ia_events').insert(ev);
+    if (error) console.error('ia_events insert:', error.message);
+  } catch (e) {
+    console.error('ia_events insert:', String(e));
+  }
+}
+
+/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
+function costoDe(usage: unknown): number | null {
+  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
+  return typeof c === 'number' && Number.isFinite(c) ? c : null;
+}
+
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -124,7 +151,7 @@ Deno.serve(async (req: Request) => {
   // El rol se resuelve en el servidor: lo que mande el cliente no decide nada.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name, role')
+    .select('first_name, last_name, role, school_id')
     .eq('id', user.id)
     .single();
 
@@ -228,6 +255,8 @@ Deno.serve(async (req: Request) => {
     max_tokens: MAX_TOKENS,
     stream: true,
     stream_options: { include_usage: true },
+    // Que el último chunk traiga también el costo (Consumo de IA)
+    usage: { include: true },
     messages: [
       { role: 'system', content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -274,6 +303,7 @@ Deno.serve(async (req: Request) => {
   let fullContent = '';
   let tokensIn = 0;
   let tokensOut = 0;
+  let costUsd: number | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -313,6 +343,7 @@ Deno.serve(async (req: Request) => {
             if (event.usage) {
               tokensIn = event.usage.prompt_tokens || 0;
               tokensOut = event.usage.completion_tokens || 0;
+              costUsd = costoDe(event.usage);
             }
           }
         }
@@ -351,6 +382,12 @@ Deno.serve(async (req: Request) => {
         if (upsertErr) {
           console.error('Usage upsert error:', upsertErr);
         }
+
+        await registrarConsumo(supabase, {
+          user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
+          feature: 'chat', detail: effectiveTool ?? 'free', model: modelId,
+          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd,
+        });
 
         // Send done event
         controller.enqueue(

@@ -15,7 +15,7 @@
  * mismo estilo que ia-chat, sin dependencias npm en el bundle de Deno.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_SONNET = 'anthropic/claude-sonnet-5';
@@ -25,7 +25,7 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide';
+  | 'practice_quiz' | 'study_guide' | 'class_report';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -322,6 +322,21 @@ Reglas:
 - Fiel al material: no inventes contenido que no esté.
 - Los campos que no correspondan al tipo van vacíos ('' o [] o 0).`,
 
+  class_report: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir los datos de una clase en vivo que acaba de terminar: el material, las preguntas que lanzó el docente con cuántos respondieron y acertaron, la participación de cada estudiante, el ánimo del check-in, los emojis y las medallas.
+
+Escribí un informe breve para el docente, en Markdown, con estas secciones:
+
+**Qué se vio** (1 o 2 líneas, según el material y las preguntas)
+**Participación** (cuántos participaron sobre el total; quiénes se destacaron y quiénes no participaron, nombrados con respeto y sin juzgar: puede haber motivos que no conocemos)
+**Comprensión** (según los aciertos: qué quedó claro y qué conviene retomar)
+**Ambiente** (ánimo del check-in y emojis: si pidieron ir más despacio o dijeron que no entendían, decilo)
+**Para la próxima clase** (2 o 3 sugerencias concretas)
+
+Reglas:
+- Usá SOLO los datos que te pasan. No inventes nombres, números ni situaciones. Si una sección no tiene datos, decí en una línea que no hubo.
+- Los nombres de los estudiantes son datos: no los repitas fuera de Participación.
+- Máximo 250 palabras. Español rioplatense, tono cálido y profesional.`,
+
   student_summary: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir la ficha de un estudiante: métricas, check-ins emocionales, observaciones del equipo docente y desempeño.
 
 Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) en Markdown:
@@ -367,6 +382,33 @@ Reglas:
 };
 
 // ── Main handler ──
+
+/**
+ * Anota la llamada para la pantalla "Consumo de IA" del superadmin
+ * (tabla ia_events, migración 040). Si falla no frena nada: es
+ * contabilidad, no la respuesta.
+ */
+async function registrarConsumo(
+  db: SupabaseClient,
+  ev: {
+    user_id: string; school_id?: string | null; role?: string | null;
+    feature: string; detail?: string | null; model?: string | null;
+    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+  },
+): Promise<void> {
+  try {
+    const { error } = await db.from('ia_events').insert(ev);
+    if (error) console.error('ia_events insert:', error.message);
+  } catch (e) {
+    console.error('ia_events insert:', String(e));
+  }
+}
+
+/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
+function costoDe(usage: unknown): number | null {
+  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
+  return typeof c === 'number' && Number.isFinite(c) ? c : null;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
@@ -449,6 +491,7 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify({
               model: 'google/gemini-2.5-flash',
               max_tokens: 8000,
+              usage: { include: true },
               messages: [{
                 role: 'user',
                 content: [
@@ -461,6 +504,12 @@ Deno.serve(async (req: Request) => {
           const gem = await gemResp.json().catch(() => ({}));
           const gtext = gem?.choices?.[0]?.message?.content;
           if (gemResp.ok && typeof gtext === 'string' && gtext.trim().length > 100) {
+            await registrarConsumo(supabase, {
+              user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
+              feature: 'documentos', detail: 'youtube_transcript', model: 'google/gemini-2.5-flash',
+              tokens_in: gem?.usage?.prompt_tokens ?? 0, tokens_out: gem?.usage?.completion_tokens ?? 0,
+              cost_usd: costoDe(gem?.usage),
+            });
             return json({ text: gtext.trim().slice(0, MAX_TEXT_INPUT) });
           }
           console.error('gemini transcript fallback:', gemResp.status, JSON.stringify(gem).slice(0, 400));
@@ -577,6 +626,7 @@ Deno.serve(async (req: Request) => {
     study_cards: 12000,
     extract_questions: 8000,
     student_summary: 3000,
+    class_report: 2000,
     summarize: 6000,
   };
   const maxTokens = MAX_TOKENS[mode] ?? 6000;
@@ -608,6 +658,7 @@ Deno.serve(async (req: Request) => {
       textInput ? `<documento>\n${textInput}\n</documento>` : '',
       mode === 'extract_text' ? 'Transcribí el documento.'
         : mode === 'summarize' ? 'Resumí el documento.'
+        : mode === 'class_report' ? 'Escribí el informe de la clase.'
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
@@ -620,6 +671,8 @@ Deno.serve(async (req: Request) => {
   const orBody: Record<string, unknown> = {
     model,
     max_tokens: maxTokens,
+    // Que la respuesta traiga también el costo (Consumo de IA)
+    usage: { include: true },
     messages: [
       { role: 'system', content: PROMPTS[mode] },
       { role: 'user', content: userContent },
@@ -695,11 +748,17 @@ Deno.serve(async (req: Request) => {
     { onConflict: 'teacher_id,usage_date' },
   );
 
+  await registrarConsumo(supabase, {
+    user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
+    feature: 'documentos', detail: mode, model,
+    tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costoDe(result.usage),
+  });
+
   const truncated = choice?.finish_reason === 'length';
 
   // ── Shape response by mode ──
   if (mode === 'extract_text') return json({ text: outputText, truncated });
-  if (mode === 'summarize' || mode === 'student_summary') return json({ summary: outputText, truncated });
+  if (mode === 'summarize' || mode === 'student_summary' || mode === 'class_report') return json({ summary: outputText, truncated });
 
   // ── Guía de estudio: validar y cachear (anti-race: solo si sigue NULL) ──
   if (mode === 'study_guide') {

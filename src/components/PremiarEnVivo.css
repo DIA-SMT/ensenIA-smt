@@ -1,0 +1,29 @@
+/* Dar medallas en la clase en vivo */
+
+.pev { max-width: 620px; width: calc(100vw - 32px); max-height: 90dvh; display: flex; flex-direction: column; }
+.pev .em-modal-body { overflow-y: auto; }
+
+.pev-quienes { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.pev-quienes-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.pev-atajos { display: flex; flex-wrap: wrap; gap: 2px; }
+
+.pev-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pev-alumno {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.pev-alumno.on { border-color: var(--warning); background: var(--warning-light); }
+.pev-alumno input { margin: 0; }

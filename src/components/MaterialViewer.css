@@ -53,3 +53,74 @@
 .mv-texto summary:hover { color: var(--text-primary); }
 
 .mv-texto[open] summary { margin-bottom: var(--space-2); }
+
+.mv-acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 480px) {
+  .mv-solo-ancho { display: none; }
+}
+
+/* PDF dibujado con pdf.js: una página debajo de la otra */
+.mv-pdf-paginas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mv-pdf-pagina {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+/* Word convertido a HTML: se lee como un documento */
+.mv-word {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.mv-word h1, .mv-word h2, .mv-word h3 { margin: 1.2em 0 0.5em; line-height: 1.3; }
+.mv-word p { margin: 0 0 0.75em; }
+.mv-word ul, .mv-word ol { margin: 0 0 0.75em; padding-left: 1.5em; }
+.mv-word img { max-width: 100%; height: auto; }
+.mv-word table { border-collapse: collapse; width: 100%; margin: 0 0 0.75em; display: block; overflow-x: auto; }
+.mv-word td, .mv-word th { border: 1px solid #ccc; padding: 4px 8px; vertical-align: top; }
+
+@media (max-width: 480px) {
+  .mv-word { padding: var(--space-4); }
+}
+
+/* Material solo texto (tema del temario, módulo armado con IA) */
+.mv-texto-solo { line-height: 1.6; }
+
+/* Modo proyector: ocupa toda la pantalla y se lee desde el fondo del aula */
+.mv-overlay-proyector { padding: 0; }
+.mv-modal.mv-proyector {
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 0;
+}
+.mv-proyector .em-modal-header h3 { font-size: 1.5rem; }
+.mv-proyector .mv-texto-solo { font-size: 1.5rem; max-width: 60ch; margin: 0 auto; width: 100%; }
+.mv-proyector .mv-word { font-size: 1.375rem; max-width: 70ch; margin: 0 auto; width: 100%; }
+.mv-proyector .mv-pdf-paginas { max-width: 1100px; margin: 0 auto; width: 100%; }
+.mv-proyector .mv-imagen { max-height: calc(100dvh - 120px); object-fit: contain; }
+
+/* Video de YouTube embebido, 16:9 */
+.mv-video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: #000; }
+.mv-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.mv-proyector .mv-video { max-height: calc(100dvh - 120px); width: auto; margin: 0 auto; }

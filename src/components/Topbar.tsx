@@ -64,7 +64,6 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
           </p>
           <h1 className="page-title">{titulo}</h1>
         </div>
-        <span className="demo-chip" title="Demo para las escuelas municipales Gabriela Mistral y Alfonsina Storni. Los datos son de prueba.">DEMO</span>
         {eligeEscuela && (
           <select
             className="form-select topbar-school"

@@ -63,6 +63,45 @@ export async function giveStudentAward(input: {
   return mapStudentAward(row);
 }
 
+/** La misma medalla para varios estudiantes de una vez (clase en vivo). */
+export async function giveStudentAwards(input: {
+  studentIds: string[];
+  teacherId: string;
+  subjectId?: string | null;
+  badgeCode: string;
+  message?: string;
+}): Promise<number> {
+  if (input.studentIds.length === 0) return 0;
+  const message = input.message?.trim() || null;
+  const { error, count } = await supabase
+    .from('student_awards')
+    .insert(
+      input.studentIds.map(id => ({
+        student_id: id,
+        teacher_id: input.teacherId,
+        subject_id: input.subjectId ?? null,
+        badge_code: input.badgeCode,
+        message,
+      })),
+      { count: 'exact' },
+    );
+  if (error) throw new Error('No se pudo dar la medalla. ¿Son todos estudiantes de tu curso?');
+  return count ?? input.studentIds.length;
+}
+
+/** La medalla más nueva del estudiante desde un momento (para festejarla en vivo). */
+export async function getNewestAwardSince(studentId: string, sinceIso: string): Promise<StudentAward | null> {
+  const { data } = await supabase
+    .from('student_awards')
+    .select('*, profiles(first_name, last_name), subjects(name)')
+    .eq('student_id', studentId)
+    .gt('created_at', sinceIso)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? mapStudentAward(data) : null;
+}
+
 export async function getStudentAwards(studentId: string): Promise<StudentAward[]> {
   const data = unwrap(
     await supabase

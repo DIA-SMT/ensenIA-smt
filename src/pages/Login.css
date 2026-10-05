@@ -154,6 +154,18 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
 }
 .login-error svg { flex-shrink: 0; margin-top: 2px; }
 
+/* Por qué hay que volver a entrar (sesión de 12 h del personal) */
+.login-aviso {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: var(--warning-ink);
+  font-size: 0.875rem; font-weight: 550;
+}
+.login-aviso svg { flex-shrink: 0; margin-top: 2px; }
+
 /* ── Demo ── */
 .login-demo { padding-top: var(--space-5); border-top: 1px solid var(--border-color); }
 .login-demo-title {
@@ -204,25 +216,4 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
   /* Las promesas se quedan en escritorio: en el celular, primero entrar. */
   .login-promesas { display: none; }
   .login-card { padding: 24px 20px calc(32px + env(safe-area-inset-bottom)); gap: var(--space-4); }
-}
-
-/* La demo se dice de frente */
-.login-demo-note {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 11.5px;
-  color: var(--text-subtle);
-  margin: 6px 0 0;
-}
-.login-demo-chip {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  color: #FCD34D;
-  background: rgba(251, 191, 36, 0.1);
 }

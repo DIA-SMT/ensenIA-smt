@@ -13,7 +13,7 @@
  * diferencia entre filtrar y solo pedirle a la IA que no cuente.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildSystemPrompt, RIESGO_SYSTEM,
   type MigueAudience, type PolicyHit,
@@ -80,6 +80,7 @@ interface Clasificacion {
  */
 async function pasadaClasificador(
   apiKey: string, modelo: string, texto: string,
+  anotar?: (modelo: string, usage: { prompt_tokens?: number; completion_tokens?: number; cost?: number } | undefined) => void,
 ): Promise<Clasificacion | null> {
   try {
     const r = await fetch(OPENROUTER_URL, {
@@ -92,6 +93,7 @@ async function pasadaClasificador(
       body: JSON.stringify({
         model: modelo,
         max_tokens: 300,
+        usage: { include: true },
         messages: [
           { role: 'system', content: RIESGO_SYSTEM },
           // El texto del chico va delimitado y el prompt dice que es dato.
@@ -109,6 +111,7 @@ async function pasadaClasificador(
       return null;
     }
     const j = await r.json();
+    anotar?.(modelo, j?.usage);
     const raw: string = j?.choices?.[0]?.message?.content ?? '';
     // Objetos planos, sin anidar: se toma el ÚLTIMO, que es la respuesta
     // del modelo. Un regex greedy podía abarcar desde una llave escrita
@@ -144,13 +147,41 @@ async function pasadaClasificador(
  */
 async function clasificarRiesgo(
   apiKey: string, texto: string,
+  anotar?: Parameters<typeof pasadaClasificador>[3],
 ): Promise<Clasificacion | 'error'> {
-  const primera = await pasadaClasificador(apiKey, MODEL_CLASIF, texto);
+  const primera = await pasadaClasificador(apiKey, MODEL_CLASIF, texto, anotar);
   if (primera) return primera;
-  const segunda = await pasadaClasificador(apiKey, MODEL_CHAT, texto);
+  const segunda = await pasadaClasificador(apiKey, MODEL_CHAT, texto, anotar);
   if (segunda) return segunda;
   console.error('clasificador: fallaron los dos modelos');
   return 'error';
+}
+
+/**
+ * Anota la llamada para la pantalla "Consumo de IA" del superadmin
+ * (tabla ia_events, migración 040). Si falla no frena nada: es
+ * contabilidad, no la respuesta.
+ */
+async function registrarConsumo(
+  db: SupabaseClient,
+  ev: {
+    user_id: string; school_id?: string | null; role?: string | null;
+    feature: string; detail?: string | null; model?: string | null;
+    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+  },
+): Promise<void> {
+  try {
+    const { error } = await db.from('ia_events').insert(ev);
+    if (error) console.error('ia_events insert:', error.message);
+  } catch (e) {
+    console.error('ia_events insert:', String(e));
+  }
+}
+
+/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
+function costoDe(usage: unknown): number | null {
+  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
+  return typeof c === 'number' && Number.isFinite(c) ? c : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -300,7 +331,15 @@ Deno.serve(async (req: Request) => {
   // se guardó de verdad: prometerlo sin haberlo hecho sería lo peor.
   let derivada: 'seguimiento' | 'urgente' | null = null;
   if (audience === 'estudiante' && studentId) {
-    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content);
+    const pasadas: Parameters<typeof registrarConsumo>[1][] = [];
+    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content, (modelo, u) => {
+      pasadas.push({
+        user_id: user.id, school_id: profile.school_id, role: profile.role,
+        feature: 'migue_riesgo', model: modelo,
+        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+      });
+    });
+    for (const p of pasadas) await registrarConsumo(admin, p);
 
     if (clasif === 'error') {
       // Falló la evaluación. No es "no pasa nada": se deja una señal para
@@ -374,6 +413,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     max_tokens: MAX_TOKENS,
     stream: true,
     stream_options: { include_usage: true },
+    // Que el último chunk traiga también el costo (Consumo de IA)
+    usage: { include: true },
     messages: [
       { role: 'system', content: systemPrompt + avisoDerivacion },
       ...historial,
@@ -415,6 +456,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
   let fullContent = '';
   let tokensIn = 0;
   let tokensOut = 0;
+  let costUsd: number | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -443,6 +485,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
             if (ev?.usage) {
               tokensIn = ev.usage.prompt_tokens ?? 0;
               tokensOut = ev.usage.completion_tokens ?? 0;
+              costUsd = costoDe(ev.usage);
             }
           }
         }
@@ -475,6 +518,12 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           token_count_in: (usage?.token_count_in ?? 0) + tokensIn,
           token_count_out: (usage?.token_count_out ?? 0) + tokensOut,
         }, { onConflict: 'teacher_id,usage_date' });
+
+        await registrarConsumo(admin, {
+          user_id: user.id, school_id: profile.school_id, role: profile.role,
+          feature: 'migue', detail: audience, model: MODEL_CHAT,
+          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd,
+        });
 
         controller.enqueue(encoder.encode(sseEvent('done', {
           model: 'sonnet',

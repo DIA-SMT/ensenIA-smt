@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck } from 'lucide-react';
+import { useAuth, SESION_VENCIDA_KEY } from '../contexts/AuthContext';
+import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck, Clock } from 'lucide-react';
 import './Login.css';
 
 /**
@@ -25,6 +25,13 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // La sesión del personal vence a las 12 h (AuthContext): se explica una vez
+  const [sesionVencida] = useState(() => {
+    try { return sessionStorage.getItem(SESION_VENCIDA_KEY) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { sessionStorage.removeItem(SESION_VENCIDA_KEY); } catch { /* noop */ }
+  }, []);
 
   // Destino post-login: si vino de un QR (?next=/mis-actividades/...),
   // va derecho ahí; si no, a "/" y HomeRedirect resuelve según el rol.
@@ -65,10 +72,6 @@ export default function Login() {
           <h1 className="login-title" id="login-titulo">SMT Estud<span>IA</span></h1>
           <p className="login-subtitle">La plataforma de las escuelas municipales de San Miguel de Tucumán.</p>
 
-          <p className="login-demo-note">
-            <span className="login-demo-chip">DEMO</span>
-            Plataforma en demostración · los datos son de prueba
-          </p>
 
           <ul className="login-roles" aria-label="Quiénes la usan">
             <li className="rol-direccion">Dirección</li>
@@ -90,6 +93,12 @@ export default function Login() {
           <p className="login-form-bajada">Con el email y la contraseña que te dio la escuela.</p>
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
+            {sesionVencida && !error && (
+              <div className="login-aviso" role="status">
+                <Clock size={16} aria-hidden="true" />
+                <span>Tu sesión se cerró porque pasaron 12 horas desde que entraste. Volvé a entrar para seguir.</span>
+              </div>
+            )}
             {error && (
               <div className="login-error" role="alert">
                 <AlertCircle size={16} aria-hidden="true" />

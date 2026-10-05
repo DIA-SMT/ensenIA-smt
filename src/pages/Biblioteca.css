@@ -276,3 +276,10 @@
   border: 1px solid var(--border-color);
   margin-bottom: 4px;
 }
+
+/* Por qué no se pudo leer el texto de un material */
+.mat-text-error {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}

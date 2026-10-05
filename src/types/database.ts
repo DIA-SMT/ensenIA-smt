@@ -2842,6 +2842,10 @@ export type Database = {
           guests_enabled: boolean
           id: string
           join_code: string | null
+          material_id: string | null
+          class_id: string | null
+          material_visible: boolean
+          ai_summary: string | null
           reactions_enabled: boolean
           school_id: string
           status: string
@@ -2856,6 +2860,10 @@ export type Database = {
           guests_enabled?: boolean
           id?: string
           join_code?: string | null
+          material_id?: string | null
+          class_id?: string | null
+          material_visible?: boolean
+          ai_summary?: string | null
           reactions_enabled?: boolean
           school_id: string
           status?: string
@@ -2870,6 +2878,10 @@ export type Database = {
           guests_enabled?: boolean
           id?: string
           join_code?: string | null
+          material_id?: string | null
+          class_id?: string | null
+          material_visible?: boolean
+          ai_summary?: string | null
           reactions_enabled?: boolean
           school_id?: string
           status?: string
@@ -3174,6 +3186,18 @@ export type Database = {
       switch_school: {
         Args: { p_school: string }
         Returns: undefined
+      }
+      ia_consumption: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
+      live_class_material: {
+        Args: { p_session: string }
+        Returns: Json
+      }
+      live_session_summary: {
+        Args: { p_session: string }
+        Returns: Json
       }
       ensure_academic_terms: {
         Args: { p_school_id: string; p_year: number }

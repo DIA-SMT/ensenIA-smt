@@ -200,7 +200,7 @@ export function libretaToPdf(
   doc.text(`${opts.subjectName} · ${opts.courseName} · Docente: ${opts.teacherName}`, M, 64);
   doc.setTextColor(...SUBTLE);
   doc.setFontSize(8.5);
-  doc.text('Escala 1-10, se aprueba con 6. Por trimestre: nota · conducta · inasistencias. Documento de demostración.', M, 78);
+  doc.text('Escala 1-10, se aprueba con 6. Por trimestre: nota · conducta · inasistencias.', M, 78);
 
   const cols = [
     { key: 'student', label: 'Estudiante', w: 170 },
@@ -283,7 +283,7 @@ export function informeToPdf(
   doc.setTextColor(...SUBTLE);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${scope} · generado el ${new Date().toLocaleDateString('es-AR')} · Documento de demostración`, M, 66);
+  doc.text(`${scope} · generado el ${new Date().toLocaleDateString('es-AR')}`, M, 66);
 
   // Resumen en fila de tarjetas
   let x = M;

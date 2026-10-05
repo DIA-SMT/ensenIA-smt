@@ -11,7 +11,7 @@
  * Secrets: OPENROUTER_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID (opcional).
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const SCRIPT_MODEL = 'anthropic/claude-sonnet-5';
@@ -47,6 +47,33 @@ function json(body: Record<string, unknown>, status = 200): Response {
     status,
     headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Anota la llamada para la pantalla "Consumo de IA" del superadmin
+ * (tabla ia_events, migración 040). Si falla no frena nada: es
+ * contabilidad, no la respuesta.
+ */
+async function registrarConsumo(
+  db: SupabaseClient,
+  ev: {
+    user_id: string; school_id?: string | null; role?: string | null;
+    feature: string; detail?: string | null; model?: string | null;
+    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+  },
+): Promise<void> {
+  try {
+    const { error } = await db.from('ia_events').insert(ev);
+    if (error) console.error('ia_events insert:', error.message);
+  } catch (e) {
+    console.error('ia_events insert:', String(e));
+  }
+}
+
+/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
+function costoDe(usage: unknown): number | null {
+  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
+  return typeof c === 'number' && Number.isFinite(c) ? c : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -110,6 +137,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: SCRIPT_MODEL,
         max_tokens: 4000,
+        usage: { include: true },
         messages: [
           { role: 'system', content: SCRIPT_PROMPT },
           { role: 'user', content: `MATERIAL: "${mat.title}" (${mat.subject_name})\n\n"""\n${source}\n"""` },
@@ -120,6 +148,15 @@ Deno.serve(async (req: Request) => {
     const orJson = await orRes.json();
     const script: string = orJson.choices?.[0]?.message?.content?.trim() ?? '';
     if (script.length < 200) throw new Error('El guion salió vacío o demasiado corto.');
+
+    // El podcast no cuenta para el tope diario, pero sí para el consumo
+    const { data: autor } = await db.from('profiles').select('role, school_id').eq('id', user.id).maybeSingle();
+    const quien = { user_id: user.id, school_id: autor?.school_id ?? null, role: autor?.role ?? null };
+    await registrarConsumo(db, {
+      ...quien, feature: 'podcast', detail: 'guion', model: SCRIPT_MODEL,
+      tokens_in: orJson.usage?.prompt_tokens ?? 0, tokens_out: orJson.usage?.completion_tokens ?? 0,
+      cost_usd: costoDe(orJson.usage),
+    });
 
     // ── 2. Voz ──
     const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || DEFAULT_VOICE;
@@ -140,6 +177,10 @@ Deno.serve(async (req: Request) => {
       throw new Error(`ElevenLabs ${ttsRes.status}: ${t.slice(0, 150)}`);
     }
     const audio = new Uint8Array(await ttsRes.arrayBuffer());
+    // ElevenLabs cobra por caracter: se anota aunque el audio salga mal
+    await registrarConsumo(db, {
+      ...quien, feature: 'podcast', detail: 'voz', model: 'eleven_multilingual_v2', tts_chars: script.length,
+    });
     if (audio.byteLength < 10_000) throw new Error('El audio salió vacío.');
 
     // ── 3. Storage + estado ──
