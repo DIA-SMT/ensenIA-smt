@@ -2842,6 +2842,9 @@ export type Database = {
           guests_enabled: boolean
           id: string
           join_code: string | null
+          material_id: string | null
+          class_id: string | null
+          material_visible: boolean
           reactions_enabled: boolean
           school_id: string
           status: string
@@ -2856,6 +2859,9 @@ export type Database = {
           guests_enabled?: boolean
           id?: string
           join_code?: string | null
+          material_id?: string | null
+          class_id?: string | null
+          material_visible?: boolean
           reactions_enabled?: boolean
           school_id: string
           status?: string
@@ -2870,6 +2876,9 @@ export type Database = {
           guests_enabled?: boolean
           id?: string
           join_code?: string | null
+          material_id?: string | null
+          class_id?: string | null
+          material_visible?: boolean
           reactions_enabled?: boolean
           school_id?: string
           status?: string
@@ -3177,6 +3186,10 @@ export type Database = {
       }
       ia_consumption: {
         Args: { p_days?: number }
+        Returns: Json
+      }
+      live_class_material: {
+        Args: { p_session: string }
         Returns: Json
       }
       ensure_academic_terms: {

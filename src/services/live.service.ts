@@ -10,7 +10,7 @@
  */
 
 import { supabase, unwrap } from './_helpers';
-import type { CheckinFeeling } from '../types';
+import type { CheckinFeeling, LibraryMaterial, FileType } from '../types';
 
 // ── Tipos ──
 
@@ -45,6 +45,11 @@ export interface LiveSession {
   guestsEnabled: boolean;
   /** Código corto de 6 caracteres que se proyecta junto al QR. */
   joinCode: string | null;
+  /** Material de la clase (041): uno de la biblioteca o un tema del temario. */
+  materialId: string | null;
+  classId: string | null;
+  /** Los celulares del curso lo ven mientras dure la clase. */
+  materialVisible: boolean;
   createdAt: string;
   endedAt?: string | null;
 }
@@ -104,6 +109,9 @@ function mapSession(row: any): LiveSession {
     reactionsEnabled: row.reactions_enabled,
     guestsEnabled: row.guests_enabled,
     joinCode: row.join_code,
+    materialId: row.material_id ?? null,
+    classId: row.class_id ?? null,
+    materialVisible: row.material_visible ?? false,
     createdAt: row.created_at,
     endedAt: row.ended_at,
   };
@@ -141,6 +149,8 @@ export async function startLiveSession(s: {
   subjectId: string;
   courseId: string;
   title: string;
+  materialId?: string | null;
+  classId?: string | null;
 }): Promise<LiveSession> {
   const { data, error } = await supabase
     .from('live_sessions')
@@ -150,6 +160,10 @@ export async function startLiveSession(s: {
       subject_id: s.subjectId,
       course_id: s.courseId,
       title: s.title,
+      // Solo si se eligió: sin la 041 corrida, mandar las columnas rompería
+      // el inicio de cualquier clase
+      ...(s.materialId ? { material_id: s.materialId } : {}),
+      ...(s.classId ? { class_id: s.classId } : {}),
     })
     .select('*')
     .single();
@@ -176,6 +190,73 @@ export async function setReactionsEnabled(id: string, enabled: boolean): Promise
     .update({ reactions_enabled: enabled })
     .eq('id', id);
   if (error) throw error;
+}
+
+// ── Material de la clase (041) ──
+
+/** Lo que devuelve live_class_material: un tema del temario o un material. */
+export type MaterialDeClase =
+  | { tipo: 'tema'; id: string; titulo: string; unidad: string; objetivos: string[]; contenido: string | null }
+  | {
+      tipo: 'material'; id: string; titulo: string; descripcion: string | null;
+      file_type: string; file_name: string; storage_path: string | null;
+      video_url: string | null; texto: string | null;
+    };
+
+/** Cambia (o saca, con null) el material de la clase. */
+export async function setLiveMaterial(
+  sessionId: string,
+  m: { materialId: string } | { classId: string } | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('live_sessions')
+    .update({
+      material_id: m && 'materialId' in m ? m.materialId : null,
+      class_id: m && 'classId' in m ? m.classId : null,
+    })
+    .eq('id', sessionId);
+  if (error) throw new Error(error.message.includes('no es') ? error.message : 'No se pudo cambiar el material.');
+}
+
+export async function setMaterialVisible(sessionId: string, visible: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('live_sessions')
+    .update({ material_visible: visible })
+    .eq('id', sessionId);
+  if (error) throw error;
+}
+
+/** null si no hay material, o si al alumno todavía no se lo muestran. */
+export async function getLiveClassMaterial(sessionId: string): Promise<MaterialDeClase | null> {
+  const { data, error } = await supabase.rpc('live_class_material', { p_session: sessionId });
+  if (error) throw error;
+  return (data as unknown as MaterialDeClase | null) ?? null;
+}
+
+/** El texto con el que se puede trabajar (preguntas con IA). */
+export function textoDeMaterial(m: MaterialDeClase): string {
+  if (m.tipo === 'tema') {
+    const objetivos = m.objetivos.length
+      ? `Objetivos:\n${m.objetivos.map(o => `- ${o}`).join('\n')}\n\n`
+      : '';
+    return `# ${m.titulo}\n\n${objetivos}${m.contenido ?? ''}`.trim();
+  }
+  return (m.texto ?? '').trim();
+}
+
+/** El material con la forma que espera MaterialViewer (el tema es solo texto). */
+export function materialParaVisor(m: MaterialDeClase): LibraryMaterial {
+  const base = {
+    id: m.id, title: m.titulo, fileSize: '', subjectId: '', subjectName: '', teacherId: '', schoolId: '',
+    tags: [], uploadedAt: '', isSharedWithStudents: false,
+  };
+  if (m.tipo === 'tema') {
+    return { ...base, description: m.unidad, fileType: 'doc', fileName: '', storagePath: null, extractedText: textoDeMaterial(m) };
+  }
+  return {
+    ...base, description: m.descripcion ?? '', fileType: m.file_type as FileType, fileName: m.file_name,
+    storagePath: m.storage_path, extractedText: m.texto, videoUrl: m.video_url,
+  };
 }
 
 // ── Sesión + actividad actual (lo pollean docente y estudiante) ──

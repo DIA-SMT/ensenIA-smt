@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText, Eye,
+  Headphones, ScanText, Eye, Radio,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
@@ -601,6 +601,15 @@ export default function Biblioteca() {
                         onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
                       >
                         <FlaskConical size={14} /> Usar en IA Lab
+                      </button>
+                    )}
+                    {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
+                      <button
+                        className="mat-action-btn"
+                        title="Trabajarlo en la clase en vivo: proyectarlo, mostrarlo en los celulares y sacar preguntas"
+                        onClick={() => navigate(`/clase-en-vivo?material=${mat.id}`)}
+                      >
+                        <Radio size={14} /> En vivo
                       </button>
                     )}
                     <button

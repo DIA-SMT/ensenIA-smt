@@ -9,10 +9,11 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
-    UsersRound, Target, X,
+    UsersRound, Target, X, BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -22,11 +23,15 @@ import GruposModal from '../components/GruposModal';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds,
+    getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds, setLiveMaterial,
     LIVE_KIND_META,
     type LiveSession, type LiveActivity, type LiveActivityKind,
-    type LiveResults, type LiveOption,
+    type LiveResults, type LiveOption, type LiveActivityConfig,
 } from '../services/live.service';
+import { getMaterialsByTeacher } from '../services/library.service';
+import { getPlanningByTeacher } from '../services/planning.service';
+import MaterialEnVivo from '../components/MaterialEnVivo';
+import ElegirMaterial, { type EleccionMaterial } from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
@@ -49,6 +54,10 @@ export default function ClaseEnVivo() {
     const [assignmentIdx, setAssignmentIdx] = useState(0);
     const [starting, setStarting] = useState(false);
     const [startError, setStartError] = useState('');
+    // Material elegido antes de arrancar (opcional)
+    const [materialInicial, setMaterialInicial] = useState<EleccionMaterial | null>(null);
+    const [eligiendoInicial, setEligiendoInicial] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Lanzador de actividades
     const [pickedKind, setPickedKind] = useState<LiveActivityKind | null>(null);
@@ -89,6 +98,50 @@ export default function ClaseEnVivo() {
         if (!user) return;
         getMyLiveSession(user.id).then(setSession).catch(() => setSession(null));
     }, [user]);
+
+    // Llegado desde la Biblioteca (?material=) o el temario (?tema=): ese
+    // material queda elegido. Con la clase ya andando y de la misma materia
+    // se cambia ahí mismo; si no, se preselecciona para arrancarla.
+    const pedidoMaterial = searchParams.get('material');
+    const pedidoTema = searchParams.get('tema');
+    useEffect(() => {
+        if (!user || session === undefined || (!pedidoMaterial && !pedidoTema)) return;
+        let cancelado = false;
+        (async () => {
+            let destino: { subjectId: string; courseId?: string; eleccion: EleccionMaterial } | null = null;
+            if (pedidoMaterial) {
+                const m = (await getMaterialsByTeacher(user.id)).find(x => x.id === pedidoMaterial);
+                if (m) destino = { subjectId: m.subjectId, eleccion: { materialId: m.id, titulo: m.title } };
+            } else if (pedidoTema) {
+                for (const u of await getPlanningByTeacher(user.id)) {
+                    const c = u.classes.find(x => x.id === pedidoTema);
+                    if (c) { destino = { subjectId: u.subjectId, courseId: u.courseId, eleccion: { classId: c.id, titulo: c.title } }; break; }
+                }
+            }
+            if (cancelado) return;
+            setSearchParams({}, { replace: true });
+            if (!destino) return;
+            const d = destino;
+            if (session && session.status === 'live') {
+                if (session.subjectId !== d.subjectId || (d.courseId && session.courseId !== d.courseId)) {
+                    setStartError('Ese material es de otra materia o curso que la clase que tenés en vivo.');
+                    return;
+                }
+                const e = d.eleccion;
+                await setLiveMaterial(session.id, 'materialId' in e ? { materialId: e.materialId } : { classId: e.classId });
+                setSession({ ...session, materialId: 'materialId' in e ? e.materialId : null, classId: 'classId' in e ? e.classId : null });
+                return;
+            }
+            const idx = assignments.findIndex(a => a.subjectId === d.subjectId && (!d.courseId || a.courseId === d.courseId));
+            if (idx >= 0) {
+                setAssignmentIdx(idx);
+                setMaterialInicial(d.eleccion);
+            }
+        })().catch(console.error);
+        return () => { cancelado = true; };
+        // Corre una vez por pedido: session y assignments se leen en ese momento
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, session === undefined, pedidoMaterial, pedidoTema]);
 
     // Con la clase viva, carga el curso (para nombres) y sus grupos
     useEffect(() => {
@@ -160,6 +213,8 @@ export default function ClaseEnVivo() {
                 subjectId: a.subjectId,
                 courseId: a.courseId,
                 title: `${subjectName(a.subjectId)} · ${a.courseName}`,
+                materialId: materialInicial && 'materialId' in materialInicial ? materialInicial.materialId : null,
+                classId: materialInicial && 'classId' in materialInicial ? materialInicial.classId : null,
             });
             setSession(s);
         } catch (err) {
@@ -246,6 +301,14 @@ export default function ClaseEnVivo() {
         }
     };
 
+    /** Lanza una pregunta armada desde el material (va a todo el curso). */
+    const lanzarDesdeMaterial = async (kind: LiveActivityKind, config: LiveActivityConfig) => {
+        if (!session) return;
+        const act = await launchActivity(session.id, kind, config, null);
+        setActivity(act);
+        setResults(null);
+    };
+
     const handleReveal = async () => {
         if (!activity) return;
         await setActivityStatus(activity.id, 'revealed').catch(console.error);
@@ -280,7 +343,7 @@ export default function ClaseEnVivo() {
                         <select
                             className="form-select"
                             value={assignmentIdx}
-                            onChange={e => setAssignmentIdx(Number(e.target.value))}
+                            onChange={e => { setAssignmentIdx(Number(e.target.value)); setMaterialInicial(null); }}
                         >
                             {assignments.map((a, i) => (
                                 <option key={i} value={i}>
@@ -288,6 +351,12 @@ export default function ClaseEnVivo() {
                                 </option>
                             ))}
                         </select>
+                        <label className="text-sm text-secondary">Material de la clase (opcional)</label>
+                        <button type="button" className="btn btn-secondary w-full cv-start-material" onClick={() => setEligiendoInicial(true)}
+                            disabled={assignments.length === 0}>
+                            <BookOpen size={16} aria-hidden="true" />
+                            <span>{materialInicial ? materialInicial.titulo : 'Elegir un tema o material'}</span>
+                        </button>
                         <button className="btn btn-primary w-full" onClick={handleStart} disabled={starting || assignments.length === 0}>
                             {starting ? <Loader2 size={16} className="spin" /> : <Radio size={16} />}
                             {starting ? 'Iniciando...' : 'Iniciar clase en vivo'}
@@ -298,6 +367,17 @@ export default function ClaseEnVivo() {
                         </p>
                     </div>
                 </div>
+                {assignments[assignmentIdx] && (
+                    <ElegirMaterial
+                        abierto={eligiendoInicial}
+                        alCerrar={() => setEligiendoInicial(false)}
+                        teacherId={user.id}
+                        subjectId={assignments[assignmentIdx].subjectId}
+                        courseId={assignments[assignmentIdx].courseId}
+                        actual={materialInicial ? ('materialId' in materialInicial ? materialInicial.materialId : materialInicial.classId) : null}
+                        alElegir={e => { setMaterialInicial(e); setEligiendoInicial(false); }}
+                    />
+                )}
             </div>
         );
     }
@@ -504,6 +584,8 @@ export default function ClaseEnVivo() {
                     </p>
                 </div>
             )}
+
+            <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />
 
             {/* Lanzador */}
             <div className="card cv-launcher">

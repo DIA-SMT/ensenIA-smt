@@ -10,15 +10,16 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Radio, Send, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId } from '../services/activities.service';
 import {
     getLiveSessionForCourse, getSessionState, getLiveResults,
     upsertLiveResponse, getMyLiveResponse, sendLiveReaction, saveLiveCheckin,
-    sendHeartbeat, LIVE_KIND_META, LIVE_REACTIONS,
-    type LiveSession, type LiveActivity, type LiveResults,
+    sendHeartbeat, LIVE_KIND_META, LIVE_REACTIONS, getLiveClassMaterial, materialParaVisor,
+    type LiveSession, type LiveActivity, type LiveResults, type MaterialDeClase,
 } from '../services/live.service';
+import MaterialViewer from '../components/MaterialViewer';
 import { getMyGroup, type CourseGroup } from '../services/groups.service';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type Student, type CheckinFeeling } from '../types';
@@ -49,6 +50,10 @@ export default function ClaseEnVivoAlumno() {
     // para cuidar datos y batería.
     const lastBeatAt = useRef(0);
     const [myGroup, setMyGroup] = useState<CourseGroup | null>(null);
+
+    // Material de la clase: solo si el docente lo muestra (y mientras dure la clase)
+    const [material, setMaterial] = useState<MaterialDeClase | null>(null);
+    const [viendoMaterial, setViendoMaterial] = useState(false);
 
     useEffect(() => {
         if (!user) return;
@@ -102,6 +107,22 @@ export default function ClaseEnVivoAlumno() {
         const id = window.setInterval(poll, POLL_MS);
         return () => window.clearInterval(id);
     }, [student, poll]);
+
+    const materialKey = session?.materialVisible ? `${session.id}:${session.materialId ?? ''}:${session.classId ?? ''}` : null;
+    useEffect(() => {
+        let cancelado = false;
+        if (!materialKey || !session) {
+            setMaterial(null);
+            setViendoMaterial(false);
+            return;
+        }
+        getLiveClassMaterial(session.id)
+            .then(m => { if (!cancelado) setMaterial(m); })
+            .catch(() => { if (!cancelado) setMaterial(null); });
+        return () => { cancelado = true; };
+        // materialKey ya resume session.id, el material y si se muestra
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [materialKey]);
 
     // Mi grupo (si el docente armó grupos): para "respondé por tu grupo"
     useEffect(() => {
@@ -332,6 +353,21 @@ export default function ClaseEnVivoAlumno() {
                             : 'Atendé a la clase 😄 — cuando tu docente lance una actividad, aparece sola acá.'}
                     </p>
                 </div>
+            )}
+
+            {/* Material de la clase (lo muestra el docente) */}
+            {material && (
+                <div className="card cv-material-alumno">
+                    <BookOpen size={18} aria-hidden="true" />
+                    <div className="cv-material-alumno-texto">
+                        <span className="text-xs text-subtle">Material de la clase</span>
+                        <strong>{material.titulo}</strong>
+                    </div>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => setViendoMaterial(true)}>Abrir</button>
+                </div>
+            )}
+            {viendoMaterial && material && (
+                <MaterialViewer material={materialParaVisor(material)} onClose={() => setViendoMaterial(false)} />
             )}
 
             {/* Botonera de emojis (la controla el docente) */}

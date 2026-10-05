@@ -18,6 +18,7 @@ import { X, FileText, ExternalLink, Loader2, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
 import PdfVista from './PdfVista';
+import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
 import type { LibraryMaterial } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
@@ -29,16 +30,19 @@ interface MaterialViewerProps {
   onClose: () => void;
   /** Solo para el docente: bajar el archivo original. */
   onDescargar?: () => void;
+  /** Pantalla completa y letra grande, para el proyector del aula. */
+  proyectar?: boolean;
 }
 
 const ERROR_ABRIR = 'No se pudo abrir el material. Probá de nuevo en un rato.';
 
-export default function MaterialViewer({ material, onClose, onDescargar }: MaterialViewerProps) {
+export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false }: MaterialViewerProps) {
   const conArchivo = Boolean(material.storagePath);
   const esImagen = conArchivo && material.fileType === 'image';
   const esPdf = conArchivo && material.fileType === 'pdf';
   const esWord = conArchivo && material.fileType === 'doc';
   const esLink = material.fileType === 'link';
+  const videoId = material.videoUrl ? parseYouTubeId(material.videoUrl) : null;
   const necesitaArchivo = esImagen || esPdf || esWord;
 
   const [url, setUrl] = useState<string | null>(null);
@@ -92,13 +96,13 @@ export default function MaterialViewer({ material, onClose, onDescargar }: Mater
   };
 
   const texto = material.extractedText?.trim();
-  const seVe = (esImagen && url) || (esPdf && url && !pdfFallo) || (esWord && wordHtml);
+  const seVe = Boolean(videoId) || (esImagen && url) || (esPdf && url && !pdfFallo) || (esWord && wordHtml);
   // Formato que no se puede mostrar, o falló al mostrarlo
   const sinVistaPrevia = conArchivo && !esLink && !cargando && !seVe;
 
   return (
-    <div className="em-modal-overlay" onClick={onClose}>
-      <div className="em-modal mv-modal" role="dialog" aria-label={material.title} onClick={e => e.stopPropagation()}>
+    <div className={`em-modal-overlay ${proyectar ? 'mv-overlay-proyector' : ''}`} onClick={onClose}>
+      <div className={`em-modal mv-modal ${proyectar ? 'mv-proyector' : ''}`} role="dialog" aria-label={material.title} onClick={e => e.stopPropagation()}>
         <div className="em-modal-header">
           <h3><FileText size={17} /> {material.title}</h3>
           <div className="mv-acciones">
@@ -123,6 +127,14 @@ export default function MaterialViewer({ material, onClose, onDescargar }: Mater
             <p className="text-secondary text-sm mv-cargando">
               <Loader2 size={14} className="spin" /> Abriendo el material…
             </p>
+          )}
+
+          {videoId && (
+            <div className="mv-video">
+              <iframe src={youTubeEmbedUrl(videoId)} title={material.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen />
+            </div>
           )}
 
           {esImagen && url && (
@@ -150,9 +162,15 @@ export default function MaterialViewer({ material, onClose, onDescargar }: Mater
             </div>
           )}
 
+          {/* Material que es solo texto (un tema del temario, un módulo armado
+              con IA): se lee directo, sin desplegable. */}
+          {texto && !conArchivo && !esLink && !videoId && (
+            <div className="mv-texto-solo"><MarkdownRenderer content={texto} /></div>
+          )}
+
           {/* El texto extraído sirve para buscar, copiar una cita o leer
               cuando el archivo es pesado o no se pudo mostrar. */}
-          {texto && (
+          {texto && (conArchivo || videoId) && (
             <details className="mv-texto" open={!seVe && !esLink && !cargando}>
               <summary>Texto del material</summary>
               <MarkdownRenderer content={texto} />
@@ -171,7 +189,7 @@ export default function MaterialViewer({ material, onClose, onDescargar }: Mater
             </div>
           )}
 
-          {!conArchivo && !esLink && !texto && (
+          {!conArchivo && !esLink && !texto && !videoId && (
             <p className="text-secondary text-sm">
               Este material no tiene una vista previa disponible. Pedile a tu docente
               que lo vuelva a subir.
