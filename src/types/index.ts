@@ -188,6 +188,8 @@ export interface StudentObservation {
   note: string;
   createdAt: string;
   teacherName?: string;
+  /** Guardada en este equipo y todavía sin enviar (cola offline). */
+  pendiente?: boolean;
 }
 
 export const OBSERVATION_META: Record<ObservationCategory, { emoji: string; label: string }> = {

@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import {
     Search, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
-    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus,
+    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByTeacher, getWorkByStudent, type StudentWork } from '../services/students.service';
 import { logAccess } from '../services/audit.service';
-import { getCheckinsByStudent, getObservationsByStudent, addObservation, deleteObservation } from '../services/wellbeing.service';
+import { getCheckinsByStudent, getObservationsByStudent, deleteObservation } from '../services/wellbeing.service';
+import { guardarObservacionResiliente, pendientesDe, subscribe as suscribirCola } from '../services/offline-queue.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
 import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
 import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
@@ -62,6 +63,30 @@ export default function Students() {
     // Datos del panel
     const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
     const [observations, setObservations] = useState<StudentObservation[]>([]);
+
+    /**
+     * Las observaciones del alumno: las del servidor más las guardadas en
+     * este equipo que todavía no se enviaron (arriba, marcadas). Sin señal,
+     * si no hay copia de las del servidor, se ven al menos las pendientes.
+     */
+    function recargarObservaciones(studentId: string) {
+        const enEspera = (): StudentObservation[] => pendientesDe('observacion')
+            .filter(op => op.studentId === studentId)
+            .map(op => ({
+                id: op.id, studentId: op.studentId, teacherId: op.teacherId, subjectId: op.subjectId,
+                category: op.category, note: op.note.trim(), createdAt: new Date(op.ts).toISOString(),
+                teacherName: user ? `${user.firstName} ${user.lastName}` : undefined, pendiente: true,
+            }))
+            .reverse();
+        setObservations(enEspera());
+        getObservationsByStudent(studentId)
+            .then(lista => {
+                const pend = enEspera();
+                const ids = new Set(lista.map(o => o.id));
+                setObservations([...pend.filter(p => !ids.has(p.id)), ...lista]);
+            })
+            .catch(console.error);
+    }
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
     const [work, setWork] = useState<StudentWork[]>([]);
     const [absences, setAbsences] = useState<{ date: string; status: AttendanceStatus }[]>([]);
@@ -120,16 +145,18 @@ export default function Students() {
         if (!selectedStudent || !user || talkSaving) return;
         setTalkSaving(true);
         try {
-            await addObservation({
+            const resultado = await guardarObservacionResiliente({
                 studentId: selectedStudent.id,
                 teacherId: user.id,
                 subjectId: null,
                 category: 'otro',
                 note: 'Charla de acompañamiento: hablamos a partir de las señales de bienestar.',
+                descripcion: `Charla registrada con ${selectedStudent.firstName} ${selectedStudent.lastName}`,
             });
-            const obs = await getObservationsByStudent(selectedStudent.id);
-            setObservations(obs);
-            avisar.exito('Charla registrada', 'Quedó en las observaciones de la ficha.');
+            recargarObservaciones(selectedStudent.id);
+            avisar.exito('Charla registrada', resultado === 'pendiente'
+                ? 'Quedó guardada en este equipo y se envía sola cuando haya señal.'
+                : 'Quedó en las observaciones de la ficha.');
         } catch (err) {
             console.error(err);
             avisar.error('No se pudo registrar la charla.', 'Probá de nuevo.');
@@ -201,7 +228,7 @@ export default function Students() {
         setNotasFicha(null);
         getPublishedGradesByStudent(selectedStudent.id).then(setNotasFicha).catch(err => { console.error(err); setNotasFicha([]); });
         getCheckinsByStudent(selectedStudent.id, 40).then(setCheckins).catch(console.error);
-        getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+        recargarObservaciones(selectedStudent.id);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
         getWorkByStudent(selectedStudent.id).then(setWork).catch(console.error);
         getAbsencesByStudent(selectedStudent.id).then(setAbsences).catch(console.error);
@@ -220,6 +247,13 @@ export default function Students() {
             });
         }
     }, [selectedStudent?.id]);
+
+    // Cuando la cola manda las observaciones pendientes, se ven como enviadas
+    useEffect(() => suscribirCola(() => {
+        if (!selectedStudent || !observations.some(o => o.pendiente)) return;
+        if (pendientesDe('observacion').some(op => op.studentId === selectedStudent.id)) return;
+        recargarObservaciones(selectedStudent.id);
+    }), [selectedStudent?.id, observations]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const courseNames = useMemo(
         () => Array.from(new Set(allStudents.map(s => s.courseName))).sort(),
@@ -254,30 +288,23 @@ export default function Students() {
         setObsSaving(true);
         setObsError('');
         try {
-            await addObservation({
-                studentId: selectedStudent.id,
-                teacherId: user.id,
-                category: obsCategory,
-                note: obsNote,
-            });
-            // Mostrar la huella al instante, sin esperar el refetch
-            setObservations(prev => [{
-                id: `local-${Date.now()}`,
+            // Sin señal queda guardada en el equipo y se envía sola
+            await guardarObservacionResiliente({
                 studentId: selectedStudent.id,
                 teacherId: user.id,
                 subjectId: null,
                 category: obsCategory,
-                note: obsNote.trim(),
-                createdAt: new Date().toISOString(),
-                teacherName: `${user.firstName} ${user.lastName}`,
-            }, ...prev]);
+                note: obsNote,
+                descripcion: `Observación sobre ${selectedStudent.firstName} ${selectedStudent.lastName}`,
+            });
             setObsNote('');
             setObsSaved(true);
             setTimeout(() => setObsSaved(false), 2500);
-            getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+            recargarObservaciones(selectedStudent.id);
         } catch (err) {
+            // Con o sin señal, lo que llega acá es que el servidor no la aceptó
             console.error('Error guardando observación:', err);
-            setObsError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+            setObsError('El servidor no aceptó la observación. Probá de nuevo; el texto sigue acá.');
         } finally {
             setObsSaving(false);
         }
@@ -916,9 +943,14 @@ export default function Students() {
                                             </p>
                                             <span className="acts-obs-meta">
                                                 {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                                                {o.pendiente && (
+                                                    <span className="text-warning" title="Guardada en este equipo: se envía sola cuando haya señal">
+                                                        {' '}· <CloudUpload size={11} className="inline" aria-hidden="true" /> sin enviar
+                                                    </span>
+                                                )}
                                             </span>
                                         </div>
-                                        {o.teacherId === user.id && !o.id.startsWith('local-') && (
+                                        {o.teacherId === user.id && !o.pendiente && (
                                             <button
                                                 className="stu-obs-delete"
                                                 title="Borrar esta observación"

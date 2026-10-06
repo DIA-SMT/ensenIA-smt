@@ -1,18 +1,21 @@
 /**
  * "Material de la clase" en el panel de la clase en vivo (docente).
  *
- * Lo que hace el docente con el material mientras da la clase: elegirlo o
- * cambiarlo, proyectarlo, mostrarlo en los celulares (solo mientras dure
- * la clase) y sacar preguntas con IA para lanzarlas con un toque.
+ * Lo que hace el docente con el material mientras da la clase: elegir uno
+ * o varios (049) y pasar de uno a otro con un toque; el que está en
+ * pantalla se proyecta, se muestra en los celulares (solo mientras dure la
+ * clase) y de él salen las preguntas con IA para lanzarlas con un toque.
  */
 
 import { useEffect, useState } from 'react';
 import {
-  BookOpen, MonitorPlay, Smartphone, Sparkles, Loader2, Send, RefreshCw, Check,
+  BookOpen, MonitorPlay, Smartphone, Sparkles, Loader2, Send, ListPlus, Check,
 } from 'lucide-react';
 import {
   getLiveClassMaterial, setLiveMaterial, setMaterialVisible, textoDeMaterial, materialParaVisor,
+  getMaterialesDeClase, sincronizarMaterialesDeClase, idEnLista,
   type LiveSession, type LiveActivityKind, type LiveActivityConfig, type MaterialDeClase,
+  type MaterialEnLista, type EleccionMaterial,
 } from '../services/live.service';
 import { extractQuestions } from '../services/documents.service';
 import { deckDe } from '../lib/presentation';
@@ -38,8 +41,16 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
   const [generando, setGenerando] = useState(false);
   const [lanzadas, setLanzadas] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  // Los materiales de la clase, en orden (049). Vacía si la clase tiene uno solo de antes.
+  const [lista, setLista] = useState<MaterialEnLista[]>([]);
+  const [cambiando, setCambiando] = useState(false);
 
+  /** El que está en pantalla ahora */
   const elegido = session.materialId ?? session.classId;
+
+  const recargarLista = () => getMaterialesDeClase(session.id).then(setLista).catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void recargarLista(); }, [session.id, elegido]);
 
   useEffect(() => {
     let cancelado = false;
@@ -55,21 +66,51 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
   const deck = material?.tipo === 'material' ? deckDe({ tags: [], extractedText: material.texto }) : null;
   const puedePreguntar = texto.length >= MIN_TEXTO;
 
-  const elegir = async (e: Parameters<Parameters<typeof ElegirMaterial>[0]['alElegir']>[0]) => {
+  /** Lo que la clase tiene, como lo espera el selector (si es de antes de la 049, el único). */
+  const elegidos: EleccionMaterial[] = lista.length > 0
+    ? lista.map(m => (m.materialId ? { materialId: m.materialId, titulo: m.titulo } : { classId: m.classId!, titulo: m.titulo }))
+    : elegido && material
+      ? [session.materialId ? { materialId: session.materialId, titulo: material.titulo } : { classId: session.classId!, titulo: material.titulo }]
+      : [];
+
+  const ponerEnPantalla = (e: EleccionMaterial | null) => {
+    onSession({
+      ...session,
+      materialId: e && 'materialId' in e ? e.materialId : null,
+      classId: e && 'classId' in e ? e.classId : null,
+      materialVisible: e ? session.materialVisible : false,
+    });
+    setPreguntas(null);
+    setLanzadas(new Set());
+  };
+
+  /** Lo que eligió en el selector: la lista nueva, con su orden. */
+  const confirmarLista = async (deseados: EleccionMaterial[]) => {
     setEligiendo(false);
     setError('');
     try {
-      await setLiveMaterial(session.id, e ? ('materialId' in e ? { materialId: e.materialId } : { classId: e.classId }) : null);
-      onSession({
-        ...session,
-        materialId: e && 'materialId' in e ? e.materialId : null,
-        classId: e && 'classId' in e ? e.classId : null,
-        materialVisible: e ? session.materialVisible : false,
-      });
-      setPreguntas(null);
-      setLanzadas(new Set());
+      const enPantalla = await sincronizarMaterialesDeClase(session.id, deseados, elegido);
+      const idNuevo = enPantalla ? ('materialId' in enPantalla ? enPantalla.materialId : enPantalla.classId) : null;
+      if (idNuevo !== elegido) ponerEnPantalla(enPantalla);
+      await recargarLista();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el material.');
+    }
+  };
+
+  /** Un toque en la lista: ese pasa a estar en pantalla. */
+  const cambiarA = async (m: MaterialEnLista) => {
+    if (idEnLista(m) === elegido || cambiando) return;
+    setCambiando(true);
+    setError('');
+    try {
+      const e: EleccionMaterial = m.materialId ? { materialId: m.materialId, titulo: m.titulo } : { classId: m.classId!, titulo: m.titulo };
+      await setLiveMaterial(session.id, m.materialId ? { materialId: m.materialId } : { classId: m.classId! });
+      ponerEnPantalla(e);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar el material.');
+    } finally {
+      setCambiando(false);
     }
   };
 
@@ -117,21 +158,41 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
   return (
     <section className="card mev" aria-labelledby="mev-titulo">
       <div className="mev-head">
-        <h4 id="mev-titulo"><BookOpen size={16} aria-hidden="true" /> Material de la clase</h4>
+        <h4 id="mev-titulo"><BookOpen size={16} aria-hidden="true" /> {lista.length > 1 ? 'Materiales de la clase' : 'Material de la clase'}</h4>
         {elegido && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEligiendo(true)}>
-            <RefreshCw size={14} aria-hidden="true" /> Cambiar
+            <ListPlus size={14} aria-hidden="true" /> Agregar o quitar
           </button>
         )}
       </div>
+
+      {/* Varios: un toque y pasa a estar en pantalla */}
+      {lista.length > 1 && (
+        <div className="mev-lista" role="group" aria-label="Elegí cuál está en pantalla">
+          {lista.map((m, i) => {
+            const on = idEnLista(m) === elegido;
+            return (
+              <button key={m.id} type="button" className={`mev-item ${on ? 'on' : ''}`} aria-pressed={on}
+                onClick={() => cambiarA(m)} disabled={cambiando && !on}
+                title={on ? 'Es el que está en pantalla' : 'Ponerlo en pantalla'}>
+                <span className="mev-item-n" aria-hidden="true">{i + 1}</span>
+                <span className="mev-item-texto">
+                  <strong>{m.titulo}</strong>
+                  <span>{on ? 'En pantalla' : m.detalle}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {!elegido && (
         <EstadoVacio
           compacto
           icono={BookOpen}
           titulo="Todavía no elegiste material"
-          texto="Elegí un tema de tu temario o un material de tu biblioteca: lo proyectás, lo ven en los celulares y la IA saca preguntas para lanzar."
-          accion={{ etiqueta: 'Elegir material', alTocar: () => setEligiendo(true), icono: BookOpen }}
+          texto="Elegí uno o varios temas de tu temario o materiales de tu biblioteca: los proyectás, los ven en los celulares y la IA saca preguntas para lanzar."
+          accion={{ etiqueta: 'Elegir materiales', alTocar: () => setEligiendo(true), icono: BookOpen }}
         />
       )}
 
@@ -216,8 +277,8 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
         teacherId={session.teacherId}
         subjectId={session.subjectId}
         courseId={session.courseId}
-        actual={elegido}
-        alElegir={elegir}
+        elegidos={elegidos}
+        alConfirmar={confirmarLista}
       />
 
       {proyectando && material && (

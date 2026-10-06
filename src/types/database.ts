@@ -2837,6 +2837,55 @@ export type Database = {
           },
         ]
       }
+      live_session_materials: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          id: string
+          material_id: string | null
+          session_id: string
+          sort_order: number
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id: string
+          sort_order?: number
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_session_materials_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "planning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "library_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_sessions: {
         Row: {
           course_id: string
@@ -3194,6 +3243,18 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      demo_alumnos_estado: {
+        Args: { p_school: string }
+        Returns: Json
+      }
+      demo_alumnos_cargar: {
+        Args: { p_course: string }
+        Returns: number
+      }
+      demo_alumnos_quitar: {
+        Args: { p_course: string }
+        Returns: number
+      }
       live_class_material: {
         Args: { p_session: string }
         Returns: Json
@@ -3232,6 +3293,26 @@ export type Database = {
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
       gen_join_code: { Args: never; Returns: string }
+      guardar_asistencia: {
+        Args: {
+          p_course: string
+          p_fecha: string
+          p_nota?: string | null
+          p_registros: Json
+          p_subject: string
+        }
+        Returns: string
+      }
+      guardar_notas_trimestre: {
+        Args: {
+          p_course: string
+          p_filas: Json
+          p_status: string
+          p_subject: string
+          p_term: string
+        }
+        Returns: undefined
+      }
       get_alert_thresholds: {
         Args: { p_school_id: string }
         Returns: {
@@ -3302,6 +3383,16 @@ export type Database = {
       submit_live_guest_response: {
         Args: { p_activity: string; p_payload: Json; p_token: string }
         Returns: undefined
+      }
+      temario_clases: {
+        Args: { p_unidades: string[] }
+        Returns: {
+          id: string
+          objectives: string[]
+          sort_order: number
+          title: string
+          unit_id: string
+        }[]
       }
     }
     Enums: {

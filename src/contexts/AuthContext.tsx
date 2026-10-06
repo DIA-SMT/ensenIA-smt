@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User, School, UserRole } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, sesionGuardada } from '../lib/supabase';
+import { haySenial, suscribirConexion } from '../lib/conexion';
+import { esEquipoPersonal, marcarEquipoPersonal } from '../lib/equipoPersonal';
 import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
 import { toLoginEmail } from '../lib/dni';
 import { olvidarBusquedas } from '../services/busqueda.service';
@@ -22,6 +24,12 @@ import { setDuenioCola } from '../services/offline-queue.service';
  * 3. El perfil se cachea en localStorage: sin conexión, la app arranca
  *    igual con los datos del último uso (los service workers cachean el
  *    resto de los datos).
+ *
+ * 4. Sin red no se echa a nadie. Si la app abre sin señal con el token
+ *    vencido, supabase-js no lo puede renovar y avisa "sin sesión", pero
+ *    la deja guardada (solo la borra si el servidor la rechaza). Con la
+ *    sesión guardada y el perfil de esa misma cuenta, se sigue en modo
+ *    sin conexión; cuando vuelve la señal se valida sola.
  */
 
 const PROFILE_CACHE_KEY = 'ensenia_profile_cache_v1';
@@ -31,6 +39,10 @@ const PROFILE_CACHE_KEY = 'ensenia_profile_cache_v1';
  * cierra sola a las 12 h de haber entrado (alcanza para la jornada y no
  * queda abierta para el que se sienta después). Estudiantes y familias
  * entran desde su celular y no vencen.
+ *
+ * En su propio equipo ("Es mi equipo" al entrar) tampoco vence: el docente
+ * prepara a la noche en casa y a la mañana lo usa en el aula sin señal, y
+ * con el corte no habría podido volver a entrar.
  */
 const DURACION_SESION_PERSONAL_MS = 12 * 60 * 60 * 1000;
 const ROLES_CON_VENCIMIENTO: UserRole[] = ['docente', 'director', 'superadmin'];
@@ -122,8 +134,8 @@ interface AuthContextType {
   isOfflineProfile: boolean;
   /** Escuelas a las que pertenece (más de una: puede elegir la activa) */
   mySchools: MySchool[];
-  /** email o DNI */
-  login: (emailOrDni: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** email o DNI. equipoPersonal: la sesión del personal no vence en este equipo. */
+  login: (emailOrDni: string, password: string, opciones?: { equipoPersonal?: boolean }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   /** Vuelve a leer el perfil (después de cambiar la clave, por ejemplo) */
   refreshProfile: () => Promise<void>;
@@ -143,6 +155,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const currentUserIdRef = useRef<string | null>(null);
   currentUserIdRef.current = user?.id ?? null;
+  const offlineRef = useRef(false);
+  offlineRef.current = isOfflineProfile;
+  // Para volver a validar el perfil cuando vuelve la señal (lo llena el efecto de abajo)
+  const recargarPerfilRef = useRef<((userId: string) => void) | null>(null);
 
   // La cola offline envía solo lo de quien tiene la sesión abierta.
   useEffect(() => { setDuenioCola(user?.id ?? null); }, [user?.id]);
@@ -162,11 +178,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }, 8000);
 
+    let terminado = false;
     const finish = () => {
       if (cancelled) return;
+      terminado = true;
       clearTimeout(watchdog);
       setIsLoading(false);
     };
+
+    // Sin señal no tiene sentido esperar los 8 s del watchdog (en el aula
+    // es lo primero que se ve): con la sesión guardada y el perfil de esa
+    // misma cuenta, se arranca ya en modo sin conexión.
+    const arrancarSinSenial = () => {
+      if (cancelled || terminado || haySenial()) return;
+      const guardada = sesionGuardada();
+      const cached = readProfileCache();
+      if (!guardada || !cached || cached.user.id !== guardada.user.id) return;
+      setUser(cached.user);
+      setSchool(cached.school);
+      setIsOfflineProfile(true);
+      finish();
+    };
+    const dejarDeEscuchar = suscribirConexion(arrancarSinSenial);
+    arrancarSinSenial();
 
     // Carga de perfil SIEMPRE fuera del callback de auth (ver nota arriba).
     const loadProfileDeferred = (userId: string) => {
@@ -202,17 +236,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }, 0);
     };
+    recargarPerfilRef.current = loadProfileDeferred;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // SIN awaits acá adentro. Solo decisiones sincrónicas.
       if (session?.user) {
         if (currentUserIdRef.current === session.user.id && event === 'TOKEN_REFRESHED') {
-          // mismo usuario, solo se renovó el token: nada que recargar
-          finish();
+          // Mismo usuario, solo se renovó el token. Si veníamos sin
+          // conexión, es que volvió: se valida el perfil.
+          if (offlineRef.current) loadProfileDeferred(session.user.id);
+          else finish();
           return;
         }
         loadProfileDeferred(session.user.id);
       } else {
+        // Arrancó sin poder renovar la sesión. Si sigue guardada, el
+        // problema fue la red (ver regla 4): se sigue con el perfil guardado.
+        if (event === 'INITIAL_SESSION') {
+          const guardada = sesionGuardada();
+          const cached = readProfileCache();
+          if (guardada && cached && cached.user.id === guardada.user.id) {
+            setUser(cached.user);
+            setSchool(cached.school);
+            setIsOfflineProfile(true);
+            finish();
+            return;
+          }
+        }
         // INITIAL_SESSION sin sesión, o SIGNED_OUT
         if (event === 'SIGNED_OUT') clearProfileCache();
         setUser(null);
@@ -226,14 +276,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       clearTimeout(watchdog);
       subscription.unsubscribe();
+      dejarDeEscuchar();
+      recargarPerfilRef.current = null;
     };
   }, []);
 
-  const login = useCallback(async (emailOrDni: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const { error } = await supabase.auth.signInWithPassword({
+  // Volvió la señal y estábamos con el perfil guardado: se valida contra el
+  // servidor (si el token estaba vencido, lo hace el TOKEN_REFRESHED de arriba).
+  useEffect(() => suscribirConexion(() => {
+    const id = currentUserIdRef.current;
+    if (haySenial() && offlineRef.current && id && sesionGuardada()) recargarPerfilRef.current?.(id);
+  }), []);
+
+  const login = useCallback(async (
+    emailOrDni: string,
+    password: string,
+    opciones?: { equipoPersonal?: boolean },
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: toLoginEmail(emailOrDni),
       password,
     });
+    if (!error && data.user) marcarEquipoPersonal(data.user.id, !!opciones?.equipoPersonal);
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
@@ -272,6 +336,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const rolActual = user?.role;
   useEffect(() => {
     if (!rolActual || !ROLES_CON_VENCIMIENTO.includes(rolActual)) return;
+    if (esEquipoPersonal(user?.id)) return;
     let terminado = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 

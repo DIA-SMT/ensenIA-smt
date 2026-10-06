@@ -6,6 +6,45 @@
 .mev-head h4 svg { color: var(--acento); }
 
 
+/* Varios materiales: uno por botón, el que está en pantalla resaltado */
+.mev-lista { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: 2px; }
+.mev-item {
+  flex: 0 0 auto;
+  max-width: 240px;
+  min-height: var(--touch);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mev-item:hover:not(:disabled) { background: var(--bg-hover); }
+.mev-item.on { border-color: var(--acento); background: var(--acento-suave, var(--bg-hover)); cursor: default; }
+.mev-item:disabled { opacity: 0.6; cursor: wait; }
+.mev-item-n {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.mev-item.on .mev-item-n { background: var(--acento); color: #fff; }
+.mev-item-texto { display: flex; flex-direction: column; min-width: 0; }
+.mev-item-texto strong { font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mev-item-texto span { font-size: 0.75rem; color: var(--text-secondary); }
+.mev-item.on .mev-item-texto span { color: var(--acento); font-weight: 600; }
+
 .mev-material { display: flex; flex-direction: column; gap: 2px; }
 .mev-material strong { font-size: 1rem; overflow-wrap: anywhere; }
 .mev-sub { font-size: 0.8125rem; color: var(--text-subtle); }

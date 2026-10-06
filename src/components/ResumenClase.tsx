@@ -8,7 +8,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile } from 'lucide-react';
 import {
-  getLiveSessionSummary, saveLiveSessionReport, LIVE_KIND_META, LIVE_REACTIONS, type ResumenClase as Datos,
+  getLiveSessionSummary, saveLiveSessionReport, getMaterialesDeClase, LIVE_KIND_META, LIVE_REACTIONS,
+  type ResumenClase as Datos, type MaterialEnLista,
 } from '../services/live.service';
 import { classReport } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -24,11 +25,15 @@ const fecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
 /** Los números de la clase en texto, para que la IA escriba el informe. */
-function datosParaInforme(d: Datos): string {
+function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): string {
   const t = d.totales;
   const l: string[] = [];
   l.push(`Clase: ${d.sesion.titulo}. Duración: ${d.sesion.minutos} minutos.`);
-  if (d.material) l.push(`Material: ${d.material.titulo}${d.material.unidad ? ` (${d.material.unidad})` : ''}.`);
+  if (materiales.length > 1) {
+    l.push(`Materiales que se usaron: ${materiales.map(m => `${m.titulo} (${m.detalle})`).join('; ')}.`);
+  } else if (d.material) {
+    l.push(`Material: ${d.material.titulo}${d.material.unidad ? ` (${d.material.unidad})` : ''}.`);
+  }
   l.push(`Estudiantes del curso: ${t.curso}. Se conectaron: ${t.conectados}. Participaron (respondieron algo): ${t.participaron}.`);
   if (t.invitados) l.push(`Invitados sin cuenta: ${t.invitados}.`);
   l.push('', 'Actividades:');
@@ -66,9 +71,12 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
   const [generando, setGenerando] = useState(false);
   const [errorInforme, setErrorInforme] = useState('');
   const [copiado, setCopiado] = useState(false);
+  // Todos los materiales de la clase (049); con uno solo alcanza con datos.material
+  const [materiales, setMateriales] = useState<MaterialEnLista[]>([]);
 
   useEffect(() => {
     let cancelado = false;
+    getMaterialesDeClase(sessionId).then(m => { if (!cancelado) setMateriales(m); }).catch(console.error);
     getLiveSessionSummary(sessionId)
       .then(d => { if (cancelado) return; setDatos(d); setInforme(d?.sesion.ai_summary ?? null); })
       .catch(err => { if (!cancelado) { setDatos(null); setError(err instanceof Error ? err.message : 'No se pudo cargar el resumen.'); } });
@@ -80,7 +88,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
     setGenerando(true);
     setErrorInforme('');
     try {
-      const texto = await classReport(datosParaInforme(datos));
+      const texto = await classReport(datosParaInforme(datos, materiales));
       setInforme(texto);
       await saveLiveSessionReport(sessionId, texto).catch(err => {
         console.error(err);
@@ -132,7 +140,11 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
         <p className="text-secondary text-sm">
           <Clock size={13} aria-hidden="true" /> {fecha(datos.sesion.inicio)} · {datos.sesion.minutos} min
         </p>
-        {datos.material && (
+        {materiales.length > 1 ? (
+          <p className="text-sm rc-material">
+            📖 {materiales.length} materiales: {materiales.map(m => m.titulo).join(' · ')}
+          </p>
+        ) : datos.material && (
           <p className="text-sm rc-material">
             📖 {datos.material.titulo}{datos.material.unidad ? ` · ${datos.material.unidad}` : ''}
           </p>

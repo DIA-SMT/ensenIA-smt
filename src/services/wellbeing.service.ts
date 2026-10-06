@@ -84,7 +84,12 @@ function mapObservation(row: any): StudentObservation {
   };
 }
 
+/**
+ * Con id (lo elige la cola offline), reenviar la misma observación no la
+ * duplica: si ya había llegado, el choque de id se toma como guardada.
+ */
 export async function addObservation(o: {
+  id?: string;
   studentId: string;
   teacherId: string;
   subjectId?: string | null;
@@ -92,13 +97,14 @@ export async function addObservation(o: {
   note: string;
 }): Promise<void> {
   const { error } = await supabase.from('student_observations').insert({
+    ...(o.id ? { id: o.id } : {}),
     student_id: o.studentId,
     teacher_id: o.teacherId,
     subject_id: o.subjectId ?? null,
     category: o.category,
     note: o.note.trim(),
   });
-  if (error) throw error;
+  if (error && !(o.id && error.code === '23505')) throw error;
 }
 
 export async function getObservationsByStudent(studentId: string): Promise<StudentObservation[]> {
