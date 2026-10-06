@@ -151,3 +151,6 @@ export async function getMaterialByClass(classId: string): Promise<LibraryMateri
     .maybeSingle();
   return data ? mapMaterial(data) : null;
 }
+
+/** Etiqueta de las versiones adaptadas que se leen con letra grande e interlineado. */
+export const TAG_LETRA_GRANDE = 'letra-grande';

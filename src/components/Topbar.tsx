@@ -1,14 +1,15 @@
 /**
  * Barra superior: dónde estoy (título de la pantalla, que es el <h1>),
  * buscar o ir a cualquier lado, ajustes de lectura, avisos y, para el
- * docente, la actividad rápida.
+ * docente, el botón para crear (actividad, módulo, evaluación...).
  */
 
 import { useState } from 'react';
-import { Search, Zap, Accessibility, HelpCircle } from 'lucide-react';
+import { Search, Plus, Accessibility, HelpCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { tituloDe } from '../lib/navegacion';
+import { avisar } from './ui/avisar';
 import NotificationDropdown from './NotificationDropdown';
 import { LogoMark } from './Sidebar';
 import './Topbar.css';
@@ -44,7 +45,7 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
       await switchSchool(schoolId); // recarga la app en la escuela nueva
     } catch (err) {
       console.error(err);
-      alert('No se pudo cambiar de escuela. Probá de nuevo.');
+      avisar.error('No se pudo cambiar de escuela', 'Revisá la conexión y probá de nuevo.');
       setCambiando(false);
     }
   };
@@ -118,10 +119,10 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
 
         <NotificationDropdown />
 
-        {isDocente && (
-          <Link to="/actividad-rapida" className="btn btn-primary nueva-clase-btn" title="Crear y publicar una actividad en un minuto">
-            <Zap size={17} aria-hidden="true" />
-            <span>Crear actividad</span>
+        {isDocente && pathname !== '/crear' && (
+          <Link to="/crear" className="btn btn-primary nueva-clase-btn" title="Crear una actividad, un módulo o una evaluación">
+            <Plus size={18} aria-hidden="true" />
+            <span>Crear</span>
           </Link>
         )}
       </div>

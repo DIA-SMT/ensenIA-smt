@@ -6,9 +6,11 @@
 
 import { useState } from 'react';
 import { X, Medal, Send } from 'lucide-react';
+import Dialogo from './shell/Dialogo';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/IALab.css';
+import './shell/shell.css';
 import './Modals.css';
 import './AwardPickerModal.css';
 
@@ -42,11 +44,11 @@ export default function AwardPickerModal({ title, recipientName, catalog, onClos
   };
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="award-titulo" className="dialogo-em">
       <div className="em-modal award-modal">
         <div className="em-modal-header">
-          <h3><Medal size={17} className="text-warning" /> {title}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <h3 id="award-titulo"><Medal size={17} className="text-warning" aria-hidden="true" /> {title}</h3>
+          <button type="button" className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="em-modal-body">
@@ -103,6 +105,6 @@ export default function AwardPickerModal({ title, recipientName, catalog, onClos
           </div>
         )}
       </div>
-    </div>
+    </Dialogo>
   );
 }

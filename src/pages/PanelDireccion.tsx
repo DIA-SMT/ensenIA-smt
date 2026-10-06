@@ -14,13 +14,16 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Radio, HeartPulse, Users, Layers, ClipboardList, CheckSquare,
-    ClipboardCheck, AlertTriangle, Activity,
+    ClipboardCheck, AlertTriangle, Activity, Bell, CheckCircle2, ArrowRight, UserX, RotateCw,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     getTeacherPulse, getSchoolClimate, getLiveNow,
     type TeacherPulse, type CourseClimateRow,
 } from '../services/stats.service';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import '../components/ui/ui.css';
 import './PanelDireccion.css';
 
 const RANGES = [
@@ -58,6 +61,7 @@ export default function PanelDireccion() {
     const [liveNow, setLiveNow] = useState<{ id: string; title: string; teacherId: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [reintento, setReintento] = useState(0);
 
     useEffect(() => {
         if (!user) return;
@@ -75,9 +79,17 @@ export default function PanelDireccion() {
             console.error(err);
             setError('No se pudieron cargar los datos de la escuela.');
         }).finally(() => setLoading(false));
-    }, [user, days]);
+    }, [user, days, reintento]);
 
     if (!user) return null;
+
+    /** Baja hasta una sección de la misma pantalla y le pasa el foco. */
+    const irA = (id: string) => {
+        const destino = document.getElementById(id);
+        if (!destino) return;
+        destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        destino.focus({ preventScroll: true });
+    };
 
     const teacherName = (id: string) => pulse.find(t => t.teacherId === id)?.teacherName ?? 'Docente';
     const totalPending = pulse.reduce((a, t) => a + t.pendingGrading, 0);
@@ -88,20 +100,25 @@ export default function PanelDireccion() {
         ? withCheckins.reduce((a, c) => a + (c.mood ?? 0), 0) / withCheckins.length
         : null;
 
+    // Lo primero que ve dirección: qué pide atención ahora, armado con lo
+    // que ya llegó (sin pedidos extra). Lo más urgente arriba.
+    const cursosAAcompanar = [...climate]
+        .filter(c => c.studentsAtRisk > 0 || moodClass(c.mood) === 'low')
+        .sort((a, b) => b.studentsAtRisk - a.studentsAtRisk || (a.mood ?? 5) - (b.mood ?? 5));
+    const docentesConPendientes = pulse.filter(t => t.pendingGrading > 0).length;
+    const hayAlgo = cursosAAcompanar.length > 0 || totalPending > 0 || inactive > 0 || liveNow.length > 0;
+
     return (
         <div className="pd-container animate-in">
             <header className="pd-header">
-                <div>
-                    <h1>Qué está pasando</h1>
-                    <p className="text-secondary text-sm">
-                        El pulso de la escuela: cursos, docentes y aulas en vivo.
-                    </p>
-                </div>
-                <div className="pd-ranges">
+                <p className="pd-bajada">El pulso de la escuela: cursos, docentes y aulas en vivo.</p>
+                <div className="pd-ranges fila-desplazable" role="group" aria-label="Período">
                     {RANGES.map(r => (
                         <button
                             key={r.days}
+                            type="button"
                             className={`pd-range ${days === r.days ? 'active' : ''}`}
+                            aria-pressed={days === r.days}
                             onClick={() => setDays(r.days)}
                         >
                             {r.label}
@@ -110,11 +127,74 @@ export default function PanelDireccion() {
                 </div>
             </header>
 
-            {error && <div className="pd-error"><AlertTriangle size={15} /> {error}</div>}
-            {loading && <p className="text-secondary">Leyendo el pulso de la escuela...</p>}
+            {error && (
+                <div className="pd-error" role="alert">
+                    <AlertTriangle size={15} aria-hidden="true" /> {error}
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setReintento(n => n + 1)}>
+                        <RotateCw size={14} aria-hidden="true" /> Reintentar
+                    </button>
+                </div>
+            )}
+            {loading && <Esqueleto tipo="tarjetas" cantidad={4} etiqueta="Leyendo el pulso de la escuela…" />}
 
             {!loading && !error && (
                 <>
+                    {/* Qué pide atención ahora */}
+                    <section className="card pd-section pd-atencion" aria-labelledby="pd-atencion-titulo">
+                        <h2 className="pd-title" id="pd-atencion-titulo"><Bell size={16} aria-hidden="true" /> Para atender ahora</h2>
+                        {!hayAlgo ? (
+                            <p className="pd-tranqui"><CheckCircle2 size={16} aria-hidden="true" /> Nada urgente en este período: ningún curso viene mal y no hay entregas esperando.</p>
+                        ) : (
+                            <ul className="pd-atencion-lista">
+                                {liveNow.length > 0 && (
+                                    <li className="pd-atencion-item vivo">
+                                        <Radio size={16} aria-hidden="true" />
+                                        <span>
+                                            <strong>{liveNow.length === 1 ? '1 clase en vivo' : `${liveNow.length} clases en vivo`}</strong> en este momento
+                                        </span>
+                                        <button type="button" className="pd-atencion-ir" onClick={() => irA('pd-vivo')}>Ver <ArrowRight size={14} aria-hidden="true" /></button>
+                                    </li>
+                                )}
+                                {cursosAAcompanar.slice(0, 4).map(c => (
+                                    <li key={c.courseId} className="pd-atencion-item riesgo">
+                                        <AlertTriangle size={16} aria-hidden="true" />
+                                        <span>
+                                            <strong>{c.courseName}</strong>
+                                            {c.studentsAtRisk > 0
+                                                ? `: ${c.studentsAtRisk === 1 ? '1 estudiante' : `${c.studentsAtRisk} estudiantes`} a acompañar`
+                                                : ': el ánimo del curso viene bajo'}
+                                        </span>
+                                        <button type="button" className="pd-atencion-ir" onClick={() => navigate(`/cursos/${c.courseId}`)}>
+                                            Ver curso <ArrowRight size={14} aria-hidden="true" />
+                                        </button>
+                                    </li>
+                                ))}
+                                {totalPending > 0 && (
+                                    <li className="pd-atencion-item">
+                                        <ClipboardCheck size={16} aria-hidden="true" />
+                                        <span>
+                                            <strong>{totalPending === 1 ? '1 entrega' : `${totalPending} entregas`} sin corregir</strong>
+                                            {` de ${docentesConPendientes === 1 ? '1 docente' : `${docentesConPendientes} docentes`}`}
+                                        </span>
+                                        <button type="button" className="pd-atencion-ir" onClick={() => irA('pd-docentes')}>Ver <ArrowRight size={14} aria-hidden="true" /></button>
+                                    </li>
+                                )}
+                                {inactive > 0 && (
+                                    <li className="pd-atencion-item">
+                                        <UserX size={16} aria-hidden="true" />
+                                        <span>
+                                            <strong>{inactive === 1 ? '1 docente' : `${inactive} docentes`}</strong> todavía no {inactive === 1 ? 'usó' : 'usaron'} la app
+                                        </span>
+                                        <button type="button" className="pd-atencion-ir" onClick={() => irA('pd-docentes')}>Ver <ArrowRight size={14} aria-hidden="true" /></button>
+                                    </li>
+                                )}
+                            </ul>
+                        )}
+                        <button type="button" className="btn btn-outline btn-sm pd-more" onClick={() => navigate('/alerts')}>
+                            <Activity size={14} aria-hidden="true" /> Ver las alertas de la escuela
+                        </button>
+                    </section>
+
                     {/* Resumen */}
                     <div className="pd-summary">
                         <div className={`pd-sum-card mood-${moodClass(schoolMood)}`}>
@@ -141,12 +221,12 @@ export default function PanelDireccion() {
 
                     {/* En vivo ahora */}
                     {liveNow.length > 0 && (
-                        <section className="card pd-section pd-live">
-                            <h3 className="pd-title"><Radio size={16} className="text-danger" /> Aulas en vivo en este momento</h3>
+                        <section className="card pd-section pd-live" id="pd-vivo" tabIndex={-1} aria-labelledby="pd-vivo-titulo">
+                            <h2 className="pd-title" id="pd-vivo-titulo"><Radio size={16} className="text-danger" aria-hidden="true" /> Aulas en vivo en este momento</h2>
                             <div className="pd-live-list">
                                 {liveNow.map(l => (
                                     <div key={l.id} className="pd-live-item">
-                                        <span className="pd-live-dot" />
+                                        <span className="pd-live-dot" aria-hidden="true" />
                                         <div>
                                             <strong>{l.title}</strong>
                                             <span>{teacherName(l.teacherId)}</span>
@@ -159,10 +239,14 @@ export default function PanelDireccion() {
 
                     {/* Clima por curso */}
                     <section className="card pd-section">
-                        <h3 className="pd-title"><HeartPulse size={16} /> Cómo viene cada curso</h3>
+                        <h2 className="pd-title"><HeartPulse size={16} aria-hidden="true" /> Cómo viene cada curso</h2>
                         <p className="text-sm text-secondary">
                             Sale de lo que los propios estudiantes dicen sentir. No es una nota ni una evaluación.
                         </p>
+                        {climate.length === 0 && (
+                            <EstadoVacio compacto icono={HeartPulse} titulo="Todavía no hay cursos con datos"
+                                texto="El clima aparece cuando los estudiantes empiezan a contar cómo llegan a clase." />
+                        )}
                         <div className="pd-courses">
                             {climate.map(c => (
                                 <div key={c.courseId} className={`pd-course mood-${moodClass(c.mood)}`}>
@@ -192,12 +276,18 @@ export default function PanelDireccion() {
                     </section>
 
                     {/* Docentes */}
-                    <section className="card pd-section">
-                        <h3 className="pd-title"><Users size={16} /> Qué hizo cada docente</h3>
+                    <section className="card pd-section" id="pd-docentes" tabIndex={-1} aria-labelledby="pd-docentes-titulo">
+                        <h2 className="pd-title" id="pd-docentes-titulo"><Users size={16} aria-hidden="true" /> Qué hizo cada docente</h2>
                         <p className="text-sm text-secondary">
                             Para saber a quién hay que acompañar, no para controlar.
-                            {inactive > 0 && ` ${inactive} docente(s) todavía no usaron la app.`}
+                            {inactive === 1 && ' 1 docente todavía no usó la app.'}
+                            {inactive > 1 && ` ${inactive} docentes todavía no usaron la app.`}
                         </p>
+                        {pulse.length === 0 && (
+                            <EstadoVacio compacto icono={Users} titulo="Todavía no hay docentes en la escuela"
+                                texto="Sumalos desde Mi escuela y asignales sus materias."
+                                accion={{ etiqueta: 'Ir a Mi escuela', a: '/mi-escuela' }} />
+                        )}
                         <div className="pd-teachers">
                             {pulse.map(t => {
                                 const total = t.materials + t.activities + t.liveClasses + t.attendanceTaken;
@@ -236,10 +326,6 @@ export default function PanelDireccion() {
                             })}
                         </div>
                     </section>
-
-                    <button className="btn btn-outline btn-sm pd-more" onClick={() => navigate('/alerts')}>
-                        <Activity size={14} /> Ver las alertas de la escuela
-                    </button>
                 </>
             )}
         </div>

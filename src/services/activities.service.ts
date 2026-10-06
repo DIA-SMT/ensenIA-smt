@@ -478,6 +478,9 @@ export interface PendingGrading {
   answers: Record<string, ActivityAnswer>;
   responseText?: string | null;
   questions: ActivityQuestion[];
+  /** Consigna de la actividad (para sugerir la devolución con IA). */
+  activityContent?: string;
+  activityDescription?: string | null;
 }
 
 /**
@@ -491,7 +494,7 @@ export async function getPendingGrading(teacherId: string): Promise<PendingGradi
       .select(
         'id, auto_score, submitted_at, answers, response_text,' +
         ' students(first_name, last_name, avatar_initials),' +
-        ' activities!inner(id, title, points, questions, teacher_id, subjects(name), courses(name))'
+        ' activities!inner(id, title, description, content_md, points, questions, teacher_id, subjects(name), courses(name))'
       )
       .eq('activities.teacher_id', teacherId)
       .eq('status', 'submitted')
@@ -512,6 +515,8 @@ export async function getPendingGrading(teacherId: string): Promise<PendingGradi
     answers: r.answers ?? {},
     responseText: r.response_text,
     questions: r.activities?.questions ?? [],
+    activityContent: r.activities?.content_md ?? '',
+    activityDescription: r.activities?.description ?? null,
   }));
 }
 

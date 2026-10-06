@@ -1,9 +1,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Grid3x3 } from 'lucide-react';
 import type { HeatmapCell, HeatmapMetric } from '../types';
+import EstadoVacio from './ui/EstadoVacio';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/Students.css';
+import './ui/ui.css';
 import './CourseHeatmap.css';
 
 const METRIC_META: Record<HeatmapMetric, { label: string; caption: string; goodIsHigh: boolean }> = {
@@ -62,11 +65,13 @@ export default function CourseHeatmap({ cellsByMetric }: CourseHeatmapProps) {
   return (
     <div className="heatmap-widget">
       <div className="heatmap-header">
-        <div className="heatmap-tabs">
+        <div className="heatmap-tabs fila-desplazable" role="group" aria-label="Qué mostrar en el mapa">
           {METRIC_ORDER.map(m => (
             <button
               key={m}
+              type="button"
               className={`heatmap-tab ${metric === m ? 'active' : ''}`}
+              aria-pressed={metric === m}
               onClick={() => setMetric(m)}
             >
               {METRIC_META[m].label}
@@ -77,7 +82,8 @@ export default function CourseHeatmap({ cellsByMetric }: CourseHeatmapProps) {
       </div>
 
       {rows.length === 0 || cols.length === 0 ? (
-        <p className="text-secondary text-sm">Todavía no hay materias con estudiantes inscriptos para mostrar el mapa.</p>
+        <EstadoVacio compacto icono={Grid3x3} titulo="Todavía no hay datos para el mapa"
+          texto="Aparece cuando haya materias asignadas a docentes y estudiantes inscriptos en esos cursos." />
       ) : (
         <div className="table-responsive">
           <div

@@ -22,6 +22,7 @@ import {
 } from '../services/wellbeing.service';
 import { formatRelative } from '../lib/format';
 import type { WellbeingStatus } from '../types';
+import { avisar } from './ui/avisar';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import './Modals.css';
@@ -61,6 +62,7 @@ export default function WellbeingSignals({ schoolId }: { schoolId: string }) {
       if (texto.trim()) await addCaseNote(id, schoolId, texto);
       await updateSignalStatus(id, estado);
       setSeñales(await getWellbeingSignals());
+      avisar.exito(estado === 'cerrada' ? 'Señal cerrada' : 'Tomaste el caso', 'El seguimiento quedó registrado para el equipo.');
       setAbierta(null);
       setNotas(n => { const c = { ...n }; delete c[id]; return c; });
     } catch (err: any) {

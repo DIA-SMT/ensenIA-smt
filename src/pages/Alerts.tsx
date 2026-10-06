@@ -17,6 +17,10 @@ import { getAlertsByTeacher, getAlertsBySchool, startFollowUp, closeAlert } from
 import { getThresholds, saveThresholds } from '../services/thresholds.service';
 import { formatRelative } from '../lib/format';
 import WellbeingSignals from '../components/WellbeingSignals';
+import Dialogo from '../components/shell/Dialogo';
+import { avisar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import {
     ALERT_STATUS_META, ALERT_OUTCOME_META,
     type Alert, type AlertOutcome, type AlertThresholds,
@@ -25,6 +29,7 @@ import {
 // por separado, lo que no se importa acá no llega.
 import './Dashboard.css';
 import './Alerts.css';
+import '../components/shell/shell.css';
 import '../components/Modals.css';
 
 type StatusFilter = 'activas' | 'cerradas' | 'todas';
@@ -72,6 +77,7 @@ function ThresholdsModal({ initial, onSave, onClose }: {
         setError('');
         try {
             await onSave(t);
+            avisar.exito('Umbrales guardados', 'Rigen para las alertas nuevas.');
             onClose();
         } catch {
             setError('No se pudieron guardar los umbrales. Probá de nuevo.');
@@ -81,11 +87,11 @@ function ThresholdsModal({ initial, onSave, onClose }: {
     };
 
     return (
-        <div className="em-modal-overlay" onClick={onClose}>
-            <div className="em-modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
+        <Dialogo abierto alCerrar={onClose} etiquetadoPor="umbrales-titulo" className="dialogo-em">
+            <div className="em-modal" style={{ maxWidth: 540 }}>
                 <div className="em-modal-header">
-                    <h3><SlidersHorizontal size={18} />Umbrales de alerta</h3>
-                    <button className="btn btn-ghost" onClick={onClose}><X size={18} /></button>
+                    <h3 id="umbrales-titulo"><SlidersHorizontal size={18} aria-hidden="true" />Umbrales de alerta</h3>
+                    <button type="button" className="btn btn-ghost" aria-label="Cerrar" onClick={onClose}><X size={18} aria-hidden="true" /></button>
                 </div>
                 <div className="em-modal-body">
                     <p className="em-hint">
@@ -94,8 +100,9 @@ function ThresholdsModal({ initial, onSave, onClose }: {
                     </p>
                     {fields.map(f => (
                         <div key={f.key} className="em-field">
-                            <label>{f.label}</label>
+                            <label htmlFor={`umbral-${f.key}`}>{f.label}</label>
                             <input
+                                id={`umbral-${f.key}`}
                                 type="number"
                                 min={f.min}
                                 max={f.max}
@@ -115,7 +122,7 @@ function ThresholdsModal({ initial, onSave, onClose }: {
                     </button>
                 </div>
             </div>
-        </div>
+        </Dialogo>
     );
 }
 
@@ -189,11 +196,12 @@ export default function Alerts() {
     const [actionOn, setActionOn] = useState<{ id: string; mode: 'seguimiento' | 'cierre' } | null>(null);
     const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
     const [showThresholds, setShowThresholds] = useState(false);
+    const [cargando, setCargando] = useState(true);
 
     const load = () => {
         if (!user) return;
         const q = isDirector ? getAlertsBySchool(user.schoolId) : getAlertsByTeacher(user.id);
-        q.then(setAlertsList).catch(console.error);
+        q.then(setAlertsList).catch(console.error).finally(() => setCargando(false));
     };
 
     useEffect(() => {
@@ -226,6 +234,7 @@ export default function Alerts() {
 
     const doFollowUp = async (alertId: string, note: string) => {
         await startFollowUp(alertId, note);
+        avisar.exito('Alerta en seguimiento', 'La intervención quedó registrada.');
         setActionOn(null);
         load();
     };
@@ -236,6 +245,7 @@ export default function Alerts() {
             ? (alert.interventionNote ? `${alert.interventionNote}\n[Cierre] ${note.trim()}` : note.trim())
             : undefined;
         await closeAlert(alert.id, outcome, closeNote);
+        avisar.exito('Alerta cerrada', ALERT_OUTCOME_META[outcome]);
         setActionOn(null);
         load();
     };
@@ -244,7 +254,7 @@ export default function Alerts() {
         <div className="alerts-container">
             <header className="alerts-header">
                 <div>
-                    <h2 className="page-title">Sistema de Alertas Tempranas</h2>
+                    <h2 className="page-title">Sistema de alertas tempranas</h2>
                     <p className="text-secondary mt-1">{subtitle}</p>
                 </div>
                 {isDirector && thresholds && (
@@ -296,10 +306,25 @@ export default function Alerts() {
                     <span className="badge badge-neutral">{visible.length}</span>
                 </div>
 
-                {visible.length === 0 && (
-                    <p className="text-secondary text-sm">
-                        {filter === 'cerradas' ? 'Todavía no hay alertas cerradas.' : 'Sin alertas activas. 🎉'}
-                    </p>
+                {cargando && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando alertas…" />}
+
+                {!cargando && visible.length === 0 && (
+                    filter === 'cerradas' ? (
+                        <EstadoVacio
+                            compacto
+                            icono={ClipboardCheck}
+                            titulo="Todavía no hay alertas cerradas"
+                            texto="Cuando cierres una alerta con su resultado, queda guardada acá."
+                            accion={{ etiqueta: 'Ver las activas', alTocar: () => setFilter('activas') }}
+                        />
+                    ) : (
+                        <EstadoVacio
+                            compacto
+                            icono={CheckCircle}
+                            titulo="Sin alertas activas"
+                            texto="Cuando aparezca una señal de riesgo, la vas a ver acá para tomarla en seguimiento."
+                        />
+                    )
                 )}
 
                 <div className="lifecycle-list">

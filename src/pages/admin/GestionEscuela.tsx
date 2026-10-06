@@ -31,6 +31,9 @@ import EstudiantesTab from './EstudiantesTab';
 import HorarioTab from './HorarioTab';
 import FamiliasTab from './FamiliasTab';
 import CredencialesModal, { type Credencial } from './CredencialesModal';
+import { avisar } from '../../components/ui/avisar';
+import { Esqueleto } from '../../components/ui/Esqueleto';
+import EstadoVacio from '../../components/ui/EstadoVacio';
 import './Admin.css';
 
 export interface SchoolData {
@@ -50,7 +53,7 @@ export interface TabProps {
   data: SchoolData;
   isSuperadmin: boolean;
   reload: () => Promise<void>;
-  /** corre una acción mostrando el error arriba si falla */
+  /** corre una acción y recarga; si falla, avisa el error y devuelve false */
   run: (fn: () => Promise<void>) => Promise<boolean>;
   showCredentials: (items: Credencial[]) => void;
   /** para los atajos entre pestañas ("primero creá los cursos") */
@@ -110,24 +113,33 @@ export default function GestionEscuela() {
       .finally(() => setLoading(false));
   }, [reload]);
 
+  // El error de una acción va en un aviso: un banner arriba de todo no se
+  // ve si la acción fue en la fila 40 de la lista de estudiantes.
   const run = useCallback(async (fn: () => Promise<void>) => {
-    setError('');
     try {
       await fn();
       await reload();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo completar.');
+      avisar.error(err instanceof Error ? err.message : 'No se pudo completar. Probá de nuevo.');
       return false;
     }
   }, [reload]);
 
-  if (loading) return <p className="text-secondary adm-cargando">Cargando escuela...</p>;
+  if (loading) {
+    return (
+      <div className="adm-container">
+        <Esqueleto tipo="filas" cantidad={5} etiqueta="Cargando la escuela…" />
+      </div>
+    );
+  }
   if (!data) {
     return (
       <div className="adm-container">
-        {error && <div className="adm-error" role="alert"><AlertCircle size={15} /> {error}</div>}
-        <p className="text-secondary">No se encontró la escuela o no tenés acceso.</p>
+        {error && <div className="adm-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {error}</div>}
+        <EstadoVacio icono={Building2} titulo="No se encontró la escuela"
+          texto="Puede que la hayan dado de baja o que tu cuenta no tenga acceso a ella."
+          accion={isSuperadmin ? { etiqueta: 'Ver todas las escuelas', a: '/admin', icono: ArrowLeft } : undefined} />
       </div>
     );
   }
@@ -200,8 +212,6 @@ export default function GestionEscuela() {
           </button>
         ))}
       </div>
-
-      {error && <div className="adm-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {error}</div>}
 
       <div role="tabpanel" className="adm-panel">
         {activa === 'cursos' && <CursosTab {...props} />}

@@ -121,8 +121,14 @@ async function main() {
   }
   const schoolsCount = await countRows('schools');
   console.log(`  ${'schools'.padEnd(22)} ${schoolsCount}`);
-  const authUsers = await listAllAuthUsers();
-  console.log(`  ${'auth.users'.padEnd(22)} ${authUsers.length}`);
+  // Los superadmin son cuentas reales de la Municipalidad, no datos demo:
+  // no pertenecen a ninguna escuela y sobreviven al reset.
+  const { data: admins, error: adminsError } = await supabase.from('profiles').select('id').eq('role', 'superadmin');
+  if (adminsError) throw new Error(`superadmins: ${adminsError.message}`);
+  const adminIds = new Set((admins ?? []).map(a => a.id));
+  const allUsers = await listAllAuthUsers();
+  const authUsers = allUsers.filter(u => !adminIds.has(u.id));
+  console.log(`  ${'auth.users'.padEnd(22)} ${authUsers.length} (+ ${allUsers.length - authUsers.length} superadmin que se conservan)`);
   for (const u of authUsers) console.log(`    - ${u.email}`);
 
   console.log('\n💾 Backup de seguridad (schools, courses, subjects, students, profiles)...');

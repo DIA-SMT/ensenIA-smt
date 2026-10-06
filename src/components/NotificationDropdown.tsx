@@ -5,11 +5,19 @@
  * ("Avisos, 3 sin leer"), el panel se abre y se cierra con teclado
  * (Escape devuelve el foco al botón) y cada aviso es un botón de verdad:
  * antes eran recuadros que solo respondían al mouse.
+ *
+ * Para el docente, arriba de todo: las entregas que esperan su nota (y un
+ * aviso cuando llegan nuevas con la app abierta). Antes nada le avisaba.
  */
 
 import { useState, useRef, useEffect, useId } from 'react';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, Check, CheckCheck, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
+import { getPendingGradingCount } from '../services/activities.service';
+import { avisar } from './ui/avisar';
+import EstadoVacio from './ui/EstadoVacio';
 import './NotificationDropdown.css';
 
 const priorityColors: Record<string, string> = {
@@ -31,6 +39,37 @@ export default function NotificationDropdown() {
     const idPanel = useId();
     const idTitulo = useId();
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+    const { user, isDocente } = useAuth();
+    const [porCorregir, setPorCorregir] = useState(0);
+
+    // Entregas esperando nota: al entrar, al volver a la pestaña y cada 2 minutos
+    // mientras se ve. Si sube con la app abierta, se avisa.
+    useEffect(() => {
+        if (!isDocente || !user) return;
+        let vivo = true;
+        let anterior: number | null = null;
+        const contar = () => {
+            if (document.visibilityState !== 'visible') return;
+            getPendingGradingCount(user.id).then(n => {
+                if (!vivo) return;
+                if (anterior !== null && n > anterior) {
+                    const nuevas = n - anterior;
+                    avisar.info(nuevas === 1 ? 'Llegó una entrega nueva' : `Llegaron ${nuevas} entregas nuevas`, 'Están en Corregir, esperando tu nota.');
+                }
+                anterior = n;
+                setPorCorregir(n);
+            }).catch(() => { /* sin conexión: se reintenta en la próxima vuelta */ });
+        };
+        contar();
+        const intervalo = window.setInterval(contar, 120_000);
+        document.addEventListener('visibilitychange', contar);
+        return () => {
+            vivo = false;
+            window.clearInterval(intervalo);
+            document.removeEventListener('visibilitychange', contar);
+        };
+    }, [isDocente, user]);
+    const total = unreadCount + porCorregir;
 
     // Cerrar al tocar afuera o con Escape (y devolver el foco al botón).
     useEffect(() => {
@@ -49,9 +88,11 @@ export default function NotificationDropdown() {
         };
     }, [isOpen]);
 
-    const nombreBoton = unreadCount > 0
-        ? `Avisos, ${unreadCount} sin leer`
-        : 'Avisos, ninguno sin leer';
+    const partes = [
+        unreadCount > 0 ? `${unreadCount} sin leer` : '',
+        porCorregir > 0 ? `${porCorregir} ${porCorregir === 1 ? 'entrega' : 'entregas'} para corregir` : '',
+    ].filter(Boolean);
+    const nombreBoton = partes.length ? `Avisos, ${partes.join(', ')}` : 'Avisos, ninguno sin leer';
 
     return (
         <div className="notif-dropdown-container" ref={dropdownRef}>
@@ -66,9 +107,9 @@ export default function NotificationDropdown() {
                 onClick={() => setIsOpen(prev => !prev)}
             >
                 <Bell size={19} aria-hidden="true" />
-                {unreadCount > 0 && (
+                {total > 0 && (
                     <span className="notif-dot" aria-hidden="true">
-                        <span className="notif-count">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                        <span className="notif-count">{total > 9 ? '9+' : total}</span>
                     </span>
                 )}
             </button>
@@ -86,11 +127,24 @@ export default function NotificationDropdown() {
                     </div>
 
                     <div className="notif-dropdown-list">
-                        {notifications.length === 0 ? (
-                            <div className="notif-dropdown-empty">
-                                <Bell size={24} aria-hidden="true" />
-                                <p>No tenés avisos.</p>
-                            </div>
+                        {porCorregir > 0 && (
+                            <Link to="/corregir" className="notif-corregir" onClick={() => setIsOpen(false)}>
+                                <span className="notif-corregir-icono" aria-hidden="true"><ClipboardCheck size={18} /></span>
+                                <span className="notif-corregir-textos">
+                                    <strong>{porCorregir === 1 ? '1 entrega esperando tu nota' : `${porCorregir} entregas esperando tu nota`}</strong>
+                                    <span>Corregilas todas de una, con las respuestas a la vista.</span>
+                                </span>
+                                <ChevronRight size={16} aria-hidden="true" />
+                            </Link>
+                        )}
+                        {notifications.length === 0 && porCorregir > 0 ? null : notifications.length === 0 ? (
+                            <EstadoVacio
+                                compacto
+                                className="notif-vacio"
+                                icono={Bell}
+                                titulo="No tenés avisos"
+                                texto="Cuando la escuela o tus docentes te avisen algo, aparece acá."
+                            />
                         ) : (
                             <ul className="notif-lista">
                                 {notifications.map(n => (

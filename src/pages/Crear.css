@@ -1,0 +1,137 @@
+/* ══════════════════════════════
+   CREAR — una puerta para todo lo que arma el docente
+   ══════════════════════════════ */
+
+.crear {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.crear-cabeza { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+
+.crear-bajada {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+/* ── Las tres principales: tarjetas grandes ── */
+.crear-principales {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+.crear-principales li { display: flex; }
+
+.crear-opcion {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), box-shadow 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.crear-opcion:hover {
+  border-color: var(--acento);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.crear-opcion:active { transform: none; }
+
+.crear-opcion-icono {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+.crear-opcion-titulo { font-size: 1.1875rem; font-weight: 750; line-height: 1.25; }
+.crear-opcion-texto { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.5; }
+.crear-opcion-pie {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.crear-opcion-nota {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--acento-hover);
+}
+.crear-opcion-flecha { color: var(--acento); transition: transform 0.2s var(--ease-out); }
+.crear-opcion:hover .crear-opcion-flecha { transform: translateX(3px); }
+
+/* ── Otras herramientas: lista compacta ── */
+.crear-seccion {
+  font-size: 0.8125rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-subtle);
+  margin-bottom: var(--space-3);
+}
+.crear-herramientas ul {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-2);
+}
+.crear-herramienta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+.crear-herramienta:hover { border-color: var(--acento); background: var(--bg-hover); }
+.crear-herramienta-icono {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--indigo-glow);
+  color: var(--indigo);
+}
+.crear-herramienta-textos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.crear-herramienta-titulo { font-size: 0.9375rem; font-weight: 700; }
+.crear-herramienta-texto { font-size: 0.8125rem; color: var(--text-subtle); line-height: 1.4; }
+.crear-herramienta-flecha { flex-shrink: 0; color: var(--text-muted); }
+
+@media (max-width: 600px) {
+  .crear { gap: var(--space-6); }
+  .crear-opcion { padding: var(--space-5); }
+  /* En el celular las principales van como renglones con el ícono al costado */
+  .crear-opcion {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+  }
+  .crear-opcion-icono { grid-row: span 3; margin-bottom: 0; }
+  .crear-opcion-pie { padding-top: var(--space-2); }
+}
+
+html[data-contraste="alto"] .crear-opcion,
+html[data-contraste="alto"] .crear-herramienta { border-width: 2px; border-color: var(--border-strong); }

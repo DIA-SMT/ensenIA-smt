@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ClipboardList, Users, CheckCircle, Clock, ChevronRight, Sparkles,
+  Users, CheckCircle, Clock, ChevronRight, Sparkles,
   CircleDot, Lock, Unlock, Trash2, QrCode, Search,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,10 @@ import {
   getActivitiesByTeacher, getSubmissionsByActivity, updateActivityStatus, deleteActivity,
 } from '../services/activities.service';
 import QrModal from '../components/QrModal';
+import BotonCopiarActividad from '../components/CopiarActividad';
+import { avisar, confirmar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import type { Activity, ActivitySubmission } from '../types';
 import './Actividades.css';
 
@@ -76,13 +80,34 @@ export default function Actividades() {
   if (!user) return null;
 
   const handleToggleStatus = async (a: Activity) => {
-    await updateActivityStatus(a.id, a.status === 'closed' ? 'published' : 'closed');
+    const reabrir = a.status === 'closed';
+    try {
+      await updateActivityStatus(a.id, reabrir ? 'published' : 'closed');
+    } catch (err) {
+      console.error(err);
+      avisar.error(reabrir ? 'No se pudo reabrir la actividad' : 'No se pudieron cerrar las entregas', 'Probá de nuevo.');
+      return;
+    }
+    avisar.exito(reabrir ? 'Actividad reabierta' : 'Entregas cerradas', a.title);
     load();
   };
 
   const handleDelete = async (a: Activity) => {
-    if (!window.confirm(`¿Eliminar "${a.title}"? Se pierden las entregas y la huella digital.`)) return;
-    await deleteActivity(a.id);
+    const ok = await confirmar({
+      titulo: `¿Eliminar "${a.title}"?`,
+      mensaje: 'Se pierden las entregas y la huella digital. No se puede deshacer.',
+      accion: 'Eliminar',
+      peligro: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteActivity(a.id);
+    } catch (err) {
+      console.error(err);
+      avisar.error('No se pudo eliminar la actividad', 'Probá de nuevo.');
+      return;
+    }
+    avisar.exito('Actividad eliminada', a.title);
     load();
   };
 
@@ -90,14 +115,17 @@ export default function Actividades() {
     <div className="acts-container animate-in">
       <div className="acts-header">
         <div>
-          <h2 className="flex items-center gap-2"><ClipboardList size={22} className="text-cyan" /> Actividades</h2>
-          <p className="text-secondary text-sm">
+          {/* El título ("Actividades") ya está en la barra de arriba */}
+          <p className="text-secondary">
             Acá seguís el trabajo de tus estudiantes: quién entregó, qué nota sacó y cómo trabajó.
           </p>
         </div>
-        <Link to="/crear" className="btn btn-primary btn-sm">
-          <Sparkles size={15} /> Crear actividad
-        </Link>
+        {/* Con la lista vacía, el botón está en el estado vacío */}
+        {(loading || activities.length > 0) && (
+          <Link to="/actividad-rapida" className="btn btn-primary btn-sm">
+            <Sparkles size={15} aria-hidden="true" /> Crear actividad
+          </Link>
+        )}
       </div>
 
       {activities.length > 3 && (
@@ -111,7 +139,7 @@ export default function Actividades() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <div className="acts-filters">
+          <div className="acts-filters fila-desplazable">
             {([
               ['todas', 'Todas'],
               ['abiertas', 'Abiertas'],
@@ -131,27 +159,26 @@ export default function Actividades() {
         </div>
       )}
 
-      {loading && <p className="text-secondary p-6">Cargando actividades...</p>}
+      {loading && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando actividades…" />}
 
       {!loading && activities.length === 0 && (
-        <div className="card acts-empty">
-          <Sparkles size={36} className="text-ia-accent" />
-          <h3>Todavía no publicaste actividades</h3>
-          <p className="text-secondary text-sm">
-            Escribí el tema y la app arma la actividad: tus estudiantes la reciben al instante
-            y vos ves cómo trabajaron.
-          </p>
-          <Link to="/crear" className="btn btn-primary btn-sm">
-            <Sparkles size={15} /> Crear mi primera actividad
-          </Link>
-        </div>
+        <EstadoVacio
+          icono={Sparkles}
+          titulo="Todavía no publicaste actividades"
+          texto="Escribí el tema y la app arma la actividad: tus estudiantes la reciben al instante y vos ves cómo trabajaron."
+          accion={{ etiqueta: 'Crear mi primera actividad', a: '/actividad-rapida', icono: Sparkles }}
+        />
       )}
 
       <div className="acts-list">
         {!loading && activities.length > 0 && filtered.length === 0 && (
-          <div className="card acts-empty">
-            <p className="text-secondary text-sm">Ninguna actividad coincide con la búsqueda.</p>
-          </div>
+          <EstadoVacio
+            compacto
+            icono={Search}
+            titulo="Ninguna actividad coincide"
+            texto="Probá con otra palabra o mirá todas las actividades."
+            accion={{ etiqueta: 'Ver todas', alTocar: () => { setSearch(''); setFilter('todas'); } }}
+          />
         )}
         {filtered.map(a => (
           <div key={a.id} className={`card acts-card ${a.status === 'closed' ? 'closed' : ''}`}>
@@ -201,6 +228,7 @@ export default function Actividades() {
                 >
                   {a.status === 'closed' ? <Unlock size={16} /> : <Lock size={16} />}
                 </button>
+                <BotonCopiarActividad activity={a} compacto alCopiar={load} />
                 <button className="btn-icon" title="Eliminar" onClick={() => handleDelete(a)}>
                   <Trash2 size={16} />
                 </button>

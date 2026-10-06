@@ -22,8 +22,8 @@
 .lib-header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .lib-header-controls .form-select { min-width: 210px; }
 
-/* Pestañas de trimestre */
-.lib-terms { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Pestañas de trimestre (en el celular se deslizan de costado: .fila-desplazable) */
+.lib-terms { display: flex; gap: 6px; }
 .lib-term {
   padding: 7px 14px;
   border-radius: 999px;
@@ -232,6 +232,73 @@
 .libreta-input.grade-risk { color: var(--warning); border-color: rgba(251, 191, 36, 0.45); }
 .libreta-input.grade-fail { color: var(--danger); border-color: rgba(239, 68, 68, 0.5); }
 
+/* En el celular la tabla no entra: cada estudiante es una tarjeta, con el
+   nombre arriba y "Sugerida" / "Nota del trimestre" rotuladas abajo. Los
+   rótulos salen de data-label; los inputs ya tienen su aria-label. */
+@media (max-width: 600px) {
+  .libreta-table.modern-table,
+  .libreta-table.modern-table tbody,
+  .libreta-table.modern-table tr,
+  .libreta-table.modern-table td { display: block; width: 100%; }
+
+  /* El encabezado sobra: cada dato lleva su rótulo */
+  .libreta-table.modern-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .libreta-table.modern-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .libreta-table.modern-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+  }
+
+  .libreta-table.modern-table td,
+  .libreta-table.modern-table tr:hover td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+  }
+  /* Nombre e iniciales: arriba, a todo el ancho */
+  .libreta-table.modern-table td:first-child { grid-column: 1 / -1; font-size: 0.9375rem; }
+  .libreta-table.modern-table td.libreta-estado { grid-column: 1 / -1; }
+  .libreta-table.modern-table td.libreta-estado:empty { display: none; }
+
+  .libreta-table.modern-table td[data-label]::before {
+    content: attr(data-label);
+    flex-basis: 100%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .libreta-table.modern-table td.libreta-estado::before { display: none; }
+
+  .libreta-table .libreta-suggested { font-size: 0.9375rem; min-height: 44px; }
+  .libreta-table .libreta-input { width: 100%; min-height: 44px; font-size: 1rem; }
+}
+
 /* ── Acciones ── */
 .libreta-actions {
   display: flex;
@@ -400,7 +467,8 @@
 }
 
 /* ── Pestañas de la Libreta ── */
-.libreta-tabs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+/* No se parten en dos renglones: en el celular se deslizan (.fila-desplazable) */
+.libreta-tabs { display: flex; gap: var(--space-2); }
 .libreta-tab {
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
@@ -540,4 +608,39 @@
   align-items: flex-start;
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+/* ── Boletín en el celular: una tarjeta por estudiante en vez de 7 columnas
+   que obligaban a desplazar de costado. Mismos campos y mismo orden. ── */
+@media (max-width: 600px) {
+  .lib-table-card { overflow: visible; }
+  .lib-table-boletin,
+  .lib-table-boletin tbody,
+  .lib-table-boletin tr,
+  .lib-table-boletin td { display: block; width: 100%; }
+  .lib-table-boletin thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .lib-table-boletin tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-color);
+  }
+  .lib-table-boletin td { padding: 0; border: 0; }
+  .lib-table-boletin td.lib-student { grid-column: 1 / -1; font-weight: 700; font-size: 0.9375rem; }
+  .lib-table-boletin td[data-label="Observación"],
+  .lib-table-boletin td[data-label="Conducta"] { grid-column: 1 / -1; }
+  .lib-table-boletin td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-subtle);
+  }
+  .lib-table-boletin .lib-grade,
+  .lib-table-boletin .lib-comment { width: 100%; min-height: var(--touch); }
+  .lib-table-boletin .lib-conduct-btn { min-width: var(--touch); min-height: 40px; }
 }

@@ -10,6 +10,8 @@ import { getTeacherAwards, giveTeacherAward } from '../services/awards.service';
 import { logAccess } from '../services/audit.service';
 import { formatRelative, daysSince } from '../lib/format';
 import AwardPickerModal from '../components/AwardPickerModal';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import EstadoVacio from '../components/ui/EstadoVacio';
 import { TEACHER_AWARD_META, type TeacherAward, type User, type Subject, type Student, type ScheduleBlock } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -37,6 +39,7 @@ export default function Docentes() {
   const [search, setSearch] = useState('');
   const [teacherAwards, setTeacherAwards] = useState<TeacherAward[]>([]);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function Docentes() {
         results.forEach(r => { map[r.id] = r.count; });
         setTeacherWeeklyClasses(map);
       });
-    }).catch(console.error);
+    }).catch(console.error).finally(() => setCargando(false));
   }, [user]);
 
   // Bitácora: queda registrado cada acceso al perfil de un docente.
@@ -135,7 +138,7 @@ export default function Docentes() {
       <div className={`docentes-main ${selectedTeacher ? 'with-panel' : ''}`}>
         <div className="card">
           <div className="docentes-header">
-            <h2>Equipo Docente</h2>
+            <h2>Equipo docente</h2>
             <div className="search-bar" style={{ width: 280 }}>
               <Search size={16} className="search-icon" />
               <input
@@ -148,15 +151,26 @@ export default function Docentes() {
             </div>
           </div>
 
+          {cargando ? (
+            <Esqueleto tipo="tabla" cantidad={5} etiqueta="Cargando el equipo docente…" />
+          ) : teachers.length === 0 ? (
+            <EstadoVacio icono={Users} titulo="Todavía no hay docentes en la escuela"
+              texto="Cuando los sumes desde Mi escuela, acá vas a ver sus materias, sus clases de hoy y su última actividad."
+              accion={{ etiqueta: 'Ir a Mi escuela', a: '/mi-escuela' }} />
+          ) : filteredTeachers.length === 0 ? (
+            <EstadoVacio compacto icono={Search} titulo={`Ningún docente coincide con «${search.trim()}»`}
+              texto="Probá con otra parte del nombre, el email o una materia."
+              accion={{ etiqueta: 'Ver a todos', alTocar: () => setSearch('') }} />
+          ) : (
           <div className="table-responsive">
             <table className="modern-table">
               <thead>
                 <tr>
                   <th>Docente</th>
                   <th>Materias</th>
-                  <th>Clases Hoy</th>
+                  <th>Clases hoy</th>
                   <th>Alumnos</th>
-                  <th>Última Actividad</th>
+                  <th>Última actividad</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,16 +200,10 @@ export default function Docentes() {
                     </tr>
                   );
                 })}
-                {filteredTeachers.length === 0 && search.trim() !== '' && (
-                  <tr>
-                    <td colSpan={5} className="text-secondary text-sm">
-                      No se encontraron docentes para «{search.trim()}».
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
 
@@ -204,7 +212,7 @@ export default function Docentes() {
         <aside className="card student-profile-panel animate-slide-in">
           <div className="profile-header">
             <div className="profile-title-row">
-              <h3>Perfil Docente</h3>
+              <h3>Perfil docente</h3>
               <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedTeacher(null)}>
                 <X size={18} />
               </button>
@@ -230,7 +238,7 @@ export default function Docentes() {
             </div>
 
             <div className="profile-section">
-              <h4><Calendar size={14} style={{ marginRight: 6 }} /> Horario Hoy</h4>
+              <h4><Calendar size={14} style={{ marginRight: 6 }} /> Horario de hoy</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {todayClassesForTeacher(selectedTeacher.id).map(block => (
                   <div key={block.id} className="metric-box" style={{ alignItems: 'flex-start' }}>
@@ -259,7 +267,7 @@ export default function Docentes() {
             </div>
 
             <div className="profile-section">
-              <h4><Activity size={14} style={{ marginRight: 6 }} /> Actividad Reciente</h4>
+              <h4><Activity size={14} style={{ marginRight: 6 }} /> Actividad reciente</h4>
               {recentActivitiesOf(selectedTeacher.id).length === 0 && (
                 <p className="text-secondary text-sm">Sin actividades publicadas todavía.</p>
               )}

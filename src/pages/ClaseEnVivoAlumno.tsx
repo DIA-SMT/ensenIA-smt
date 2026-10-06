@@ -25,6 +25,8 @@ import { getMyGroup, type CourseGroup } from '../services/groups.service';
 import { getNewestAwardSince } from '../services/awards.service';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, AWARD_META, type Student, type CheckinFeeling, type StudentAward } from '../types';
+import { avisar } from '../components/ui/avisar';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -149,7 +151,7 @@ export default function ClaseEnVivoAlumno() {
     }, [student?.id, session?.id]);
 
     if (!user) return null;
-    if (student === undefined) return <div className="cv-container"><p className="text-secondary">Cargando...</p></div>;
+    if (student === undefined) return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Buscando tu clase en vivo…" /></div>;
     if (!student) {
         return (
             <div className="cv-container cv-start">
@@ -192,7 +194,7 @@ export default function ClaseEnVivoAlumno() {
             }
         } catch (err) {
             console.error(err);
-            alert('No se pudo enviar. Probá de nuevo.');
+            avisar.error('No se pudo enviar tu respuesta.', 'Revisá tu conexión y probá de nuevo.');
         } finally {
             setSending(false);
         }

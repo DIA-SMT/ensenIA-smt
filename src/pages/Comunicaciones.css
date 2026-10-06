@@ -187,18 +187,15 @@
   box-shadow: 0 0 0 3px var(--cyan-glow);
 }
 
-/* Empty state */
-.comms-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-subtle);
-  gap: var(--space-3);
-}
+/* .login-field vive en Login.css, que no siempre está cargado (al volver
+   con la sesión abierta no se pasa por el login): lo básico va acá. */
+.comms-compose-form .login-field { display: flex; flex-direction: column; gap: 6px; }
+.comms-compose-form .login-field > label:first-child { font-size: 0.875rem; font-weight: 650; color: var(--text-primary); }
 
-.comms-empty p {
-  font-size: 0.9375rem;
-  color: var(--text-secondary);
+/* Vacío del panel derecho: sin el borde punteado, ya está adentro de una tarjeta */
+.comms-vacio {
+  height: 100%;
+  justify-content: center;
+  border: 0;
+  background: transparent;
 }

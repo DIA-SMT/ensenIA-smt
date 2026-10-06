@@ -508,6 +508,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   color: #FFFFFF;
 }
 
+/* Acciones que no se deshacen (borrar, quitar): rojo lleno */
+.btn-peligro {
+  background-color: var(--danger-ink);
+  color: #FFFFFF;
+}
+.btn-peligro:hover:not(:disabled) { background-color: #991B1B; color: #FFFFFF; }
+.btn-peligro:active:not(:disabled) { transform: translateY(1px); }
+
 
 /* ══════════════════════════════
    TYPOGRAPHY

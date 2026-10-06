@@ -5,8 +5,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X, BookOpen, FileText, Youtube, Loader2, Check } from 'lucide-react';
+import { X, BookOpen, FileText, Youtube, Check } from 'lucide-react';
 import Dialogo from './shell/Dialogo';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
 import { getPlanningBySubjectAndCourse } from '../services/planning.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import type { LibraryMaterial, PlanningUnit } from '../types';
@@ -62,10 +64,20 @@ export default function ElegirMaterial({
       <p className="dialogo-bajada">Elegí un tema de tu temario o un material de tu biblioteca para trabajar hoy.</p>
 
       <div className="elm-cuerpo">
-        {error && <p className="text-sm text-danger">{error}</p>}
-        {cargando && <p className="text-secondary text-sm elm-cargando"><Loader2 size={14} className="spin" /> Cargando…</p>}
+        {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+        {cargando && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando tu material…" />}
 
-        {!cargando && !error && (
+        {/* Sin nada en ninguno de los dos lados: un solo aviso, no dos */}
+        {!cargando && !error && temas.length === 0 && materiales?.length === 0 && (
+          <EstadoVacio
+            compacto
+            icono={BookOpen}
+            titulo="Todavía no tenés material de esta materia"
+            texto="Cargá temas en tu temario o subí algo a tu biblioteca. Mientras, la clase anda igual sin material."
+          />
+        )}
+
+        {!cargando && !error && (temas.length > 0 || (materiales?.length ?? 0) > 0) && (
           <>
             <section aria-labelledby="elm-temario">
               <h3 id="elm-temario" className="elm-seccion">Del temario</h3>

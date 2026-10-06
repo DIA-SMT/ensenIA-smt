@@ -1,23 +1,31 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 043 — Horario de la escuela
+-- 045 — Horario: también lo arma la dirección, sin superposiciones
 --
--- El horario (schedule_blocks) lo leían "Mi día", la Agenda del docente y
--- el equipo docente de la dirección, pero nadie lo podía cargar: no había
--- policy de escritura, solo lo llenaban los seeds de demo. Ahora:
+-- La 044 le dio al docente la carga de SU horario y completa los datos
+-- copiados de cada clase (nombres, día). Esta suma lo que faltaba para
+-- que el horario sirva a toda la escuela:
 --
---  · La dirección (y el superadmin) arman el horario de su escuela desde
---    Gestión de la escuela → Horario.
---  · Un trigger completa lo que se repetía a mano (nombres de materia y
---    curso, día de la semana, escuela, cantidad de estudiantes) y frena lo
---    que no tiene sentido: una clase de una materia que ese docente no da
---    en ese curso, o dos clases a la misma hora del mismo curso o docente.
+--  · La dirección (y el superadmin) cargan y corrigen el horario de
+--    cualquier docente de su escuela, desde Gestión de la escuela →
+--    Horario.
+--  · Ni el docente ni la dirección pueden cargar una clase de una materia
+--    que ese docente no da en ese curso, ni dos clases a la misma hora del
+--    mismo curso o del mismo docente.
 --  · Los estudiantes ven el horario de su curso.
 --  · Al sacarle a un docente una materia de un curso, se van sus clases
 --    del horario, y los estudiantes dejan de tener esa materia si nadie
 --    más la da en el curso (antes la seguían viendo).
+--  · Borrar un curso o una materia borra su horario (antes lo impedía).
+--
+-- Requiere la 044 (trigger schedule_block_completar).
 -- ═══════════════════════════════════════════════════════════════════
 
--- ── Al borrar un curso o una materia se va su horario (antes lo impedía) ──
+-- Si se llegó a correr la versión anterior de esta migración (043_horario,
+-- que también completaba los datos), su trigger se reemplaza por el de abajo
+DROP TRIGGER IF EXISTS trg_schedule_block_prepare ON schedule_blocks;
+DROP FUNCTION IF EXISTS schedule_block_prepare();
+
+-- ── Al borrar un curso o una materia se va su horario ──
 ALTER TABLE schedule_blocks DROP CONSTRAINT IF EXISTS schedule_blocks_course_id_fkey;
 ALTER TABLE schedule_blocks ADD CONSTRAINT schedule_blocks_course_id_fkey
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE;
@@ -25,7 +33,7 @@ ALTER TABLE schedule_blocks DROP CONSTRAINT IF EXISTS schedule_blocks_subject_id
 ALTER TABLE schedule_blocks ADD CONSTRAINT schedule_blocks_subject_id_fkey
   FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE;
 
--- ── Escritura: la dirección de la escuela y el superadmin ──
+-- ── Escritura de la dirección de la escuela y el superadmin ──
 DROP POLICY IF EXISTS "Managers manage schedule" ON schedule_blocks;
 CREATE POLICY "Managers manage schedule"
   ON schedule_blocks FOR ALL
@@ -38,19 +46,18 @@ CREATE POLICY "Students see their course schedule"
   ON schedule_blocks FOR SELECT
   USING (course_id = auth_student_course_id());
 
--- ── Completar y validar cada clase ──
-CREATE OR REPLACE FUNCTION schedule_block_prepare()
+-- ── Validar cada clase (corre después del completado de la 044) ──
+CREATE OR REPLACE FUNCTION schedule_block_validar()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_course courses%ROWTYPE;
   v_choque TEXT;
   v_fin NUMERIC := NEW.start_hour + NEW.duration;
 BEGIN
-  SELECT * INTO v_course FROM courses WHERE id = NEW.course_id;
-  IF NOT FOUND THEN RAISE EXCEPTION 'El curso no existe'; END IF;
+  -- La escuela es la del curso, la ponga quien la ponga
+  NEW.school_id := course_school(NEW.course_id);
 
   IF NOT EXISTS (
     SELECT 1 FROM teacher_assignments
@@ -60,18 +67,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 
-  IF NEW.start_hour < 6 OR v_fin > 23 OR NEW.duration <= 0 OR NEW.duration > 6 THEN
-    RAISE EXCEPTION 'El horario tiene que estar entre las 6:00 y las 23:00' USING ERRCODE = '23514';
-  END IF;
-
-  -- Datos que se mostraban copiados: salen de la fuente
-  NEW.school_id := v_course.school_id;
-  NEW.course_name := v_course.name;
-  NEW.subject_name := (SELECT name FROM subjects WHERE id = NEW.subject_id);
-  NEW.student_count := COALESCE(v_course.student_count, 0);
-  NEW.day_of_week := (ARRAY['lunes','martes','miercoles','jueves','viernes']::day_of_week[])[NEW.day_index + 1];
-
-  -- Superposiciones: el mismo curso o el mismo docente, el mismo día, horas que se pisan
+  -- El mismo curso o el mismo docente, el mismo día, horas que se pisan
   SELECT CASE WHEN b.course_id = NEW.course_id
               THEN 'El curso ' || b.course_name || ' ya tiene ' || b.subject_name || ' en ese horario'
               ELSE 'Ese docente ya da ' || b.subject_name || ' en ' || b.course_name || ' en ese horario' END
@@ -91,10 +87,12 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_schedule_block_prepare ON schedule_blocks;
-CREATE TRIGGER trg_schedule_block_prepare
+-- Los triggers BEFORE corren por orden alfabético: este ("…_validar")
+-- después del "…_completar" de la 044, que ya llenó los nombres.
+DROP TRIGGER IF EXISTS trg_schedule_block_validar ON schedule_blocks;
+CREATE TRIGGER trg_schedule_block_validar
   BEFORE INSERT OR UPDATE ON schedule_blocks
-  FOR EACH ROW EXECUTE FUNCTION schedule_block_prepare();
+  FOR EACH ROW EXECUTE FUNCTION schedule_block_validar();
 
 -- ── Al sacarle una materia a un docente ──
 CREATE OR REPLACE FUNCTION on_assignment_removed()
@@ -121,7 +119,7 @@ CREATE TRIGGER trg_assignment_removed
   AFTER DELETE ON teacher_assignments
   FOR EACH ROW EXECUTE FUNCTION on_assignment_removed();
 
--- ── La cantidad de estudiantes del horario sigue a la del curso ──
+-- ── La cantidad de estudiantes y el nombre del curso siguen al curso ──
 CREATE OR REPLACE FUNCTION on_course_count_changed()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER
@@ -144,5 +142,5 @@ CREATE TRIGGER trg_course_count_schedule
 -- Comprobación: una fila, las tres en true
 SELECT
   EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'schedule_blocks' AND policyname = 'Managers manage schedule') AS escritura,
-  EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_schedule_block_prepare') AS validacion,
+  EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_schedule_block_validar') AS validacion,
   EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_assignment_removed') AS limpieza;

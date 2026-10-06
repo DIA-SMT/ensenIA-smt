@@ -38,6 +38,8 @@ import ElegirMaterial, { type EleccionMaterial } from '../components/ElegirMater
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
+import { avisar, confirmar } from '../components/ui/avisar';
+import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
 import { FEELING_META, AWARD_META, type Subject, type CheckinFeeling, type Student } from '../types';
 import './ClaseEnVivo.css';
 
@@ -83,9 +85,9 @@ export default function ClaseEnVivo() {
     /** Pregunta dirigida: si está, lo que se lance va solo a este estudiante. */
     const [targetStudent, setTargetStudent] = useState<Student | null>(null);
     const [groupMode, setGroupMode] = useState(false);
-    // Medallas: el diálogo (con quiénes vienen marcados) y el aviso de que salió
+    // Medallas: el diálogo (con quiénes vienen marcados)
     const [premiar, setPremiar] = useState<{ titulo: string; preseleccion: string[] } | null>(null);
-    const [avisoPremio, setAvisoPremio] = useState('');
+
     // Resumen: el de la clase que se acaba de terminar, o una anterior
     const [resumenId, setResumenId] = useState<string | null>(null);
     const [pasadas, setPasadas] = useState<LiveSession[]>([]);
@@ -242,14 +244,24 @@ export default function ClaseEnVivo() {
 
     const handleEnd = async () => {
         if (!session) return;
-        if (!window.confirm('¿Terminar la clase en vivo? Los estudiantes vuelven a su pantalla normal y vas a ver el resumen de la clase.')) return;
+        const ok = await confirmar({
+            titulo: '¿Terminar la clase en vivo?',
+            mensaje: 'Los estudiantes vuelven a su pantalla normal y vas a ver el resumen de la clase.',
+            accion: 'Terminar clase',
+            cancelar: 'Seguir en vivo',
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await endLiveSession(session.id);
             setResumenId(session.id);
             setSession(null);
             setActivity(null);
             setResults(null);
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error(err);
+            avisar.error('No se pudo terminar la clase. Probá de nuevo.');
+        }
     };
 
     const handleToggleReactions = async () => {
@@ -261,6 +273,7 @@ export default function ClaseEnVivo() {
         } catch (err) {
             console.error(err);
             setSession({ ...session, reactionsEnabled: !next });
+            avisar.error('No se pudo cambiar la botonera de emojis. Probá de nuevo.');
         }
     };
 
@@ -278,6 +291,7 @@ export default function ClaseEnVivo() {
         } catch (err) {
             console.error(err);
             setSession({ ...session, guestsEnabled: !next });
+            avisar.error('No se pudo cambiar el acceso de invitados. Probá de nuevo.');
         }
     };
 
@@ -312,7 +326,7 @@ export default function ClaseEnVivo() {
             resetLauncher();
             setTargetStudent(null);
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'No se pudo lanzar la actividad.');
+            avisar.error('No se pudo lanzar la actividad.', err instanceof Error ? err.message : 'Probá de nuevo.');
         } finally {
             setLaunching(false);
         }
@@ -358,7 +372,7 @@ export default function ClaseEnVivo() {
 
     // ── Render: cargando ──
     if (session === undefined) {
-        return <div className="cv-container"><p className="text-secondary">Cargando...</p></div>;
+        return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando la clase en vivo…" /></div>;
     }
 
     // ── Render: resumen de una clase terminada ──
@@ -560,7 +574,6 @@ export default function ClaseEnVivo() {
                         <Medal size={14} aria-hidden="true" /> Medalla
                     </button>
                 </div>
-                {avisoPremio && <p className="cv-aviso-premio" role="status">{avisoPremio}</p>}
                 <div className="cv-people-chips">
                     {students.map(s => {
                         const online = onlineIds.has(s.id);
@@ -581,7 +594,7 @@ export default function ClaseEnVivo() {
                         );
                     })}
                     {students.length === 0 && (
-                        <p className="text-xs text-subtle">Cargando el curso...</p>
+                        <Cargando texto="Cargando el curso…" />
                     )}
                 </div>
             </div>
@@ -798,8 +811,7 @@ export default function ClaseEnVivo() {
                     onListo={(n, code) => {
                         setPremiar(null);
                         const m = AWARD_META[code];
-                        setAvisoPremio(`${m?.emoji ?? '🏅'} ${m?.label ?? 'Medalla'} para ${n} estudiante${n !== 1 ? 's' : ''}: les aparece ahora en el celular.`);
-                        window.setTimeout(() => setAvisoPremio(''), 6000);
+                        avisar.exito(`${m?.emoji ?? '🏅'} ${m?.label ?? 'Medalla'} para ${n} estudiante${n !== 1 ? 's' : ''}`, 'Les aparece ahora en el celular.');
                     }}
                 />
             )}

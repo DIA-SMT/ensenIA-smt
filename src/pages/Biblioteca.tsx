@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText, Eye, Radio,
+  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
@@ -19,7 +19,15 @@ import VideoModal from '../components/VideoModal';
 import MaterialViewer from '../components/MaterialViewer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PlacasEditor from '../components/PlacasEditor';
+import PresentationViewer from '../components/PresentationViewer';
+import AdaptarMaterial from '../components/AdaptarMaterial';
+import { deckDe, type ParsedPresentation } from '../lib/presentation';
 import PodcastPlayer from '../components/PodcastPlayer';
+import Dialogo from '../components/shell/Dialogo';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar, confirmar } from '../components/ui/avisar';
 import type { LibraryMaterial, Subject } from '../types';
 import './Biblioteca.css';
 import '../components/Modals.css';
@@ -41,6 +49,8 @@ export default function Biblioteca() {
   const [allMaterials, setAllMaterials] = useState<LibraryMaterial[]>([]);
   const [searchResults, setSearchResults] = useState<LibraryMaterial[] | null>(null);
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
+  // Hasta que llega la primera lista no se dice "no hay materiales"
+  const [cargado, setCargado] = useState(false);
 
   // Upload modal
   const [showUpload, setShowUpload] = useState(false);
@@ -60,18 +70,21 @@ export default function Biblioteca() {
   // La lectura de un escaneo corre en esta pestaña: si se va, se corta
   useEffect(() => {
     if (processingIds.size === 0) return;
-    const avisar = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', avisar);
-    return () => window.removeEventListener('beforeunload', avisar);
+    const frenar = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', frenar);
+    return () => window.removeEventListener('beforeunload', frenar);
   }, [processingIds]);
 
   // Resumen IA
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  // Dentro del diálogo, "Copiado" en el mismo botón: un aviso quedaría detrás del fondo
+  const [resumenCopiado, setResumenCopiado] = useState(false);
 
   // Placas de estudio
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  const [placasEditando, setPlacasEditando] = useState<LibraryMaterial | null>(null);
   const [cardsGeneratingId, setCardsGeneratingId] = useState<string | null>(null);
 
   // Podcast
@@ -80,7 +93,10 @@ export default function Biblioteca() {
 
   const refresh = () => {
     if (!user) return;
-    getMaterialsByTeacher(user.id).then(setAllMaterials).catch(console.error);
+    getMaterialsByTeacher(user.id)
+      .then(setAllMaterials)
+      .catch(console.error)
+      .finally(() => setCargado(true));
   };
 
   useEffect(() => {
@@ -119,6 +135,23 @@ export default function Biblioteca() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Diapositivas guardadas desde el Laboratorio: se presentan en vez de leerse
+  const [presentando, setPresentando] = useState<{ deck: ParsedPresentation; mat: LibraryMaterial } | null>(null);
+  // Adaptar un material (lectura fácil, paso a paso…)
+  const [adaptando, setAdaptando] = useState<LibraryMaterial | null>(null);
+
+  // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla)
+  const decks = useMemo(() => {
+    const map = new Map<string, ParsedPresentation>();
+    for (const m of [...allMaterials, ...(searchResults ?? [])]) {
+      if (map.has(m.id)) continue;
+      const deck = deckDe(m);
+      if (deck) map.set(m.id, deck);
+    }
+    return map;
+  }, [allMaterials, searchResults]);
 
   // Todos los hooks van antes de este return: al cerrar sesión user pasa
   // a null, y si quedaba alguno abajo React rompía la pantalla con
@@ -144,6 +177,12 @@ export default function Biblioteca() {
     setUplShare(false);
     setUplError('');
     setShowUpload(true);
+  };
+
+  const openVideo = () => {
+    setShowVideo(true);
+    setVideoError('');
+    setVideoSubjectId(mySubjects[0]?.id ?? '');
   };
 
   const handlePickFile = (f: File | null) => {
@@ -187,6 +226,7 @@ export default function Biblioteca() {
 
       setShowUpload(false);
       refresh();
+      avisar.exito('Material subido', uplShare ? 'Ya lo ven tus estudiantes de la materia.' : undefined);
 
       // Word y PDF: leer el texto para que la IA pueda usarlo
       void leerTexto({ ...material, storagePath }, uplFile);
@@ -232,11 +272,18 @@ export default function Biblioteca() {
       a.click();
     } catch (err) {
       console.error(err);
+      avisar.error('No se pudo descargar el archivo.', 'Probá de nuevo en un rato.');
     }
   };
 
   const handleDelete = async (mat: LibraryMaterial) => {
-    if (!window.confirm(`¿Eliminar "${mat.title}" de la biblioteca?`)) return;
+    const ok = await confirmar({
+      titulo: `¿Eliminar "${mat.title}"?`,
+      mensaje: 'Se borra de tu biblioteca junto con sus placas y su podcast, y tus estudiantes dejan de verlo. No se puede deshacer.',
+      accion: 'Eliminar',
+      peligro: true,
+    });
+    if (!ok) return;
     try {
       if (mat.storagePath) await removeFile(mat.storagePath);
       // El podcast vive aparte del archivo original: si no se borra acá,
@@ -244,8 +291,10 @@ export default function Biblioteca() {
       if (mat.podcastPath) await removeFile(mat.podcastPath).catch(console.error);
       await deleteMaterial(mat.id);
       refresh();
+      avisar.exito('Material eliminado');
     } catch (err) {
       console.error(err);
+      avisar.error('No se pudo eliminar el material.', 'Probá de nuevo.');
     }
   };
 
@@ -281,6 +330,7 @@ export default function Biblioteca() {
       setAllMaterials(prev => [mat, ...prev]);
       setShowVideo(false);
       setVideoUrl(''); setVideoTitle(''); setVideoDesc('');
+      avisar.exito('Video agregado', 'Ahora se transcribe solo, si tiene subtítulos.');
       // La transcripción arranca sola: con ella el video alimenta a la IA
       handleTranscribe(mat);
     } catch (err) {
@@ -300,7 +350,7 @@ export default function Biblioteca() {
       await updateMaterial(mat.id, { extractedText: text });
       setAllMaterials(prev => prev.map(m => m.id === mat.id ? { ...m, extractedText: text } : m));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo transcribir el video.');
+      avisar.error('No se pudo transcribir el video.', err instanceof Error ? err.message : undefined);
     } finally {
       setTranscribingId(null);
     }
@@ -311,20 +361,24 @@ export default function Biblioteca() {
     setEditFor(mat);
     setEditTitle(mat.title);
     setEditDesc(mat.description ?? '');
+    setEditError('');
   };
 
   const handleRename = async () => {
     if (!editFor || !editTitle.trim() || editSaving) return;
     setEditSaving(true);
+    setEditError('');
     try {
       await renameMaterial(editFor.id, editTitle.trim(), editDesc.trim());
       setAllMaterials(prev => prev.map(m => m.id === editFor.id
         ? { ...m, title: editTitle.trim(), description: editDesc.trim() }
         : m));
       setEditFor(null);
+      avisar.exito('Cambios guardados');
     } catch (err) {
       console.error(err);
-      alert('No se pudo guardar el cambio. Probá de nuevo.');
+      // Con el diálogo abierto, el error va adentro: ahí está mirando
+      setEditError('No se pudo guardar el cambio. Probá de nuevo.');
     } finally {
       setEditSaving(false);
     }
@@ -334,8 +388,11 @@ export default function Biblioteca() {
     try {
       await updateMaterial(mat.id, { isSharedWithStudents: !mat.isSharedWithStudents });
       refresh();
+      if (mat.isSharedWithStudents) avisar.exito('Dejaste de compartirlo');
+      else avisar.exito('Compartido con tus estudiantes', `Lo ven en ${mat.subjectName}.`);
     } catch (err) {
       console.error(err);
+      avisar.error('No se pudo cambiar si se comparte.', 'Probá de nuevo.');
     }
   };
 
@@ -346,6 +403,7 @@ export default function Biblioteca() {
     }
     if (!mat.extractedText) return;
     setCardsGeneratingId(mat.id);
+    avisar.info('Armando las placas…', 'Tarda cerca de un minuto. Quedan guardadas en el material: no hace falta volver a generarlas.');
     try {
       const cards = await generateStudyCards(mat.extractedText, mat.title);
       if (!cards.length) throw new Error('La IA no generó placas para este material.');
@@ -353,7 +411,7 @@ export default function Biblioteca() {
       setCardsFor({ ...mat, studyCards: cards });
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error generando las placas.');
+      avisar.error('No se pudieron generar las placas.', err instanceof Error ? err.message : 'Probá de nuevo.');
     } finally {
       setCardsGeneratingId(null);
     }
@@ -372,7 +430,7 @@ export default function Biblioteca() {
       setPodcastFor(updated);
       refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error generando el podcast.');
+      avisar.error('No se pudo generar el podcast.', err instanceof Error ? err.message : 'Probá de nuevo.');
       refresh();
     } finally {
       setPodcastGeneratingId(null);
@@ -441,7 +499,7 @@ export default function Biblioteca() {
           </button>
           <button
             className="btn btn-secondary w-full mt-2"
-            onClick={() => { setShowVideo(true); setVideoError(''); setVideoSubjectId(mySubjects[0]?.id ?? ''); }}
+            onClick={openVideo}
           >
             <Youtube size={16} />
             Agregar video
@@ -471,9 +529,41 @@ export default function Biblioteca() {
           <span className="text-secondary text-sm">{filtered.length} material{filtered.length !== 1 ? 'es' : ''}</span>
         </div>
 
+        {!cargado && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando tus materiales…" />}
+
+        {cargado && filtered.length === 0 && (
+          query.trim() ? (
+            <EstadoVacio
+              icono={Search}
+              titulo="Ningún material coincide"
+              texto={`Nada coincide con "${query.trim()}". Probá con otra palabra o buscá en todas las materias.`}
+              accion={{ etiqueta: 'Ver todos los materiales', alTocar: () => { setQuery(''); setActiveSubject(null); } }}
+            />
+          ) : activeSubject ? (
+            <EstadoVacio
+              icono={BookOpen}
+              titulo="Todavía no hay materiales de esta materia"
+              texto="Subí un apunte, una guía o un video para tenerlo a mano y usarlo con la IA."
+              accion={{ etiqueta: 'Subir material', alTocar: openUpload, icono: Upload }}
+              accionSecundaria={{ etiqueta: 'Ver todas las materias', alTocar: () => setActiveSubject(null) }}
+            />
+          ) : (
+            <EstadoVacio
+              icono={BookOpen}
+              titulo="Tu biblioteca está vacía"
+              texto="Subí tu primer material: un programa, un apunte, una guía. La IA lee el texto y arma placas, podcast y actividades."
+              accion={{ etiqueta: 'Subir material', alTocar: openUpload, icono: Upload }}
+              accionSecundaria={{ etiqueta: 'Agregar video', alTocar: openVideo, icono: Youtube }}
+            />
+          )
+        )}
+
         <div className="biblioteca-grid">
           {filtered.map(mat => {
-            const Icon = fileIcons[mat.fileType] || FileText;
+            const deck = decks.get(mat.id) ?? null;
+            const Icon = deck ? Presentation : fileIcons[mat.fileType] || FileText;
+            // Material que es solo texto (armado con IA, adaptado): se lee acá adentro
+            const soloTexto = !mat.storagePath && !mat.videoUrl && !!mat.extractedText && mat.fileType !== 'link';
             const processing = processingIds.has(mat.id);
             // Word o PDF subido que quedó sin texto: se puede volver a leer
             const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
@@ -498,6 +588,11 @@ export default function Biblioteca() {
                   <h4 className="mat-title" aria-level={3}>{mat.title}</h4>
                   {mat.description && <p className="mat-desc">{mat.description}</p>}
                   <div className="mat-meta">
+                    {deck && (
+                      <span className="badge badge-ia" title={`${deck.slides.length} diapositivas, listas para presentar`}>
+                        <Presentation size={11} aria-hidden="true" /> Diapositivas
+                      </span>
+                    )}
                     <span className="badge badge-cyan">{mat.subjectName}</span>
                     {mat.unitName && <span className="badge badge-neutral">{mat.unitName}</span>}
                     <span className="mat-size">{mat.fileSize}</span>
@@ -528,6 +623,15 @@ export default function Biblioteca() {
                     ))}
                   </div>
                   <div className="mat-actions">
+                    {deck && (
+                      <button
+                        className="mat-action-btn"
+                        title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
+                        onClick={() => setPresentando({ deck, mat })}
+                      >
+                        <Play size={14} /> Presentar
+                      </button>
+                    )}
                     {mat.videoUrl && (
                       <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
                         <Youtube size={14} /> Ver video
@@ -545,7 +649,7 @@ export default function Biblioteca() {
                           : <><Captions size={14} /> Transcribir</>}
                       </button>
                     )}
-                    {mat.storagePath && (
+                    {(mat.storagePath || (soloTexto && !deck)) && (
                       <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
                         <Eye size={14} /> Ver
                       </button>
@@ -578,7 +682,7 @@ export default function Biblioteca() {
                         disabled={cardsGeneratingId === mat.id}
                       >
                         {cardsGeneratingId === mat.id
-                          ? <><Loader2 size={14} className="spin" /> Generando...</>
+                          ? <><Loader2 size={14} className="spin" /> Armando placas…</>
                           : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
                       </button>
                     )}
@@ -601,6 +705,15 @@ export default function Biblioteca() {
                         onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
                       >
                         <FlaskConical size={14} /> Usar en IA Lab
+                      </button>
+                    )}
+                    {mat.extractedText && !deck && (
+                      <button
+                        className="mat-action-btn"
+                        title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
+                        onClick={() => setAdaptando(mat)}
+                      >
+                        <Wand2 size={14} /> Adaptar
                       </button>
                     )}
                     {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
@@ -630,20 +743,33 @@ export default function Biblioteca() {
               </div>
             );
           })}
-
-          {filtered.length === 0 && (
-            <div className="biblioteca-empty">
-              <BookOpen size={40} />
-              <p>No se encontraron materiales</p>
-              <span className="text-secondary text-sm">Subí tu primer material: un programa, un apunte, una guía...</span>
-            </div>
-          )}
         </div>
       </main>
 
       {/* ── Modal: ver el material acá adentro ── */}
       {viendo && (
-        <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} />
+        <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} verNotas />
+      )}
+
+      {/* ── Diapositivas guardadas: presentarlas ── */}
+      {presentando && (
+        <PresentationViewer
+          presentation={presentando.deck}
+          subjectName={presentando.mat.subjectName || undefined}
+          teacherName={`${user.firstName} ${user.lastName}`}
+          onClose={() => setPresentando(null)}
+        />
+      )}
+
+      {/* ── Adaptar un material: versión nueva, el original no cambia ── */}
+      {adaptando && (
+        <AdaptarMaterial
+          material={adaptando}
+          teacherId={user.id}
+          courseName={user.subjects?.find(s => s.subjectId === adaptando.subjectId)?.courseName}
+          alCerrar={() => setAdaptando(null)}
+          alGuardar={nuevo => setAllMaterials(prev => [nuevo, ...prev])}
+        />
       )}
 
       {/* ── Modal: ver video ── */}
@@ -652,170 +778,165 @@ export default function Biblioteca() {
       )}
 
       {/* ── Modal: agregar video de YouTube ── */}
-      {showVideo && (
-        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !videoSaving) setShowVideo(false); }}>
-          <div className="em-modal">
-            <div className="em-modal-header">
-              <h3><Youtube size={17} className="text-cyan" /> Agregar video de YouTube</h3>
-              <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowVideo(false)}><X size={18} /></button>
+      <Dialogo abierto={showVideo} alCerrar={() => setShowVideo(false)} etiquetadoPor="bib-video-titulo" className="dialogo-em">
+        <div className="em-modal">
+          <div className="em-modal-header">
+            <h3 id="bib-video-titulo"><Youtube size={17} className="text-cyan" /> Agregar video de YouTube</h3>
+            <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowVideo(false)}><X size={18} /></button>
+          </div>
+          <div className="em-modal-body">
+            {videoError && <div className="em-error"><AlertCircle size={15} /> {videoError}</div>}
+            <div className="em-field">
+              <label>Link del video</label>
+              <input
+                type="text"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={videoUrl}
+                data-inicial=""
+                onChange={e => setVideoUrl(e.target.value)}
+              />
             </div>
-            <div className="em-modal-body">
-              {videoError && <div className="em-error"><AlertCircle size={15} /> {videoError}</div>}
-              <div className="em-field">
-                <label>Link del video</label>
-                <input
-                  type="text"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  value={videoUrl}
-                  autoFocus
-                  onChange={e => setVideoUrl(e.target.value)}
-                />
-              </div>
-              {parseYouTubeId(videoUrl) && (
-                <img
-                  className="em-video-preview"
-                  src={youTubeThumbnail(parseYouTubeId(videoUrl)!)}
-                  alt="Vista previa del video"
-                />
-              )}
-              <div className="em-field">
-                <label>Título (cómo lo van a ver tus estudiantes)</label>
-                <input
-                  type="text"
-                  placeholder="Ej: ¿Qué es un vector? (5 min)"
-                  value={videoTitle}
-                  maxLength={120}
-                  onChange={e => setVideoTitle(e.target.value)}
-                />
-              </div>
-              <div className="em-field">
-                <label>Consigna o descripción (opcional)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Ej: Miralo antes de la clase del jueves y anotá dos preguntas."
-                  value={videoDesc}
-                  maxLength={300}
-                  onChange={e => setVideoDesc(e.target.value)}
-                />
-              </div>
-              <div className="em-field">
-                <label>Materia</label>
-                <select className="form-select" value={videoSubjectId} onChange={e => setVideoSubjectId(e.target.value)}>
-                  {mySubjects.map(sj => <option key={sj.id} value={sj.id}>{sj.name}</option>)}
-                </select>
-              </div>
-              <p className="text-xs text-subtle">
-                Al guardarlo se transcribe solo (si el video tiene subtítulos): con eso la IA puede resumirlo, armar placas y responder preguntas sobre él. Acordate de Compartirlo para que lo vean tus estudiantes.
-              </p>
+            {parseYouTubeId(videoUrl) && (
+              <img
+                className="em-video-preview"
+                src={youTubeThumbnail(parseYouTubeId(videoUrl)!)}
+                alt="Vista previa del video"
+              />
+            )}
+            <div className="em-field">
+              <label>Título (cómo lo van a ver tus estudiantes)</label>
+              <input
+                type="text"
+                placeholder="Ej: ¿Qué es un vector? (5 min)"
+                value={videoTitle}
+                maxLength={120}
+                onChange={e => setVideoTitle(e.target.value)}
+              />
             </div>
-            <div className="em-modal-footer">
-              <button className="btn btn-outline btn-sm" onClick={() => setShowVideo(false)}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={handleAddVideo} disabled={videoSaving || !videoUrl.trim() || !videoTitle.trim()}>
-                {videoSaving ? 'Guardando...' : 'Agregar video'}
-              </button>
+            <div className="em-field">
+              <label>Consigna o descripción (opcional)</label>
+              <textarea
+                rows={2}
+                placeholder="Ej: Miralo antes de la clase del jueves y anotá dos preguntas."
+                value={videoDesc}
+                maxLength={300}
+                onChange={e => setVideoDesc(e.target.value)}
+              />
             </div>
+            <div className="em-field">
+              <label>Materia</label>
+              <select className="form-select" value={videoSubjectId} onChange={e => setVideoSubjectId(e.target.value)}>
+                {mySubjects.map(sj => <option key={sj.id} value={sj.id}>{sj.name}</option>)}
+              </select>
+            </div>
+            <p className="text-xs text-subtle">
+              Al guardarlo se transcribe solo (si el video tiene subtítulos): con eso la IA puede resumirlo, armar placas y responder preguntas sobre él. Acordate de Compartirlo para que lo vean tus estudiantes.
+            </p>
+          </div>
+          <div className="em-modal-footer">
+            <button className="btn btn-outline btn-sm" onClick={() => setShowVideo(false)}>Cancelar</button>
+            <button className="btn btn-primary btn-sm" onClick={handleAddVideo} disabled={videoSaving || !videoUrl.trim() || !videoTitle.trim()}>
+              {videoSaving ? 'Guardando...' : 'Agregar video'}
+            </button>
           </div>
         </div>
-      )}
+      </Dialogo>
 
       {/* ── Modal: renombrar material ── */}
-      {editFor && (
-        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditFor(null); }}>
-          <div className="em-modal">
-            <div className="em-modal-header">
-              <h3><PencilLine size={17} className="text-cyan" /> Editar material</h3>
-              <button className="btn-icon" aria-label="Cerrar" onClick={() => setEditFor(null)}><X size={18} /></button>
+      <Dialogo abierto={editFor !== null} alCerrar={() => setEditFor(null)} etiquetadoPor="bib-editar-titulo" className="dialogo-em">
+        <div className="em-modal">
+          <div className="em-modal-header">
+            <h3 id="bib-editar-titulo"><PencilLine size={17} className="text-cyan" /> Editar material</h3>
+            <button className="btn-icon" aria-label="Cerrar" onClick={() => setEditFor(null)}><X size={18} /></button>
+          </div>
+          <div className="em-modal-body">
+            {editError && <div className="em-error" role="alert"><AlertCircle size={15} /> {editError}</div>}
+            <div className="em-field">
+              <label>Nombre</label>
+              <input
+                type="text"
+                value={editTitle}
+                maxLength={120}
+                data-inicial=""
+                onChange={e => setEditTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(); }}
+              />
             </div>
-            <div className="em-modal-body">
-              <div className="em-field">
-                <label>Nombre</label>
-                <input
-                  type="text"
-                  value={editTitle}
-                  maxLength={120}
-                  autoFocus
-                  onChange={e => setEditTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleRename(); }}
-                />
-              </div>
-              <div className="em-field">
-                <label>Descripción (opcional)</label>
-                <textarea
-                  rows={2}
-                  value={editDesc}
-                  maxLength={300}
-                  onChange={e => setEditDesc(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="em-modal-footer">
-              <button className="btn btn-outline btn-sm" onClick={() => setEditFor(null)}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={!editTitle.trim() || editSaving}>
-                {editSaving ? 'Guardando...' : 'Guardar'}
-              </button>
+            <div className="em-field">
+              <label>Descripción (opcional)</label>
+              <textarea
+                rows={2}
+                value={editDesc}
+                maxLength={300}
+                onChange={e => setEditDesc(e.target.value)}
+              />
             </div>
           </div>
+          <div className="em-modal-footer">
+            <button className="btn btn-outline btn-sm" onClick={() => setEditFor(null)}>Cancelar</button>
+            <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={!editTitle.trim() || editSaving}>
+              {editSaving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
-      )}
+      </Dialogo>
 
       {/* ── Modal: subir material ── */}
-      {showUpload && (
-        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !uploading) setShowUpload(false); }}>
-          <div className="em-modal">
-            <div className="em-modal-header">
-              <h3><Upload size={17} className="text-cyan" /> Subir material</h3>
-              <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowUpload(false)}><X size={18} /></button>
+      <Dialogo abierto={showUpload} alCerrar={() => setShowUpload(false)} etiquetadoPor="bib-subir-titulo" className="dialogo-em">
+        <div className="em-modal">
+          <div className="em-modal-header">
+            <h3 id="bib-subir-titulo"><Upload size={17} className="text-cyan" /> Subir material</h3>
+            <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowUpload(false)}><X size={18} /></button>
+          </div>
+          <div className="em-modal-body">
+            {uplError && <div className="em-error"><AlertCircle size={15} /> {uplError}</div>}
+            <div
+              className="em-dropzone"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); handlePickFile(e.dataTransfer.files[0] ?? null); }}
+            >
+              <FileUp size={26} />
+              {uplFile
+                ? <span className="em-file-name">{uplFile.name} · {formatFileSize(uplFile.size)}</span>
+                : <span>Arrastrá el archivo acá o hacé clic para elegirlo</span>}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.docx,image/*"
+                hidden
+                onChange={e => handlePickFile(e.target.files?.[0] ?? null)}
+              />
             </div>
-            <div className="em-modal-body">
-              {uplError && <div className="em-error"><AlertCircle size={15} /> {uplError}</div>}
-              <div
-                className="em-dropzone"
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); handlePickFile(e.dataTransfer.files[0] ?? null); }}
-              >
-                <FileUp size={26} />
-                {uplFile
-                  ? <span className="em-file-name">{uplFile.name} · {formatFileSize(uplFile.size)}</span>
-                  : <span>Arrastrá el archivo acá o hacé clic para elegirlo</span>}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,.docx,image/*"
-                  hidden
-                  onChange={e => handlePickFile(e.target.files?.[0] ?? null)}
-                />
+            <div className="em-field">
+              <label>Título</label>
+              <input type="text" value={uplTitle} onChange={e => setUplTitle(e.target.value)} placeholder="Ej: Guía de vectores — Unidad 2" />
+            </div>
+            <div className="em-row">
+              <div className="em-field">
+                <label>Materia</label>
+                <select className="form-select" value={uplSubjectId} onChange={e => setUplSubjectId(e.target.value)}>
+                  {mySubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
               <div className="em-field">
-                <label>Título</label>
-                <input type="text" value={uplTitle} onChange={e => setUplTitle(e.target.value)} placeholder="Ej: Guía de vectores — Unidad 2" />
+                <label>Tags (separados por coma)</label>
+                <input type="text" value={uplTags} onChange={e => setUplTags(e.target.value)} placeholder="guía, práctica..." />
               </div>
-              <div className="em-row">
-                <div className="em-field">
-                  <label>Materia</label>
-                  <select className="form-select" value={uplSubjectId} onChange={e => setUplSubjectId(e.target.value)}>
-                    {mySubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div className="em-field">
-                  <label>Tags (separados por coma)</label>
-                  <input type="text" value={uplTags} onChange={e => setUplTags(e.target.value)} placeholder="guía, práctica..." />
-                </div>
-              </div>
-              <label className="em-checkbox-row">
-                <input type="checkbox" checked={uplShare} onChange={e => setUplShare(e.target.checked)} />
-                Compartir con los estudiantes de la materia
-              </label>
             </div>
-            <div className="em-modal-footer">
-              <button className="btn btn-outline btn-sm" onClick={() => setShowUpload(false)} disabled={uploading}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={handleUpload} disabled={uploading || !uplFile}>
-                {uploading ? 'Subiendo...' : 'Subir a la biblioteca'}
-              </button>
-            </div>
+            <label className="em-checkbox-row">
+              <input type="checkbox" checked={uplShare} onChange={e => setUplShare(e.target.checked)} />
+              Compartir con los estudiantes de la materia
+            </label>
+          </div>
+          <div className="em-modal-footer">
+            <button className="btn btn-outline btn-sm" onClick={() => setShowUpload(false)} disabled={uploading}>Cancelar</button>
+            <button className="btn btn-primary btn-sm" onClick={handleUpload} disabled={uploading || !uplFile}>
+              {uploading ? 'Subiendo...' : 'Subir a la biblioteca'}
+            </button>
           </div>
         </div>
-      )}
+      </Dialogo>
 
       {/* ── Visor de placas ── */}
       {podcastFor?.podcastPath && (
@@ -832,21 +953,38 @@ export default function Biblioteca() {
           title={cardsFor.title}
           subjectName={cardsFor.subjectName}
           onClose={() => setCardsFor(null)}
+          onEditar={() => { setPlacasEditando(cardsFor); setCardsFor(null); }}
+        />
+      )}
+
+      {/* ── Editor de placas: corregir sin volver a generar ── */}
+      {placasEditando?.studyCards && (
+        <PlacasEditor
+          placas={placasEditando.studyCards}
+          titulo={placasEditando.title}
+          alCerrar={() => setPlacasEditando(null)}
+          alGuardar={async placas => {
+            await updateMaterial(placasEditando.id, { studyCards: placas });
+            refresh();
+          }}
+          alRehacer={placasEditando.extractedText
+            ? () => generateStudyCards(placasEditando.extractedText!, placasEditando.title)
+            : undefined}
         />
       )}
 
       {/* ── Modal: resumen IA ── */}
-      {summaryFor && (
-        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setSummaryFor(null); }}>
+      <Dialogo abierto={summaryFor !== null} alCerrar={() => setSummaryFor(null)} etiquetadoPor="bib-resumen-titulo" className="dialogo-em">
+        {summaryFor && (
           <div className="em-modal em-modal-lg">
             <div className="em-modal-header">
-              <h3><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {summaryFor.title}</h3>
+              <h3 id="bib-resumen-titulo"><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {summaryFor.title}</h3>
               <button className="btn-icon" aria-label="Cerrar" onClick={() => setSummaryFor(null)}><X size={18} /></button>
             </div>
             <div className="em-modal-body">
               {summaryLoading && (
-                <div className="em-processing">
-                  <div className="em-spinner" />
+                <div className="em-processing" role="status">
+                  <div className="em-spinner" aria-hidden="true" />
                   <p>Generando resumen pedagógico...</p>
                 </div>
               )}
@@ -868,17 +1006,21 @@ export default function Biblioteca() {
                   </button>
                   <button
                     className="btn btn-outline btn-sm"
-                    onClick={() => { navigator.clipboard.writeText(summaryFor.aiSummary ?? ''); }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(summaryFor.aiSummary ?? '')
+                        .then(() => { setResumenCopiado(true); setTimeout(() => setResumenCopiado(false), 2000); })
+                        .catch(() => setSummaryError('No se pudo copiar. Seleccioná el texto y copialo a mano.'));
+                    }}
                   >
-                    Copiar
+                    {resumenCopiado ? <><Check size={14} /> Copiado</> : 'Copiar'}
                   </button>
                 </>
               )}
               <button className="btn btn-primary btn-sm" onClick={() => setSummaryFor(null)}>Cerrar</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialogo>
     </div>
   );
 }

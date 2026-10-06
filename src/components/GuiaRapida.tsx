@@ -12,6 +12,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronRight, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Dialogo from './shell/Dialogo';
+import './shell/shell.css';
+import './Modals.css';
 import './GuiaRapida.css';
 
 const AUTO_OFF_KEY = 'estudia_guia_auto_off';
@@ -86,17 +89,17 @@ export default function GuiaRapida({ onClose }: { onClose: () => void }) {
   const go = (to: string) => { onClose(); navigate(to); };
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="em-modal guia-modal" role="dialog" aria-label="Guía rápida">
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="guia-rapida-titulo" className="dialogo-em">
+      <div className="em-modal guia-modal">
         <div className="em-modal-header">
-          <h3>👋 ¿Qué querés hacer?</h3>
-          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
+          <h3 id="guia-rapida-titulo">👋 ¿Qué querés hacer?</h3>
+          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="em-modal-body guia-body">
           <div className="guia-list">
-            {destinos.map(d => (
-              <button key={d.to} className="guia-item" onClick={() => go(d.to)}>
+            {destinos.map((d, i) => (
+              <button key={d.to} className="guia-item" onClick={() => go(d.to)} data-inicial={i === 0 ? true : undefined}>
                 <span className="guia-emoji" aria-hidden>{d.emoji}</span>
                 <span className="guia-text">
                   <strong>{d.title}</strong>
@@ -136,6 +139,6 @@ export default function GuiaRapida({ onClose }: { onClose: () => void }) {
           <span className="text-xs text-subtle">Siempre está en el «?» de arriba</span>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

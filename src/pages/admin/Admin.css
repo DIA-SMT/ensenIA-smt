@@ -9,8 +9,6 @@
   min-width: 0;
 }
 
-.adm-cargando { padding: var(--space-6); }
-
 /* ── Encabezado de página ── */
 .adm-head {
   display: flex;
@@ -484,33 +482,6 @@
   cursor: pointer;
 }
 .adm-chip-agregar:hover { background: var(--acento-suave); }
-
-/* ── Vacío ── */
-.adm-vacio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
-}
-.adm-vacio-icono {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  color: var(--text-subtle);
-  margin-bottom: 4px;
-}
-.adm-vacio p {
-  max-width: 44ch;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-.adm-vacio .btn { margin-top: var(--space-2); }
 
 /* ── Diálogos ── */
 .adm-dialogo { align-items: center; justify-content: center; padding: var(--space-4); }

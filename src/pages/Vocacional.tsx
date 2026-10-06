@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Compass, Save, Share2, RotateCcw, CheckCircle, Lock } from 'lucide-react';
+import { Compass, Save, Share2, RotateCcw, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId } from '../services/activities.service';
 import {
@@ -18,6 +18,9 @@ import {
   getMyProfile, saveMyProfile,
 } from '../services/vocational.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar } from '../components/ui/avisar';
 import type { Student, VocationalProfile } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -42,7 +45,6 @@ export default function Vocacional() {
   const [cargando, setCargando] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [okMsg, setOkMsg] = useState('');
   const [rehaciendo, setRehaciendo] = useState(false);
 
   useEffect(() => {
@@ -70,18 +72,22 @@ export default function Vocacional() {
   }, [user]);
 
   if (!user) return null;
-  if (cargando) return <p className="text-secondary p-6">Cargando…</p>;
+  if (cargando) {
+    return (
+      <div className="voc-container">
+        <Esqueleto tipo="filas" cantidad={5} etiqueta="Cargando tu orientación vocacional…" />
+      </div>
+    );
+  }
 
   if (!student) {
     return (
       <div className="voc-container">
-        <div className="card voc-vacio">
-          <Compass size={32} className="text-cyan" />
-          <p className="text-secondary text-sm">
-            Tu cuenta todavía no está vinculada a un curso. Pedile a tu docente que te
-            agregue a la lista.
-          </p>
-        </div>
+        <EstadoVacio
+          icono={Compass}
+          titulo="Tu cuenta no está vinculada a un curso"
+          texto="Pedile a tu docente que te agregue a la lista."
+        />
       </div>
     );
   }
@@ -95,7 +101,7 @@ export default function Vocacional() {
       setError(`Te faltan ${ITEMS.length - contestadas} respuestas.`);
       return;
     }
-    setBusy(true); setError(''); setOkMsg('');
+    setBusy(true); setError('');
     try {
       const clara = hayPreferenciaClara(respuestas);
       // Sin preferencia clara no se guarda un ranking: no hay ninguno.
@@ -113,12 +119,12 @@ export default function Vocacional() {
       const p = await getMyProfile(student.id);
       setPerfil(p);
       setRehaciendo(false);
-      setOkMsg(compartir
-        ? 'Listo. El equipo de orientación de tu escuela lo puede ver.'
-        : 'Guardado. Solo lo ves vos.');
-    } catch (err: any) {
+      avisar.exito(compartir ? 'Guardado y compartido' : 'Guardado', compartir
+        ? 'El equipo de orientación de tu escuela lo puede ver.'
+        : 'Solo lo ves vos.');
+    } catch (err) {
       console.error(err);
-      setError(err?.message ?? 'No se pudo guardar.');
+      avisar.error('No se pudo guardar.', err instanceof Error ? err.message : 'Probá de nuevo en un ratito.');
     } finally {
       setBusy(false);
     }
@@ -126,7 +132,7 @@ export default function Vocacional() {
 
   const cambiarCompartir = async (compartir: boolean) => {
     if (!perfil) return;
-    setBusy(true); setError(''); setOkMsg('');
+    setBusy(true); setError('');
     try {
       await saveMyProfile({
         studentId: student.id, schoolId: user.schoolId, existe: true,
@@ -135,12 +141,12 @@ export default function Vocacional() {
         sharedWithSchool: compartir,
       });
       setPerfil(await getMyProfile(student.id));
-      setOkMsg(compartir
+      avisar.exito(compartir
         ? 'Compartido con el equipo de orientación.'
         : 'Ya no lo ve la escuela. Volvió a ser solo tuyo.');
     } catch (err) {
       console.error(err);
-      setError('No se pudo cambiar quién lo ve.');
+      avisar.error('No se pudo cambiar quién lo ve.', 'Probá de nuevo en un ratito.');
     } finally {
       setBusy(false);
     }
@@ -158,8 +164,7 @@ export default function Vocacional() {
         </div>
       </header>
 
-      {error && <div className="em-error">{error}</div>}
-      {okMsg && <div className="libreta-ok"><CheckCircle size={14} /> {okMsg}</div>}
+      {error && <div className="em-error" role="alert">{error}</div>}
 
       {mostrarResultado ? (
         <>
@@ -207,7 +212,7 @@ export default function Vocacional() {
             </div>
             <div className="libreta-actions-right">
               <button className="btn btn-ghost btn-sm" disabled={busy}
-                      onClick={() => { setRehaciendo(true); setOkMsg(''); }}>
+                      onClick={() => setRehaciendo(true)}>
                 <RotateCcw size={14} /> Rehacerlo
               </button>
               {perfil!.sharedWithSchool ? (

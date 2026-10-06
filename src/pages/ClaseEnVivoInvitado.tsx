@@ -20,6 +20,7 @@ import {
 import { LIVE_KIND_META, LIVE_REACTIONS } from '../services/live.service';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type CheckinFeeling } from '../types';
+import { Cargando } from '../components/ui/Esqueleto';
 import './ClaseEnVivo.css';
 import './ClaseEnVivoInvitado.css';
 
@@ -128,7 +129,7 @@ export default function ClaseEnVivoInvitado() {
     // Puerta: nombre y a la sala
     // ══════════════════════════════════════
     if (guest === undefined) {
-        return <div className="inv-shell"><Loader2 size={22} className="spin" /></div>;
+        return <div className="inv-shell"><Cargando texto="Abriendo la sala…" /></div>;
     }
 
     if (guest === null) {

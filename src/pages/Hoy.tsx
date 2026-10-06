@@ -12,10 +12,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
-    History, ClipboardList,
+    History, ClipboardList, Wand2, CalendarDays, Target,
 } from 'lucide-react';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
-import { getTodaySchedule } from '../services/schedule.service';
+import { getScheduleByTeacher } from '../services/schedule.service';
+import { horaATexto } from '../lib/horas';
+import { useResumenRepaso } from '../services/comprension.service';
 import { getTeacherStats, getTeacherTimeline, type TimelineItem, type TimelineKind } from '../services/stats.service';
 import { getAlertsByTeacher } from '../services/alerts.service';
 import { getRecentAttendance, todayISO } from '../services/attendance.service';
@@ -45,10 +49,16 @@ function timeAgo(iso: string): string {
     return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
 }
 
-function formatHour(h: number): string {
-    const hh = Math.floor(h);
-    const mm = h % 1 ? '30' : '00';
-    return `${hh}:${mm}`;
+/** Lo mismo varias veces seguidas (tres clases en vivo de Lengua) va en un solo renglón */
+interface GrupoRastro { item: TimelineItem; veces: number }
+function agruparRastro(items: TimelineItem[]): GrupoRastro[] {
+    const grupos: GrupoRastro[] = [];
+    for (const item of items) {
+        const ultimo = grupos[grupos.length - 1];
+        if (ultimo && ultimo.item.kind === item.kind && ultimo.item.title === item.title) ultimo.veces++;
+        else grupos.push({ item, veces: 1 });
+    }
+    return grupos;
 }
 
 function greeting(): string {
@@ -63,21 +73,28 @@ export default function Hoy() {
     const navigate = useNavigate();
 
     const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
+    // Todo el horario: para saber si está cargado y qué viene el lunes
+    const [semana, setSemana] = useState<ScheduleBlock[]>([]);
     const [stats, setStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, entregasParaCorregir: 0, avgAttendance: 0 });
     const [alerts, setAlerts] = useState<AlertType[]>([]);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
     const [isNew, setIsNew] = useState(false);
     const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+    // Temas donde el curso viene flojo (de actividades y clases en vivo)
+    const { temas: temasRepaso } = useResumenRepaso(user?.id);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) return;
-        const dayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
+        // 0 = lunes … 4 = viernes; el fin de semana no hay clases (antes el
+        // domingo mostraba las del viernes)
+        const dia = new Date().getDay();
+        const dayIndex = dia >= 1 && dia <= 5 ? dia - 1 : -1;
         const today = todayISO();
 
         Promise.all([
-            getTodaySchedule(user.id, dayIndex).catch(() => [] as ScheduleBlock[]),
+            getScheduleByTeacher(user.id).catch(() => [] as ScheduleBlock[]),
             getTeacherStats(user.id, dayIndex).catch(() => stats),
             getAlertsByTeacher(user.id).catch(() => [] as AlertType[]),
             getRecentAttendance(user.id, 20).catch(() => []),
@@ -85,8 +102,9 @@ export default function Hoy() {
             getActivitiesByTeacher(user.id).catch(() => []),
             getMaterialsByTeacher(user.id).catch(() => []),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
-        ]).then(([classes, st, al, attendance, live, activities, materials, trail]) => {
-            setTodayClasses(classes);
+        ]).then(([horario, st, al, attendance, live, activities, materials, trail]) => {
+            setSemana(horario);
+            setTodayClasses(horario.filter(b => b.dayIndex === dayIndex).sort((a, b) => a.startHour - b.startHour));
             setStats(st);
             setAlerts(al.filter(a => !a.isRead).slice(0, 3));
             setLiveSession(live);
@@ -102,27 +120,22 @@ export default function Hoy() {
     if (!user) return null;
 
     const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
+    const finDeSemana = [0, 6].includes(new Date().getDay());
+    const lunes = semana.filter(b => b.dayIndex === 0).length;
     const nextIdx = todayClasses.findIndex(c => c.startHour + c.duration > nowHour);
 
     return (
         <div className="hoy-container animate-in">
-            {/* Saludo */}
+            {/* Saludo. El <h1> de la pantalla ("Mi día") lo pone la barra superior. */}
             <header className="hoy-greeting">
                 <div>
-                    <h1>{greeting()}, {user.firstName}</h1>
+                    <h2 className="hoy-saludo">{greeting()}, {user.firstName}</h2>
                     <p className="text-secondary">
                         {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
                         {todayClasses.length > 0 && ` · ${todayClasses.length} clase${todayClasses.length !== 1 ? 's' : ''} hoy`}
                     </p>
                 </div>
-                <div className="hoy-header-actions">
-                    <button className="btn btn-primary hoy-create-btn" onClick={() => navigate('/modulo')}>
-                        <Boxes size={16} /> Armar módulo
-                    </button>
-                    <button className="btn btn-outline hoy-create-btn" onClick={() => navigate('/crear')}>
-                        <Sparkles size={16} /> Actividad rápida
-                    </button>
-                </div>
+                {/* Crear está en la barra superior, en todas las pantallas */}
             </header>
 
             {/* Primer uso */}
@@ -136,7 +149,7 @@ export default function Hoy() {
                         Tres pasos y ya estás andando. No hace falta saber nada de IA: la app te guía.
                     </p>
                     <div className="hoy-onb-steps">
-                        <Link to="/mis-clases?tab=materiales" className="hoy-onb-step">
+                        <Link to="/biblioteca" className="hoy-onb-step">
                             <span className="hoy-onb-num">1</span>
                             <span className="hoy-onb-icon"><Upload size={17} /></span>
                             <div>
@@ -192,27 +205,47 @@ export default function Hoy() {
                 </Link>
             )}
 
+            {/* Hay temas que el curso no entendió */}
+            {temasRepaso !== null && temasRepaso > 0 && (
+                <Link to="/mis-clases?tab=repasar" className="card hoy-pending-banner hoy-repaso-banner">
+                    <span className="hoy-pending-icon"><Target size={18} aria-hidden="true" /></span>
+                    <div>
+                        <h4>{temasRepaso === 1 ? 'Hay un tema para repasar' : `Hay ${temasRepaso} temas para repasar`}</h4>
+                        <p className="text-sm text-secondary">
+                            Menos de 6 de cada 10 acertaron en actividades o en la clase en vivo.
+                        </p>
+                    </div>
+                    <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
+                </Link>
+            )}
+
             {/* Clases de hoy */}
             <section className="hoy-classes">
                 <h2 className="hoy-section-title"><Sun size={17} /> Tus clases de hoy</h2>
 
-                {loading && <p className="text-secondary">Cargando...</p>}
+                {loading && <Esqueleto filas={2} etiqueta="Cargando tus clases de hoy…" />}
 
                 {!loading && todayClasses.length === 0 && (
-                    <div className="card hoy-empty">
-                        <p className="text-secondary">
-                            Hoy no tenés clases en el horario. Igual podés preparar material o
-                            revisar cómo viene tu curso.
-                        </p>
-                        <div className="hoy-empty-actions">
-                            <button className="btn btn-primary btn-sm" onClick={() => navigate('/crear')}>
-                                <Sparkles size={14} /> Crear actividad
-                            </button>
-                            <Link to="/students" className="btn btn-outline btn-sm">
-                                <Users size={14} /> Ver estudiantes
-                            </Link>
-                        </div>
-                    </div>
+                    semana.length === 0 ? (
+                        <EstadoVacio
+                            compacto
+                            icono={CalendarDays}
+                            titulo="Cargá tu horario"
+                            texto="Una sola vez: con tu horario, acá te aparece la próxima clase con pasar lista y preparar a un toque."
+                            accion={{ etiqueta: 'Cargar mi horario', a: '/mis-clases', icono: CalendarDays }}
+                        />
+                    ) : (
+                        <EstadoVacio
+                            compacto
+                            icono={CalendarDays}
+                            titulo={finDeSemana ? 'Es fin de semana' : 'Hoy no tenés clases'}
+                            texto={finDeSemana
+                                ? (lunes > 0 ? `El lunes tenés ${lunes} clase${lunes !== 1 ? 's' : ''}. Si querés, dejá algo preparado.` : 'Buen momento para preparar material.')
+                                : 'Buen momento para preparar material o ver cómo viene tu curso.'}
+                            accion={{ etiqueta: 'Crear', a: '/crear', icono: Wand2 }}
+                            accionSecundaria={{ etiqueta: 'Ver mi horario', a: '/mis-clases' }}
+                        />
+                    )
                 )}
 
                 {todayClasses.map((cls, i) => {
@@ -222,8 +255,8 @@ export default function Hoy() {
                     return (
                         <div key={cls.id} className={`card hoy-class ${isNext ? 'next' : ''} ${isPast ? 'past' : ''}`}>
                             <div className="hoy-class-time">
-                                <span className="hoy-hour">{formatHour(cls.startHour)}</span>
-                                <span className="hoy-hour-end">{formatHour(cls.startHour + cls.duration)}</span>
+                                <span className="hoy-hour">{horaATexto(cls.startHour)}</span>
+                                <span className="hoy-hour-end">{horaATexto(cls.startHour + cls.duration)}</span>
                                 {isNext && <span className="hoy-next-pill">Ahora</span>}
                             </div>
                             <div className="hoy-class-body">
@@ -235,8 +268,8 @@ export default function Hoy() {
                                 <div className="hoy-class-actions">
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate('/ia-lab')}
-                                        title="Generar contenido, actividades o evaluaciones con IA"
+                                        onClick={() => navigate('/crear')}
+                                        title="Armar una actividad, un módulo o una evaluación"
                                     >
                                         <Sparkles size={15} /> Preparar
                                     </button>
@@ -256,7 +289,7 @@ export default function Hoy() {
                                     </button>
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/mis-clases?tab=actividades')}
+                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/actividades')}
                                         title="Entregas, notas y cómo trabajaron"
                                     >
                                         <BarChart3 size={15} /> Cómo les fue
@@ -291,14 +324,17 @@ export default function Hoy() {
                 <section className="hoy-timeline">
                     <h2 className="hoy-section-title"><History size={17} /> Lo que hiciste</h2>
                     <div className="hoy-trail">
-                        {timeline.map(item => {
+                        {agruparRastro(timeline).map(({ item, veces }) => {
                             const meta = TIMELINE_META[item.kind];
                             const Icon = meta.icon;
                             const content = (
                                 <>
-                                    <span className={`hoy-trail-icon k-${item.kind}`}><Icon size={14} /></span>
+                                    <span className={`hoy-trail-icon k-${item.kind}`}><Icon size={14} aria-hidden="true" /></span>
                                     <div className="hoy-trail-body">
-                                        <span className="hoy-trail-label">{meta.label}</span>
+                                        <span className="hoy-trail-label">
+                                            {meta.label}
+                                            {veces > 1 && <span className="hoy-trail-veces"> · {veces} veces</span>}
+                                        </span>
                                         <strong>{item.title}</strong>
                                         {item.detail && <span className="hoy-trail-detail">{item.detail}</span>}
                                     </div>
@@ -313,32 +349,29 @@ export default function Hoy() {
                 </section>
             )}
 
-            {/* Contexto (métricas, en segundo plano) */}
+            {/* Contexto (métricas, en segundo plano). Sin "asistencia
+                promedio": ese número sale de un campo que solo llena el seed
+                de demo, ninguna función lo calcula. */}
             <section className="hoy-stats">
-                <div className="hoy-stat">
-                    <Users size={15} className="text-cyan" />
+                <Link to="/students" className="hoy-stat hoy-stat-action">
+                    <Users size={15} className="text-cyan" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.totalStudents}</span>
-                    <span className="hoy-stat-label">estudiantes</span>
-                </div>
-                <div className="hoy-stat">
-                    <Clock size={15} className="text-warning" />
+                    <span className="hoy-stat-label">{stats.totalStudents === 1 ? 'estudiante' : 'estudiantes'}</span>
+                </Link>
+                <Link to="/mis-clases" className="hoy-stat hoy-stat-action">
+                    <Clock size={15} className="text-warning" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.classesToday}</span>
-                    <span className="hoy-stat-label">clases hoy</span>
-                </div>
-                <button
+                    <span className="hoy-stat-label">{stats.classesToday === 1 ? 'clase hoy' : 'clases hoy'}</span>
+                </Link>
+                <Link
+                    to="/corregir"
                     className="hoy-stat hoy-stat-action"
-                    onClick={() => navigate('/corregir')}
                     title="Ver y corregir todas las entregas pendientes"
                 >
-                    <ClipboardCheck size={15} className="text-ia-accent" />
+                    <ClipboardCheck size={15} className="text-ia-accent" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.pendingEvaluations}</span>
                     <span className="hoy-stat-label">por corregir</span>
-                </button>
-                <div className="hoy-stat">
-                    <CheckSquare size={15} className="text-success" />
-                    <span className="hoy-stat-val">{stats.avgAttendance}%</span>
-                    <span className="hoy-stat-label">asistencia</span>
-                </div>
+                </Link>
             </section>
         </div>
     );
