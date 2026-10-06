@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info,
+  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -40,12 +40,12 @@ const ENCUADRE: Record<MigueAudience, {
 }> = {
   equipo: {
     titulo: 'Migue',
-    bajada: 'Preguntale por la normativa y los protocolos de la escuela. Responde con lo que dirección cargó, citando la norma.',
-    aviso: 'Migue responde solo con la normativa publicada de tu escuela. Si no encuentra una norma, te lo dice en vez de inventarla.',
+    bajada: 'Tu asistente para pensar clases, estrategias pedagógicas y consultar información de la escuela.',
+    aviso: 'En pedagogía, Migue propone ideas para que vos decidas. Sobre la escuela y su normativa, usa solo la información disponible, cita las normas y te avisa si no encuentra un dato.',
     sugerencias: [
-      '¿Qué hago si un estudiante falta hace tres semanas?',
-      '¿Cómo se procede ante una pelea entre compañeros?',
-      '¿Qué dice el reglamento sobre el uso del celular?',
+      'Ayudame a adaptar una actividad para distintos ritmos de aprendizaje',
+      '¿Cómo puedo comprobar si entendieron sin tomar una prueba?',
+      '¿Qué dice la escuela sobre el uso del celular?',
     ],
   },
   estudiante: {
@@ -70,7 +70,7 @@ const ENCUADRE: Record<MigueAudience, {
   },
 };
 
-export default function Migue() {
+export default function Migue({ enPanel = false, alCerrar }: { enPanel?: boolean; alCerrar?: () => void }) {
   const { user } = useAuth();
   const audience = user ? audienceForRole(user.role) : null;
 
@@ -207,15 +207,27 @@ export default function Migue() {
   return (
     <div className="migue-container animate-in">
       <div className="migue-head">
-        <div>
-          <h2><Sparkles size={20} className="text-cyan" /> {enc.titulo}</h2>
-          <p className="text-secondary text-sm">{enc.bajada}</p>
+        <div className="migue-identidad">
+          {user.role === 'docente' || user.role === 'director'
+            ? <span className="migue-avatar migue-avatar-head" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
+            : <Sparkles size={20} className="text-cyan" />}
+          <div>
+            <h2>{enc.titulo}</h2>
+            <p className="text-secondary text-sm">{enc.bajada}</p>
+          </div>
         </div>
-        {burbujas.length > 0 && (
-          <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo}>
-            <RotateCcw size={14} /> Empezar de cero
-          </button>
-        )}
+        <div className="migue-head-acciones">
+          {burbujas.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo}>
+              <RotateCcw size={14} /> Empezar de cero
+            </button>
+          )}
+          {enPanel && alCerrar && (
+            <button type="button" className="btn-icon" onClick={alCerrar} aria-label="Cerrar Migue" data-inicial>
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={`migue-aviso ${audience === 'estudiante' ? 'destacado' : ''}`}>
@@ -228,7 +240,9 @@ export default function Migue() {
 
         {!cargando && burbujas.length === 0 && (
           <div className="migue-vacio">
-            <Sparkles size={28} className="text-cyan" />
+            {user.role === 'docente' || user.role === 'director'
+              ? <span className="migue-avatar migue-avatar-vacio" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
+              : <Sparkles size={28} className="text-cyan" />}
             <p className="text-secondary text-sm">Podés arrancar por acá:</p>
             <div className="migue-sugerencias">
               {enc.sugerencias.map(s => (

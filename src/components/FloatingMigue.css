@@ -1,0 +1,104 @@
+.migue-flotante-burbuja {
+  position: fixed;
+  z-index: 700;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  overflow: visible;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(16, 72, 102, 0.28), 0 0 0 2px var(--acento);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.migue-flotante-burbuja:hover {
+  box-shadow: 0 14px 34px rgba(16, 72, 102, 0.34), 0 0 0 3px var(--acento);
+  transform: translateY(-2px);
+}
+
+.migue-flotante-burbuja:active { cursor: grabbing; transform: scale(0.98); }
+.migue-flotante-burbuja:focus-visible { outline: 3px solid var(--acento); outline-offset: 4px; }
+
+.migue-flotante-retrato {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.migue-flotante-retrato img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.95);
+  transform-origin: 50% 25%;
+}
+
+.migue-flotante-ia {
+  position: absolute;
+  right: -4px;
+  top: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--indigo, #7057d9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.migue-flotante-agarre {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  color: var(--text-subtle);
+  font-size: 11px;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.dialogo-migue { justify-content: flex-end; align-items: stretch; }
+.dialogo-migue .dialogo-cuerpo {
+  width: min(500px, 100vw);
+  height: 100%;
+  border-radius: var(--radius-2xl) 0 0 var(--radius-2xl);
+  animation-name: panel-entra;
+}
+
+.dialogo-migue .migue-container {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+}
+
+.migue-head-acciones { display: flex; align-items: center; gap: var(--space-2); }
+
+@media (max-width: 860px) {
+  .migue-flotante-burbuja { width: 64px; height: 64px; }
+  .dialogo-migue { justify-content: center; align-items: flex-end; }
+  .dialogo-migue .dialogo-cuerpo {
+    width: 100vw;
+    height: min(86dvh, 760px);
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation-name: hoja-entra;
+  }
+  .dialogo-migue .migue-container { padding: var(--space-4) var(--space-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .migue-flotante-burbuja { transition: none; }
+}
