@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Search, Plus, Accessibility, HelpCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { tituloDe } from '../lib/navegacion';
+import { tituloDe, inicioDe } from '../lib/navegacion';
 import { avisar } from './ui/avisar';
 import NotificationDropdown from './NotificationDropdown';
 import { LogoMark } from './Sidebar';
@@ -56,7 +56,7 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <span className="topbar-logo" aria-hidden="true"><LogoMark size={20} /></span>
+        <Link to={inicioDe(user?.role)} className="topbar-logo" aria-label="Ir al inicio" title="Ir al inicio"><LogoMark size={20} /></Link>
         <div className="topbar-titulos">
           <p className="topbar-greeting">
             <span>{saludo()}{user?.firstName ? `, ${user.firstName}` : ''}</span>

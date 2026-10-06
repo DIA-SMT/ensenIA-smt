@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, LogOut, Accessibility } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo } from '../lib/navegacion';
+import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo, inicioDe } from '../lib/navegacion';
 import { getUnreadAlertCount, getEscaladasPendientes } from '../services/alerts.service';
 import { getCommunicationsBySchool, sinLeer, EVENTO_COMUNICADO_LEIDO } from '../services/communications.service';
 import { getMyLiveSession } from '../services/live.service';
@@ -125,13 +125,14 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
 
   return (
     <aside className={`sidebar${colapsada ? ' collapsed' : ''}`} aria-label="Menú lateral">
-      <div className="sidebar-header">
+      {/* La marca lleva al inicio de cada rol, como en cualquier sitio */}
+      <Link to={inicioDe(user.role)} className="sidebar-header" aria-label="Ir al inicio" title="Ir al inicio">
         <LogoMark size={colapsada ? 22 : 26} />
         <div className="logo-text">
           <span className="logo-title">SMT Estud<span className="logo-ia">IA</span></span>
           <span className="logo-subtitle">{school?.shortName ?? (user.role === 'superadmin' ? 'Administración' : 'Escuela municipal')}</span>
         </div>
-      </div>
+      </Link>
 
       <div className="sidebar-quien" title={colapsada ? `${nombre} · ${ETIQUETA_ROL[user.role]}` : undefined}>
         <div className="avatar" aria-hidden="true">{user.avatarInitials}</div>

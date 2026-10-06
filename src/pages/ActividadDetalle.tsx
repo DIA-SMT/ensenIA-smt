@@ -437,7 +437,6 @@ export default function ActividadDetalle() {
             <thead>
               <tr>
                 <th>Estudiante</th>
-                <th>ID</th>
                 <th>Estado</th>
                 <th>Tiempo</th>
                 <th>Nota</th>
@@ -457,7 +456,6 @@ export default function ActividadDetalle() {
                         <span className="font-medium">{st.firstName} {st.lastName}</span>
                       </div>
                     </td>
-                    <td className="text-secondary text-xs">{st.enrollmentCode}</td>
                     <td><span className={`badge ${s.cls}`}>{s.label}</span></td>
                     <td className="text-secondary">{sub ? fmtTime(sub.timeSpentSeconds) : '—'}</td>
                     <td className="font-semibold">
@@ -482,7 +480,6 @@ export default function ActividadDetalle() {
                 <div className="student-avatar">{selected.avatarInitials}</div>
                 <div>
                   <h3>{selected.firstName} {selected.lastName}</h3>
-                  <span className="text-xs text-secondary">{selected.enrollmentCode}</span>
                 </div>
               </div>
               <button className="btn-icon" aria-label="Cerrar" onClick={closeStudent}><X size={18} /></button>

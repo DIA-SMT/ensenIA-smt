@@ -391,11 +391,10 @@ export default function MisActividades() {
       </Link>
 
       {enrollments.length > 0 && (
-        <ul className="sp-enrollments" aria-label="Tus materias y tu código en cada una">
+        <ul className="sp-enrollments" aria-label="Tus materias">
           {enrollments.map(e => (
             <li key={e.id} className="sp-enrollment-chip">
               {e.subjectName} · {e.courseName}
-              <code>{e.enrollmentCode}</code>
             </li>
           ))}
         </ul>

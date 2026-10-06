@@ -23,7 +23,13 @@
   gap: var(--space-3);
   padding: var(--space-1) var(--space-2) var(--space-2);
   min-height: 44px;
+  /* Es un link al inicio: sin subrayado ni color de link */
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-md);
 }
+.sidebar-header:hover .logo-title { color: var(--acento, inherit); }
+.sidebar-header:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 .sidebar-header svg { flex-shrink: 0; }
 /* El isologo (Sidebar.tsx → LogoMark): imagen, no se estira ni se achica */
 .logo-mark { display: block; flex-shrink: 0; object-fit: contain; }
