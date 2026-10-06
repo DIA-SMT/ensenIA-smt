@@ -69,7 +69,7 @@ VITE_SUPABASE_ANON_KEY=<anon key>
 - Edge functions en `supabase/functions/`: `ia-chat` (chat con streaming) y `process-document`
   (extraer texto, resumir, importar programa, extraer preguntas — structured outputs).
 - Deploy de funciones: `supabase functions deploy <name> --project-ref <ref> --use-api`
-- Secret necesario para la IA: `supabase secrets set OPENROUTER_API_KEY=... --project-ref <ref>` (podcasts: `ELEVENLABS_API_KEY`)
+- Secret necesario para la IA: `supabase secrets set OPENROUTER_API_KEY=... --project-ref <ref>` (podcasts: `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`, gratis hasta 500.000 caracteres/mes; `ELEVENLABS_API_KEY` queda de respaldo pago)
 - Las cuentas se crean solo desde el backend: rol y escuela van en `app_metadata` (`auth.admin.createUser`). Desde la migración 017 un usuario no puede elegir ni cambiar su rol o escuela.
 - Seed de datos demo: `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed.ts`
 
