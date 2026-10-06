@@ -190,3 +190,32 @@
 @media (max-width: 640px) {
   .alerts-summary-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Regla de diciembre en los umbrales: dos opciones con su explicación */
+.umbral-regla {
+    border: 0;
+    padding: 0;
+    margin: 0 0 var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.umbral-regla legend {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+.umbral-regla-opcion {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.umbral-regla-opcion > span { display: flex; flex-direction: column; gap: 2px; }
+.umbral-regla-opcion input { margin-top: 3px; accent-color: var(--acento); }
+.umbral-regla-opcion.activa { border-color: var(--acento); background: var(--acento-suave); }

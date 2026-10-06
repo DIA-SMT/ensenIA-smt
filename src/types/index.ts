@@ -342,11 +342,19 @@ export interface AlertThresholds {
   lowScorePct: number;
   inactivityDays: number;
   escalationHours: number;
-  /** Nota ≤ este valor (y > gradeFailMax) → aviso de riesgo a la familia. */
+  /** Nota ≤ este valor (y que no se lleve la materia) → aviso de riesgo a la familia. */
   gradeRiskMax: number;
-  /** Nota ≤ este valor → la materia se lleva a diciembre. */
+  /** Con la regla 'trimestre': nota ≤ este valor → la materia se lleva a diciembre. */
   gradeFailMax: number;
+  /**
+   * Cuándo se lleva la materia a diciembre (migración 046):
+   * 'trimestre' — una nota ≤ gradeFailMax en cualquier trimestre;
+   * 'anual' — el 3er trimestre por debajo de 6, o el promedio de los tres por debajo de 6.
+   */
+  decemberRule: DecemberRule;
 }
+
+export type DecemberRule = 'trimestre' | 'anual';
 
 // ── Libreta de calificaciones (011) ──
 

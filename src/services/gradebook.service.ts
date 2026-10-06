@@ -5,8 +5,9 @@
  * el docente la FIJA. La sugerencia nunca califica sola: es un punto de
  * partida que el docente acepta, corrige o ignora.
  *
- * Al publicar, la regla 5/4 corre en el servidor (trigger de la 011):
- * avisa a la familia y deja la señal en el tablero directivo.
+ * Al publicar, el servidor aplica la regla de diciembre de la escuela
+ * (triggers de la 011, regla por escuela desde la 046): avisa a la
+ * familia y deja la señal en el tablero directivo.
  */
 
 import { supabase, unwrap } from './_helpers';

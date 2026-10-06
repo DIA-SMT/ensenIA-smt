@@ -20,8 +20,12 @@ export function toLoginEmail(input: string): string {
   return /^\d{6,9}$/.test(digits) ? `${digits}@${DNI_EMAIL_DOMAIN}` : value;
 }
 
-/** Lo que se muestra como "usuario": el DNI si la cuenta es por DNI. */
+/**
+ * Lo que se muestra como "usuario": el DNI si la cuenta es por DNI. Quien
+ * se dio de alta con email entra con el email aunque tenga el DNI cargado:
+ * mostrarle el DNI lo dejaría afuera.
+ */
 export function loginLabel(email: string, dni?: string | null): string {
-  if (dni) return dni;
-  return email.endsWith(`@${DNI_EMAIL_DOMAIN}`) ? email.split('@')[0] : email;
+  if (!email.endsWith(`@${DNI_EMAIL_DOMAIN}`)) return email;
+  return dni || email.split('@')[0];
 }

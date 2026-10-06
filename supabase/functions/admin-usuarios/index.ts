@@ -62,6 +62,14 @@ const initials = (first: string, last: string) =>
 
 const cleanDni = (v: unknown) => String(v ?? '').replace(/\D/g, '');
 
+/**
+ * Con qué entra la persona: el DNI si su cuenta es por DNI y, si se dio de
+ * alta con email, el email (aunque tenga el DNI cargado). Igual que
+ * loginLabel en src/lib/dni.ts.
+ */
+const loginDe = (email: string | null | undefined, dni: string | null | undefined, dniDomain: string) =>
+  email && !email.endsWith(`@${dniDomain}`) ? email : (dni || (email ?? '').split('@')[0]);
+
 async function allowed(userDb: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<boolean> {
   const { data, error } = await userDb.rpc(fn, args);
   if (error) {
@@ -111,7 +119,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
       await admin.from('profiles').update({ must_change_password: true }).eq('id', userId);
       const { data: p } = await admin.from('profiles').select('email, dni').eq('id', userId).single();
-      return json({ login: p?.dni ?? p?.email ?? '', password });
+      return json({ login: loginDe(p?.email, p?.dni, dniDomain), password });
     }
 
     if (body.action !== 'create') return json({ error: 'Acción desconocida' }, 400);
@@ -144,14 +152,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const loginEmail = email || `${dni}@${dniDomain}`;
-    const login = dni || email;
+    const login = loginDe(loginEmail, dni, dniDomain);
 
     // ¿Ya tiene cuenta? Por email y por DNI, en dos consultas: armar un
     // .or() con el email metería texto del usuario en el filtro, y esta
     // consulta corre con la service role.
-    const { data: byEmail } = await admin.from('profiles').select('id, role').eq('email', loginEmail).maybeSingle();
+    const { data: byEmail } = await admin.from('profiles').select('id, role, email, dni').eq('email', loginEmail).maybeSingle();
     const { data: byDni } = dni && !byEmail
-      ? await admin.from('profiles').select('id, role').eq('dni', dni).maybeSingle()
+      ? await admin.from('profiles').select('id, role, email, dni').eq('dni', dni).maybeSingle()
       : { data: null };
     const existing = byEmail ?? byDni;
 
@@ -166,7 +174,8 @@ Deno.serve(async (req: Request) => {
         if (error.code === '23505') return json({ error: 'Esa persona ya es parte de esta escuela.' }, 409);
         throw error;
       }
-      return json({ userId: existing.id, login, existing: true });
+      // Sigue entrando con su cuenta de siempre, no con lo que se escribió ahora
+      return json({ userId: existing.id, login: loginDe(existing.email, existing.dni, dniDomain), existing: true });
     }
 
     const password = genPassword();

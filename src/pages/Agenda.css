@@ -150,6 +150,12 @@
   min-height: calc(9 * 60px);
 }
 
+.dia-columna {
+  grid-row: 1;
+  border-right: 1px solid var(--border-color);
+}
+.dia-columna.today { background-color: rgba(2, 132, 199, 0.06); }
+
 .grid-lines {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;

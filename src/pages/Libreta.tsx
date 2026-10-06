@@ -4,7 +4,8 @@
  * Dos herramientas en una pantalla:
  *  - "Notas" y "Temario y criterios": la libreta de calificaciones por
  *    trimestre. La plataforma sugiere, el docente decide; al publicar corre
- *    la regla 5/4 en el servidor (aviso a la familia y señal a dirección).
+ *    en el servidor la regla de diciembre de la escuela (046) y el aviso a
+ *    la familia y la señal a dirección.
  *  - "Boletín y informes": el boletín con conducta, observación e
  *    inasistencias (grilla que se llena con el teclado, guarda sola), la
  *    libreta del curso y el informe de actividad de cada estudiante en PDF.
@@ -19,7 +20,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getEnrolledStudents } from '../services/activities.service';
 import { getTerms, ensureTerms, pickCurrentTerm, getGradebook, saveGrades } from '../services/gradebook.service';
-import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
+import {
+  getThresholds, DEFAULT_THRESHOLDS, notaLlevaADiciembre, textoReglaDiciembre,
+} from '../services/thresholds.service';
 import {
   getGradesForCourse, upsertGrade, yearSummary, getAbsencesByTermForCourse,
   CONDUCT_META, TERM_LABELS, type Conduct, type ReportGrade,
@@ -51,7 +54,7 @@ const keyOf = (studentId: string, term: number) => `${studentId}:${term}`;
 
 /** Boletín por trimestre (1-3 + diciembre/febrero): grilla con teclado, conducta, observación,
  *  inasistencias, libreta del curso e informes de actividad en PDF. Guarda en report_grades. */
-function BoletinTeclado() {
+function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
     const { user } = useAuth();
     const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
     const [assignmentIdx, setAssignmentIdx] = useState(0);
@@ -185,7 +188,7 @@ function BoletinTeclado() {
             const gs = gradesByStudent.get(st.id) ?? [];
             const byTerm = new Map(gs.map(g => [g.term, g]));
             const abs = absences[st.id] ?? [0, 0, 0];
-            const sum = yearSummary(gs);
+            const sum = yearSummary(gs, exigeTercero);
             const cell = (t: 1 | 2 | 3) => {
                 const g = byTerm.get(t);
                 return {
@@ -319,7 +322,7 @@ function BoletinTeclado() {
                                 const state = saveStates[k] ?? 'idle';
                                 const gs = gradesByStudent.get(st.id) ?? [];
                                 const byTerm = new Map(gs.map(g => [g.term, g.grade]));
-                                const sum = yearSummary(gs);
+                                const sum = yearSummary(gs, exigeTercero);
                                 const abs = absences[st.id] ?? [0, 0, 0];
                                 return (
                                     <tr key={st.id}>
@@ -528,8 +531,8 @@ export default function Libreta() {
   };
 
   const gradeClass = (g: number | null): string => {
-    if (g === null || !thresholds) return '';
-    if (g <= thresholds.gradeFailMax) return 'grade-fail';
+    if (g === null || !thresholds || !term) return '';
+    if (notaLlevaADiciembre(g, term.number, thresholds)) return 'grade-fail';
     if (g <= thresholds.gradeRiskMax) return 'grade-risk';
     return 'grade-ok';
   };
@@ -547,7 +550,11 @@ export default function Libreta() {
       return;
     }
     if (status === 'publicada') {
-      const enRiesgo = conNota.filter(r => thresholds && r.grade! <= thresholds.gradeRiskMax).length;
+      // Las que avisan a la familia: riesgo o diciembre (con la regla anual
+      // el 3er trimestre avisa por debajo de 6, aunque supere la nota de riesgo)
+      const enRiesgo = conNota.filter(r => thresholds && (
+        r.grade! <= thresholds.gradeRiskMax || notaLlevaADiciembre(r.grade!, term.number, thresholds)
+      )).length;
       const ok = await confirmar({
         titulo: `¿Publicar ${conNota.length} nota${conNota.length !== 1 ? 's' : ''} del trimestre?`,
         mensaje: enRiesgo > 0
@@ -687,7 +694,7 @@ export default function Libreta() {
             </button>
           </div>
 
-          {tab === 'boletin' && <BoletinTeclado />}
+          {tab === 'boletin' && <BoletinTeclado exigeTercero={thresholds?.decemberRule === 'anual'} />}
 
           {tab === 'temario' && assignment && term && (
             <TemarioEditor
@@ -797,7 +804,7 @@ export default function Libreta() {
                 <p className="libreta-rule">
                   <Info size={13} />
                   Al publicar: nota <b>{thresholds.gradeRiskMax}</b> o menos avisa a la familia;
-                  <b> {thresholds.gradeFailMax}</b> o menos marca que la materia se lleva a diciembre.
+                  {' '}{textoReglaDiciembre(thresholds)}.
                   Dirección puede ajustar estos valores en Alertas.
                 </p>
               )}

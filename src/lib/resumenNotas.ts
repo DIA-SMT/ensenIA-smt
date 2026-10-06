@@ -18,14 +18,14 @@ export interface ResumenNotas {
   termId: string;
   promedio: number;
   materias: number;
-  /** Nota en la franja de aviso (≤ umbral de riesgo y > umbral de desaprobación). */
+  /** Nota en la franja de aviso (≤ umbral de riesgo, sin llevarse la materia a diciembre). */
   conAviso: number;
   aDiciembre: number;
 }
 
 export function resumirNotas(
   notas: TermGrade[],
-  umbrales: Pick<AlertThresholds, 'gradeRiskMax' | 'gradeFailMax'>,
+  umbrales: Pick<AlertThresholds, 'gradeRiskMax'>,
 ): ResumenNotas | null {
   const conNota = notas.filter((n): n is TermGrade & { grade: number } => n.grade !== null);
   if (conNota.length === 0) return null;
@@ -40,7 +40,8 @@ export function resumirNotas(
     termId: ultimo.termId,
     promedio: Math.round((suma / delTrimestre.length) * 10) / 10,
     materias: delTrimestre.length,
-    conAviso: delTrimestre.filter(n => n.grade <= umbrales.gradeRiskMax && n.grade > umbrales.gradeFailMax).length,
+    // Diciembre lo decide el servidor con la regla de la escuela (046)
+    conAviso: delTrimestre.filter(n => n.grade <= umbrales.gradeRiskMax && !n.carriesToDecember).length,
     aDiciembre: delTrimestre.filter(n => n.carriesToDecember).length,
   };
 }

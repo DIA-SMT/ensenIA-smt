@@ -61,7 +61,10 @@ function campoDe(encabezado: string): Campo | null {
     if (/apellido/.test(k) && /nombre/.test(k)) return 'tApellidoNombre';
     if (/apellido/.test(k)) return 'tApellido';
     if (/nombre/.test(k)) return 'tNombre';
-    return null;
+    // "Tutor", "Responsable", "Madre, padre o tutor": la columna es el tutor
+    // mismo. "Teléfono tutor" o "Domicilio tutor" no.
+    const resto = k.replace(/\b(tutor|tutora|tutores|familia|familiar|responsable|madre|padre|adulto|a cargo|legal|del|de|la|el|o|y|a|s|es)\b/g, '').trim();
+    return resto ? null : 'tApellidoNombre';
   }
   if (/^(curso|ano y division|anio y division|division|grado|ano|anio)\b/.test(k) || k === 'curso') return 'curso';
   if (esDni) return 'dni';
@@ -110,11 +113,25 @@ export function nombrePropio(s: string): string {
   return t.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_, sep, l) => sep + l.toUpperCase());
 }
 
+/**
+ * El texto de un CSV. Excel en español lo guarda en la codificación de
+ * Windows, no en UTF-8: leído como UTF-8, "Gómez" o "2°" llegan rotos.
+ */
+export function textoDeCsv(bytes: ArrayBuffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
 /** CSV con separador detectado (coma, punto y coma o tabulador) y comillas */
 export function leerCsv(texto: string): string[][] {
   const limpio = (texto.charCodeAt(0) === BOM ? texto.slice(1) : texto);
-  const primera = limpio.split(/\r?\n/, 1)[0] ?? '';
-  const sep = [';', '\t', ','].sort((a, b) => primera.split(b).length - primera.split(a).length)[0];
+  // Mirando las primeras líneas: arriba del encabezado puede haber un título
+  const primeras = limpio.split(/\r?\n/, 10);
+  const veces = (s: string) => Math.max(...primeras.map(l => l.split(s).length));
+  const sep = [';', '\t', ','].sort((a, b) => veces(b) - veces(a))[0];
   const filas: string[][] = [];
   let fila: string[] = [];
   let celda = '';

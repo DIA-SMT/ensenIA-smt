@@ -128,9 +128,10 @@ export async function upsertGrade(g: {
 /**
  * Estado anual de un estudiante en una materia según el régimen:
  * promedio de los 3 trimestres; si no llega a 6, vale diciembre y
- * después febrero.
+ * después febrero. Con exigeTercero (la regla anual de la escuela, 046)
+ * el 3er trimestre además tiene que estar aprobado con 6.
  */
-export function yearSummary(grades: ReportGrade[]): {
+export function yearSummary(grades: ReportGrade[], exigeTercero = false): {
   average: number | null;
   final: number | null;
   status: 'aprobado' | 'diciembre' | 'febrero' | 'pendiente' | 'incompleto';
@@ -140,7 +141,8 @@ export function yearSummary(grades: ReportGrade[]): {
   if (t.some(x => x == null)) return { average: null, final: null, status: 'incompleto' };
 
   const average = Math.round(((t[0]! + t[1]! + t[2]!) / 3) * 100) / 100;
-  if (average >= PASSING_GRADE) return { average, final: average, status: 'aprobado' };
+  const terceroOk = !exigeTercero || t[2]! >= PASSING_GRADE;
+  if (average >= PASSING_GRADE && terceroOk) return { average, final: average, status: 'aprobado' };
 
   const dic = byTerm.get(4);
   if (dic == null) return { average, final: null, status: 'diciembre' };
