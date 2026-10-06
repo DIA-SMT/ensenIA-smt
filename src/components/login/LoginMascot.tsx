@@ -1,10 +1,20 @@
 import { useEffect, useRef } from 'react';
 import type { MiguePose, StudentController } from './student-viewer';
 
-export default function LoginMascot({ pose }: { pose: MiguePose }) {
+export default function LoginMascot({ pose, rejection, passwordVisible }: { pose: MiguePose; rejection: number; passwordVisible: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<StudentController | null>(null);
   const poseRef = useRef(pose);
+  const visibleRef = useRef(passwordVisible);
+
+  useEffect(() => {
+    visibleRef.current = passwordVisible;
+    controllerRef.current?.setPasswordVisible(passwordVisible);
+  }, [passwordVisible]);
+
+  useEffect(() => {
+    if (rejection > 0) controllerRef.current?.reject();
+  }, [rejection]);
 
   useEffect(() => {
     poseRef.current = pose;
@@ -39,6 +49,7 @@ export default function LoginMascot({ pose }: { pose: MiguePose }) {
           onError() { if (!disposed && ticket === generation) host.dataset.state = 'unavailable'; },
         });
         controllerRef.current.setPose(poseRef.current);
+        controllerRef.current.setPasswordVisible(visibleRef.current);
       } catch { if (!disposed && ticket === generation) host.dataset.state = 'unavailable'; }
     }
 
@@ -72,6 +83,6 @@ export default function LoginMascot({ pose }: { pose: MiguePose }) {
 
   return <aside className="login-migue" aria-label="Migue, tu compañero en EstudIA">
     <div ref={hostRef} className="login-migue-model" aria-hidden="true" />
-    <p><strong>¡Hola! Soy Migue.</strong><span>Aprendemos juntos.</span></p>
+    <p><strong>¡Hola! Soy Migue.</strong><span>¿Estudiamos juntos?</span></p>
   </aside>;
 }

@@ -30,6 +30,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [rejection, setRejection] = useState(0);
   const [miguePose, setMiguePose] = useState<MiguePose>('neutral');
   const winkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (winkTimer.current) clearTimeout(winkTimer.current); }, []);
@@ -73,6 +74,10 @@ export default function Login() {
 
     if (!result.success) {
       setError(result.error || 'No pudimos iniciar la sesión.');
+      if (result.code === 'invalid_credentials') {
+        reactMigue('neutral');
+        setRejection(count => count + 1);
+      }
     }
     // Si sale bien, AuthContext carga el usuario y el <Navigate> de arriba redirige.
   }
@@ -204,7 +209,7 @@ export default function Login() {
             </div>
           )}
         </section>
-        <LoginMascot pose={miguePose} />
+        <LoginMascot pose={miguePose} rejection={rejection} passwordVisible={showPassword} />
         </div>
         <p className="login-school-footer">Municipalidad de San Miguel de Tucumán</p>
       </main>

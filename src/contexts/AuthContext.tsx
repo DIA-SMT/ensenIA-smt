@@ -135,7 +135,7 @@ interface AuthContextType {
   /** Escuelas a las que pertenece (más de una: puede elegir la activa) */
   mySchools: MySchool[];
   /** email o DNI. equipoPersonal: la sesión del personal no vence en este equipo. */
-  login: (emailOrDni: string, password: string, opciones?: { equipoPersonal?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  login: (emailOrDni: string, password: string, opciones?: { equipoPersonal?: boolean }) => Promise<{ success: boolean; error?: string; code?: 'invalid_credentials' }>;
   logout: () => void;
   /** Vuelve a leer el perfil (después de cambiar la clave, por ejemplo) */
   refreshProfile: () => Promise<void>;
@@ -292,7 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emailOrDni: string,
     password: string,
     opciones?: { equipoPersonal?: boolean },
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; code?: 'invalid_credentials' }> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: toLoginEmail(emailOrDni),
       password,
@@ -300,8 +300,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data.user) marcarEquipoPersonal(data.user.id, !!opciones?.equipoPersonal);
 
     if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        return { success: false, error: 'Usuario o contraseña incorrectos.' };
+      if (error.code === 'invalid_credentials' || error.message.includes('Invalid login credentials')) {
+        return { success: false, code: 'invalid_credentials', error: 'Usuario o contraseña incorrectos.' };
       }
       if (error.message.includes('fetch') || error.name === 'AuthRetryableFetchError') {
         return { success: false, error: 'Sin conexión. Conectate a una red para iniciar sesión la primera vez.' };
