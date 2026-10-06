@@ -262,7 +262,7 @@ export default function Hoy() {
                             <div className="hoy-class-body">
                                 <h3>{cls.subjectName}</h3>
                                 <p className="hoy-class-meta">
-                                    {cls.courseName} · {cls.room} · {cls.studentCount} estudiantes
+                                    {[cls.courseName, cls.room, `${cls.studentCount} estudiante${cls.studentCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
                                     {done && <span className="hoy-done-chip"><Check size={11} /> Asistencia tomada</span>}
                                 </p>
                                 <div className="hoy-class-actions">
