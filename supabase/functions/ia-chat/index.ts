@@ -191,6 +191,24 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── 3c. La conversación tiene que ser de quien pide ──
+  // Con la service key la respuesta se guarda en el session_id que mande el
+  // cliente: sin esto, con el id de la conversación de otra persona se le
+  // podían escribir mensajes "de la IA" en su historial.
+  const { data: sesion } = await supabase
+    .from('chat_sessions')
+    .select('id')
+    .eq('id', sessionId)
+    .eq('teacher_id', user.id)
+    .maybeSingle();
+
+  if (!sesion) {
+    return new Response(
+      sseEvent('error', { code: 'SESSION_INVALID', message: 'No se encontró esta conversación. Recargá la página y probá de nuevo.' }),
+      { status: 403, headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
+    );
+  }
+
   // ── 4. Check daily quota ──
   const today = new Date().toISOString().split('T')[0];
   const { data: usage } = await supabase
@@ -295,6 +313,24 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
+
+  // ── 8b. El uso se cuenta ya, no al terminar ──
+  // Si el docente toca "Detener", el navegador corta y el resto de esta
+  // función no corre: la generación salía gratis y no contaba para el cupo.
+  // Al final se vuelve a escribir la misma fila, ya con los tokens.
+  const { error: reservaErr } = await supabase
+    .from('ia_usage')
+    .upsert(
+      {
+        teacher_id: user.id,
+        usage_date: today,
+        message_count: (usage?.message_count ?? 0) + 1,
+        token_count_in: usage?.token_count_in ?? 0,
+        token_count_out: usage?.token_count_out ?? 0,
+      },
+      { onConflict: 'teacher_id,usage_date' },
+    );
+  if (reservaErr) console.error('Usage reserve error:', reservaErr);
 
   // ── 9. Stream response (SSE estilo OpenAI: choices[0].delta.content) ──
   const reader = orResponse.body!.getReader();

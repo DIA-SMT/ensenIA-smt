@@ -12,7 +12,7 @@ import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit 
 import { getSubjects } from '../services/subjects.service';
 import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
 import {
-    getOrCreateSession, getSessionMessages, saveUserMessage,
+    getOrCreateSession, getFreeSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
 } from '../services/chat-history.service';
 import { streamChat } from '../services/ia-chat.service';
@@ -47,6 +47,12 @@ const tools = [
 const LEVEL_LABELS: Record<string, string> = {
     '1ro': '1er Año', '2do': '2do Año', '3ro': '3er Año', '4to': '4to Año', '5to': '5to Año',
 };
+
+/** "2° A" → "2do". Sin año reconocible, null (queda lo que haya elegido el docente). */
+function nivelDelCurso(courseName?: string): string | null {
+    const anio = courseName?.match(/^\s*([1-5])\s*(?:°|º|o|ro|do|to|er)?/i)?.[1];
+    return anio ? (['1ro', '2do', '3ro', '4to', '5to'][Number(anio) - 1]) : null;
+}
 
 const DAILY_QUOTA = 50;
 const SUMMARY_INPUT_LIMIT = 8000;
@@ -188,6 +194,40 @@ export default function IALab() {
     /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
     const assignments = user?.subjects ?? [];
     const currentAssignment: SubjectAssignment | undefined = assignments[selectedAssignmentIdx];
+
+    // El nivel sale del curso elegido: con el "4to" fijo, a 2° A le llegaba a
+    // la IA "2° A" y "4to año (16-17)" a la vez. El docente lo puede cambiar.
+    const cursoActual = currentAssignment?.courseName;
+    useEffect(() => {
+        const nivel = nivelDelCurso(cursoActual);
+        if (nivel) setEducationLevel(nivel);
+    }, [cursoActual]);
+
+    // ── Al entrar (o cambiar de materia) se retoma la conversación libre ──
+    // Solo se busca: se crea recién al usarla. Si mientras tanto se abrió la
+    // de un tema, no se pisa.
+    const sesionRef = useRef<ChatSession | null>(null);
+    useEffect(() => { sesionRef.current = currentSession; }, [currentSession]);
+    const userId = user?.id;
+    const materiaId = currentAssignment?.subjectId ?? null;
+    const cursoId = currentAssignment?.courseId ?? null;
+    useEffect(() => {
+        if (!userId) return;
+        let cancelado = false;
+        (async () => {
+            try {
+                const libre = await getFreeSession(userId, materiaId, cursoId);
+                if (!libre || cancelado || sesionRef.current) return;
+                const msgs = await getSessionMessages(libre.id);
+                if (cancelado || sesionRef.current) return;
+                setCurrentSession(libre);
+                setMessages(msgs);
+            } catch (err) {
+                console.error('Error cargando la conversación libre:', err);
+            }
+        })();
+        return () => { cancelado = true; };
+    }, [userId, materiaId, cursoId]);
 
     // ── Load planning data + usage + subjects + materials ──
     useEffect(() => {
@@ -412,17 +452,26 @@ export default function IALab() {
         }
     };
 
+    // ── Conversación del tema elegido, o la libre de esta materia y curso ──
+    const abrirSesion = async (): Promise<ChatSession> => {
+        if (!selectedClass) {
+            const libre = await getFreeSession(user.id, currentAssignment?.subjectId ?? null, currentAssignment?.courseId ?? null);
+            if (libre) return libre;
+        }
+        return getOrCreateSession(user.id, selectedClass?.id ?? null, {
+            subjectId: currentAssignment?.subjectId,
+            courseId: currentAssignment?.courseId,
+            title: selectedClass?.title ?? 'Chat libre',
+        });
+    };
+
     // ── Switch to chat mode (create free session if needed) ──
     const handleSwitchToChat = async () => {
         setCenterMode('chat');
 
         if (!currentSession) {
             try {
-                const session = await getOrCreateSession(user.id, selectedClass?.id ?? null, {
-                    subjectId: currentAssignment?.subjectId,
-                    courseId: currentAssignment?.courseId,
-                    title: selectedClass?.title ?? 'Chat libre',
-                });
+                const session = await abrirSesion();
                 setCurrentSession(session);
                 const msgs = await getSessionMessages(session.id);
                 setMessages(msgs);
@@ -445,11 +494,7 @@ export default function IALab() {
 
         // Ensure session exists
         if (!currentSession) {
-            getOrCreateSession(user.id, selectedClass?.id ?? null, {
-                subjectId: currentAssignment?.subjectId,
-                courseId: currentAssignment?.courseId,
-                title: selectedClass?.title ?? 'Chat libre',
-            }).then(session => {
+            abrirSesion().then(session => {
                 setCurrentSession(session);
                 getSessionMessages(session.id).then(setMessages);
             }).catch(console.error);
@@ -484,11 +529,7 @@ export default function IALab() {
         let session = currentSession;
         if (!session) {
             try {
-                session = await getOrCreateSession(user.id, selectedClass?.id ?? null, {
-                    subjectId: currentAssignment?.subjectId,
-                    courseId: currentAssignment?.courseId,
-                    title: selectedClass?.title ?? 'Chat libre',
-                });
+                session = await abrirSesion();
                 setCurrentSession(session);
             } catch {
                 avisar.error('No se pudo abrir la conversación.', 'Revisá la conexión y probá de nuevo.');
@@ -753,9 +794,16 @@ export default function IALab() {
     };
 
     // ── Pedir un ajuste rápido a la IA sobre la última respuesta ──
-    const handleAskAdjust = (instruction: string) => {
+    const handleAskAdjust = (instruction: string, content: string) => {
         setRefineSource(null);
-        sendMessage(`Ajustá tu última respuesta: ${instruction.toLowerCase()}. Mantené todo lo demás igual y devolvé la versión completa corregida.`);
+        const pedido = instruction.toLowerCase();
+        // "Tu última respuesta" solo sirve si es la que se estaba revisando y
+        // sin cambios a mano; si no, la IA ajustaba otra cosa (las diapositivas
+        // de después en vez de la actividad que se revisaba).
+        const ultima = [...messages].reverse().find(m => m.role === 'assistant' && !m.content.startsWith('⚠️'));
+        sendMessage(ultima && ultima.content === content
+            ? `Ajustá tu última respuesta: ${pedido}. Mantené todo lo demás igual y devolvé la versión completa corregida.`
+            : `Ajustá este texto: ${pedido}. Mantené todo lo demás igual y devolvé la versión completa corregida.\n\n---\n\n${content}`);
     };
 
     // ── Enter key handler ──
@@ -1486,8 +1534,8 @@ export default function IALab() {
                     onClose={() => setRefineSource(null)}
                     onInsertInClass={handleInsertContent}
                     onSaveAsMaterial={handleSaveAsMaterial}
-                    onPublish={(content) => {
-                        setPublishSource({ content, toolUsed: refineSource.toolUsed });
+                    onPublish={(content, title) => {
+                        setPublishSource({ content, toolUsed: refineSource.toolUsed, title: title || undefined });
                         setRefineSource(null);
                     }}
                     onAskAdjust={handleAskAdjust}
