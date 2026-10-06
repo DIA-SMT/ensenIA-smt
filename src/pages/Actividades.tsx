@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ClipboardList, Users, CheckCircle, Clock, ChevronRight, Sparkles,
+  Users, CheckCircle, Clock, ChevronRight, Sparkles,
   CircleDot, Lock, Unlock, Trash2, QrCode, Search,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -114,8 +114,8 @@ export default function Actividades() {
     <div className="acts-container animate-in">
       <div className="acts-header">
         <div>
-          <h2 className="flex items-center gap-2"><ClipboardList size={22} className="text-cyan" /> Actividades</h2>
-          <p className="text-secondary text-sm">
+          {/* El título ("Actividades") ya está en la barra de arriba */}
+          <p className="text-secondary">
             Acá seguís el trabajo de tus estudiantes: quién entregó, qué nota sacó y cómo trabajó.
           </p>
         </div>

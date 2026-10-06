@@ -10,6 +10,7 @@
  *   avisar.exito('Actividad publicada');
  *   avisar.error('No se pudo guardar. Probá de nuevo.');
  *   if (!(await confirmar({ titulo: '¿Borrar la actividad?', accion: 'Borrar', peligro: true }))) return;
+ *   const nombre = await pedirTexto({ titulo: 'Cambiar el nombre', etiqueta: 'Nombre', valor: actual });
  *
  * Los dibuja <Avisos />, montado una vez en App.
  */
@@ -36,9 +37,22 @@ export interface OpcionesConfirmar {
   peligro?: boolean;
 }
 
+export interface OpcionesTexto {
+  titulo: string;
+  /** Rótulo del campo. */
+  etiqueta: string;
+  /** Texto con el que arranca el campo. */
+  valor?: string;
+  mensaje?: string;
+  accion?: string;
+  maxLength?: number;
+}
+
 export interface PedidoConfirmar extends OpcionesConfirmar {
   id: number;
-  responder: (si: boolean) => void;
+  /** Si está, el diálogo pide un texto (reemplaza a window.prompt). */
+  entrada?: { etiqueta: string; valor: string; maxLength?: number };
+  responder: (si: boolean, texto?: string) => void;
 }
 
 interface Estado {
@@ -93,19 +107,40 @@ export const avisar = {
   info: (texto: string, detalle?: string) => mostrar('info', texto, detalle),
 };
 
+function encolar(pedido: PedidoConfirmar) {
+  if (estado.pedido) cola.push(pedido);
+  else cambiar({ pedido });
+}
+
+function siguiente() {
+  cambiar({ pedido: cola.shift() ?? null });
+}
+
 /** Pregunta antes de una acción. Resuelve true si la persona confirma. */
 export function confirmar(opciones: OpcionesConfirmar): Promise<boolean> {
   return new Promise(resolve => {
-    const pedido: PedidoConfirmar = {
+    encolar({
       ...opciones,
       id: siguienteId++,
-      responder: si => {
-        resolve(si);
-        const proximo = cola.shift() ?? null;
-        cambiar({ pedido: proximo });
+      responder: si => { resolve(si); siguiente(); },
+    });
+  });
+}
+
+/** Pide un texto corto. Resuelve el texto (sin espacios de más) o null si se cancela. */
+export function pedirTexto(opciones: OpcionesTexto): Promise<string | null> {
+  return new Promise(resolve => {
+    encolar({
+      titulo: opciones.titulo,
+      mensaje: opciones.mensaje,
+      accion: opciones.accion ?? 'Guardar',
+      entrada: { etiqueta: opciones.etiqueta, valor: opciones.valor ?? '', maxLength: opciones.maxLength },
+      id: siguienteId++,
+      responder: (si, texto) => {
+        const limpio = (texto ?? '').trim();
+        resolve(si && limpio ? limpio : null);
+        siguiente();
       },
-    };
-    if (estado.pedido) cola.push(pedido);
-    else cambiar({ pedido });
+    });
   });
 }

@@ -300,7 +300,7 @@ function BoletinTeclado() {
                 />
             ) : (
                 <div className="card lib-table-card">
-                    <table className="lib-table">
+                    <table className="lib-table lib-table-boletin">
                         <thead>
                             <tr>
                                 <th>Estudiante</th>
@@ -329,7 +329,7 @@ function BoletinTeclado() {
                                             {state === 'saved' && <Check size={13} className="lib-state text-success" />}
                                             {state === 'error' && <AlertCircle size={13} className="lib-state text-danger" />}
                                         </td>
-                                        <td>
+                                        <td data-label="Nota">
                                             <input
                                                 className={`lib-grade ${d.grade && (Number(d.grade.replace(',', '.')) < 6) ? 'low' : ''}`}
                                                 inputMode="decimal"
@@ -344,7 +344,7 @@ function BoletinTeclado() {
                                             />
                                         </td>
                                         {!isApoyo && (
-                                            <td>
+                                            <td data-label="Conducta">
                                                 <div className="lib-conduct" role="group" aria-label="Conducta">
                                                     {(Object.entries(CONDUCT_META) as [Conduct, typeof CONDUCT_META[Conduct]][]).map(([c, meta]) => (
                                                         <button
@@ -360,7 +360,7 @@ function BoletinTeclado() {
                                             </td>
                                         )}
                                         {!isApoyo && (
-                                            <td>
+                                            <td data-label="Observación">
                                                 <input
                                                     className="lib-comment"
                                                     placeholder="..."
@@ -373,9 +373,9 @@ function BoletinTeclado() {
                                             </td>
                                         )}
                                         {!isApoyo && (
-                                            <td className="lib-abs">{term <= 3 ? (abs[term - 1] ?? 0) : ''}</td>
+                                            <td className="lib-abs" data-label="Inasistencias">{term <= 3 ? (abs[term - 1] ?? 0) : ''}</td>
                                         )}
-                                        <td className="lib-year">
+                                        <td className="lib-year" data-label="Año">
                                             <span className="lib-year-terms" title="Notas de los tres trimestres">
                                                 {[1, 2, 3].map(t => (
                                                     <em key={t} className={t === term ? 'now' : ''}>{byTerm.get(t) ?? '·'}</em>
@@ -393,7 +393,7 @@ function BoletinTeclado() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td>
+                                        <td data-label="Informe">
                                             <div className="lib-informe">
                                                 <button
                                                     className="btn-icon"
@@ -614,8 +614,8 @@ export default function Libreta() {
     <div className="libreta-container animate-in">
       <header className="libreta-header">
         <div>
-          <h2 className="flex items-center gap-2"><BookMarked size={22} className="text-cyan" /> Libreta</h2>
-          <p className="text-secondary text-sm">
+          {/* El título ("Libreta") ya está en la barra de arriba */}
+          <p className="text-secondary">
             La plataforma sugiere una nota con el trabajo del trimestre. Vos decidís.
           </p>
         </div>

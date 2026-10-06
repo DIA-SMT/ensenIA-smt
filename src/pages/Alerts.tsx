@@ -254,7 +254,7 @@ export default function Alerts() {
         <div className="alerts-container">
             <header className="alerts-header">
                 <div>
-                    <h2 className="page-title">Sistema de Alertas Tempranas</h2>
+                    <h2 className="page-title">Sistema de alertas tempranas</h2>
                     <p className="text-secondary mt-1">{subtitle}</p>
                 </div>
                 {isDirector && thresholds && (

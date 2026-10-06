@@ -124,10 +124,15 @@ export default function Avisos() {
 
   // Responder una sola vez: el botón y el cierre del <dialog> llegan los dos
   const respondido = useRef<number | null>(null);
+  // El texto escrito es de UN pedido: el siguiente arranca con su propio valor
+  const [escrito, setEscrito] = useState<{ id: number; valor: string } | null>(null);
+  const texto = escrito && escrito.id === pedido?.id ? escrito.valor : pedido?.entrada?.valor ?? '';
+  const setTexto = (valor: string) => { if (pedido) setEscrito({ id: pedido.id, valor }); };
+
   const responder = (si: boolean) => {
     if (!pedido || respondido.current === pedido.id) return;
     respondido.current = pedido.id;
-    pedido.responder(si);
+    pedido.responder(si, si ? texto : undefined);
   };
 
   return (
@@ -157,15 +162,36 @@ export default function Avisos() {
           <div className="confirmar" aria-describedby={pedido.mensaje ? 'confirmar-mensaje' : undefined}>
             <h2 id="confirmar-titulo" className="confirmar-titulo">{pedido.titulo}</h2>
             {pedido.mensaje && <p id="confirmar-mensaje" className="confirmar-mensaje">{pedido.mensaje}</p>}
+            {pedido.entrada && (
+              <form
+                id="confirmar-form"
+                className="confirmar-entrada"
+                onSubmit={e => { e.preventDefault(); if (texto.trim()) responder(true); }}
+              >
+                <label htmlFor="confirmar-texto">{pedido.entrada.etiqueta}</label>
+                <input
+                  id="confirmar-texto"
+                  className="form-input"
+                  value={texto}
+                  maxLength={pedido.entrada.maxLength}
+                  onChange={e => setTexto(e.target.value)}
+                  // Con texto, el foco va al campo (con todo seleccionado para reemplazarlo)
+                  data-inicial=""
+                  onFocus={e => e.currentTarget.select()}
+                  autoComplete="off"
+                />
+              </form>
+            )}
             <div className="confirmar-botones">
               {/* Cancelar recibe el foco primero: Enter por accidente no borra nada */}
-              <button type="button" className="btn btn-secondary" onClick={() => responder(false)} data-inicial="">
+              <button type="button" className="btn btn-secondary" onClick={() => responder(false)} data-inicial={pedido.entrada ? undefined : ''}>
                 {pedido.cancelar ?? 'Cancelar'}
               </button>
               <button
                 type="button"
                 className={`btn ${pedido.peligro ? 'btn-peligro' : 'btn-primary'}`}
                 onClick={() => responder(true)}
+                disabled={Boolean(pedido.entrada) && !texto.trim()}
               >
                 {pedido.accion ?? 'Aceptar'}
               </button>

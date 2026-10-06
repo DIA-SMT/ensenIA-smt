@@ -13,7 +13,7 @@ import {
 } from '../services/activities.service';
 import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import { avisar } from '../components/ui/avisar';
+import { avisar, pedirTexto } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import {
@@ -253,13 +253,14 @@ export default function ActividadDetalle() {
   // Renombrar la actividad: lo que el docente creó lo puede corregir
   const handleRenameActivity = async () => {
     if (!activity) return;
-    const next = window.prompt('Nuevo nombre de la actividad:', activity.title);
+    const next = await pedirTexto({ titulo: 'Cambiar el nombre de la actividad', etiqueta: 'Nombre', valor: activity.title, maxLength: 120 });
     if (next === null) return;
     const title = next.trim();
     if (!title || title === activity.title) return;
     try {
       await updateActivity(activity.id, { title });
       setActivity({ ...activity, title });
+      avisar.exito('Nombre cambiado');
     } catch (err) {
       console.error(err);
       avisar.error('No se pudo cambiar el nombre', 'Probá de nuevo.');
