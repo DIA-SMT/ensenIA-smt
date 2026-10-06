@@ -157,6 +157,18 @@ async function main() {
   }
   console.log(`  ✓ ${assignments.length} assignments`);
 
+  // Desde la 039 dar clases en una escuela requiere ser miembro de ella:
+  // los docentes de la Mistral que también dan en la Storni la suman.
+  const { error: membershipError } = await supabase.from('school_memberships').upsert(
+    assignments.map(a => ({
+      user_id: ids[a.teacher],
+      school_id: ids[a.course === 'course_gm_3a' ? 'school_gm' : 'school_as'],
+      role: 'docente',
+    })),
+    { onConflict: 'user_id,school_id', ignoreDuplicates: true },
+  );
+  if (membershipError) throw membershipError;
+
   // ═══ 6. Students (con cuenta de usuario) — placeholders ficticios ═══
   console.log('\n🧑‍🎓 Creating students with accounts...');
   type SeedStudent = {
@@ -249,13 +261,15 @@ async function main() {
     for (const cfg of courseSubjects[s.course]) {
       counters[cfg.prefix] = (counters[cfg.prefix] ?? 0) + 1;
       const code = `${cfg.prefix}-${String(counters[cfg.prefix]).padStart(2, '0')}`;
-      const { error } = await supabase.from('enrollments').insert({
+      // Desde la 039 el trigger de students ya anota al alumno en las
+      // materias de su curso: acá solo se fijan los códigos de siempre.
+      const { error } = await supabase.from('enrollments').upsert({
         student_id: ids[s.key],
         subject_id: ids[cfg.subject],
         course_id: ids[s.course],
         enrollment_code: code,
         school_id: ids[schoolKey],
-      });
+      }, { onConflict: 'student_id,subject_id,course_id' });
       if (error) throw error;
       enrollmentCount++;
     }
