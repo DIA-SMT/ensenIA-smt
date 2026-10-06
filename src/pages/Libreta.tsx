@@ -922,7 +922,10 @@ export default function Libreta() {
                 <span className="text-sm text-secondary">
                   {columnas.length === 0
                     ? 'Todavía no hay notas cargadas en este trimestre: cargá las de una prueba, un TP o un oral.'
-                    : `${columnas.filter(c => c.origen === 'evaluacion').length} evaluaciones cargadas · ${columnas.filter(c => c.origen === 'actividad').length} actividades de la app`}
+                    : [
+                      [columnas.filter(c => c.origen === 'evaluacion').length, 'evaluación cargada', 'evaluaciones cargadas'],
+                      [columnas.filter(c => c.origen === 'actividad').length, 'actividad de la app', 'actividades de la app'],
+                    ].filter(([n]) => n).map(([n, uno, varios]) => `${n} ${n === 1 ? uno : varios}`).join(' · ')}
                 </span>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditando('nueva')}>
                   <Plus size={14} aria-hidden="true" /> Cargar notas de una evaluación
