@@ -16,6 +16,8 @@ import {
   audienceForRole, getOrCreateSession, getMessages, resetSession, streamMigue,
 } from '../services/migue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import IrAlFinal from '../components/ui/IrAlFinal';
+import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Cargando } from '../components/ui/Esqueleto';
 import { confirmar } from '../components/ui/avisar';
@@ -106,9 +108,11 @@ export default function Migue() {
     return () => { cancelado = true; abortRef.current?.abort(); };
   }, [user, audience]);
 
-  useEffect(() => {
-    finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [burbujas]);
+  // Mientras Migue escribe: texto parejo y el hilo acompaña sin tirones
+  // (antes: un scrollIntoView suave por cada fragmento, que movía la página)
+  const ultima = burbujas[burbujas.length - 1];
+  const textoEnVivo = useTextoSuave(enVuelo && ultima?.role === 'assistant' ? ultima.content : '', enVuelo);
+  const { lejos, irAlFinal } = useSeguirAlFinal(finRef, `${burbujas.length}|${textoEnVivo.length}`);
 
   if (!user) return null;
 
@@ -135,6 +139,8 @@ export default function Migue() {
     const historial: Burbuja[] = [...burbujas, { role: 'user', content: contenido }];
     setBurbujas([...historial, { role: 'assistant', content: '' }]);
     setEnVuelo(true);
+    // La pregunta recién hecha se ve, y la respuesta la sigue debajo
+    requestAnimationFrame(() => irAlFinal());
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -240,12 +246,14 @@ export default function Migue() {
           </div>
         )}
 
-        {burbujas.map((b, i) => (
+        {burbujas.map((b, i) => {
+          const contenido = enVuelo && i === burbujas.length - 1 ? textoEnVivo : b.content;
+          return (
           <div key={i} className={`migue-burbuja ${b.role}`}>
             {b.role === 'assistant' ? (
               <>
-                {b.content
-                  ? <MarkdownRenderer content={b.content} />
+                {contenido
+                  ? <MarkdownRenderer content={contenido} />
                   : b.derivada
                     ? null
                     : <span className="migue-pensando"><Loader2 size={14} className="spin" /> Migue está pensando…</span>}
@@ -272,9 +280,11 @@ export default function Migue() {
               <p>{b.content}</p>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {error && <div className="em-error">{error}</div>}
+        <IrAlFinal visible={lejos && burbujas.length > 0} enCurso={enVuelo} alTocar={() => irAlFinal()} />
         <div ref={finRef} />
       </div>
 

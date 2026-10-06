@@ -8,6 +8,8 @@ import {
     Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
 } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
+import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
+import IrAlFinal from '../components/ui/IrAlFinal';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
@@ -280,10 +282,11 @@ export default function IALab() {
         };
     }, []);
 
-    // ── Auto-scroll on new messages / streaming ──
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, streamingContent]);
+    // ── Mientras la IA escribe: texto parejo y el chat acompaña sin tirones ──
+    // (antes: un scrollIntoView suave por cada fragmento, que movía la página
+    // entera y arrastraba hacia abajo aunque el docente estuviera leyendo)
+    const textoEnVivo = useTextoSuave(streamingContent, isStreaming);
+    const { lejos: lejosDelFinal, irAlFinal } = useSeguirAlFinal(chatEndRef, `${messages.length}|${textoEnVivo.length}`);
 
     /* -- Planning data -- */
     const filteredUnits = useMemo(() => {
@@ -558,6 +561,8 @@ export default function IALab() {
             createdAt: new Date().toISOString(),
         };
         setMessages(prev => [...prev, userMsg]);
+        // El mensaje nuevo se ve, y la respuesta lo sigue debajo
+        requestAnimationFrame(() => irAlFinal());
 
         // Save to DB
         saveUserMessage(session.id, text, activeTool !== 'free' ? activeTool : undefined).catch(console.error);
@@ -1182,8 +1187,8 @@ export default function IALab() {
                                 <div className="lab-msg bot-msg">
                                     <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
                                     <div className="msg-content">
-                                        {streamingContent ? (
-                                            <MarkdownRenderer content={streamingContent} />
+                                        {textoEnVivo ? (
+                                            <MarkdownRenderer content={textoEnVivo} />
                                         ) : (
                                             <div className="generation-loader">
                                                 <span className="dot"></span><span className="dot"></span><span className="dot"></span>
@@ -1194,6 +1199,12 @@ export default function IALab() {
                                 </div>
                             )}
 
+                            {/* Subió a leer: no se lo arrastra, se le ofrece volver */}
+                            <IrAlFinal
+                                visible={lejosDelFinal && (isStreaming || messages.length > 0)}
+                                enCurso={isStreaming}
+                                alTocar={() => irAlFinal()}
+                            />
                             <div ref={chatEndRef} />
                         </div>
 

@@ -13,6 +13,8 @@ import {
   GraduationCap, Wand2, Send, Square, Bot, User as UserIcon, Paperclip, X, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
+import IrAlFinal from '../components/ui/IrAlFinal';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import {
   getOrCreateSession, getSessionsByTeacher, getSessionMessages,
@@ -111,9 +113,10 @@ export default function MiGuia() {
     return () => { cancelled = true; };
   }, [user, mode]);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+  // Mientras la guía escribe: texto parejo y el chat acompaña sin tirones
+  // (antes: un scrollIntoView suave por cada fragmento, que movía la página)
+  const textoEnVivo = useTextoSuave(streamingContent, isStreaming);
+  const { lejos, irAlFinal } = useSeguirAlFinal(endRef, `${messages.length}|${textoEnVivo.length}`);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -141,6 +144,7 @@ export default function MiGuia() {
       createdAt: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMsg]);
+    requestAnimationFrame(() => irAlFinal());
     saveUserMessage(session.id, text, mode).catch(console.error);
 
     // El modo, el límite de tema y el "no te hago la tarea" los impone el
@@ -303,12 +307,13 @@ export default function MiGuia() {
             <div className="guia-msg assistant">
               <div className="guia-avatar"><Bot size={15} /></div>
               <div className="guia-bubble">
-                {streamingContent
-                  ? <MarkdownRenderer content={streamingContent} />
+                {textoEnVivo
+                  ? <MarkdownRenderer content={textoEnVivo} />
                   : <span className="text-sm text-secondary">Pensando...</span>}
               </div>
             </div>
           )}
+          <IrAlFinal visible={lejos && (isStreaming || messages.length > 0)} enCurso={isStreaming} alTocar={() => irAlFinal()} />
           <div ref={endRef} />
         </div>
 

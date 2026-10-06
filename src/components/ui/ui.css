@@ -224,3 +224,35 @@ html[data-ahorro="si"] .esq-circulo { animation: none; }
 }
 .usos-ia-poco { background: var(--warning-light); color: var(--warning-ink); }
 .usos-ia-agotado { background: var(--danger-light); color: var(--danger-ink); }
+
+
+/* ── Chat: volver al final mientras la IA escribe ── */
+.chat-ir-final {
+  position: sticky;
+  bottom: var(--space-3);
+  align-self: center;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  animation: chat-ir-final-entra 0.18s ease-out;
+}
+.chat-ir-final:hover { border-color: var(--acento); }
+.chat-ir-final:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+@keyframes chat-ir-final-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-ir-final { animation: none; }
+}
+html[data-movimiento="reducido"] .chat-ir-final { animation: none; }
