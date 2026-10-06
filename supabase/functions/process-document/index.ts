@@ -292,7 +292,7 @@ const SLIDES_SCHEMA = {
           puntos: {
             type: 'array',
             items: { type: 'string' },
-            description: 'puntos/cierre: 3 a 5 viñetas de una línea. portada: la bajada. Vacío en destacado, dos-columnas y pregunta.',
+            description: 'puntos/cierre: 3 a 5 viñetas de una línea. portada: la bajada. pregunta: la frase, verso o caso que hay que analizar, si la pregunta no se entiende sin eso. Vacío en destacado y dos-columnas.',
           },
           destacado: {
             type: 'string',
@@ -388,6 +388,7 @@ REGLAS DE CONTENIDO
 - Frases cortas, de una línea. Si una viñeta ocupa dos renglones, está de más.
 - Sin "Introducción", "Desarrollo", "Conclusión": títulos que digan algo.
 - Nada que no esté en el material. No inventes datos, fechas ni autores.
+- Si el material cita un verso, una frase o un ejemplo SIN decir de quién es, vos tampoco se lo atribuyas a nadie. Ni aunque creas saberlo: el docente lo va a proyectar sin poder verificarlo. Citá exactamente lo que dice la fuente, nada más.
 - Ejemplos de Tucumán o del día a día cuando el tema lo permita.
 - Español rioplatense, de vos.
 
@@ -398,6 +399,7 @@ Un mazo donde todo es título + viñetas se ve monótono proyectado. Elegí el t
 - destacado: una definición, una idea fuerte o una cita que merece la lámina entera. Usá al menos una.
 - dos-columnas: cuando hay dos cosas que se comparan o se oponen (antes/después, causa/efecto, dos posturas, dos métodos).
 - pregunta: 1 o 2 en el mazo, repartidas, para que el curso participe. 3 o 4 opciones.
+  La pregunta tiene que entenderse SOLA proyectada. Si para contestarla hay que ver una frase, un verso o un caso, ponelo en puntos. Las notas del docente NO se proyectan: el curso no las ve. Nada de "¿qué recurso aparece acá?" sin el "acá" en la lámina.
 - cierre: la última. Qué se llevan de la clase.
 
 NOTAS PARA EL DOCENTE
