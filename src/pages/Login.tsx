@@ -1,9 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, SESION_VENCIDA_KEY } from '../contexts/AuthContext';
 import { esEquipoPersonal } from '../lib/equipoPersonal';
 import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck, Clock } from 'lucide-react';
+import LoginChalkboard from '../components/login/LoginChalkboard';
+import LoginMascot from '../components/login/LoginMascot';
+import type { MiguePose } from '../components/login/student-viewer';
 import './Login.css';
+import './LoginScene.css';
 
 /**
  * Cuentas de demostración. Solo con VITE_DEMO_LOGIN=true: Vite reemplaza la
@@ -26,6 +30,13 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [miguePose, setMiguePose] = useState<MiguePose>('neutral');
+  const winkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (winkTimer.current) clearTimeout(winkTimer.current); }, []);
+  function reactMigue(pose: MiguePose) {
+    if (winkTimer.current) clearTimeout(winkTimer.current);
+    setMiguePose(pose);
+  }
   // Queda marcada si la última vez se marcó en este equipo
   const [equipoPersonal, setEquipoPersonal] = useState(() => esEquipoPersonal());
   // La sesión del personal vence a las 12 h (AuthContext): se explica una vez
@@ -54,6 +65,8 @@ export default function Login() {
       return;
     }
 
+    reactMigue('wink');
+    winkTimer.current = setTimeout(() => setMiguePose('neutral'), 1300);
     setSubmitting(true);
     const result = await login(email, password, { equipoPersonal });
     setSubmitting(false);
@@ -66,7 +79,8 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <main className="login-layout">
+      <main className="login-layout" data-migue-region>
+        <LoginChalkboard />
         {/* ── Marca ── */}
         <section className="login-marca" aria-labelledby="login-titulo">
           {/* El logo de la ciudad, tal cual lo usa la Municipalidad (blanco sobre azul) */}
@@ -90,8 +104,11 @@ export default function Login() {
           </ul>
         </section>
 
+        <div className="login-access">
         {/* ── Formulario ── */}
-        <section className="login-card" aria-labelledby="login-form-titulo">
+        <section className="login-card" aria-labelledby="login-form-titulo"
+          onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) reactMigue('neutral'); }}>
+          <span className="login-eyebrow">TU ESCUELA, MÁS CERCA</span>
           <h2 className="login-form-titulo" id="login-form-titulo">Entrar</h2>
           <p className="login-form-bajada">Con el email y la contraseña que te dio la escuela.</p>
 
@@ -122,7 +139,7 @@ export default function Login() {
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-invalid={!!error && !email.trim()}
-                autoFocus
+                onFocus={() => reactMigue('username')}
               />
             </div>
 
@@ -135,12 +152,13 @@ export default function Login() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  onFocus={() => reactMigue(showPassword ? 'surprise' : 'password')}
                   aria-invalid={!!error && !password.trim()}
                 />
                 <button
                   type="button"
                   className="login-eye-btn"
-                  onClick={() => setShowPassword(p => !p)}
+                  onClick={() => { setShowPassword(p => !p); reactMigue(showPassword ? 'password' : 'surprise'); }}
                   aria-label={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
                   aria-pressed={showPassword}
                 >
@@ -186,6 +204,9 @@ export default function Login() {
             </div>
           )}
         </section>
+        <LoginMascot pose={miguePose} />
+        </div>
+        <p className="login-school-footer">Municipalidad de San Miguel de Tucumán</p>
       </main>
     </div>
   );
