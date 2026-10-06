@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   BookMarked, Plus, Search, Eye, EyeOff, Trash2, Save, X,
-  ShieldCheck, ExternalLink, Users,
+  ShieldCheck, ExternalLink, Users, School, Landmark,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -20,6 +20,7 @@ import {
   CATEGORY_LABELS, AUDIENCE_LABELS,
 } from '../services/policies.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import ReferenciasConsulta from '../components/ReferenciasConsulta';
 import { confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -49,6 +50,8 @@ export default function Normativa() {
   const { user } = useAuth();
   const puedeEditar = user?.role === 'director';
 
+  /** La normativa propia de la escuela o la común a todas (biblioteca de referencia, 047). */
+  const [seccion, setSeccion] = useState<'escuela' | 'referencia'>('escuela');
   const [policies, setPolicies] = useState<SchoolPolicy[] | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState<PolicyCategory | 'todas'>('todas');
@@ -132,9 +135,9 @@ export default function Normativa() {
         : 'Guardada como borrador. Todavía no la ve nadie más.');
       setForm(null);
       if (abierta) setAbierta(p.find(x => x.id === abierta.id) ?? null);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err?.message ?? 'No se pudo guardar la norma.');
+      setError((err as { message?: string } | null)?.message ?? 'No se pudo guardar la norma.');
     } finally {
       setBusy(false);
     }
@@ -182,7 +185,7 @@ export default function Normativa() {
               : 'Reglamentos y protocolos de la escuela. Si no encontrás algo, preguntale a Migue.'}
           </p>
         </div>
-        {puedeEditar && (
+        {puedeEditar && seccion === 'escuela' && (
           <button
             className="btn btn-primary"
             onClick={() => { setAbierta(null); abrirEditor({ ...VACIA }); }}
@@ -192,6 +195,32 @@ export default function Normativa() {
         )}
       </div>
 
+      <div className="libreta-tabs fila-desplazable" role="tablist" aria-label="Qué normativa">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'escuela'}
+          className={`libreta-tab ${seccion === 'escuela' ? 'active' : ''}`}
+          onClick={() => setSeccion('escuela')}
+        >
+          <School size={14} /> De la escuela
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'referencia'}
+          className={`libreta-tab ${seccion === 'referencia' ? 'active' : ''}`}
+          onClick={() => setSeccion('referencia')}
+        >
+          <Landmark size={14} /> Nacional, provincial y municipal
+        </button>
+      </div>
+
+      {seccion === 'referencia' && <ReferenciasConsulta />}
+
+      {/* Lo de la escuela, como siempre. Al ir y volver de la otra pestaña
+          el formulario abierto se conserva: vive en el estado de esta pantalla. */}
+      {seccion === 'escuela' && (<>
       <div className="norm-filters">
         <div className="norm-search">
           <Search size={15} className="text-subtle" />
@@ -417,6 +446,7 @@ export default function Normativa() {
           </div>
         ))}
       </div>
+      </>)}
     </div>
   );
 }

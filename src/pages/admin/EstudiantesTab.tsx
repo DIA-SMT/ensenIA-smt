@@ -12,9 +12,10 @@ import { printCredenciales, type Credencial } from './credenciales';
 import { avisar, confirmar } from '../../components/ui/avisar';
 import type { TabProps } from './GestionEscuela';
 import ImportarPlanilla from './ImportarPlanilla';
+import AlumnosDeMuestra from './AlumnosDeMuestra';
 
 export default function EstudiantesTab(props: TabProps) {
-  const { data, run, showCredentials, irA } = props;
+  const { data, isSuperadmin, run, showCredentials, irA } = props;
   const [alta, setAlta] = useState(false);
   const [importar, setImportar] = useState(false);
   const [filterCourse, setFilterCourse] = useState('');
@@ -76,6 +77,8 @@ export default function EstudiantesTab(props: TabProps) {
           <button type="button" className="adm-link" onClick={() => irA('cursos')}>Ir a Cursos y materias</button>
         </p>
       )}
+
+      {isSuperadmin && <AlumnosDeMuestra data={data} run={run} />}
 
       <section className="card adm-tarjeta">
         {data.students.length > 0 && (

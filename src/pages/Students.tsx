@@ -3,13 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 import {
     Search, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
-    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus,
+    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload, ArrowUpRight,
 } from 'lucide-react';
+import { avisarADireccionPorAlumno, TEMAS_AVISO } from '../services/alerts.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByTeacher, getWorkByStudent, type StudentWork } from '../services/students.service';
 import { logAccess } from '../services/audit.service';
-import { getCheckinsByStudent, getObservationsByStudent, addObservation, deleteObservation } from '../services/wellbeing.service';
+import { getCheckinsByStudent, getObservationsByStudent, deleteObservation } from '../services/wellbeing.service';
+import { guardarObservacionResiliente, pendientesDe, subscribe as suscribirCola } from '../services/offline-queue.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
+import { getSubjects } from '../services/subjects.service';
 import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
 import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
 import { summarizeStudent } from '../services/documents.service';
@@ -62,6 +65,30 @@ export default function Students() {
     // Datos del panel
     const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
     const [observations, setObservations] = useState<StudentObservation[]>([]);
+
+    /**
+     * Las observaciones del alumno: las del servidor más las guardadas en
+     * este equipo que todavía no se enviaron (arriba, marcadas). Sin señal,
+     * si no hay copia de las del servidor, se ven al menos las pendientes.
+     */
+    function recargarObservaciones(studentId: string) {
+        const enEspera = (): StudentObservation[] => pendientesDe('observacion')
+            .filter(op => op.studentId === studentId)
+            .map(op => ({
+                id: op.id, studentId: op.studentId, teacherId: op.teacherId, subjectId: op.subjectId,
+                category: op.category, note: op.note.trim(), createdAt: new Date(op.ts).toISOString(),
+                teacherName: user ? `${user.firstName} ${user.lastName}` : undefined, pendiente: true,
+            }))
+            .reverse();
+        setObservations(enEspera());
+        getObservationsByStudent(studentId)
+            .then(lista => {
+                const pend = enEspera();
+                const ids = new Set(lista.map(o => o.id));
+                setObservations([...pend.filter(p => !ids.has(p.id)), ...lista]);
+            })
+            .catch(console.error);
+    }
     const [guardians, setGuardians] = useState<GuardianLink[]>([]);
     const [work, setWork] = useState<StudentWork[]>([]);
     const [absences, setAbsences] = useState<{ date: string; status: AttendanceStatus }[]>([]);
@@ -114,22 +141,46 @@ export default function Students() {
         }
     };
 
+    // Avisar a dirección sobre este alumno (051)
+    const [avisoAbierto, setAvisoAbierto] = useState(false);
+    const [avisoTema, setAvisoTema] = useState('convivencia');
+    const [avisoMotivo, setAvisoMotivo] = useState('');
+    const [avisoEnviando, setAvisoEnviando] = useState(false);
+    const [avisoError, setAvisoError] = useState('');
+    const handleAvisarDireccion = async () => {
+        if (!selectedStudent || !avisoMotivo.trim() || avisoEnviando) return;
+        setAvisoEnviando(true);
+        setAvisoError('');
+        try {
+            await avisarADireccionPorAlumno(selectedStudent.id, avisoTema, avisoMotivo);
+            avisar.exito('Le avisaste a dirección', 'Le llegó a cada directivo. Lo seguís en Alertas → Avisadas a dirección.');
+            setAvisoAbierto(false);
+            setAvisoMotivo('');
+        } catch (err) {
+            setAvisoError(err instanceof Error ? err.message : 'No se pudo avisar. Probá de nuevo.');
+        } finally {
+            setAvisoEnviando(false);
+        }
+    };
+
     // Cierre del círculo: registrar que la conversación pasó
     const [talkSaving, setTalkSaving] = useState(false);
     const handleTalked = async () => {
         if (!selectedStudent || !user || talkSaving) return;
         setTalkSaving(true);
         try {
-            await addObservation({
+            const resultado = await guardarObservacionResiliente({
                 studentId: selectedStudent.id,
                 teacherId: user.id,
                 subjectId: null,
                 category: 'otro',
                 note: 'Charla de acompañamiento: hablamos a partir de las señales de bienestar.',
+                descripcion: `Charla registrada con ${selectedStudent.firstName} ${selectedStudent.lastName}`,
             });
-            const obs = await getObservationsByStudent(selectedStudent.id);
-            setObservations(obs);
-            avisar.exito('Charla registrada', 'Quedó en las observaciones de la ficha.');
+            recargarObservaciones(selectedStudent.id);
+            avisar.exito('Charla registrada', resultado === 'pendiente'
+                ? 'Quedó guardada en este equipo y se envía sola cuando haya señal.'
+                : 'Quedó en las observaciones de la ficha.');
         } catch (err) {
             console.error(err);
             avisar.error('No se pudo registrar la charla.', 'Probá de nuevo.');
@@ -155,6 +206,9 @@ export default function Students() {
     const [citeSending, setCiteSending] = useState(false);
     const [citeDone, setCiteDone] = useState(false);
     const [citeError, setCiteError] = useState('');
+    // La citación es de una materia del docente en el curso del estudiante (052)
+    const [citeMaterias, setCiteMaterias] = useState<{ id: string; name: string }[]>([]);
+    const [citeSubjectId, setCiteSubjectId] = useState('');
 
     // Señales tempranas de bienestar (línea base, persistencia, convergencia)
     const [signals, setSignals] = useState<Map<string, WellbeingSignal>>(new Map());
@@ -196,12 +250,15 @@ export default function Students() {
         setObsNote('');
         setObsError('');
         setObsSaved(false);
+        setAvisoAbierto(false);
+        setAvisoMotivo('');
+        setAvisoError('');
         setAwards([]);
         setStudentProgress(null);
         setNotasFicha(null);
         getPublishedGradesByStudent(selectedStudent.id).then(setNotasFicha).catch(err => { console.error(err); setNotasFicha([]); });
         getCheckinsByStudent(selectedStudent.id, 40).then(setCheckins).catch(console.error);
-        getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+        recargarObservaciones(selectedStudent.id);
         getGuardiansOfStudent(selectedStudent.id).then(setGuardians).catch(console.error);
         getWorkByStudent(selectedStudent.id).then(setWork).catch(console.error);
         getAbsencesByStudent(selectedStudent.id).then(setAbsences).catch(console.error);
@@ -220,6 +277,13 @@ export default function Students() {
             });
         }
     }, [selectedStudent?.id]);
+
+    // Cuando la cola manda las observaciones pendientes, se ven como enviadas
+    useEffect(() => suscribirCola(() => {
+        if (!selectedStudent || !observations.some(o => o.pendiente)) return;
+        if (pendientesDe('observacion').some(op => op.studentId === selectedStudent.id)) return;
+        recargarObservaciones(selectedStudent.id);
+    }), [selectedStudent?.id, observations]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const courseNames = useMemo(
         () => Array.from(new Set(allStudents.map(s => s.courseName))).sort(),
@@ -254,30 +318,23 @@ export default function Students() {
         setObsSaving(true);
         setObsError('');
         try {
-            await addObservation({
-                studentId: selectedStudent.id,
-                teacherId: user.id,
-                category: obsCategory,
-                note: obsNote,
-            });
-            // Mostrar la huella al instante, sin esperar el refetch
-            setObservations(prev => [{
-                id: `local-${Date.now()}`,
+            // Sin señal queda guardada en el equipo y se envía sola
+            await guardarObservacionResiliente({
                 studentId: selectedStudent.id,
                 teacherId: user.id,
                 subjectId: null,
                 category: obsCategory,
-                note: obsNote.trim(),
-                createdAt: new Date().toISOString(),
-                teacherName: `${user.firstName} ${user.lastName}`,
-            }, ...prev]);
+                note: obsNote,
+                descripcion: `Observación sobre ${selectedStudent.firstName} ${selectedStudent.lastName}`,
+            });
             setObsNote('');
             setObsSaved(true);
             setTimeout(() => setObsSaved(false), 2500);
-            getObservationsByStudent(selectedStudent.id).then(setObservations).catch(console.error);
+            recargarObservaciones(selectedStudent.id);
         } catch (err) {
+            // Con o sin señal, lo que llega acá es que el servidor no la aceptó
             console.error('Error guardando observación:', err);
-            setObsError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+            setObsError('El servidor no aceptó la observación. Probá de nuevo; el texto sigue acá.');
         } finally {
             setObsSaving(false);
         }
@@ -397,11 +454,23 @@ export default function Students() {
         setCitePlace('');
         setCiteDone(false);
         setCiteError('');
+        const ids = [...new Set((user.subjects ?? [])
+            .filter(a => a.courseId === selectedStudent.courseId)
+            .map(a => a.subjectId))];
+        setCiteMaterias(ids.map(id => ({ id, name: '' })));
+        setCiteSubjectId(ids[0] ?? '');
+        getSubjects(user.schoolId)
+            .then(lista => setCiteMaterias(ids.map(id => ({ id, name: lista.find(m => m.id === id)?.name ?? 'Materia' }))))
+            .catch(console.error);
         setShowCite(true);
     };
 
     const handleSendCite = async () => {
         if (!selectedStudent || !citeTitle.trim() || !citeBody.trim()) return;
+        if (!citeSubjectId) {
+            setCiteError('No das ninguna materia en el curso de este estudiante: no lo podés citar.');
+            return;
+        }
         setCiteSending(true);
         setCiteError('');
         try {
@@ -410,6 +479,7 @@ export default function Students() {
                 studentId: selectedStudent.id,
                 fromUserId: user.id,
                 type: 'citacion',
+                subjectId: citeSubjectId,
                 title: citeTitle,
                 body: citeBody,
                 meetingAt: citeDate ? new Date(`${citeDate}T${citeTime || '08:00'}`).toISOString() : null,
@@ -418,7 +488,10 @@ export default function Students() {
             setCiteDone(true);
         } catch (err) {
             console.error(err);
-            setCiteError('No se pudo enviar la citación. Revisá la conexión y probá de nuevo.');
+            // La base rechaza si el estudiante no cursa esa materia con el docente
+            setCiteError(err && typeof err === 'object' && 'code' in err && err.code === '42501'
+                ? 'Este estudiante no cursa esa materia con vos: no lo podés citar por ella.'
+                : 'No se pudo enviar la citación. Revisá la conexión y probá de nuevo.');
         } finally {
             setCiteSending(false);
         }
@@ -804,7 +877,7 @@ export default function Students() {
                                     </ul>
                                     {sig.nextStep && <p className="senal-step">👉 {sig.nextStep}</p>}
                                     <p className="senal-disclaimer">
-                                        Es una señal para conversar, no un diagnóstico. Si algo te preocupa, derivá a dirección o al gabinete.
+                                        Es una señal para conversar, no un diagnóstico. Si algo te preocupa, avisale a dirección desde «Avisar a dirección», más abajo.
                                     </p>
                                     <button className="btn btn-outline btn-sm" onClick={handleTalked} disabled={talkSaving}>
                                         {talkSaving ? 'Registrando...' : '✓ Lo hablamos — registrar'}
@@ -916,9 +989,14 @@ export default function Students() {
                                             </p>
                                             <span className="acts-obs-meta">
                                                 {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                                                {o.pendiente && (
+                                                    <span className="text-warning" title="Guardada en este equipo: se envía sola cuando haya señal">
+                                                        {' '}· <CloudUpload size={11} className="inline" aria-hidden="true" /> sin enviar
+                                                    </span>
+                                                )}
                                             </span>
                                         </div>
-                                        {o.teacherId === user.id && !o.id.startsWith('local-') && (
+                                        {o.teacherId === user.id && !o.pendiente && (
                                             <button
                                                 className="stu-obs-delete"
                                                 title="Borrar esta observación"
@@ -944,6 +1022,42 @@ export default function Students() {
                             <button className="btn btn-outline btn-sm mt-2 w-full" onClick={openCite}>
                                 <CalendarPlus size={14} /> Citar a la familia
                             </button>
+                        </div>
+
+                        {/* ── Avisar a dirección (051) ── */}
+                        <div className="profile-section">
+                            <h4><ArrowUpRight size={14} className="text-secondary inline ml-1" /> Dirección</h4>
+                            {!avisoAbierto ? (
+                                <>
+                                    <p className="text-sm text-secondary">Si algo te preocupa de {selectedStudent.firstName}, contáselo a dirección: le llega a cada directivo y lo ven en Alertas.</p>
+                                    <button className="btn btn-outline btn-sm mt-2 w-full" onClick={() => { setAvisoAbierto(true); setAvisoError(''); }}>
+                                        <ArrowUpRight size={14} /> Avisar a dirección
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="stu-aviso">
+                                    <label className="text-xs text-secondary" htmlFor="stu-aviso-tema">Sobre</label>
+                                    <select id="stu-aviso-tema" className="form-select" value={avisoTema} onChange={e => setAvisoTema(e.target.value)}>
+                                        {TEMAS_AVISO.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+                                    </select>
+                                    <textarea
+                                        className="form-textarea"
+                                        rows={3}
+                                        maxLength={1000}
+                                        value={avisoMotivo}
+                                        onChange={e => setAvisoMotivo(e.target.value)}
+                                        placeholder="Qué pasa y qué necesitás de dirección…"
+                                        aria-label="Motivo del aviso a dirección"
+                                    />
+                                    {avisoError && <p className="text-xs text-danger">{avisoError}</p>}
+                                    <div className="stu-aviso-botones">
+                                        <button className="btn btn-ghost btn-sm" onClick={() => setAvisoAbierto(false)} disabled={avisoEnviando}>Cancelar</button>
+                                        <button className="btn btn-primary btn-sm" onClick={handleAvisarDireccion} disabled={avisoEnviando || !avisoMotivo.trim()}>
+                                            {avisoEnviando ? 'Avisando…' : 'Avisar a dirección'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1027,7 +1141,7 @@ export default function Students() {
                                     <CheckCircle size={38} className="text-success" />
                                     <p><strong>Citación enviada</strong></p>
                                     <p className="text-sm text-secondary">
-                                        La familia la ve en su portal y puede confirmar asistencia. Seguí los acuses en la sección <strong>Familias</strong>.
+                                        La familia la ve en su portal y puede confirmar asistencia. Seguí los acuses en <strong>Citaciones</strong>.
                                     </p>
                                 </div>
                             ) : (
@@ -1036,9 +1150,19 @@ export default function Students() {
                                     {guardians.length === 0 && (
                                         <div className="em-error">Este estudiante no tiene tutores vinculados: la citación no la verá nadie todavía.</div>
                                     )}
+                                    {citeMaterias.length > 1 ? (
+                                        <div className="em-field">
+                                            <label htmlFor="stu-cita-materia">Por qué materia</label>
+                                            <select id="stu-cita-materia" className="form-select" value={citeSubjectId} onChange={e => setCiteSubjectId(e.target.value)}>
+                                                {citeMaterias.map(m => <option key={m.id} value={m.id}>{m.name || 'Materia'}</option>)}
+                                            </select>
+                                        </div>
+                                    ) : citeMaterias.length === 1 && citeMaterias[0].name && (
+                                        <p className="text-xs text-subtle">La familia ve que la cita es por {citeMaterias[0].name}.</p>
+                                    )}
                                     <div className="em-field">
-                                        <label>Título</label>
-                                        <input type="text" value={citeTitle} onChange={e => setCiteTitle(e.target.value)} />
+                                        <label htmlFor="stu-cita-asunto">Título</label>
+                                        <input id="stu-cita-asunto" type="text" value={citeTitle} onChange={e => setCiteTitle(e.target.value)} />
                                     </div>
                                     <div className="em-field">
                                         <label>Motivo / mensaje para la familia</label>

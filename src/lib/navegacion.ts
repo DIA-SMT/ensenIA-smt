@@ -10,7 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
-  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2,
+  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -50,8 +50,9 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
-  { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'padres citación tutores' },
-  { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento' },
+  { ruta: '/familias', etiqueta: 'Citaciones', titulo: 'Citaciones a familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'familias padres citar citación tutores reunión' },
+  { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento hablar avisar dirección' },
+  { ruta: '/comunicados', etiqueta: 'Comunicados', titulo: 'Comunicados de dirección', icono: Megaphone, grupo: 'Escuela', claves: 'avisos dirección mensajes reunión' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Ayuda', ia: true, claves: 'asistente preguntar protocolo' },
   { ruta: '/settings', etiqueta: 'Ajustes', titulo: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },
@@ -75,6 +76,7 @@ const DIRECTOR: ItemNav[] = [
 const SUPERADMIN: ItemNav[] = [
   { ruta: '/admin', etiqueta: 'Escuelas', icono: Building2, grupo: 'Administración', enBarra: true, claves: 'escuelas directores usuarios cuentas alta' },
   { ruta: '/admin/consumo-ia', etiqueta: 'Consumo de IA', icono: Activity, grupo: 'Administración', enBarra: true, claves: 'gasto costo tokens uso inteligencia artificial dólares' },
+  { ruta: '/admin/referencias', etiqueta: 'Biblioteca de referencia', icono: Library, grupo: 'Administración', claves: 'normativa leyes resoluciones nap esi núcleos aprendizajes prioritarios técnicas pedagógicas cargar' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', enBarra: true, claves: 'configuración accesibilidad letra contraste datos' },
 ];
 

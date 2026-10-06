@@ -203,6 +203,114 @@ export type MaterialDeClase =
       video_url: string | null; texto: string | null;
     };
 
+/** Un tema del temario o un material de la biblioteca, elegido para la clase. */
+export type EleccionMaterial =
+  | { materialId: string; titulo: string }
+  | { classId: string; titulo: string };
+
+/** Un material de la lista de la clase (049). */
+export interface MaterialEnLista {
+  /** id de la fila de la lista */
+  id: string;
+  materialId: string | null;
+  classId: string | null;
+  titulo: string;
+  tipo: 'tema' | 'material';
+  /** "Tema · Unidad 2", "Video", "Diapositivas", "PDF"... */
+  detalle: string;
+  orden: number;
+}
+
+const idDe = (e: EleccionMaterial) => ('materialId' in e ? e.materialId : e.classId);
+export const idEnLista = (m: MaterialEnLista) => m.materialId ?? m.classId ?? '';
+
+const DETALLE_ARCHIVO: Record<string, string> = { pdf: 'PDF', doc: 'Word', image: 'Imagen', link: 'Enlace' };
+
+/** La lista de materiales de la clase, en orden. Vacía si todavía no se corrió la 049. */
+export async function getMaterialesDeClase(sessionId: string): Promise<MaterialEnLista[]> {
+  const { data, error } = await supabase
+    .from('live_session_materials')
+    .select('id, material_id, class_id, sort_order, library_materials(title, file_type, video_url, tags), planning_classes(title, planning_units(title))')
+    .eq('session_id', sessionId)
+    .order('sort_order');
+  if (error) {
+    // Sin la 049 la clase sigue andando con un solo material
+    if (error.code === '42P01' || error.code === 'PGRST205') return [];
+    throw error;
+  }
+  type Fila = {
+    id: string; material_id: string | null; class_id: string | null; sort_order: number;
+    library_materials: { title: string; file_type: string; video_url: string | null; tags: string[] | null } | null;
+    planning_classes: { title: string; planning_units: { title: string } | null } | null;
+  };
+  return ((data ?? []) as unknown as Fila[]).map(r => {
+    if (r.class_id) {
+      return {
+        id: r.id, materialId: null, classId: r.class_id, orden: r.sort_order, tipo: 'tema' as const,
+        titulo: r.planning_classes?.title ?? 'Tema',
+        detalle: r.planning_classes?.planning_units?.title ? `Tema · ${r.planning_classes.planning_units.title}` : 'Tema del temario',
+      };
+    }
+    const m = r.library_materials;
+    const detalle = m?.video_url ? 'Video'
+      : (m?.tags ?? []).includes('presentacion') ? 'Diapositivas'
+        : DETALLE_ARCHIVO[m?.file_type ?? ''] ?? 'De tu biblioteca';
+    return {
+      id: r.id, materialId: r.material_id, classId: null, orden: r.sort_order, tipo: 'material' as const,
+      titulo: m?.title ?? 'Material', detalle,
+    };
+  });
+}
+
+/**
+ * Deja la lista de la clase como la eligió el docente: suma lo nuevo, saca
+ * lo que destildó y respeta el orden. Si el que estaba en pantalla salió,
+ * pasa el primero de la lista nueva (o ninguno).
+ * @returns cuál queda en pantalla
+ */
+export async function sincronizarMaterialesDeClase(
+  sessionId: string,
+  deseados: EleccionMaterial[],
+  enPantalla: string | null,
+): Promise<EleccionMaterial | null> {
+  const actual = await getMaterialesDeClase(sessionId);
+  const ids = deseados.map(idDe);
+
+  const sacar = actual.filter(m => !ids.includes(idEnLista(m)));
+  if (sacar.length > 0) {
+    const { error } = await supabase.from('live_session_materials').delete().in('id', sacar.map(m => m.id));
+    if (error) throw new Error('No se pudo sacar el material de la clase.');
+  }
+
+  const yaEstan = new Set(actual.map(idEnLista));
+  const nuevos = deseados.filter(e => !yaEstan.has(idDe(e)));
+  if (nuevos.length > 0) {
+    const { error } = await supabase.from('live_session_materials').insert(nuevos.map(e => ({
+      session_id: sessionId,
+      material_id: 'materialId' in e ? e.materialId : null,
+      class_id: 'classId' in e ? e.classId : null,
+      sort_order: ids.indexOf(idDe(e)) + 1,
+    })));
+    if (error) throw new Error(error.message.includes('no es') ? error.message : 'No se pudo sumar el material a la clase.');
+  }
+
+  // El orden que eligió (pocas filas: una por material)
+  const quedan = actual.filter(m => ids.includes(idEnLista(m)));
+  await Promise.all(quedan
+    .filter(m => m.orden !== ids.indexOf(idEnLista(m)) + 1)
+    .map(m => supabase.from('live_session_materials').update({ sort_order: ids.indexOf(idEnLista(m)) + 1 }).eq('id', m.id)));
+
+  const sigueEnPantalla = enPantalla && ids.includes(enPantalla)
+    ? deseados.find(e => idDe(e) === enPantalla)!
+    : deseados[0] ?? null;
+  if ((sigueEnPantalla ? idDe(sigueEnPantalla) : null) !== enPantalla) {
+    await setLiveMaterial(sessionId, sigueEnPantalla
+      ? ('materialId' in sigueEnPantalla ? { materialId: sigueEnPantalla.materialId } : { classId: sigueEnPantalla.classId })
+      : null);
+  }
+  return sigueEnPantalla;
+}
+
 /** Cambia (o saca, con null) el material de la clase. */
 export async function setLiveMaterial(
   sessionId: string,

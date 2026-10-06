@@ -395,6 +395,109 @@ export type Database = {
           },
         ]
       }
+      assessment_grades: {
+        Row: {
+          absent: boolean
+          assessment_id: string
+          grade: number | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          absent?: boolean
+          assessment_id: string
+          grade?: number | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          absent?: boolean
+          assessment_id?: string
+          grade?: number | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_grades_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          course_id: string
+          created_at: string
+          held_on: string
+          id: string
+          kind: string
+          school_id: string
+          subject_id: string
+          teacher_id: string | null
+          term_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          held_on?: string
+          id?: string
+          kind?: string
+          school_id: string
+          subject_id: string
+          teacher_id?: string | null
+          term_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          held_on?: string
+          id?: string
+          kind?: string
+          school_id?: string
+          subject_id?: string
+          teacher_id?: string | null
+          term_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_thresholds: {
         Row: {
           december_rule: string
@@ -453,6 +556,8 @@ export type Database = {
           created_at: string | null
           date_label: string | null
           escalated_at: string | null
+          escalated_by: string | null
+          escalation_reason: string | null
           id: string
           intervention_at: string | null
           intervention_by: string | null
@@ -472,6 +577,8 @@ export type Database = {
           created_at?: string | null
           date_label?: string | null
           escalated_at?: string | null
+          escalated_by?: string | null
+          escalation_reason?: string | null
           id?: string
           intervention_at?: string | null
           intervention_by?: string | null
@@ -491,6 +598,8 @@ export type Database = {
           created_at?: string | null
           date_label?: string | null
           escalated_at?: string | null
+          escalated_by?: string | null
+          escalation_reason?: string | null
           id?: string
           intervention_at?: string | null
           intervention_by?: string | null
@@ -996,6 +1105,7 @@ export type Database = {
           meeting_place: string | null
           school_id: string
           student_id: string | null
+          subject_id: string | null
           title: string
           type: string
         }
@@ -1008,6 +1118,7 @@ export type Database = {
           meeting_place?: string | null
           school_id: string
           student_id?: string | null
+          subject_id?: string | null
           title: string
           type: string
         }
@@ -1020,10 +1131,18 @@ export type Database = {
           meeting_place?: string | null
           school_id?: string
           student_id?: string | null
+          subject_id?: string | null
           title?: string
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "guardian_notices_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guardian_notices_from_user_id_fkey"
             columns: ["from_user_id"]
@@ -1086,6 +1205,7 @@ export type Database = {
         Row: {
           ai_summary: string | null
           class_id: string | null
+          course_id: string | null
           description: string | null
           extracted_text: string | null
           file_name: string | null
@@ -1114,6 +1234,7 @@ export type Database = {
         Insert: {
           ai_summary?: string | null
           class_id?: string | null
+          course_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1142,6 +1263,7 @@ export type Database = {
         Update: {
           ai_summary?: string | null
           class_id?: string | null
+          course_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1168,6 +1290,13 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "library_materials_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "library_materials_class_id_fkey"
             columns: ["class_id"]
@@ -2840,6 +2969,55 @@ export type Database = {
           },
         ]
       }
+      live_session_materials: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          id: string
+          material_id: string | null
+          session_id: string
+          sort_order: number
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id: string
+          sort_order?: number
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_session_materials_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "planning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "library_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_sessions: {
         Row: {
           course_id: string
@@ -3197,6 +3375,18 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      demo_alumnos_estado: {
+        Args: { p_school: string }
+        Returns: Json
+      }
+      demo_alumnos_cargar: {
+        Args: { p_course: string }
+        Returns: number
+      }
+      demo_alumnos_quitar: {
+        Args: { p_course: string }
+        Returns: number
+      }
       live_class_material: {
         Args: { p_session: string }
         Returns: Json
@@ -3234,7 +3424,56 @@ export type Database = {
       detect_silent_students: { Args: never; Returns: number }
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
+      avisar_a_direccion: {
+        Args: { p_alert: string; p_motivo: string }
+        Returns: undefined
+      }
+      avisar_a_direccion_por_alumno: {
+        Args: { p_motivo: string; p_student: string; p_tema: string }
+        Returns: string
+      }
       gen_join_code: { Args: never; Returns: string }
+      guardar_evaluacion: {
+        Args: {
+          p_course: string
+          p_fecha: string
+          p_id: string
+          p_notas: Json
+          p_subject: string
+          p_term: string
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: string
+      }
+      mis_docentes: {
+        Args: never
+        Returns: { materias: string; nombre: string; teacher_id: string }[]
+      }
+      pedir_hablar_con_docente: {
+        Args: { p_motivo: string | null; p_teacher: string | null }
+        Returns: number
+      }
+      guardar_asistencia: {
+        Args: {
+          p_course: string
+          p_fecha: string
+          p_nota?: string | null
+          p_registros: Json
+          p_subject: string
+        }
+        Returns: string
+      }
+      guardar_notas_trimestre: {
+        Args: {
+          p_course: string
+          p_filas: Json
+          p_status: string
+          p_subject: string
+          p_term: string
+        }
+        Returns: undefined
+      }
       get_alert_thresholds: {
         Args: { p_school_id: string }
         Returns: {
@@ -3305,6 +3544,16 @@ export type Database = {
       submit_live_guest_response: {
         Args: { p_activity: string; p_payload: Json; p_token: string }
         Returns: undefined
+      }
+      temario_clases: {
+        Args: { p_unidades: string[] }
+        Returns: {
+          id: string
+          objectives: string[]
+          sort_order: number
+          title: string
+          unit_id: string
+        }[]
       }
     }
     Enums: {

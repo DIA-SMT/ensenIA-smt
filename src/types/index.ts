@@ -188,6 +188,8 @@ export interface StudentObservation {
   note: string;
   createdAt: string;
   teacherName?: string;
+  /** Guardada en este equipo y todavía sin enviar (cola offline). */
+  pendiente?: boolean;
 }
 
 export const OBSERVATION_META: Record<ObservationCategory, { emoji: string; label: string }> = {
@@ -247,6 +249,9 @@ export interface GuardianNotice {
   fromUserId: string;
   fromName?: string;
   type: NoticeType;
+  /** Materia de la citación (las del docente siempre la traen). */
+  subjectId?: string | null;
+  subjectName?: string;
   title: string;
   body: string;
   meetingAt?: string | null;
@@ -320,6 +325,11 @@ export interface Alert {
   closedOutcome?: AlertOutcome | null;
   closedAt?: string | null;
   escalatedAt?: string | null;
+  /** Quién la escaló a dirección (un docente); null si fue el sistema a las 72 h (051) */
+  escalatedBy?: string | null;
+  escalationReason?: string | null;
+  /** Nombre del docente de la alerta */
+  teacherName?: string;
 }
 
 export const ALERT_STATUS_META: Record<AlertStatus, { label: string; badgeClass: string }> = {
@@ -388,10 +398,21 @@ export interface TermGrade {
   subjectName?: string;
   termName?: string;
   termNumber?: number;
+  termYear?: number;
+}
+
+/** Lo que una evaluación o una actividad de la app le dejó a un alumno (050). */
+export interface NotaItem {
+  nota: number | null;
+  ausente?: boolean;
+  /** Actividad de la app entregada y todavía sin corregir */
+  sinCorregir?: boolean;
 }
 
 /** Fila de la libreta que ve el docente: estudiante + nota + sugerencia. */
 export interface GradebookRow {
+  /** Las notas del trimestre por columna (id de la evaluación o de la actividad) */
+  notas: Record<string, NotaItem>;
   studentId: string;
   firstName: string;
   lastName: string;
@@ -430,6 +451,8 @@ export interface LibraryMaterial {
   fileSize: string;
   subjectId: string;
   subjectName: string;
+  /** Curso del material. null = todos los cursos donde quien lo subió da la materia. */
+  courseId?: string | null;
   unitName?: string;
   teacherId: string;
   schoolId: string;

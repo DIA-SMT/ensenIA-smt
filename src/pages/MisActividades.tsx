@@ -14,6 +14,7 @@ import { getLiveSessionForCourse, type LiveSession } from '../services/live.serv
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
+import HablarConDocente from '../components/HablarConDocente';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -177,6 +178,8 @@ export default function MisActividades() {
       setCheckinDone(true);
       setTodayFeeling(pickedFeeling);
       setStreak(v => v + 1);
+      // La casilla avisa de verdad (051): se lo decimos
+      if (wantsToTalk) avisar.exito('Les avisamos a tus docentes', 'Alguno te va a buscar para hablar.');
     } catch (err) {
       console.error('Error guardando check-in:', err);
       avisar.error('No se pudo enviar cómo venís hoy.', 'Probá de nuevo en un ratito.');
@@ -350,10 +353,13 @@ export default function MisActividades() {
                 </label>
               </>
             )}
-            <p className="sp-checkin-hint">Es privado entre vos y tus docentes. No es una nota.</p>
+            <p className="sp-checkin-hint">Lo ven tus docentes y la dirección de la escuela. No es una nota.</p>
           </>
         )}
       </div>
+
+      {/* ── Pedir hablar con un docente (051) ── */}
+      <HablarConDocente />
 
       {/* ── Mis logros ── */}
       {achievements.length > 0 && (

@@ -251,6 +251,22 @@
 }
 
 .hoy-alert:hover { border-color: var(--cyan-bright) !important; }
+
+/* Comunicados de dirección sin leer (051) */
+.hoy-comunicados {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--space-4);
+  border-color: var(--acento);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.hoy-comunicados > svg:first-child { flex-shrink: 0; color: var(--acento); }
+.hoy-comunicados > span { flex: 1; display: flex; flex-direction: column; }
+.hoy-comunicados strong { font-size: 0.9375rem; }
+.hoy-comunicados small { font-size: 0.8125rem; color: var(--text-secondary); }
+.hoy-comunicados:hover { background: var(--bg-hover); }
 .hoy-alert p { flex: 1; font-size: 13.5px; color: var(--text-secondary); }
 
 .hoy-alert-dot {

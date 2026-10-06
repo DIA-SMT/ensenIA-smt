@@ -1,0 +1,69 @@
+/* Consulta de la biblioteca de referencia (050) */
+
+.ref-consulta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ref-intro { max-width: 62ch; }
+
+.ref-capa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ref-capa-titulo {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.ref-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ref-hallado {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ref-titulo {
+  margin-bottom: 0.125rem;
+  overflow-wrap: anywhere;
+}
+
+.ref-numero { color: var(--cyan-bright); }
+
+.ref-seccion {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.ref-fragmento {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ref-fragmento:first-child { padding-top: 0; }
+
+.ref-fuente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--cyan-bright);
+}
+
+/* La cabecera de la tarjeta de documento lleva la flecha a la derecha */
+.ref-consulta .norm-card-head { gap: var(--space-3); align-items: flex-start; }

@@ -4,21 +4,29 @@
  * Todos arrancan presentes: el docente solo toca a los que faltaron.
  * Si el curso tuvo clase en vivo hoy, quienes participaron desde el
  * celular ya vienen confirmados y se marca de dónde salió el dato.
+ *
+ * Sin señal se toma igual: queda guardada en el equipo, con la fecha de
+ * hoy, y se envía sola cuando vuelve la conexión (cola offline).
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
     CheckSquare, Check, X, Clock, FileText, Save, Loader2,
-    ArrowLeft, Radio, Users,
+    ArrowLeft, Radio, Users, CloudUpload,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByCourse } from '../services/students.service';
 import { getSubjects } from '../services/subjects.service';
 import {
-    getAttendanceSession, getLiveParticipants, saveAttendance, todayISO,
+    getAttendanceSession, getLiveParticipants, todayISO,
     ATTENDANCE_META, type AttendanceStatus,
 } from '../services/attendance.service';
+import {
+    guardarAsistenciaResiliente, pendientesDe, claveAsistencia, subscribe as suscribirCola,
+} from '../services/offline-queue.service';
+import { haySenial } from '../lib/conexion';
+import { useSinGuardar } from '../lib/sinGuardar';
 import type { Student, Subject } from '../types';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -41,10 +49,21 @@ export default function Asistencia() {
     const [error, setError] = useState('');
     const [fromLive, setFromLive] = useState(0);
     const [alreadyTaken, setAlreadyTaken] = useState(false);
+    // Guardada en este equipo, esperando señal para enviarse
+    const [pendiente, setPendiente] = useState(false);
+    // Marcas tocadas desde la última vez que se guardó
+    const [sucio, setSucio] = useState(false);
+    useSinGuardar('asistencia', sucio);
 
     const assignments = user?.subjects ?? [];
     const current = assignments[assignmentIdx];
     const today = todayISO();
+    const clave = current ? claveAsistencia(current.courseId, current.subjectId, today) : '';
+
+    // Cuando la cola la manda, deja de estar pendiente
+    useEffect(() => suscribirCola(() => {
+        if (clave && !pendientesDe('asistencia').some(op => op.clave === clave)) setPendiente(false);
+    }), [clave]);
 
     useEffect(() => {
         getSubjects().then(subjects => {
@@ -68,16 +87,28 @@ export default function Asistencia() {
         if (!user || !current) return;
         setLoading(true);
         setSaved(false);
+        setSucio(false);
         setError('');
         try {
             const [studs, existing, liveIds] = await Promise.all([
                 getStudentsByCourse(current.courseId),
                 getAttendanceSession(user.id, current.courseId, current.subjectId, today),
-                getLiveParticipants(current.courseId, today),
+                // Sin señal no hubo clase en vivo que consultar (y esperaría al tope de la red)
+                haySenial() ? getLiveParticipants(current.courseId, today) : Promise.resolve([] as string[]),
             ]);
             setStudents(studs);
 
-            if (existing) {
+            // Lo tomado sin señal y todavía sin enviar manda sobre lo del servidor
+            const enEspera = pendientesDe('asistencia').find(op => op.clave === claveAsistencia(current.courseId, current.subjectId, today));
+            setPendiente(!!enEspera);
+            if (enEspera) {
+                const map: Record<string, AttendanceStatus> = {};
+                enEspera.entries.forEach(e => { map[e.studentId] = e.status; });
+                studs.forEach(s => { map[s.id] ??= 'presente'; });
+                setMarks(map);
+                setAlreadyTaken(true);
+                setFromLive(0);
+            } else if (existing) {
                 // Ya se tomó hoy: se edita lo que quedó guardado
                 const map: Record<string, AttendanceStatus> = {};
                 existing.entries.forEach(e => { map[e.studentId] = e.status; });
@@ -95,7 +126,9 @@ export default function Asistencia() {
             }
         } catch (err) {
             console.error(err);
-            setError('No se pudo cargar la lista del curso.');
+            setError(haySenial()
+                ? 'No se pudo cargar la lista del curso.'
+                : 'Sin conexión, y la lista de este curso no está guardada en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y después funciona sin conexión.');
         } finally {
             setLoading(false);
         }
@@ -114,11 +147,13 @@ export default function Asistencia() {
             return { ...prev, [studentId]: next };
         });
         setSaved(false);
+        setSucio(true);
     };
 
     const setStatus = (studentId: string, status: AttendanceStatus) => {
         setMarks(prev => ({ ...prev, [studentId]: status }));
         setSaved(false);
+        setSucio(true);
     };
 
     const markAll = (status: AttendanceStatus) => {
@@ -126,6 +161,7 @@ export default function Asistencia() {
         students.forEach(s => { map[s.id] = status; });
         setMarks(map);
         setSaved(false);
+        setSucio(true);
     };
 
     const handleSave = async () => {
@@ -133,20 +169,23 @@ export default function Asistencia() {
         setSaving(true);
         setError('');
         try {
-            await saveAttendance({
-                teacherId: user.id,
-                schoolId: user.schoolId,
-                subjectId: current.subjectId,
+            const fechaLegible = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' });
+            const resultado = await guardarAsistenciaResiliente({
                 courseId: current.courseId,
-                takenOn: today,
+                subjectId: current.subjectId,
+                fecha: today,
                 entries: students.map(s => ({ studentId: s.id, status: marks[s.id] ?? 'presente' })),
+                descripcion: `Asistencia de ${current.courseName} · ${subjectName(current.subjectId)} · ${fechaLegible}`,
             });
+            setPendiente(resultado === 'pendiente');
             setSaved(true);
+            setSucio(false);
             setAlreadyTaken(true);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
+            // Con o sin señal, lo que llega acá es que el servidor no la aceptó
             console.error(err);
-            setError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+            setError('El servidor no aceptó la asistencia. Probá de nuevo; si sigue pasando, avisá a dirección.');
         } finally {
             setSaving(false);
         }
@@ -193,7 +232,12 @@ export default function Asistencia() {
                 )}
             </div>
 
-            {alreadyTaken && !saved && (
+            {pendiente && (
+                <div className="asis-notice asis-notice-pendiente" role="status">
+                    <CloudUpload size={15} /> Guardada en este equipo. Se envía sola cuando haya señal; no hace falta volver a pasarla.
+                </div>
+            )}
+            {alreadyTaken && !saved && !pendiente && (
                 <div className="asis-notice asis-notice-info">
                     <Check size={15} /> Ya tomaste asistencia hoy en este curso. Podés corregir lo que haga falta.
                 </div>

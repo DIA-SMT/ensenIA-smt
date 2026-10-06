@@ -41,9 +41,14 @@ const DETALLES_POR_ROL: Partial<Record<string, RutaPantalla[]>> = {
   // docente más usa desde el celular: tiene que andar sin conexión.
   // Módulo, laboratorio y agenda salieron del menú (se llega por "Crear" y
   // "Mis clases") pero se siguen anticipando como antes.
-  docente: ['/actividades/:id', '/actividad-rapida', '/modulo', '/ia-lab', '/agenda'],
+  // Pasar lista y Corregir se abren desde Mi día: sin anticiparlas, no
+  // andaban sin conexión aunque el resto sí.
+  docente: ['/actividades/:id', '/actividad-rapida', '/modulo', '/ia-lab', '/agenda', '/asistencia', '/corregir'],
   director: ['/cursos/:id'],
 };
+
+/** Las del docente en el aula, aunque esté el ahorro de datos. */
+const PANTALLAS_DEL_AULA: RutaPantalla[] = ['/hoy', '/asistencia', '/libreta', '/students'];
 
 export default function MainLayout() {
   const { user } = useAuth();
@@ -103,9 +108,15 @@ export default function MainLayout() {
     return () => window.removeEventListener('keydown', alTeclear);
   }, []);
 
-  // Las pantallas del rol, por adelantado y sin apuro.
+  // Las pantallas del rol, por adelantado y sin apuro. Con ahorro de datos,
+  // al docente le quedan igual las del aula: justo con mala señal es cuando
+  // más las necesita sin conexión.
   useEffect(() => {
-    if (!user || ahorroActivo) return;
+    if (!user) return;
+    if (ahorroActivo) {
+      if (user.role === 'docente') anticipar(PANTALLAS_DEL_AULA);
+      return;
+    }
     const rutas = [...NAV_POR_ROL[user.role].map(i => i.ruta), ...(DETALLES_POR_ROL[user.role] ?? [])];
     anticipar(rutas);
   }, [user, ahorroActivo]);

@@ -55,6 +55,7 @@ export const cargadores = {
   '/actividades/:id':     () => import('../pages/ActividadDetalle'),
   '/libreta':             () => import('../pages/Libreta'),
   '/familias':            () => import('../pages/Familias'),
+  '/comunicados':         () => import('../pages/ComunicadosDireccion'),
   '/comunicados-familia': () => import('../pages/ComunicadosFamilia'),
   '/mis-hijos':           () => import('../pages/MisHijos'),
   '/mis-actividades':     () => import('../pages/MisActividades'),
@@ -81,6 +82,7 @@ export const cargadores = {
   '/admin':               () => import('../pages/admin/AdminEscuelas'),
   '/admin/escuelas/:id':   () => import('../pages/admin/GestionEscuela'),
   '/admin/consumo-ia':     () => import('../pages/admin/ConsumoIA'),
+  '/admin/referencias':    () => import('../pages/admin/Referencias'),
   '/mi-escuela':          () => import('../pages/admin/GestionEscuela'),
 } satisfies Record<string, Cargador>;
 
@@ -97,6 +99,11 @@ const yaAnticipadas = new Set<RutaPantalla>();
  * navegador está libre, para que después se abran al instante y funcionen
  * sin conexión. No hace nada con las que ya se bajaron.
  */
+/** Baja ya esas pantallas (no cuando haya tiempo): para "Preparar para el aula". */
+export async function bajarYa(rutas: RutaPantalla[]): Promise<void> {
+  await Promise.allSettled(rutas.map(r => cargadores[r]().then(() => { yaAnticipadas.add(r); })));
+}
+
 export function anticipar(rutas: RutaPantalla[]): void {
   const pendientes = rutas.filter(r => !yaAnticipadas.has(r));
   const cuandoHayaTiempo: (fn: () => void) => void =

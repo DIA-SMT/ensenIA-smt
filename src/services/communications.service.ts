@@ -55,11 +55,24 @@ export async function sendCommunication(data: {
   }
 }
 
+/**
+ * Marca el comunicado como leído. La regla de la base solo deja crear la
+ * marca (no actualizarla): si ya estaba, se ignora en vez de chocar.
+ */
 export async function markCommunicationRead(communicationId: string, userId: string): Promise<void> {
-  await supabase.from('communication_reads').upsert({
-    communication_id: communicationId,
-    user_id: userId,
-  });
+  const { error } = await supabase.from('communication_reads').upsert(
+    { communication_id: communicationId, user_id: userId },
+    { onConflict: 'communication_id,user_id', ignoreDuplicates: true },
+  );
+  if (error) throw error;
+}
+
+/** El menú escucha esto para actualizar el número de no leídos. */
+export const EVENTO_COMUNICADO_LEIDO = 'estudia:comunicado-leido';
+
+/** Comunicados de dirección que el docente todavía no abrió. */
+export function sinLeer(comunicados: Communication[], userId: string): Communication[] {
+  return comunicados.filter(c => c.fromUserId !== userId && !c.readBy.includes(userId));
 }
 
 function mapCommunication(row: any): Communication {

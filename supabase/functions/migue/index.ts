@@ -16,7 +16,7 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildSystemPrompt, RIESGO_SYSTEM,
-  type MigueAudience, type PolicyHit,
+  type MigueAudience, type PolicyHit, type RefHit,
 } from './_prompts.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -292,6 +292,18 @@ Deno.serve(async (req: Request) => {
     policyHits = [];
   }
 
+  // ── Biblioteca de referencia municipal (047), también con la RLS del
+  // usuario: a un estudiante o una familia solo le llega lo de 'comunidad'.
+  let refHits: RefHit[] = [];
+  try {
+    const { data } = await asUser.rpc('buscar_referencias', {
+      q: ultimo.content, max_results: 4,
+    });
+    refHits = (data ?? []) as RefHit[];
+  } catch (_e) {
+    refHits = [];
+  }
+
   // ── Contexto extra por audiencia ──
   let cursoNombre: string | undefined;
   let hijosNombres: string[] | undefined;
@@ -317,7 +329,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const systemPrompt = buildSystemPrompt({
-    audience, nombre, escuela, policyHits, cursoNombre, hijosNombres,
+    audience, nombre, escuela, policyHits, refHits, cursoNombre, hijosNombres,
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
 
@@ -532,6 +544,9 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           persistido: !errMsgs,
           errorPersistencia: errMsgs ? String(errMsgs.message ?? errMsgs) : null,
           citedPolicies: policyHits.map((h) => ({ id: h.id, title: h.title })),
+          citedReferencias: refHits.map((h) => ({
+            id: h.referencia_id, titulo: h.titulo, numero: h.numero, seccion: h.seccion, url: h.fuente_url,
+          })),
           // El cliente lo usa para mostrarle al chico, en la interfaz y no
           // solo dentro del texto de la IA, que esto se compartió.
           derivada,

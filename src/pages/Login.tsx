@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, SESION_VENCIDA_KEY } from '../contexts/AuthContext';
+import { esEquipoPersonal } from '../lib/equipoPersonal';
 import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck, Clock } from 'lucide-react';
 import './Login.css';
 
@@ -25,6 +26,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Queda marcada si la última vez se marcó en este equipo
+  const [equipoPersonal, setEquipoPersonal] = useState(() => esEquipoPersonal());
   // La sesión del personal vence a las 12 h (AuthContext): se explica una vez
   const [sesionVencida] = useState(() => {
     try { return sessionStorage.getItem(SESION_VENCIDA_KEY) === '1'; } catch { return false; }
@@ -52,7 +55,7 @@ export default function Login() {
     }
 
     setSubmitting(true);
-    const result = await login(email, password);
+    const result = await login(email, password, { equipoPersonal });
     setSubmitting(false);
 
     if (!result.success) {
@@ -96,7 +99,7 @@ export default function Login() {
             {sesionVencida && !error && (
               <div className="login-aviso" role="status">
                 <Clock size={16} aria-hidden="true" />
-                <span>Tu sesión se cerró porque pasaron 12 horas desde que entraste. Volvé a entrar para seguir.</span>
+                <span>Tu sesión se cerró porque pasaron 12 horas desde que entraste. Volvé a entrar para seguir; si es tu equipo, marcá "Es mi equipo" y no se va a volver a cerrar sola.</span>
               </div>
             )}
             {error && (
@@ -145,6 +148,14 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            <label className="login-equipo">
+              <input type="checkbox" checked={equipoPersonal} onChange={e => setEquipoPersonal(e.target.checked)} />
+              <span>
+                <strong>Es mi equipo</strong>
+                <small>La sesión queda abierta y lo que prepares sigue acá sin conexión. En una compu compartida de la escuela, dejalo sin marcar.</small>
+              </span>
+            </label>
 
             <button type="submit" className="login-submit" disabled={submitting} aria-busy={submitting}>
               {submitting ? (

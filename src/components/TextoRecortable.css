@@ -1,0 +1,45 @@
+/* Texto largo con "Ver más" */
+
+.txt-recorte {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.txt-recorte-texto {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.txt-recorte.compacto .txt-recorte-texto { font-size: 0.8125rem; line-height: 1.5; }
+
+.txt-recorte-texto.recortado {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.txt-recorte.compacto .txt-recorte-texto.recortado {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.txt-recorte-boton {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cyan-bright);
+  cursor: pointer;
+}
+
+.txt-recorte-boton:hover { text-decoration: underline; }
