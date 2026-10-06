@@ -23,7 +23,7 @@ const ICONO = { exito: CheckCircle2, error: AlertCircle, info: Info };
 function TarjetaAviso({ aviso }: { aviso: Aviso }) {
   const [pausado, setPausado] = useState(false);
   const restante = useRef(duracionDe(aviso.tipo));
-  const inicio = useRef(Date.now());
+  const inicio = useRef(0);
 
   useEffect(() => {
     if (pausado) return;

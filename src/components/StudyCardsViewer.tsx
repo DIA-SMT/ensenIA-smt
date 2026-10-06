@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Download, Layers, RotateCcw } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Download, Layers, RotateCcw, Pencil } from 'lucide-react';
 import type { StudyCard } from '../types';
 import Dialogo from './shell/Dialogo';
 import { avisar } from './ui/avisar';
@@ -21,11 +21,13 @@ interface Props {
   title: string;
   subjectName?: string;
   onClose: () => void;
+  /** Para el docente: abre el editor de estas placas. */
+  onEditar?: () => void;
 }
 
 const cardType = (c: StudyCard) => c.type ?? 'concept';
 
-export default function StudyCardsViewer({ cards, title, subjectName, onClose }: Props) {
+export default function StudyCardsViewer({ cards, title, subjectName, onClose, onEditar }: Props) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [generando, setGenerando] = useState(false);
@@ -80,6 +82,11 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
               <span className="sc-score" title="Quiz respondidos correctamente">
                 🎯 {quizOk}/{quizDone}
               </span>
+            )}
+            {onEditar && (
+              <button className="btn btn-outline btn-sm" onClick={onEditar} title="Corregir, borrar, ordenar o sumar placas">
+                <Pencil size={14} aria-hidden="true" /> Editar
+              </button>
             )}
             <button className="btn-icon" aria-label="Cerrar las placas" onClick={onClose}><X size={18} aria-hidden="true" /></button>
           </div>

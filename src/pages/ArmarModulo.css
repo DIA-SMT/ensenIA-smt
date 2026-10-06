@@ -366,3 +366,9 @@
 .mod-existing-head strong { color: var(--text-primary); font-size: 14px; }
 .mod-existing-head em { font-style: normal; font-size: 12.5px; color: var(--text-secondary); }
 .mod-existing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Cada pieza en su fila: si ya está guardada, debajo va "Rehacerlo" */
+.mod-piece-fila { display: flex; flex-direction: column; gap: 4px; }
+.mod-piece-fila > .mod-piece { flex: 1; width: 100%; }
+.mod-rehacer { align-self: flex-start; font-size: 0.8125rem; color: var(--text-secondary); }
+.mod-rehacer[aria-pressed="true"] { color: var(--warning-ink); }

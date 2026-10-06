@@ -19,6 +19,7 @@ import VideoModal from '../components/VideoModal';
 import MaterialViewer from '../components/MaterialViewer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PlacasEditor from '../components/PlacasEditor';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -80,6 +81,7 @@ export default function Biblioteca() {
 
   // Placas de estudio
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  const [placasEditando, setPlacasEditando] = useState<LibraryMaterial | null>(null);
   const [cardsGeneratingId, setCardsGeneratingId] = useState<string | null>(null);
 
   // Podcast
@@ -382,6 +384,7 @@ export default function Biblioteca() {
     }
     if (!mat.extractedText) return;
     setCardsGeneratingId(mat.id);
+    avisar.info('Armando las placas…', 'Tarda cerca de un minuto. Quedan guardadas en el material: no hace falta volver a generarlas.');
     try {
       const cards = await generateStudyCards(mat.extractedText, mat.title);
       if (!cards.length) throw new Error('La IA no generó placas para este material.');
@@ -643,7 +646,7 @@ export default function Biblioteca() {
                         disabled={cardsGeneratingId === mat.id}
                       >
                         {cardsGeneratingId === mat.id
-                          ? <><Loader2 size={14} className="spin" /> Generando...</>
+                          ? <><Loader2 size={14} className="spin" /> Armando placas…</>
                           : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
                       </button>
                     )}
@@ -884,6 +887,23 @@ export default function Biblioteca() {
           title={cardsFor.title}
           subjectName={cardsFor.subjectName}
           onClose={() => setCardsFor(null)}
+          onEditar={() => { setPlacasEditando(cardsFor); setCardsFor(null); }}
+        />
+      )}
+
+      {/* ── Editor de placas: corregir sin volver a generar ── */}
+      {placasEditando?.studyCards && (
+        <PlacasEditor
+          placas={placasEditando.studyCards}
+          titulo={placasEditando.title}
+          alCerrar={() => setPlacasEditando(null)}
+          alGuardar={async placas => {
+            await updateMaterial(placasEditando.id, { studyCards: placas });
+            refresh();
+          }}
+          alRehacer={placasEditando.extractedText
+            ? () => generateStudyCards(placasEditando.extractedText!, placasEditando.title)
+            : undefined}
         />
       )}
 

@@ -15,7 +15,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Boxes, Sparkles, Layers, Headphones, ClipboardList, Radio,
     Check, Loader2, ArrowRight, Share2, Eye, AlertCircle, Square,
-    BookOpen, PenLine, FolderTree,
+    BookOpen, PenLine, FolderTree, Pencil, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -30,6 +30,7 @@ import { createActivity } from '../services/activities.service';
 import { startLiveSession, launchActivity, getMyLiveSession } from '../services/live.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PlacasEditor from '../components/PlacasEditor';
 import PodcastPlayer from '../components/PodcastPlayer';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { avisar } from '../components/ui/avisar';
@@ -76,6 +77,9 @@ export default function ArmarModulo() {
         placas: 'idle', podcast: 'idle', actividad: 'idle', vivo: 'idle',
     });
     const [building, setBuilding] = useState(false);
+    // Placas y podcast ya guardados se reusan; solo se rehacen si el docente lo pide
+    const [rehacer, setRehacer] = useState<Set<'placas' | 'podcast'>>(new Set());
+    const [editandoPlacas, setEditandoPlacas] = useState(false);
 
     // Resultados
     const [materialId, setMaterialId] = useState<string | null>(null);
@@ -130,17 +134,24 @@ export default function ArmarModulo() {
     const togglePiece = (key: PieceKey) => {
         setChosen(prev => {
             const next = new Set(prev);
-            next.has(key) ? next.delete(key) : next.add(key);
+            if (next.has(key)) next.delete(key); else next.add(key);
             return next;
         });
     };
 
     const baseMaterial = materials.find(m => m.id === baseMaterialId) ?? null;
     const baseTema = temas.find(t => t.id === temaId) ?? null;
-    // Si este tema ya tiene material generado, se muestra antes de gastar otra generación
-    const existing = origen === 'tema' && baseTema
-        ? materials.find(m => m.classId === baseTema.id) ?? null
+    // Dónde queda guardado lo que se genera, para no volver a generarlo:
+    //  · de un material de la biblioteca → en ese mismo material (antes se
+    //    creaba un "Módulo:" nuevo cada vez y las placas se rehacían siempre);
+    //  · de un tema de la planificación → en el material de ese tema.
+    const destino = origen === 'material' ? baseMaterial
+        : origen === 'tema' && baseTema ? materials.find(m => m.classId === baseTema.id) ?? null
         : null;
+    const placasGuardadas = destino?.studyCards?.length ? destino.studyCards : null;
+    const podcastGuardado = destino?.podcastStatus === 'ready' && destino.podcastPath ? destino.podcastPath : null;
+    // Se muestra antes de gastar otra generación
+    const existing = destino && (placasGuardadas || podcastGuardado) ? destino : null;
 
     /** Título del módulo según de dónde salga. Si parte de otro módulo, no se
      *  arrastra el prefijo (evita "Módulo: Módulo: ..."). */
@@ -242,8 +253,9 @@ export default function ArmarModulo() {
         const moduleTitle = `Módulo: ${moduleName}`;
 
         try {
-            // El módulo queda como material de la biblioteca: de ahí salen las demás piezas
-            const mat = await createMaterial({
+            // Con material, o con un tema que ya tiene su material, todo se guarda
+            // ahí. Si no, el módulo queda como material nuevo de la biblioteca.
+            const mat = destino ?? await createMaterial({
                 title: moduleTitle,
                 description: `Generado con IA para ${subjectName} · ${assignment.courseName}`,
                 fileType: 'doc',
@@ -256,32 +268,45 @@ export default function ArmarModulo() {
                 tags: ['módulo', topic.trim().slice(0, 24)],
                 classId: origen === 'tema' && baseTema ? baseTema.id : null,
             });
-            await updateMaterial(mat.id, { extractedText: content });
+            // El texto de un material de la biblioteca es el original del docente:
+            // no se pisa con el módulo (que igual queda en la actividad).
+            if (origen !== 'material') await updateMaterial(mat.id, { extractedText: content });
             setMaterialId(mat.id);
 
             // Las piezas se generan de a una, y se ve cada una completarse
             if (chosen.has('placas')) {
-                setPiece('placas', 'working');
-                try {
-                    const generated = await generateStudyCards(content, moduleTitle);
-                    await updateMaterial(mat.id, { studyCards: generated });
-                    setCards(generated);
-                    setPiece('placas', generated.length ? 'done' : 'error');
-                } catch (err) {
-                    console.error('placas:', err);
-                    setPiece('placas', 'error');
+                if (placasGuardadas && !rehacer.has('placas')) {
+                    setCards(placasGuardadas);
+                    setPiece('placas', 'done');
+                } else {
+                    setPiece('placas', 'working');
+                    try {
+                        const generated = await generateStudyCards(content, moduleTitle);
+                        await updateMaterial(mat.id, { studyCards: generated });
+                        setCards(generated);
+                        setMaterials(prev => prev.map(m => (m.id === mat.id ? { ...m, studyCards: generated } : m)));
+                        setPiece('placas', 'done');
+                    } catch (err) {
+                        console.error('placas:', err);
+                        setPiece('placas', 'error');
+                    }
                 }
             }
 
             if (chosen.has('podcast')) {
-                setPiece('podcast', 'working');
-                try {
-                    await generatePodcast(mat.id);
-                    setPodcastPath(`podcasts/${mat.id}.mp3`);
+                if (podcastGuardado && !rehacer.has('podcast')) {
+                    setPodcastPath(podcastGuardado);
                     setPiece('podcast', 'done');
-                } catch (err) {
-                    console.error('podcast:', err);
-                    setPiece('podcast', 'error');
+                } else {
+                    setPiece('podcast', 'working');
+                    try {
+                        await generatePodcast(mat.id);
+                        setPodcastPath(`podcasts/${mat.id}.mp3`);
+                        setPiece('podcast', 'done');
+                    } catch (err) {
+                        console.error('podcast:', err);
+                        setPiece('podcast', 'error');
+                    }
                 }
             }
 
@@ -298,8 +323,8 @@ export default function ArmarModulo() {
                 setPiece('actividad', 'working');
                 try {
                     const act = await createActivity({
-                        title: `Actividad: ${topic.trim()}`,
-                        description: `Sobre el módulo "${topic.trim()}"`,
+                        title: `Actividad: ${moduleName}`,
+                        description: `Sobre el módulo "${moduleName}"`,
                         contentMd: content,
                         questions,
                         subjectId: assignment.subjectId,
@@ -490,22 +515,27 @@ export default function ArmarModulo() {
                                 <div className="mod-existing-head">
                                     <Check size={16} />
                                     <div>
-                                        <strong>Este tema ya tiene su material</strong>
-                                        <em>Se generó una vez y quedó guardado. Usalo directo, no hace falta rehacerlo.</em>
+                                        <strong>{origen === 'material' ? 'Este material ya tiene placas o podcast' : 'Este tema ya tiene su material'}</strong>
+                                        <em>Se generó una vez y quedó guardado. Usalo directo; si armás el módulo igual, se reusa lo guardado salvo que pidas rehacerlo.</em>
                                     </div>
                                 </div>
                                 <div className="mod-existing-actions">
-                                    {existing.studyCards && existing.studyCards.length > 0 && (
-                                        <button className="btn btn-primary btn-sm" onClick={() => { setCards(existing.studyCards!); setShowCards(true); }}>
-                                            <Layers size={14} /> Ver las {existing.studyCards.length} placas
-                                        </button>
+                                    {placasGuardadas && (
+                                        <>
+                                            <button className="btn btn-primary btn-sm" onClick={() => { setMaterialId(existing.id); setCards(placasGuardadas); setShowCards(true); }}>
+                                                <Layers size={14} aria-hidden="true" /> Ver las {placasGuardadas.length} placas
+                                            </button>
+                                            <button className="btn btn-outline btn-sm" onClick={() => { setMaterialId(existing.id); setCards(placasGuardadas); setEditandoPlacas(true); }}>
+                                                <Pencil size={14} aria-hidden="true" /> Editar placas
+                                            </button>
+                                        </>
                                     )}
                                     {existing.podcastStatus === 'ready' && existing.podcastPath && (
                                         <button className="btn btn-primary btn-sm" onClick={() => { setPodcastPath(existing.podcastPath!); setShowPodcast(true); }}>
                                             <Headphones size={14} /> Escuchar el podcast
                                         </button>
                                     )}
-                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/mis-clases?tab=materiales')}>
+                                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/biblioteca')}>
                                         <BookOpen size={14} /> Abrir en mis materiales
                                     </button>
                                 </div>
@@ -517,7 +547,7 @@ export default function ArmarModulo() {
                             onClick={handleGenerate}
                             disabled={!canGenerate}
                         >
-                            <Sparkles size={17} /> {existing ? 'Volver a generarlo de todos modos' : 'Armar el módulo'}
+                            <Sparkles size={17} /> {existing ? 'Armar el módulo igual' : 'Armar el módulo'}
                         </button>
                     </div>
                 </section>
@@ -528,7 +558,7 @@ export default function ArmarModulo() {
                 <>
                     <section className="card mod-card">
                         <div className="mod-card-head">
-                            <h3><Boxes size={17} className="text-ia-accent" /> {topic}</h3>
+                            <h3><Boxes size={17} className="text-ia-accent" aria-hidden="true" /> {moduleName || topic}</h3>
                             {generating && (
                                 <button className="btn btn-outline btn-sm" onClick={handleStop}>
                                     <Square size={13} /> Detener
@@ -547,20 +577,44 @@ export default function ArmarModulo() {
                             <h3 className="mod-choose-title">¿Qué querés que salga de este módulo?</h3>
                             <p className="text-sm text-secondary">Elegí lo que te sirva. Podés marcar todo.</p>
                             <div className="mod-pieces">
-                                {PIECES.map(p => (
-                                    <button
-                                        key={p.key}
-                                        className={`mod-piece ${chosen.has(p.key) ? 'on' : ''}`}
-                                        onClick={() => togglePiece(p.key)}
-                                    >
-                                        <span className="mod-piece-check">{chosen.has(p.key) && <Check size={13} />}</span>
-                                        <span className="mod-piece-emoji">{p.emoji}</span>
-                                        <span className="mod-piece-text">
-                                            <strong>{p.label}</strong>
-                                            <span>{p.desc}</span>
-                                        </span>
-                                    </button>
-                                ))}
+                                {PIECES.map(p => {
+                                    const guardada = (p.key === 'placas' && placasGuardadas) || (p.key === 'podcast' && podcastGuardado);
+                                    const seRehace = (p.key === 'placas' || p.key === 'podcast') && rehacer.has(p.key);
+                                    return (
+                                        <div key={p.key} className="mod-piece-fila">
+                                            <button
+                                                className={`mod-piece ${chosen.has(p.key) ? 'on' : ''}`}
+                                                onClick={() => togglePiece(p.key)}
+                                                aria-pressed={chosen.has(p.key)}
+                                            >
+                                                <span className="mod-piece-check">{chosen.has(p.key) && <Check size={13} />}</span>
+                                                <span className="mod-piece-emoji" aria-hidden="true">{p.emoji}</span>
+                                                <span className="mod-piece-text">
+                                                    <strong>{p.label}</strong>
+                                                    <span>
+                                                        {guardada && !seRehace ? 'Ya está guardado: se usa ese, sin gastar IA'
+                                                            : guardada && seRehace ? 'Se rehace y reemplaza al guardado'
+                                                            : p.desc}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                            {guardada && chosen.has(p.key) && (
+                                                <button
+                                                    className="btn btn-ghost btn-sm mod-rehacer"
+                                                    onClick={() => setRehacer(prev => {
+                                                        const k = p.key as 'placas' | 'podcast';
+                                                        const next = new Set(prev);
+                                                        if (next.has(k)) next.delete(k); else next.add(k);
+                                                        return next;
+                                                    })}
+                                                    aria-pressed={seRehace}
+                                                >
+                                                    <RefreshCw size={13} aria-hidden="true" /> {seRehace ? 'Usar el guardado' : 'Rehacerlo'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <button
                                 className="btn btn-primary mod-cta"
@@ -595,7 +649,7 @@ export default function ArmarModulo() {
                                     <div className="mod-prog-text">
                                         <strong>{p.emoji} {p.label}</strong>
                                         <span>
-                                            {st === 'working' ? 'Generando...'
+                                            {st === 'working' ? (p.key === 'placas' || p.key === 'podcast' ? 'Generando… (cerca de un minuto)' : 'Generando…')
                                                 : st === 'done' ? 'Listo'
                                                     : st === 'error' ? 'No se pudo generar esta parte'
                                                         : 'En espera'}
@@ -610,9 +664,14 @@ export default function ArmarModulo() {
                         <>
                             <div className="mod-results">
                                 {cards && cards.length > 0 && (
-                                    <button className="mod-result" onClick={() => setShowCards(true)}>
-                                        <Layers size={16} /> Ver las {cards.length} placas
-                                    </button>
+                                    <>
+                                        <button className="mod-result" onClick={() => setShowCards(true)}>
+                                            <Layers size={16} aria-hidden="true" /> Ver las {cards.length} placas
+                                        </button>
+                                        <button className="mod-result" onClick={() => setEditandoPlacas(true)}>
+                                            <Pencil size={16} aria-hidden="true" /> Editar las placas
+                                        </button>
+                                    </>
                                 )}
                                 {podcastPath && (
                                     <button className="mod-result" onClick={() => setShowPodcast(true)}>
@@ -648,6 +707,7 @@ export default function ArmarModulo() {
                                         setCards(null); setPodcastPath(null); setActivityId(null);
                                         setLiveReady(false); setShared(false); setMaterialId(null);
                                         setStates({ placas: 'idle', podcast: 'idle', actividad: 'idle', vivo: 'idle' });
+                                        setRehacer(new Set());
                                     }}
                                 >
                                     Armar otro módulo
@@ -661,13 +721,30 @@ export default function ArmarModulo() {
             {showCards && cards && (
                 <StudyCardsViewer
                     cards={cards}
-                    title={`Módulo: ${topic}`}
+                    title={moduleName || topic}
                     subjectName={subjectName}
                     onClose={() => setShowCards(false)}
+                    onEditar={materialId ? () => { setShowCards(false); setEditandoPlacas(true); } : undefined}
+                />
+            )}
+            {editandoPlacas && cards && materialId && (
+                <PlacasEditor
+                    placas={cards}
+                    titulo={moduleName || topic}
+                    alCerrar={() => setEditandoPlacas(false)}
+                    alGuardar={async placas => {
+                        await updateMaterial(materialId, { studyCards: placas });
+                        setCards(placas);
+                        // Que la lista local (y "ya está guardado") vea la versión nueva
+                        setMaterials(prev => prev.map(m => (m.id === materialId ? { ...m, studyCards: placas } : m)));
+                    }}
+                    alRehacer={content.trim() || destino?.extractedText
+                        ? () => generateStudyCards(content.trim() || destino!.extractedText!, moduleName || topic)
+                        : undefined}
                 />
             )}
             {showPodcast && podcastPath && (
-                <PodcastPlayer path={podcastPath} title={topic} onClose={() => setShowPodcast(false)} />
+                <PodcastPlayer path={podcastPath} title={moduleName || topic} onClose={() => setShowPodcast(false)} />
             )}
         </div>
     );
