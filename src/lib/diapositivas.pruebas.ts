@@ -79,6 +79,29 @@ const limpia = normalizarDiapositiva(lamina({ tipo: 'puntos', puntos: ['a'], des
 comprobar('destacado no se guarda en "puntos"', limpia?.destacado === undefined, limpia);
 comprobar('opciones no se guardan en "puntos"', limpia?.opciones === undefined, limpia);
 
+console.log('\n── Lámina de imagen ──');
+
+comprobar('imagen sin ruta → degrada a puntos',
+  normalizarDiapositiva(lamina({ tipo: 'imagen', puntos: ['a'] }))?.tipo === 'puntos');
+
+comprobar('imagen con ruta se respeta',
+  normalizarDiapositiva(lamina({ tipo: 'imagen', imagen: { ruta: 'docente/foto.png', alt: 'Un afiche' } }))?.tipo === 'imagen');
+
+comprobar('guarda la ruta, no una URL firmada (caduca en una hora)',
+  normalizarDiapositiva(lamina({ tipo: 'imagen', imagen: { ruta: 'docente/foto.png', alt: 'x' } }))?.imagen?.ruta === 'docente/foto.png');
+
+comprobar('una lámina solo con imagen no se descarta',
+  normalizarDiapositiva(lamina({ tipo: 'imagen', titulo: '', imagen: { ruta: 'a/b.png', alt: '' } })) !== null);
+
+comprobar('imagen sin ruta se ignora',
+  normalizarDiapositiva(lamina({ tipo: 'imagen', imagen: { alt: 'sin ruta' }, puntos: ['x'] }))?.imagen === undefined);
+
+comprobar('el alt entra en la búsqueda de la biblioteca',
+  aTextoPlano({
+    titulo: 'T',
+    diapositivas: [normalizarDiapositiva(lamina({ tipo: 'imagen', imagen: { ruta: 'a.png', alt: 'Afiche de campaña vial' } }))!],
+  }).includes('Afiche de campaña vial'));
+
 console.log('\n── Puente desde el formato viejo (Markdown parseado) ──');
 
 const legado = desdeLegado({

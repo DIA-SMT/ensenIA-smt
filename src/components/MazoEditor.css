@@ -166,3 +166,34 @@
   .me-mini { width: auto; flex-shrink: 0; }
   .me-mini-titulo { max-width: 11ch; }
 }
+
+.me-imagen {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.me-imagen > label.btn { cursor: pointer; }
+
+.me-alt { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+
+.me-alt > span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.me-alt input {
+  padding: 7px 10px;
+  font-size: 0.86rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.me-alt input:focus { border-color: var(--border-focus); }

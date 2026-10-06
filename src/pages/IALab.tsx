@@ -1650,6 +1650,7 @@ export default function IALab() {
                             alCambiar={setMazo}
                             alGuardar={guardarMazoEnBiblioteca}
                             guardando={guardandoMazo}
+                            docenteId={user.id}
                             pie={[subjectName, currentAssignment?.courseName].filter(Boolean).join(' · ')}
                             contexto={{
                                 subjectName: subjectName || undefined,

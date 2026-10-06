@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, StickyNote, Plus, X } from 'lucide-react';
 import { disenoDe, varsDiseno, DISENO_PREDETERMINADO } from '../lib/disenos';
+import { getSignedUrl } from '../services/documents.service';
 import type { Mazo, Diapositiva, Columna } from '../lib/diapositivas';
 import './MazoVisor.css';
 
@@ -28,6 +29,31 @@ function enCampoDeTexto(t: EventTarget | null): boolean {
 
 /** Cambiar una diapositiva. Si no está, la lámina es de solo lectura. */
 type AlCambiar = ((d: Diapositiva) => void) | undefined;
+
+/**
+ * La imagen vive en el bucket privado, así que hay que pedir una URL
+ * firmada. Se guarda la ruta y no la URL a propósito: una URL firmada
+ * caduca en una hora, y un mazo guardado en marzo se abre en agosto.
+ */
+function ImagenDeLamina({ ruta, alt }: { ruta: string; alt: string }) {
+  // El estado guarda de qué ruta es: así cambiar de imagen no necesita
+  // limpiarlo a mano antes de pedir la nueva (eso encadena renders), se
+  // deduce comparando.
+  const [estado, setEstado] = useState<{ ruta: string; url: string | null } | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    getSignedUrl(ruta)
+      .then(u => { if (vivo) setEstado({ ruta, url: u }); })
+      .catch(() => { if (vivo) setEstado({ ruta, url: null }); });
+    return () => { vivo = false; };
+  }, [ruta]);
+
+  const actual = estado?.ruta === ruta ? estado : null;
+  if (!actual) return <span className="mv-img-cargando" aria-hidden="true" />;
+  if (!actual.url) return <span className="mv-img-falla">No se pudo cargar la imagen.</span>;
+  return <img src={actual.url} alt={alt} className="mv-img" />;
+}
 
 /**
  * Texto que se vuelve campo cuando hay edición.
@@ -224,6 +250,21 @@ export function Lamina({ dia, pie, alCambiar }: {
                 )}
               />
             </>
+          )}
+
+          {dia.tipo === 'imagen' && dia.imagen && (
+            <figure className="mv-figura">
+              <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} />
+              {(dia.puntos.length > 0 || ed) && (
+                <figcaption>
+                  <Campo
+                    valor={dia.puntos.join(' ')}
+                    alEscribir={ed ? v => set({ puntos: v ? [v] : [] }) : undefined}
+                    placeholder="Epígrafe (opcional)"
+                  />
+                </figcaption>
+              )}
+            </figure>
           )}
 
           {(dia.tipo === 'puntos' || dia.tipo === 'cierre') && (

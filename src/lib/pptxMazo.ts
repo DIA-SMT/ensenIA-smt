@@ -22,6 +22,7 @@ import type PptxGenJS from 'pptxgenjs';
 import { disenoDe } from './disenos';
 import type { Diseno } from './disenos';
 import type { Mazo, Diapositiva } from './diapositivas';
+import { getSignedUrl } from '../services/documents.service';
 
 /** 16:9 en pulgadas, la medida que entiende pptxgenjs. */
 const ANCHO = 13.33;
@@ -103,7 +104,9 @@ function viñetas(s: PptxGenJS.Slide, puntos: string[], d: Diseno, y = 1.8, x = 
   );
 }
 
-function dibujar(pptx: PptxGenJS, dia: Diapositiva, d: Diseno, esContraste: boolean) {
+type DiapositivaConImagen = Diapositiva & { imagenData?: string };
+
+function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContraste: boolean) {
   const cuerpoBase = esContraste ? 24 : 20;
 
   switch (dia.tipo) {
@@ -176,6 +179,27 @@ function dibujar(pptx: PptxGenJS, dia: Diapositiva, d: Diseno, esContraste: bool
       return s;
     }
 
+    case 'imagen': {
+        const s = pptx.addSlide({ masterName: MAESTRA.contenido });
+        titulo(s, dia.titulo, d.titulo);
+        // La imagen va embebida en base64: el .pptx tiene que abrirse en la
+        // compu del aula sin internet y sin la sesión del docente.
+        if (dia.imagenData) {
+            s.addImage({
+                data: dia.imagenData,
+                x: 0.9, y: 1.7, w: 11.6, h: dia.puntos.length ? 4.5 : 5.1,
+                sizing: { type: 'contain', w: 11.6, h: dia.puntos.length ? 4.5 : 5.1 },
+            });
+        }
+        if (dia.puntos.length) {
+            s.addText(dia.puntos.join(' '), {
+                x: 0.9, y: 6.3, w: 11.6, h: 0.6,
+                fontSize: 14, italic: true, color: d.pie, align: 'center',
+            });
+        }
+        return s;
+    }
+
     case 'cierre': {
       const s = pptx.addSlide({ masterName: MAESTRA.contenido });
       titulo(s, dia.titulo, d.acento);
@@ -218,7 +242,27 @@ export async function exportarMazoPptx(mazo: Mazo, opts: OpcionesExport = {}): P
     }, d, esContraste);
   }
 
-  for (const dia of mazo.diapositivas) {
+  // Las imagenes se bajan ANTES de dibujar: el .pptx las lleva embebidas,
+  // asi se abre en la compu del aula sin internet y sin la sesion del docente.
+  const conImagen = await Promise.all(mazo.diapositivas.map(async (dia): Promise<DiapositivaConImagen> => {
+    if (!dia.imagen) return dia;
+    try {
+      const url = await getSignedUrl(dia.imagen.ruta);
+      const blob = await (await fetch(url)).blob();
+      const data = await new Promise<string>((ok, mal) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result));
+        r.onerror = mal;
+        r.readAsDataURL(blob);
+      });
+      return { ...dia, imagenData: data };
+    } catch {
+      // Sin la imagen la lamina queda con su titulo: mejor que no exportar.
+      return dia;
+    }
+  }));
+
+  for (const dia of conImagen) {
     const s = dibujar(pptx, dia, d, esContraste);
     // La nota del docente va a las notas del orador: PowerPoint las muestra
     // en su pantalla y no en el proyector.

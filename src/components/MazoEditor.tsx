@@ -14,12 +14,14 @@
 import { useState } from 'react';
 import {
     ChevronUp, ChevronDown, Copy, Trash2, Plus, Save, Download,
-    Palette, LayoutTemplate, StickyNote, Loader2,
+    Palette, LayoutTemplate, StickyNote, Loader2, ImagePlus,
 } from 'lucide-react';
 import { Lamina } from './MazoVisor';
 import { DISENOS, disenoDe, varsDiseno, DISENO_PREDETERMINADO } from '../lib/disenos';
 import { TIPOS_LAMINA, type Mazo, type Diapositiva, type TipoLamina } from '../lib/diapositivas';
 import { exportarMazoPptx } from '../lib/pptxMazo';
+import { uploadFile } from '../services/documents.service';
+import { avisar } from './ui/avisar';
 import './MazoEditor.css';
 
 const NOMBRE_TIPO: Record<TipoLamina, string> = {
@@ -28,6 +30,7 @@ const NOMBRE_TIPO: Record<TipoLamina, string> = {
     destacado: 'Destacado',
     'dos-columnas': 'Dos columnas',
     pregunta: 'Pregunta',
+    imagen: 'Imagen',
     cierre: 'Cierre',
 };
 
@@ -37,10 +40,11 @@ function laminaNueva(tipo: TipoLamina): Diapositiva {
     if (tipo === 'destacado') return { ...base, destacado: '' };
     if (tipo === 'dos-columnas') return { ...base, izquierda: { titulo: '', puntos: [''] }, derecha: { titulo: '', puntos: [''] } };
     if (tipo === 'pregunta') return { ...base, opciones: ['', ''], correcta: null };
+    if (tipo === 'imagen') return base;
     return { ...base, puntos: [''] };
 }
 
-export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie, contexto }: {
+export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie, contexto, docenteId }: {
     mazo: Mazo;
     alCambiar: (m: Mazo) => void;
     /** Si no está, el mazo no se persiste (por ejemplo, recién generado). */
@@ -48,10 +52,13 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
     guardando?: boolean;
     pie?: string;
     contexto?: { subjectName?: string; courseName?: string; teacherName?: string };
+    /** Dueño del material: define la carpeta donde se suben las imágenes. */
+    docenteId?: string;
 }) {
     const [i, setI] = useState(0);
     const [verNotas, setVerNotas] = useState(true);
     const [bajando, setBajando] = useState(false);
+    const [subiendo, setSubiendo] = useState(false);
 
     const total = mazo.diapositivas.length;
     const idx = Math.min(i, total - 1);
@@ -109,6 +116,31 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
             ...(tipo === 'pregunta' ? { opciones: dia.opciones?.length ? dia.opciones : nueva.opciones, correcta: dia.correcta ?? null } : {}),
             ...(dia.nota ? { nota: dia.nota } : {}),
         });
+    };
+
+    /**
+     * Sube la imagen al mismo bucket que el resto de los materiales.
+     * Se guarda la ruta, no la URL: una URL firmada caduca en una hora y
+     * un mazo guardado en marzo se abre en agosto.
+     */
+    const subirImagen = async (archivo: File) => {
+        if (!docenteId) {
+            avisar.error('No puedo subir la imagen', 'Falta saber de quién es el material.');
+            return;
+        }
+        if (archivo.size > 5 * 1024 * 1024) {
+            avisar.error('La imagen pesa demasiado', 'Máximo 5 MB. Una captura o una foto reducida alcanza.');
+            return;
+        }
+        setSubiendo(true);
+        try {
+            const { storagePath } = await uploadFile(docenteId, archivo);
+            reemplazar(idx, { ...dia, imagen: { ruta: storagePath, alt: dia.imagen?.alt ?? '' } });
+        } catch (err) {
+            avisar.error('No se pudo subir la imagen', err instanceof Error ? err.message : '');
+        } finally {
+            setSubiendo(false);
+        }
     };
 
     const descargar = async () => {
@@ -210,6 +242,37 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
                     <div style={varsDiseno(d, dia.tipo === 'pregunta')}>
                         <Lamina dia={dia} pie={pie} alCambiar={nd => reemplazar(idx, nd)} />
                     </div>
+
+                    {dia.tipo === 'imagen' && (
+                        <div className="me-imagen">
+                            <label className="btn btn-outline btn-sm">
+                                {subiendo ? <Loader2 size={14} className="girando" /> : <ImagePlus size={14} />}
+                                {dia.imagen ? 'Cambiar imagen' : 'Subir imagen'}
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    hidden
+                                    disabled={subiendo}
+                                    onChange={e => {
+                                        const f = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (f) subirImagen(f);
+                                    }}
+                                />
+                            </label>
+                            {dia.imagen && (
+                                <label className="me-alt">
+                                    <span>Qué se ve en la imagen</span>
+                                    <input
+                                        type="text"
+                                        value={dia.imagen.alt}
+                                        placeholder="Para quien no la puede ver"
+                                        onChange={e => reemplazar(idx, { ...dia, imagen: { ...dia.imagen!, alt: e.target.value } })}
+                                    />
+                                </label>
+                            )}
+                        </div>
+                    )}
 
                     {verNotas && (
                         <label className="me-nota">

@@ -33,15 +33,24 @@ export type TipoLamina =
   | 'destacado'
   | 'dos-columnas'
   | 'pregunta'
+  | 'imagen'
   | 'cierre';
 
 export const TIPOS_LAMINA: TipoLamina[] = [
-  'portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'cierre',
+  'portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'imagen', 'cierre',
 ];
 
 export interface Columna {
   titulo: string;
   puntos: string[];
+}
+
+export interface Imagen {
+  /** Ruta dentro del bucket "library". La URL firmada se pide al mostrarla:
+      guardar la URL seria guardar algo que caduca en una hora. */
+  ruta: string;
+  /** Texto alternativo. Sin esto la lamina no sirve con lector de pantalla. */
+  alt: string;
 }
 
 export interface Diapositiva {
@@ -58,6 +67,8 @@ export interface Diapositiva {
   opciones?: string[];
   /** pregunta: índice de la correcta, o null si es de opinión. */
   correcta?: number | null;
+  /** Imagen de la lámina. La sube el docente. */
+  imagen?: Imagen;
   /** Notas del orador. Nunca se le muestran al curso. */
   nota?: string;
 }
@@ -105,6 +116,11 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
   const opciones = lista(o.opciones, 6);
   const nota = texto(o.nota, 600) || undefined;
 
+  const img = o.imagen as Record<string, unknown> | undefined;
+  const imagen = img && typeof img === 'object' && texto(img.ruta, 400)
+    ? { ruta: texto(img.ruta, 400), alt: texto(img.alt, 200) }
+    : undefined;
+
   let tipo: TipoLamina = TIPOS_LAMINA.includes(o.tipo as TipoLamina)
     ? (o.tipo as TipoLamina)
     : 'puntos';
@@ -113,9 +129,11 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
   if (tipo === 'dos-columnas' && !(izquierda && derecha)) tipo = 'puntos';
   if (tipo === 'destacado' && !destacado) tipo = 'puntos';
   if (tipo === 'pregunta' && opciones.length < 2) tipo = 'puntos';
+  // Una lámina de imagen sin imagen es una lámina en blanco.
+  if (tipo === 'imagen' && !imagen) tipo = 'puntos';
 
   // Una lámina sin nada que mostrar no va.
-  const tieneCuerpo = puntos.length || destacado || izquierda || opciones.length;
+  const tieneCuerpo = puntos.length || destacado || izquierda || opciones.length || imagen;
   if (!titulo && !tieneCuerpo) return null;
 
   const correctaCruda = typeof o.correcta === 'number' ? o.correcta : null;
@@ -131,6 +149,7 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
     ...(destacado && tipo === 'destacado' ? { destacado } : {}),
     ...(tipo === 'dos-columnas' ? { izquierda, derecha } : {}),
     ...(tipo === 'pregunta' ? { opciones, correcta } : {}),
+    ...(imagen ? { imagen } : {}),
     ...(nota ? { nota } : {}),
   };
 }
@@ -239,6 +258,7 @@ export function aTextoPlano(mazo: Mazo): string {
       col.puntos.forEach(p => partes.push(`- ${p}`));
     }
     d.opciones?.forEach((o, j) => partes.push(`${String.fromCharCode(65 + j)}) ${o}`));
+    if (d.imagen?.alt) partes.push(d.imagen.alt);
     if (d.nota) partes.push(`Nota para el docente: ${d.nota}`);
   });
 
