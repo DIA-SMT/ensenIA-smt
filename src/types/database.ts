@@ -2837,6 +2837,55 @@ export type Database = {
           },
         ]
       }
+      live_session_materials: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          id: string
+          material_id: string | null
+          session_id: string
+          sort_order: number
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id: string
+          sort_order?: number
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          session_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_session_materials_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "planning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "library_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_session_materials_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_sessions: {
         Row: {
           course_id: string

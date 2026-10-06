@@ -46,9 +46,25 @@
 .elm-opcion-texto { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .elm-opcion .badge { flex-shrink: 0; }
 
+/* El número de orden en la clase, en lugar del ícono, cuando está elegido */
+.elm-orden {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--acento);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .elm-pie {
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-5) var(--space-4);
   border-top: 1px solid var(--border-subtle);
 }

@@ -24,8 +24,8 @@ import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
     getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds, setLiveMaterial,
-    getCorrectResponders, getMyPastSessions,
-    LIVE_KIND_META,
+    getCorrectResponders, getMyPastSessions, sincronizarMaterialesDeClase,
+    LIVE_KIND_META, type EleccionMaterial,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
 } from '../services/live.service';
@@ -34,7 +34,7 @@ import { getPlanningByTeacher } from '../services/planning.service';
 import MaterialEnVivo from '../components/MaterialEnVivo';
 import PremiarEnVivo from '../components/PremiarEnVivo';
 import ResumenClase from '../components/ResumenClase';
-import ElegirMaterial, { type EleccionMaterial } from '../components/ElegirMaterial';
+import ElegirMaterial from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
@@ -60,7 +60,8 @@ export default function ClaseEnVivo() {
     const [starting, setStarting] = useState(false);
     const [startError, setStartError] = useState('');
     // Material elegido antes de arrancar (opcional)
-    const [materialInicial, setMaterialInicial] = useState<EleccionMaterial | null>(null);
+    // Los materiales elegidos antes de arrancar (uno o varios, 049): el primero arranca en pantalla
+    const [materialesIniciales, setMaterialesIniciales] = useState<EleccionMaterial[]>([]);
     const [eligiendoInicial, setEligiendoInicial] = useState(false);
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -146,7 +147,8 @@ export default function ClaseEnVivo() {
             const idx = assignments.findIndex(a => a.subjectId === d.subjectId && (!d.courseId || a.courseId === d.courseId));
             if (idx >= 0) {
                 setAssignmentIdx(idx);
-                setMaterialInicial(d.eleccion);
+                const id = 'materialId' in d.eleccion ? d.eleccion.materialId : d.eleccion.classId;
+                setMaterialesIniciales(prev => (prev.some(x => ('materialId' in x ? x.materialId : x.classId) === id) ? prev : [...prev, d.eleccion]));
             }
         })().catch(console.error);
         return () => { cancelado = true; };
@@ -224,6 +226,7 @@ export default function ClaseEnVivo() {
         if (!a || starting) return;
         setStarting(true);
         setStartError('');
+        const primero = materialesIniciales[0] ?? null;
         try {
             const s = await startLiveSession({
                 teacherId: user.id,
@@ -231,9 +234,14 @@ export default function ClaseEnVivo() {
                 subjectId: a.subjectId,
                 courseId: a.courseId,
                 title: `${subjectName(a.subjectId)} · ${a.courseName}`,
-                materialId: materialInicial && 'materialId' in materialInicial ? materialInicial.materialId : null,
-                classId: materialInicial && 'classId' in materialInicial ? materialInicial.classId : null,
+                materialId: primero && 'materialId' in primero ? primero.materialId : null,
+                classId: primero && 'classId' in primero ? primero.classId : null,
             });
+            // El primero ya entró a la lista con la clase; el resto, en su orden
+            if (materialesIniciales.length > 1) {
+                await sincronizarMaterialesDeClase(s.id, materialesIniciales, s.materialId ?? s.classId)
+                    .catch(err => setStartError(`La clase arrancó, pero no se pudieron sumar todos los materiales: ${err instanceof Error ? err.message : 'probá desde "Agregar o quitar"'}`));
+            }
             setSession(s);
         } catch (err) {
             setStartError(err instanceof Error ? err.message : 'No se pudo iniciar la clase.');
@@ -397,7 +405,7 @@ export default function ClaseEnVivo() {
                         <select
                             className="form-select"
                             value={assignmentIdx}
-                            onChange={e => { setAssignmentIdx(Number(e.target.value)); setMaterialInicial(null); }}
+                            onChange={e => { setAssignmentIdx(Number(e.target.value)); setMaterialesIniciales([]); }}
                         >
                             {assignments.map((a, i) => (
                                 <option key={i} value={i}>
@@ -409,7 +417,13 @@ export default function ClaseEnVivo() {
                         <button type="button" className="btn btn-secondary w-full cv-start-material" onClick={() => setEligiendoInicial(true)}
                             disabled={assignments.length === 0}>
                             <BookOpen size={16} aria-hidden="true" />
-                            <span>{materialInicial ? materialInicial.titulo : 'Elegir un tema o material'}</span>
+                            <span>
+                                {materialesIniciales.length === 0
+                                    ? 'Elegir temas o materiales'
+                                    : materialesIniciales.length === 1
+                                        ? materialesIniciales[0].titulo
+                                        : `${materialesIniciales.length} materiales: ${materialesIniciales.map(m => m.titulo).join(' · ')}`}
+                            </span>
                         </button>
                         <button className="btn btn-primary w-full" onClick={handleStart} disabled={starting || assignments.length === 0}>
                             {starting ? <Loader2 size={16} className="spin" /> : <Radio size={16} />}
@@ -446,8 +460,8 @@ export default function ClaseEnVivo() {
                         teacherId={user.id}
                         subjectId={assignments[assignmentIdx].subjectId}
                         courseId={assignments[assignmentIdx].courseId}
-                        actual={materialInicial ? ('materialId' in materialInicial ? materialInicial.materialId : materialInicial.classId) : null}
-                        alElegir={e => { setMaterialInicial(e); setEligiendoInicial(false); }}
+                        elegidos={materialesIniciales}
+                        alConfirmar={lista => { setMaterialesIniciales(lista); setEligiendoInicial(false); }}
                     />
                 )}
             </div>
