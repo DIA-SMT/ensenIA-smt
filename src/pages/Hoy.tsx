@@ -12,7 +12,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
-    History, ClipboardList, Wand2, CalendarDays, Target, WifiOff,
+    History, ClipboardList, Wand2, CalendarDays, Target, WifiOff, Megaphone,
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import PrepararAula from '../components/PrepararAula';
@@ -28,7 +28,8 @@ import { getMyLiveSession, type LiveSession } from '../services/live.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import { pendientesDe } from '../services/offline-queue.service';
-import type { ScheduleBlock, Alert as AlertType, TeacherStats } from '../types';
+import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
+import type { ScheduleBlock, Alert as AlertType, TeacherStats, Communication } from '../types';
 import './Hoy.css';
 
 const TIMELINE_META: Record<TimelineKind, { icon: typeof Boxes; label: string }> = {
@@ -83,6 +84,7 @@ export default function Hoy() {
     const [statsFallo, setStatsFallo] = useState(false);
     const [horarioFallo, setHorarioFallo] = useState(false);
     const [alerts, setAlerts] = useState<AlertType[]>([]);
+    const [comunicadosSinLeer, setComunicadosSinLeer] = useState(0);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
     const [isNew, setIsNew] = useState(false);
@@ -108,14 +110,18 @@ export default function Hoy() {
             getActivitiesByTeacher(user.id).catch(() => []),
             getMaterialsByTeacher(user.id).catch(() => []),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
-        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail]) => {
+            getCommunicationsBySchool(user.schoolId).catch(() => [] as Communication[]),
+        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail, comunicados]) => {
             const horario = horarioLeido ?? [];
             setHorarioFallo(horarioLeido === null);
             setSemana(horario);
             setTodayClasses(horario.filter(b => b.dayIndex === dayIndex).sort((a, b) => a.startHour - b.startHour));
             setStatsFallo(st === null);
             if (st) setStats(st);
-            setAlerts(al.filter(a => !a.isRead).slice(0, 3));
+            // Un alumno que pidió hablar va primero (051)
+            const pidioHablar = (a: AlertType) => (a.title === 'Quiere hablar con vos' ? 0 : 1);
+            setAlerts(al.filter(a => !a.isRead).sort((a, b) => pidioHablar(a) - pidioHablar(b)).slice(0, 3));
+            setComunicadosSinLeer(sinLeer(comunicados, user.id).length);
             setLiveSession(live);
             // Tomada hoy: la que llegó al servidor y la que espera señal en este equipo
             setAttendanceDone(new Set([
@@ -318,6 +324,18 @@ export default function Hoy() {
                     );
                 })}
             </section>
+
+            {/* Comunicados de dirección sin leer (051) */}
+            {comunicadosSinLeer > 0 && (
+                <Link to="/comunicados" className="card hoy-comunicados">
+                    <Megaphone size={18} aria-hidden="true" />
+                    <span>
+                        <strong>Dirección te mandó {comunicadosSinLeer === 1 ? 'un comunicado' : `${comunicadosSinLeer} comunicados`}</strong>
+                        <small>Tocá para leer{comunicadosSinLeer === 1 ? 'lo' : 'los'}</small>
+                    </span>
+                    <ChevronRight size={16} className="text-subtle" aria-hidden="true" />
+                </Link>
+            )}
 
             {/* Lo que necesita atención */}
             {alerts.length > 0 && (

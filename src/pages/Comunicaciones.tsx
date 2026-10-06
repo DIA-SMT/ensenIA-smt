@@ -217,7 +217,7 @@ export default function Comunicaciones() {
           </div>
         ) : cargando ? null : communications.length === 0 ? (
           <EstadoVacio className="comms-vacio" icono={MessageSquare} titulo="Todavía no mandaste comunicados"
-            texto="Le llegan al equipo docente como aviso en su panel, y ves quién lo leyó."
+            texto="Le llegan al equipo docente en Comunicados y en Mi día, y ves quién lo leyó."
             accion={{ etiqueta: 'Escribir un comunicado', icono: Plus, alTocar: escribir }} />
         ) : (
           <EstadoVacio className="comms-vacio" icono={MessageSquare} titulo="Elegí un comunicado de la lista"

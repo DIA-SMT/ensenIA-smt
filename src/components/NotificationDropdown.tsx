@@ -143,7 +143,11 @@ export default function NotificationDropdown() {
                                 className="notif-vacio"
                                 icono={Bell}
                                 titulo="No tenés avisos"
-                                texto="Cuando la escuela o tus docentes te avisen algo, aparece acá."
+                                texto={user?.role === 'director'
+                                    ? 'Cuando un docente te avise algo o una alerta se escale, aparece acá.'
+                                    : isDocente
+                                        ? 'Acá aparecen las entregas por corregir. Lo que manda dirección está en Comunicados.'
+                                        : 'Cuando la escuela te avise algo, aparece acá.'}
                             />
                         ) : (
                             <ul className="notif-lista">

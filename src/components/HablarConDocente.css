@@ -1,0 +1,31 @@
+/* "Quiero hablar con un docente" (alumno) */
+.hablar-boton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hablar-boton:hover { background: var(--bg-hover); }
+.hablar-boton > svg { flex-shrink: 0; color: var(--acento); }
+.hablar-boton > span { display: flex; flex-direction: column; }
+.hablar-boton strong { font-size: 0.9375rem; }
+.hablar-boton small { font-size: 0.8125rem; color: var(--text-secondary); }
+
+.hablar-listo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--success);
+}
+.hablar-listo svg { flex-shrink: 0; margin-top: 3px; }
