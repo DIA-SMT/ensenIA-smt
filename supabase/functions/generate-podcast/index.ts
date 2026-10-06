@@ -4,11 +4,11 @@
  * POST /functions/v1/generate-podcast  { materialId }
  *
  * Convierte un material de la biblioteca en un mini podcast (~2-3 min):
- *  1. Claude (vía OpenRouter) escribe un guion cálido en rioplatense.
- *  2. ElevenLabs lo convierte a voz (eleven_multilingual_v2).
+ *  1. Claude (vía OpenRouter) escribe un guion cálido, como una profe tucumana.
+ *  2. ElevenLabs lo convierte a voz (eleven_multilingual_v2) con una voz argentina.
  *  3. El MP3 queda en Storage (bucket "library") y el material se marca "ready".
  *
- * Secrets: OPENROUTER_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID (opcional).
+ * Secrets: OPENROUTER_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_PODCAST_VOICE_ID (opcional).
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -16,8 +16,12 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const SCRIPT_MODEL = 'anthropic/claude-sonnet-5';
 const ELEVEN_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-// "Sarah": voz multilingüe clara; se puede pisar con el secret ELEVENLABS_VOICE_ID.
-const DEFAULT_VOICE = 'EXAVITQu4vr4xnSDxMaL';
+// Voz argentina de la Voice Library (agregada a "My voices" de la cuenta:
+// sin eso la API no la encuentra). Se puede pisar con el secret
+// ELEVENLABS_PODCAST_VOICE_ID. Antes era "Sarah" (EXAVITQu4vr4xnSDxMaL), que
+// sonaba a español neutro aunque el guion fuera rioplatense; el secret viejo
+// ELEVENLABS_VOICE_ID ya no se lee para que no la pise sin querer.
+const DEFAULT_VOICE = 'LZj1dIzYRl9rc9TIXnMt';
 const BUCKET = 'library';
 const MAX_SOURCE_CHARS = 25_000;
 
@@ -29,7 +33,9 @@ Estructura:
 3. Cierre: las 2 cosas que hay que recordar sí o sí + una pregunta para dejarlos pensando.
 
 Reglas:
-- Español rioplatense natural y cálido, como una profe copada contando algo interesante. Usá "vos".
+- Hablás como una profe tucumana copada contando algo interesante: español rioplatense del norte, cálido y bien de acá. Voseo siempre ("mirá", "fijate", "pensalo"), "ustedes" para el grupo.
+- Que se note que es de Tucumán, sin caricatura: algún "chango" o "changa", "¿vieron?", "re", "posta", "de una", y ejemplos de la vida tucumana (el colectivo, la plaza Independencia, el Parque 9 de Julio, el cerro San Javier, la zafra, el ingenio, las empanadas). Uno o dos giros por guion, no en cada frase.
+- Escribí las palabras completas y bien escritas (nada de "vamo'" ni "lo' chico'"): el acento lo pone la voz.
 - SOLO texto para leer en voz alta: sin markdown, sin títulos, sin viñetas, sin emojis, sin acotaciones entre corchetes.
 - Oraciones cortas. Puntuación natural para que la voz respire.
 - Fiel al material: no inventes contenido.`;
@@ -159,7 +165,7 @@ Deno.serve(async (req: Request) => {
     });
 
     // ── 2. Voz ──
-    const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || DEFAULT_VOICE;
+    const voiceId = Deno.env.get('ELEVENLABS_PODCAST_VOICE_ID') || DEFAULT_VOICE;
     const ttsRes = await fetch(`${ELEVEN_URL}/${voiceId}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: {
