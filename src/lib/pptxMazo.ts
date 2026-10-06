@@ -203,14 +203,35 @@ function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContra
     case 'cierre': {
       const s = pptx.addSlide({ masterName: MAESTRA.contenido });
       titulo(s, dia.titulo, d.acento);
-      viñetas(s, dia.puntos, d, 1.9, 0.9, 11.6, 4.6, cuerpoBase + 2);
+      if (dia.imagenData) {
+        viñetas(s, dia.puntos, d, 1.9, 0.9, 6.6, 4.6, cuerpoBase + 1);
+        s.addImage({
+          data: dia.imagenData,
+          x: 7.8, y: 1.9, w: 4.7, h: 4.2,
+          sizing: { type: 'contain', w: 4.7, h: 4.2 },
+        });
+      } else {
+        viñetas(s, dia.puntos, d, 1.9, 0.9, 11.6, 4.6, cuerpoBase + 2);
+      }
       return s;
     }
 
     default: {
       const s = pptx.addSlide({ masterName: MAESTRA.contenido });
       titulo(s, dia.titulo, d.titulo);
-      viñetas(s, dia.puntos, d, 1.8, 0.9, 11.6, 4.9, cuerpoBase);
+      // Con imagen, el texto se corre a la izquierda y ella ocupa la
+      // derecha: es la diapositiva más común de una clase. La imagen
+      // acompaña al contenido, no lo reemplaza, así que se lleva menos.
+      if (dia.imagenData) {
+        viñetas(s, dia.puntos, d, 1.8, 0.9, 6.6, 4.9, cuerpoBase - 1);
+        s.addImage({
+          data: dia.imagenData,
+          x: 7.8, y: 1.8, w: 4.7, h: 4.3,
+          sizing: { type: 'contain', w: 4.7, h: 4.3 },
+        });
+      } else {
+        viñetas(s, dia.puntos, d, 1.8, 0.9, 11.6, 4.9, cuerpoBase);
+      }
       return s;
     }
   }

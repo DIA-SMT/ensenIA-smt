@@ -24,6 +24,10 @@ import { uploadFile, generarImagenDeLamina } from '../services/documents.service
 import { avisar } from './ui/avisar';
 import './MazoEditor.css';
 
+/** Dónde se dibuja la imagen si la hay. En las otras no se ofrece: un campo
+ * que no se ve en ningún lado es peor que no tenerlo. */
+const ADMITEN_IMAGEN: TipoLamina[] = ['imagen', 'puntos', 'cierre'];
+
 const NOMBRE_TIPO: Record<TipoLamina, string> = {
     portada: 'Portada',
     puntos: 'Puntos',
@@ -154,6 +158,10 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
             ...(tipo === 'destacado' ? { destacado: dia.destacado || dia.puntos.join('\n') } : {}),
             ...(tipo === 'dos-columnas' ? { izquierda: dia.izquierda ?? nueva.izquierda, derecha: dia.derecha ?? nueva.derecha } : {}),
             ...(tipo === 'pregunta' ? { opciones: dia.opciones?.length ? dia.opciones : nueva.opciones, correcta: dia.correcta ?? null } : {}),
+            // La imagen sobrevive al cambio de tipo, igual que el texto. Si
+            // el tipo nuevo no la dibuja queda guardada, y vuelve a verse al
+            // volver a uno que sí.
+            ...(dia.imagen ? { imagen: dia.imagen } : {}),
             ...(dia.nota ? { nota: dia.nota } : {}),
         });
     };
@@ -305,7 +313,9 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
                         <Lamina dia={dia} pie={pie} alCambiar={nd => reemplazar(idx, nd)} />
                     </div>
 
-                    {dia.tipo === 'imagen' && (
+                    {/* La imagen tambien acompaña a una lamina de puntos: esa es
+                        la diapositiva mas comun de una clase. */}
+                    {ADMITEN_IMAGEN.includes(dia.tipo) && (
                         <div className="me-imagen">
                             <button
                                 className="btn btn-outline btn-sm"

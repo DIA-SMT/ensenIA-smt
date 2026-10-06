@@ -267,14 +267,25 @@ export function Lamina({ dia, pie, alCambiar }: {
             </figure>
           )}
 
-          {(dia.tipo === 'puntos' || dia.tipo === 'cierre') && (
-            <Lineas
-              items={dia.puntos.length || !ed ? dia.puntos : ['']}
-              alCambiar={ed ? v => set({ puntos: v }) : undefined}
-              claseLista="mv-puntos"
-              placeholder="Una línea"
-            />
-          )}
+          {/* Puntos con imagen al costado: la diapositiva más común de una
+              clase. La imagen no reemplaza al contenido, lo acompaña. */}
+          {(dia.tipo === 'puntos' || dia.tipo === 'cierre') && (() => {
+            const lista = (
+              <Lineas
+                items={dia.puntos.length || !ed ? dia.puntos : ['']}
+                alCambiar={ed ? v => set({ puntos: v }) : undefined}
+                claseLista="mv-puntos"
+                placeholder="Una línea"
+              />
+            );
+            if (!dia.imagen) return lista;
+            return (
+              <div className="mv-con-imagen">
+                {lista}
+                <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} />
+              </div>
+            );
+          })()}
         </>
       )}
 

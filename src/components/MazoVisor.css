@@ -366,3 +366,21 @@ li:hover > .mv-quitar, .mv-quitar:focus-visible { opacity: 1; }
   font-size: 0.85rem;
   color: var(--d-pie);
 }
+
+/* Puntos con imagen al costado. El texto manda: la imagen acompaña y por
+   eso se lleva la fracción menor. En celular la imagen va abajo, porque
+   dos columnas de 180 px no se leen. */
+.mv-con-imagen {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: clamp(12px, 2.5%, 32px);
+  align-items: center;
+  min-height: 0;
+  flex: 1;
+}
+
+.mv-con-imagen .mv-puntos { margin: 0; }
+
+@media (max-width: 620px) {
+  .mv-con-imagen { grid-template-columns: 1fr; }
+}
