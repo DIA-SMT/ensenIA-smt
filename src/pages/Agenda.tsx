@@ -1,133 +1,75 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Users, MapPin, FlaskConical, CheckSquare } from 'lucide-react';
+import { X, Users, MapPin, FlaskConical, CheckSquare, CalendarClock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getScheduleByTeacher } from '../services/schedule.service';
+import { getScheduleByTeacher, horaTexto } from '../services/schedule.service';
+import HorarioSemanal from '../components/HorarioSemanal';
+import { DIAS, colorDe, hoyIndice } from '../lib/horario';
 import type { ScheduleBlock } from '../types';
 import './Agenda.css';
 
-const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-const hours = Array.from({ length: 9 }, (_, i) => i + 8); // 8:00 to 16:00
-
-const blockColors: Record<string, string> = {
-    green: 'block-blue',
-    blue: 'block-green',
-    purple: 'block-purple',
-    orange: 'block-orange',
-    amber: 'block-orange',
-    teal: 'block-blue',
-};
-
-function formatHourLabel(h: number): string {
-    const hh = Math.floor(h);
-    const mm = h % 1 ? '30' : '00';
-    return `${hh}:${mm}`;
-}
-
+/**
+ * La semana del docente: sus clases según el horario que arma la dirección
+ * (Gestión de la escuela → Horario). Tocando una clase: pasar lista o
+ * prepararla.
+ */
 export default function Agenda() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
-    const [myBlocks, setMyBlocks] = useState<ScheduleBlock[]>([]);
+    const [myBlocks, setMyBlocks] = useState<ScheduleBlock[] | null>(null);
 
     useEffect(() => {
         if (!user) return;
-        getScheduleByTeacher(user.id).then(setMyBlocks).catch(console.error);
+        getScheduleByTeacher(user.id).then(setMyBlocks).catch(() => setMyBlocks([]));
     }, [user]);
 
     if (!user) return null;
 
-    // Get current week dates
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + mondayOffset);
-
-    const todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0
-
-    const weekDates = days.map((_, i) => {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        return d.getDate();
-    });
-
-    const weekLabel = `Semana ${monday.getDate()} - ${weekDates[4]} ${today.toLocaleDateString('es-AR', { month: 'long' })}`;
+    const horas = (myBlocks ?? []).reduce((n, b) => n + b.duration, 0);
+    const cursos = new Set((myBlocks ?? []).map(b => b.courseId)).size;
 
     return (
         <div className="agenda-container">
             <div className="agenda-header card">
-                <h2 className="agenda-title">Mi Agenda</h2>
-                <div className="agenda-controls">
-                    <button className="btn btn-outline">Hoy</button>
-                    <button className="btn btn-ghost">&lt;</button>
-                    <span className="current-week">{weekLabel}</span>
-                    <button className="btn btn-ghost">&gt;</button>
-                </div>
+                <h2 className="agenda-title">Mi semana</h2>
+                {myBlocks && myBlocks.length > 0 && (
+                    <span className="text-secondary text-sm">
+                        {myBlocks.length} clase{myBlocks.length !== 1 ? 's' : ''} · {horaTexto(horas)} h · {cursos} curso{cursos !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
 
-            <div className="calendar-grid card">
-                <div className="time-col">
-                    <div className="header-cell"></div>
-                    {hours.map(h => (
-                        <div key={h} className="time-cell">
-                            <span>{h}:00</span>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="days-wrapper">
-                    <div className="days-header">
-                        {days.map((day, idx) => (
-                            <div key={day} className={`day-header-cell ${idx === todayIndex ? 'today' : ''}`}>
-                                <span className="day-name">{day}</span>
-                                <span className="day-date">{weekDates[idx]}</span>
+            <div className="card" style={{ padding: 'var(--space-4)' }}>
+                {myBlocks === null ? <p className="text-secondary">Cargando…</p> : (
+                    <HorarioSemanal
+                        bloques={myBlocks}
+                        etiqueta={b => ({ titulo: b.subjectName, detalle: b.courseName })}
+                        onBloque={setSelectedBlock}
+                        hoy={hoyIndice() ?? undefined}
+                        vacio={
+                            <div className="agenda-vacia">
+                                <CalendarClock size={28} aria-hidden="true" />
+                                <strong>Todavía no tenés clases en el horario</strong>
+                                <p className="text-secondary text-sm">El horario lo carga la dirección de tu escuela en Gestión de la escuela → Horario. Apenas lo cargue, tus clases aparecen acá y en "Mi día".</p>
                             </div>
-                        ))}
-                    </div>
-
-                    <div className="days-grid-content">
-                        {/* Background Grid Lines */}
-                        <div className="grid-lines">
-                            {hours.map(h => (
-                                <div key={h} className="grid-row"></div>
-                            ))}
-                        </div>
-
-                        {/* Schedule Blocks */}
-                        {myBlocks.map(block => (
-                            <div
-                                key={block.id}
-                                className={`schedule-block ${blockColors[block.colorClass] || 'block-blue'}`}
-                                style={{
-                                    gridColumn: block.dayIndex + 1,
-                                    top: `${(block.startHour - 8) * 60}px`,
-                                    height: `${block.duration * 60}px`
-                                }}
-                                onClick={() => setSelectedBlock(block)}
-                            >
-                                <div className="block-title">{block.subjectName}</div>
-                                <div className="block-details">
-                                    <span>{block.courseName}</span> • <span>{block.room}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                        }
+                    />
+                )}
             </div>
 
-            {/* Detail Modal */}
+            {/* Detalle de la clase */}
             {selectedBlock && (
                 <div className="modal-overlay" onClick={() => setSelectedBlock(null)}>
                     <div className="modal-content card" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Detalle de Clase</h3>
+                            <h3>Detalle de la clase</h3>
                             <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedBlock(null)}><X size={20} /></button>
                         </div>
 
-                        <div className={`modal-banner ${blockColors[selectedBlock.colorClass] || 'block-blue'}`}>
+                        <div className={`modal-banner hs-${colorDe(selectedBlock.subjectId)}`} style={{ background: 'var(--hs-f)', borderLeft: '4px solid var(--hs-c)', color: 'var(--text-primary)' }}>
                             <h2>{selectedBlock.subjectName}</h2>
-                            <p>{formatHourLabel(selectedBlock.startHour)} - {formatHourLabel(selectedBlock.startHour + selectedBlock.duration)}</p>
+                            <p>{DIAS[selectedBlock.dayIndex]} · {horaTexto(selectedBlock.startHour)} – {horaTexto(selectedBlock.startHour + selectedBlock.duration)}</p>
                         </div>
 
                         <div className="modal-body">
@@ -138,13 +80,15 @@ export default function Agenda() {
                                     <span className="detail-value">{selectedBlock.courseName} ({selectedBlock.studentCount} est.)</span>
                                 </div>
                             </div>
-                            <div className="detail-row">
-                                <MapPin className="text-secondary" size={18} />
-                                <div className="detail-text">
-                                    <span className="detail-label">Aula</span>
-                                    <span className="detail-value">{selectedBlock.room}</span>
+                            {selectedBlock.room && (
+                                <div className="detail-row">
+                                    <MapPin className="text-secondary" size={18} />
+                                    <div className="detail-text">
+                                        <span className="detail-label">Aula</span>
+                                        <span className="detail-value">{selectedBlock.room}</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="modal-actions">

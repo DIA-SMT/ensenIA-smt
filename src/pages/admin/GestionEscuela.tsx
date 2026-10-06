@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Building2, BookOpen, Users, GraduationCap, HeartHandshake, AlertCircle, Check, MapPin, type LucideIcon,
+  ArrowLeft, ArrowRight, Building2, BookOpen, Users, GraduationCap, HeartHandshake, AlertCircle, Check, MapPin, CalendarClock, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -28,6 +28,7 @@ import DatosTab from './DatosTab';
 import CursosTab from './CursosTab';
 import PersonalTab from './PersonalTab';
 import EstudiantesTab from './EstudiantesTab';
+import HorarioTab from './HorarioTab';
 import FamiliasTab from './FamiliasTab';
 import CredencialesModal, { type Credencial } from './CredencialesModal';
 import './Admin.css';
@@ -42,7 +43,7 @@ export interface SchoolData {
   links: AdminGuardianLink[];
 }
 
-export type Tab = 'cursos' | 'personal' | 'estudiantes' | 'familias' | 'datos';
+export type Tab = 'cursos' | 'personal' | 'horario' | 'estudiantes' | 'familias' | 'datos';
 
 /** Lo que recibe cada pestaña */
 export interface TabProps {
@@ -59,6 +60,7 @@ export interface TabProps {
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'cursos', label: 'Cursos y materias', icon: BookOpen },
   { id: 'personal', label: 'Personal', icon: Users },
+  { id: 'horario', label: 'Horario', icon: CalendarClock },
   { id: 'estudiantes', label: 'Estudiantes', icon: GraduationCap },
   { id: 'familias', label: 'Familias', icon: HeartHandshake },
   { id: 'datos', label: 'Datos', icon: Building2 },
@@ -204,6 +206,7 @@ export default function GestionEscuela() {
       <div role="tabpanel" className="adm-panel">
         {activa === 'cursos' && <CursosTab {...props} />}
         {activa === 'personal' && <PersonalTab {...props} />}
+        {activa === 'horario' && <HorarioTab {...props} />}
         {activa === 'estudiantes' && <EstudiantesTab {...props} />}
         {activa === 'familias' && <FamiliasTab {...props} />}
         {activa === 'datos' && <DatosTab {...props} />}

@@ -1,0 +1,46 @@
+/* Horario semanal: grilla en la compu, lista por día en el celular */
+
+.hs-grilla { display: grid; grid-template-columns: 44px repeat(5, minmax(0, 1fr)); gap: 0 4px; }
+.hs-cab { height: 30px; display: flex; align-items: center; justify-content: center; font-size: .8125rem; font-weight: 700; color: var(--text-secondary); }
+.hs-dia.hoy .hs-cab { color: var(--acento); }
+.hs-horas { position: relative; }
+.hs-hora-lbl { position: absolute; right: 6px; transform: translateY(-50%); font-size: .6875rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.hs-col { position: relative; border-radius: var(--radius-md); background: var(--bg-surface); }
+.hs-dia.hoy .hs-col { background: var(--bg-hover); }
+.hs-linea { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--border-color); }
+
+.hs-bloque {
+  display: flex; flex-direction: column; gap: 1px; text-align: left;
+  border: 0; border-left: 4px solid var(--hs-c); border-radius: 6px;
+  background: var(--hs-f); color: var(--text-primary);
+  padding: 4px 6px; font: inherit; overflow: hidden; min-width: 0;
+}
+.hs-grilla .hs-bloque { position: absolute; left: 3px; right: 3px; }
+button.hs-bloque { cursor: pointer; }
+button.hs-bloque:hover { filter: brightness(.97); box-shadow: 0 1px 4px rgba(15, 23, 42, .15); }
+button.hs-bloque:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.hs-hora { font-size: .6875rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.hs-titulo { font-size: .8125rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-detalle { font-size: .7188rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hs-azul { --hs-c: #2563eb; --hs-f: #eff6ff; }
+.hs-verde { --hs-c: #16a34a; --hs-f: #f0fdf4; }
+.hs-violeta { --hs-c: #7c3aed; --hs-f: #f5f3ff; }
+.hs-naranja { --hs-c: #ea580c; --hs-f: #fff7ed; }
+.hs-celeste { --hs-c: #0891b2; --hs-f: #ecfeff; }
+.hs-rosa { --hs-c: #db2777; --hs-f: #fdf2f8; }
+.hs-oliva { --hs-c: #65a30d; --hs-f: #f7fee7; }
+.hs-gris { --hs-c: #475569; --hs-f: #f1f5f9; }
+
+.hs-lista { display: none; flex-direction: column; gap: var(--space-3); }
+.hs-lista-dia { display: flex; flex-direction: column; gap: 6px; }
+.hs-lista-dia h4 { font-size: .875rem; color: var(--text-secondary); }
+.hs-lista-dia.hoy h4 { color: var(--acento); }
+.hs-lista .hs-bloque { padding: 8px 10px; }
+.hs-lista .hs-titulo, .hs-lista .hs-detalle { white-space: normal; }
+.hs-sin { font-size: .8125rem; color: var(--text-subtle); }
+
+@media (max-width: 720px) {
+  .hs-grilla { display: none; }
+  .hs-lista { display: flex; }
+}

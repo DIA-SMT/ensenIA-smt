@@ -63,6 +63,7 @@ export const cargadores = {
   '/mi-biblioteca':       () => import('../pages/MiBiblioteca'),
   '/vocacional':          () => import('../pages/Vocacional'),
   '/docentes':            () => import('../pages/Docentes'),
+  '/horario':             () => import('../pages/HorarioEscuela'),
   '/cursos/:id':          () => import('../pages/CourseDetail'),
   '/comunicaciones':      () => import('../pages/Comunicaciones'),
   '/normativa':           () => import('../pages/Normativa'),

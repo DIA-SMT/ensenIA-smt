@@ -110,6 +110,7 @@ function App() {
                 {ruta('/panel', ['director'])}
                 {ruta('/dashboard', ['director'])}
                 {ruta('/docentes', ['director'])}
+                {ruta('/horario', ['director'])}
                 {ruta('/cursos/:id', ['director'])}
                 {ruta('/comunicaciones', ['director'])}
                 {ruta('/mi-escuela', ['director'])}

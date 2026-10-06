@@ -10,7 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
-  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2,
+  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -60,6 +60,7 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/panel', etiqueta: 'Qué está pasando', icono: Activity, grupo: 'Escuela', enBarra: true, claves: 'inicio hoy clima aula asistencia' },
   { ruta: '/dashboard', etiqueta: 'Tablero', titulo: 'Tablero de dirección', icono: LayoutDashboard, grupo: 'Escuela', claves: 'panel indicadores riesgo mapa' },
   { ruta: '/docentes', etiqueta: 'Docentes', titulo: 'Equipo docente', icono: Users, grupo: 'Escuela', enBarra: true, claves: 'profesores equipo adopción' },
+  { ruta: '/horario', etiqueta: 'Horario', titulo: 'Horario de la escuela', icono: CalendarClock, grupo: 'Escuela', claves: 'agenda clases semana cursos aulas' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', enBarra: true, claves: 'riesgo bienestar señales escaladas' },
   { ruta: '/comunicaciones', etiqueta: 'Comunicaciones', icono: MessageSquare, grupo: 'Comunidad', enBarra: true, claves: 'comunicados avisos mensajes' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
