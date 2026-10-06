@@ -143,11 +143,11 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
                 <div className="me-espaciador" />
 
                 <button className="btn btn-outline btn-sm" onClick={descargar} disabled={bajando}>
-                    {bajando ? <Loader2 size={14} className="spin" /> : <Download size={14} />} PowerPoint
+                    {bajando ? <Loader2 size={14} className="girando" /> : <Download size={14} />} PowerPoint
                 </button>
                 {alGuardar && (
                     <button className="btn btn-primary btn-sm" onClick={alGuardar} disabled={guardando}>
-                        {guardando ? <Loader2 size={14} className="spin" /> : <Save size={14} />}
+                        {guardando ? <Loader2 size={14} className="girando" /> : <Save size={14} />}
                         {guardando ? 'Guardando...' : 'Guardar'}
                     </button>
                 )}

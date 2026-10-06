@@ -371,7 +371,7 @@ export function formatFileSize(bytes: number): string {
 export async function generateSlides(
   text: string,
   title: string,
-  context?: string,
+  context?: { subjectName?: string; courseName?: string },
 ): Promise<Mazo> {
   const { deck, truncated } = await callProcessDocument<{ deck: unknown; truncated?: boolean }>({
     mode: 'slides',

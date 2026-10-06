@@ -49,10 +49,24 @@ function Campo({ valor, alEscribir, placeholder, className }: {
     const el = ref.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    // Mientras está oculto —dentro de un <dialog> que todavía no se abrió—
+    // scrollHeight da 0. Si eso se escribe como alto, el campo queda en 0px
+    // para siempre y la lámina se ve vacía aunque tenga texto.
+    if (el.scrollHeight > 0) el.style.height = `${el.scrollHeight}px`;
   }, []);
 
   useEffect(ajustar, [valor, ajustar]);
+
+  // Volver a medir cuando el campo recibe tamaño (se abre el diálogo, cambia
+  // el ancho de la lámina). Observa al padre y no a sí mismo: observarse
+  // mientras se cambia el alto es un bucle.
+  useEffect(() => {
+    const padre = ref.current?.parentElement;
+    if (!padre) return;
+    const ro = new ResizeObserver(ajustar);
+    ro.observe(padre);
+    return () => ro.disconnect();
+  }, [ajustar]);
 
   if (!alEscribir) return <>{valor}</>;
 
