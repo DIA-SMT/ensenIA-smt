@@ -239,7 +239,7 @@ Deno.serve(async (req: Request) => {
   const nombre = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Hola';
 
   const { data: school } = await admin
-    .from('schools').select('name').eq('id', profile.school_id).single();
+    .from('schools').select('name, short_name, address, district').eq('id', profile.school_id).single();
   const escuela = school?.name ?? 'la escuela';
 
   // ── La sesión tiene que ser suya y de esta audiencia ──
@@ -307,7 +307,33 @@ Deno.serve(async (req: Request) => {
   // ── Contexto extra por audiencia ──
   let cursoNombre: string | undefined;
   let hijosNombres: string[] | undefined;
+  let contextoEscuela: string | undefined;
   let studentId: string | null = null;
+
+  if (profile.role === 'docente' || profile.role === 'director') {
+    contextoEscuela = [
+      `Escuela: ${school?.name ?? escuela}${school?.short_name ? ` (${school.short_name})` : ''}.`,
+      school?.address ? `Dirección: ${school.address}.` : '',
+      school?.district ? `Distrito o localidad: ${school.district}.` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  if (profile.role === 'docente') {
+    const { data: asignaciones } = await admin
+      .from('teacher_assignments')
+      .select('subjects(name), courses(name)')
+      .eq('teacher_id', user.id);
+    const materiasYCursos = (asignaciones ?? [])
+      .map((a: { subjects: { name: string } | null; courses: { name: string } | null }) =>
+        `${a.subjects?.name ?? 'Materia'} — ${a.courses?.name ?? 'Curso'}`)
+      .filter((valor: string, indice: number, todos: string[]) => todos.indexOf(valor) === indice);
+    contextoEscuela = [
+      contextoEscuela,
+      materiasYCursos.length
+        ? `Materias y cursos asignados al docente: ${materiasYCursos.join('; ')}.`
+        : 'No hay materias ni cursos asignados disponibles en el sistema.',
+    ].filter(Boolean).join('\n');
+  }
 
   if (audience === 'estudiante') {
     const { data: st } = await admin
@@ -329,7 +355,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const systemPrompt = buildSystemPrompt({
-    audience, nombre, escuela, policyHits, refHits, cursoNombre, hijosNombres,
+    audience, nombre, escuela, policyHits, refHits, cursoNombre, hijosNombres, contextoEscuela,
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
 

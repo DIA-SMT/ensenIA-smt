@@ -25,6 +25,7 @@ import PanelPreferencias from '../components/shell/PanelPreferencias';
 import LimitePantalla from '../components/shell/LimitePantalla';
 import GuiaRapida, { shouldAutoOpenGuide } from '../components/GuiaRapida';
 import CambiarClave from '../components/CambiarClave';
+import FloatingMigue from '../components/FloatingMigue';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferencias } from '../contexts/PreferencesContext';
 import { NAV_POR_ROL, tituloDe } from '../lib/navegacion';
@@ -148,6 +149,8 @@ export default function MainLayout() {
       {guiaAbierta && <GuiaRapida onClose={() => setGuiaAbierta(false)} />}
 
       <Buscador abierto={buscando} alCerrar={cerrarBuscador} />
+
+      {(user?.role === 'docente' || user?.role === 'director') && <FloatingMigue />}
 
       <Dialogo abierto={prefsAbiertas} alCerrar={cerrarPreferencias} etiquetadoPor="prefs-titulo" className="dialogo-panel">
         <div className="dialogo-encabezado">
