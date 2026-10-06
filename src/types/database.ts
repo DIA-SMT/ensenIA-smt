@@ -395,6 +395,109 @@ export type Database = {
           },
         ]
       }
+      assessment_grades: {
+        Row: {
+          absent: boolean
+          assessment_id: string
+          grade: number | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          absent?: boolean
+          assessment_id: string
+          grade?: number | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          absent?: boolean
+          assessment_id?: string
+          grade?: number | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_grades_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          course_id: string
+          created_at: string
+          held_on: string
+          id: string
+          kind: string
+          school_id: string
+          subject_id: string
+          teacher_id: string | null
+          term_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          held_on?: string
+          id?: string
+          kind?: string
+          school_id: string
+          subject_id: string
+          teacher_id?: string | null
+          term_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          held_on?: string
+          id?: string
+          kind?: string
+          school_id?: string
+          subject_id?: string
+          teacher_id?: string | null
+          term_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "academic_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alert_thresholds: {
         Row: {
           december_rule: string
@@ -3293,6 +3396,19 @@ export type Database = {
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
       gen_join_code: { Args: never; Returns: string }
+      guardar_evaluacion: {
+        Args: {
+          p_course: string
+          p_fecha: string
+          p_id: string
+          p_notas: Json
+          p_subject: string
+          p_term: string
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: string
+      }
       guardar_asistencia: {
         Args: {
           p_course: string

@@ -1,8 +1,8 @@
 /**
  * SMT EstudIA — Libreta de calificaciones (Fase 3)
  *
- * La plataforma SUGIERE la nota a partir del trabajo real del trimestre;
- * el docente la FIJA. La sugerencia nunca califica sola: es un punto de
+ * La plataforma SUGIERE la nota a partir del trabajo real del trimestre
+ * (evaluaciones cargadas y actividades de la app); el docente la FIJA. La sugerencia nunca califica sola: es un punto de
  * partida que el docente acepta, corrige o ignora.
  *
  * Al publicar, el servidor aplica la regla de diciembre de la escuela
@@ -12,8 +12,11 @@
 
 import { supabase, unwrap } from './_helpers';
 import { getSubmissionsByActivityIds } from './activities.service';
+import {
+  getEvaluacionesDelTrimestre, notaDeActividad, type Evaluacion, type TipoEvaluacion,
+} from './evaluaciones.service';
 import type {
-  AcademicTerm, TermGrade, TermGradeStatus, GradebookRow, Student,
+  AcademicTerm, TermGrade, TermGradeStatus, GradebookRow, Student, NotaItem,
 } from '../types';
 
 // ── Trimestres ──
@@ -83,53 +86,60 @@ function mapGrade(row: any): TermGrade {
     subjectName: row.subjects?.name,
     termName: row.academic_terms?.name,
     termNumber: row.academic_terms?.number,
+    termYear: row.academic_terms?.year,
   };
 }
 
 /**
- * Nota sugerida 1-10 a partir de las entregas calificadas del trimestre.
- * Promedia el porcentaje logrado en cada actividad con puntaje, y lo lleva
- * a la escala 1-10. Sin entregas devuelve null: mejor no sugerir nada que
- * sugerir sobre aire — un alumno sin entregas NO recibe un 1 automático,
- * porque "no entregó" y "entregó mal" son cosas distintas y esa distinción
- * la hace el docente, no el promedio.
+ * Nota sugerida 1-10: el promedio de las notas del trimestre de ese alumno
+ * (evaluaciones cargadas y actividades de la app corregidas). Los ausentes y
+ * lo que falta corregir no cuentan. Sin ninguna nota devuelve null: mejor no
+ * sugerir nada que sugerir sobre aire — un alumno sin notas NO recibe un 1
+ * automático, porque "no hizo" y "le fue mal" son cosas distintas y esa
+ * distinción la hace el docente, no el promedio.
  */
-export function suggestGrade(
-  activities: { id: string; points: number | null }[],
-  submissionsByStudent: Map<string, { activityId: string; score: number | null; autoScore: number | null }[]>,
-  studentId: string,
-): { suggested: number | null; from: number } {
-  const pointsByActivity = new Map(
-    activities.filter(a => a.points && a.points > 0).map(a => [a.id, a.points as number])
-  );
-  const mine = submissionsByStudent.get(studentId) ?? [];
-
-  const pcts: number[] = [];
-  for (const s of mine) {
-    const points = pointsByActivity.get(s.activityId);
-    if (!points) continue;
-    const score = s.score ?? s.autoScore;
-    if (score === null || score === undefined) continue;
-    pcts.push(Math.min(1, score / points));
-  }
-
-  if (pcts.length === 0) return { suggested: null, from: 0 };
-  const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+export function promedioDeNotas(notas: Record<string, NotaItem>): { suggested: number | null; from: number } {
+  const v = Object.values(notas).map(n => n.nota).filter((n): n is number => n !== null);
+  if (v.length === 0) return { suggested: null, from: 0 };
+  const avg = v.reduce((a, b) => a + b, 0) / v.length;
   // Escala 1-10: nunca menos de 1, un decimal.
-  const nota = Math.max(1, Math.round(avg * 10 * 10) / 10);
-  return { suggested: nota, from: pcts.length };
+  return { suggested: Math.max(1, Math.round(avg * 10) / 10), from: v.length };
 }
 
+/** Una columna de la libreta: una evaluación cargada o una actividad de la app con puntaje. */
+export interface ColumnaLibreta {
+  id: string;
+  origen: 'evaluacion' | 'actividad';
+  tipo: TipoEvaluacion | 'actividad';
+  titulo: string;
+  /** YYYY-MM-DD */
+  fecha: string;
+  /** La evaluación completa, para editarla (solo las cargadas) */
+  evaluacion?: Evaluacion;
+}
+
+export interface LibretaTrimestre {
+  filas: GradebookRow[];
+  columnas: ColumnaLibreta[];
+}
+
+/** Fecha local YYYY-MM-DD de un timestamp. */
+const diaLocal = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 /**
- * Libreta de una materia+curso en un trimestre: nómina, nota cargada y
- * sugerencia recalculada con el trabajo que cae dentro del trimestre.
+ * Libreta de una materia+curso en un trimestre: nómina, nota cargada, las
+ * notas que la explican (evaluaciones y actividades, una columna cada una)
+ * y el promedio como sugerencia.
  *
  * La NOTA es una sola por estudiante+materia+trimestre (UNIQUE en la 011):
  * si dos docentes comparten la materia, comparten la libreta — como en la
- * escuela real. La SUGERENCIA, en cambio, sale solo de las actividades
- * propias: la RLS de activity_submissions (003) no deja a un docente leer
- * las entregas de las actividades de su colega. Por eso la UI la rotula
- * como "tus actividades" en vez de aparentar que cubre todo el trimestre.
+ * escuela real. Las evaluaciones también se comparten (050). Las
+ * ACTIVIDADES de la app, en cambio, son solo las propias: la RLS de
+ * activity_submissions (003) no deja a un docente leer las entregas de las
+ * actividades de su colega.
  */
 export async function getGradebook(params: {
   subjectId: string;
@@ -137,7 +147,7 @@ export async function getGradebook(params: {
   term: AcademicTerm;
   students: Student[];
   teacherId: string;
-}): Promise<GradebookRow[]> {
+}): Promise<LibretaTrimestre> {
   const { subjectId, courseId, term, students, teacherId } = params;
 
   // Actividades del docente en esa materia+curso dentro del trimestre.
@@ -149,41 +159,66 @@ export async function getGradebook(params: {
   const actRows = unwrap(
     await supabase
       .from('activities')
-      .select('id, points, created_at')
+      .select('id, title, points, created_at')
       .eq('teacher_id', teacherId)
       .eq('subject_id', subjectId)
       .eq('course_id', courseId)
       .gte('created_at', from)
       .lte('created_at', to)
-  ) as unknown as { id: string; points: number | null; created_at: string }[];
+      .order('created_at')
+  ) as unknown as { id: string; title: string; points: number | null; created_at: string }[];
 
-  const activities = actRows.map(a => ({ id: a.id, points: a.points }));
-  const activityIds = activities.map(a => a.id);
+  // Solo las que tienen puntaje se pueden pasar a la escala de la libreta
+  const actividades = actRows.filter(a => a.points && a.points > 0);
+  const pointsByActivity = new Map(actividades.map(a => [a.id, a.points as number]));
 
-  const [subs, gradeRows] = await Promise.all([
-    getSubmissionsByActivityIds(activityIds),
+  const [subs, gradeRows, evaluaciones] = await Promise.all([
+    getSubmissionsByActivityIds(actividades.map(a => a.id)),
     supabase
       .from('term_grades')
       .select('*')
       .eq('subject_id', subjectId)
       .eq('course_id', courseId)
       .eq('term_id', term.id),
+    getEvaluacionesDelTrimestre(subjectId, courseId, term.id),
   ]);
   if (gradeRows.error) throw gradeRows.error;
 
-  const submissionsByStudent = new Map<string, { activityId: string; score: number | null; autoScore: number | null }[]>();
+  const columnas: ColumnaLibreta[] = [
+    ...actividades.map(a => ({
+      id: a.id, origen: 'actividad' as const, tipo: 'actividad' as const, titulo: a.title, fecha: diaLocal(a.created_at),
+    })),
+    ...evaluaciones.map(e => ({
+      id: e.id, origen: 'evaluacion' as const, tipo: e.tipo, titulo: e.titulo, fecha: e.fecha, evaluacion: e,
+    })),
+  ].sort((x, y) => x.fecha.localeCompare(y.fecha));
+
+  // Notas de cada alumno, por columna
+  const notasPorAlumno = new Map<string, Record<string, NotaItem>>();
+  const de = (studentId: string) => {
+    let n = notasPorAlumno.get(studentId);
+    if (!n) { n = {}; notasPorAlumno.set(studentId, n); }
+    return n;
+  };
   for (const s of subs) {
     if (s.status !== 'submitted' && s.status !== 'graded') continue;
-    const arr = submissionsByStudent.get(s.studentId) ?? [];
-    arr.push({ activityId: s.activityId, score: s.score ?? null, autoScore: s.autoScore ?? null });
-    submissionsByStudent.set(s.studentId, arr);
+    const points = pointsByActivity.get(s.activityId);
+    if (!points) continue;
+    const score = s.score ?? s.autoScore;
+    de(s.studentId)[s.activityId] = score === null || score === undefined
+      ? { nota: null, sinCorregir: true }
+      : { nota: notaDeActividad(score, points) };
+  }
+  for (const e of evaluaciones) {
+    for (const [studentId, n] of Object.entries(e.notas)) de(studentId)[e.id] = n;
   }
 
   const existing = new Map((gradeRows.data ?? []).map((r: any) => [r.student_id, mapGrade(r)]));
 
-  return students.map(st => {
+  const filas = students.map(st => {
     const g = existing.get(st.id);
-    const { suggested, from } = suggestGrade(activities, submissionsByStudent, st.id);
+    const notas = notasPorAlumno.get(st.id) ?? {};
+    const { suggested, from } = promedioDeNotas(notas);
     return {
       studentId: st.id,
       firstName: st.firstName,
@@ -196,8 +231,10 @@ export async function getGradebook(params: {
       teacherNote: g?.teacherNote,
       suggestedGrade: suggested,
       suggestedFrom: from,
+      notas,
     };
   });
+  return { filas, columnas };
 }
 
 export interface GradeSavePayload {
@@ -254,7 +291,7 @@ export async function getPublishedGradesByStudent(studentId: string): Promise<Te
   const data = unwrap(
     await supabase
       .from('term_grades')
-      .select('*, subjects(name), academic_terms(name, number)')
+      .select('*, subjects(name), academic_terms(name, number, year)')
       .eq('student_id', studentId)
       .eq('status', 'publicada')
   );
@@ -268,7 +305,7 @@ export async function getPublishedGradesBySchool(schoolId: string, termId: strin
   const data = unwrap(
     await supabase
       .from('term_grades')
-      .select('*, subjects(name), academic_terms(name, number)')
+      .select('*, subjects(name), academic_terms(name, number, year)')
       .eq('school_id', schoolId)
       .eq('term_id', termId)
       .eq('status', 'publicada')

@@ -1,0 +1,83 @@
+/* La libreta del estudiante (y de la familia): materias × trimestres */
+.libreta-alumno { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.la-tabla { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.la-tabla thead th {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 6px 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+}
+.la-tabla thead th:first-child { text-align: left; padding-left: 0; }
+.la-tabla td { text-align: center; padding: 6px 4px; border-bottom: 1px solid var(--border-subtle, var(--border-color)); width: 15%; }
+.la-tabla tbody th { text-align: left; font-weight: 400; padding: 2px 0; border-bottom: 1px solid var(--border-subtle, var(--border-color)); }
+.la-tabla tr.abierta th,
+.la-tabla tr.abierta td { border-bottom: 0; }
+
+.la-materia {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.la-materia > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+.la-flecha { flex-shrink: 0; color: var(--text-subtle); transition: transform var(--transition-fast); }
+.la-materia[aria-expanded="true"] .la-flecha { transform: rotate(180deg); }
+.la-cuantas { flex-shrink: 0; font-size: 0.6875rem; font-weight: 500; color: var(--text-subtle); }
+
+.la-nota,
+.la-final {
+  display: inline-block;
+  min-width: 36px;
+  padding: 3px 6px;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+.la-nota.grade-ok { background: var(--success-light); color: var(--success); }
+.la-nota.grade-risk { background: var(--warning-light); color: var(--warning); }
+.la-nota.grade-fail { background: var(--danger-light); color: var(--danger); }
+.la-final.aprobada { background: var(--success); color: #fff; }
+.la-final.diciembre { background: var(--danger); color: #fff; font-size: 0.8125rem; }
+.la-vacia { color: var(--text-subtle); }
+
+.la-fila-detalle td { text-align: left; width: auto; padding: 0 0 var(--space-3); }
+.la-detalle { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); background: var(--bg-elevated); border-radius: var(--radius-md); }
+.la-trimestre h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+.la-trimestre h4 span { text-transform: none; letter-spacing: 0; font-size: 0.8125rem; }
+.la-trimestre ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.la-trimestre li { display: flex; align-items: center; gap: var(--space-2); padding: 6px 0; }
+.la-trimestre li + li { border-top: 1px solid var(--border-subtle, var(--border-color)); }
+.la-item-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 0.875rem; overflow-wrap: anywhere; }
+.la-item-texto small { font-size: 0.75rem; color: var(--text-subtle); }
+.la-item-nota { flex-shrink: 0; font-size: 0.8125rem; color: var(--text-secondary); }
+.la-item-nota strong { font-size: 1rem; color: var(--text-primary); }
+.la-item-nota strong.baja { color: var(--danger); }
+.la-aviso { margin: 0 0 4px; font-size: 0.8125rem; color: var(--danger); font-weight: 600; }
+.la-comentario { margin: 0 0 4px; font-size: 0.8125rem; color: var(--text-secondary); font-style: italic; }
+.la-ayuda { margin: 0; font-size: 0.75rem; color: var(--text-subtle); }

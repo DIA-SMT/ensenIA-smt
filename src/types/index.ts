@@ -390,10 +390,21 @@ export interface TermGrade {
   subjectName?: string;
   termName?: string;
   termNumber?: number;
+  termYear?: number;
+}
+
+/** Lo que una evaluación o una actividad de la app le dejó a un alumno (050). */
+export interface NotaItem {
+  nota: number | null;
+  ausente?: boolean;
+  /** Actividad de la app entregada y todavía sin corregir */
+  sinCorregir?: boolean;
 }
 
 /** Fila de la libreta que ve el docente: estudiante + nota + sugerencia. */
 export interface GradebookRow {
+  /** Las notas del trimestre por columna (id de la evaluación o de la actividad) */
+  notas: Record<string, NotaItem>;
   studentId: string;
   firstName: string;
   lastName: string;
