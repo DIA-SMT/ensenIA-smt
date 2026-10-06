@@ -466,6 +466,8 @@ export interface LibraryMaterial {
   studyCards?: StudyCard[] | null;
   /** Mazo de diapositivas estructurado (migración 047). Si está, manda sobre extractedText. */
   slides?: unknown;
+  /** Diagrama o juego de palabras ya armado (migración 054): lib/diagramas, lib/juegos. */
+  visual?: unknown;
   podcastPath?: string | null;
   podcastStatus?: 'none' | 'generating' | 'ready' | 'error';
   /** Tema de la planificación del que salió (si lo generó Armar módulo). */

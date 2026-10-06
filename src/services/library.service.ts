@@ -136,6 +136,7 @@ function mapMaterial(row: any): LibraryMaterial {
     isSharedWithStudents: row.is_shared_with_students ?? false,
     studyCards: row.study_cards ?? null,
     slides: row.slides ?? null,
+    visual: row.visual ?? null,
     podcastPath: row.podcast_path ?? null,
     podcastStatus: row.podcast_status ?? 'none',
     classId: row.class_id ?? null,

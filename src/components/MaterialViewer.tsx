@@ -24,6 +24,9 @@ import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
 import { deckDe } from '../lib/presentation';
 import { TAG_LETRA_GRANDE } from '../services/library.service';
 import { MazoDiapositivas } from './PresentationViewer';
+import JuegoPalabrasVista from './JuegoPalabrasVista';
+import { esJuego } from '../lib/juegos';
+import { esDiagrama } from '../lib/diagramas';
 import type { LibraryMaterial } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
@@ -96,7 +99,11 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   };
 
   const texto = material.extractedText?.trim();
-  const soloTexto = Boolean(texto) && !conArchivo && !esLink && !videoId;
+  // Crucigrama o criptograma (054): se juega acá adentro, no se lee su texto
+  const juego = esJuego(material.visual) ? material.visual : null;
+  // Diagrama: es una imagen; su texto alternativo es la descripción
+  const diagrama = esDiagrama(material.visual) ? material.visual : null;
+  const soloTexto = Boolean(texto) && !conArchivo && !esLink && !videoId && !juego;
   // Diapositivas guardadas: se pasan una por una en vez de leerse como texto
   const deck = useMemo(() => (soloTexto ? deckDe(material) : null), [soloTexto, material]);
   // Versión adaptada con "letra grande e interlineado"
@@ -147,7 +154,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
           )}
 
           {esImagen && url && (
-            <img className="mv-imagen" src={url} alt={material.title} />
+            <img className="mv-imagen" src={url} alt={diagrama?.descripcion || material.title} />
           )}
 
           {esPdf && url && !pdfFallo && (
@@ -170,6 +177,8 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
               </a>
             </div>
           )}
+
+          {juego && <JuegoPalabrasVista juego={juego} />}
 
           {/* Material que es solo texto (un tema del temario, un módulo armado
               con IA): se lee directo, sin desplegable. */}

@@ -1220,6 +1220,7 @@ export type Database = {
           school_id: string
           storage_path: string | null
           slides: Json | null
+          visual: Json | null
           study_cards: Json | null
           study_guide: string | null
           subject_id: string
@@ -1249,6 +1250,7 @@ export type Database = {
           school_id: string
           storage_path?: string | null
           slides?: Json | null
+          visual?: Json | null
           study_cards?: Json | null
           study_guide?: string | null
           subject_id: string
@@ -1278,6 +1280,7 @@ export type Database = {
           school_id?: string
           storage_path?: string | null
           slides?: Json | null
+          visual?: Json | null
           study_cards?: Json | null
           study_guide?: string | null
           subject_id?: string

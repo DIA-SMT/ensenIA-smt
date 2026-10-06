@@ -15,6 +15,8 @@ import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit 
 import { getSubjects } from '../services/subjects.service';
 import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
 import MazoEditor from '../components/MazoEditor';
+import GenerarVisual from '../components/GenerarVisual';
+import { Network, Puzzle } from 'lucide-react';
 import Dialogo from '../components/shell/Dialogo';
 import { aTextoPlano, type Mazo } from '../lib/diapositivas';
 import { generateSlides, guardarMazo } from '../services/documents.service';
@@ -178,6 +180,8 @@ export default function IALab() {
     // Diapositivas estructuradas: el mazo se arma contra un schema y se
     // edita antes de guardarlo. No pasa por el chat.
     const [mazo, setMazo] = useState<Mazo | null>(null);
+    // Diagrama o juego de palabras (con el material adjunto, el tema elegido o un tema escrito)
+    const [visualTipo, setVisualTipo] = useState<'diagrama' | 'juego' | null>(null);
     const [armandoMazo, setArmandoMazo] = useState(false);
     const [guardandoMazo, setGuardandoMazo] = useState(false);
     const [refineSource, setRefineSource] = useState<ChatMessage | null>(null);
@@ -1088,6 +1092,16 @@ export default function IALab() {
                                                 <span className="welcome-card-desc">{t.desc}</span>
                                             </button>
                                         ))}
+                                        <button className="welcome-card" onClick={() => setVisualTipo('diagrama')} disabled={!currentAssignment}>
+                                            <Network size={18} className="text-ia-accent" />
+                                            <span className="welcome-card-title">Hacer un diagrama</span>
+                                            <span className="welcome-card-desc">Flujograma, ciclo, mapa mental, línea de tiempo</span>
+                                        </button>
+                                        <button className="welcome-card" onClick={() => setVisualTipo('juego')} disabled={!currentAssignment}>
+                                            <Puzzle size={18} className="text-ia-accent" />
+                                            <span className="welcome-card-title">Armar un juego</span>
+                                            <span className="welcome-card-desc">Crucigrama o criptograma para repasar</span>
+                                        </button>
                                         <button className="welcome-card" onClick={() => handleToolClick('free')}>
                                             <MessageSquare size={18} className="text-ia-accent" />
                                             <span className="welcome-card-title">Pregunta libre</span>
@@ -1474,6 +1488,17 @@ export default function IALab() {
                             </span>
                         </div>
                     ))}
+                    {currentAssignment && (['diagrama', 'juego'] as const).map(t => (
+                        <div key={t} className="tool-item" role="button" tabIndex={0}
+                            onClick={() => setVisualTipo(t)}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisualTipo(t); } }}>
+                            {t === 'diagrama' ? <Network size={16} className="text-secondary" /> : <Puzzle size={16} className="text-secondary" />}
+                            <span className="tool-item-text">
+                                <span>{t === 'diagrama' ? 'Hacer un diagrama' : 'Armar un juego'}</span>
+                                <span className="tool-item-desc">{t === 'diagrama' ? 'Flujograma, ciclo, mapa mental, línea de tiempo' : 'Crucigrama o criptograma para repasar'}</span>
+                            </span>
+                        </div>
+                    ))}
                     {/* Free chat option */}
                     <div
                         className={`tool-item ${activeTool === 'free' ? 'active' : ''}`}
@@ -1660,6 +1685,30 @@ export default function IALab() {
                         <p>Tarda alrededor de un minuto. Las vas a poder corregir antes de guardarlas.</p>
                     </div>
                 </Dialogo>
+            )}
+
+            {currentAssignment && (
+                <GenerarVisual
+                    abierto={visualTipo !== null}
+                    alCerrar={() => setVisualTipo(null)}
+                    inicial={visualTipo ?? 'diagrama'}
+                    teacherId={user.id}
+                    schoolId={user.schoolId}
+                    fuente={{
+                        // Material adjunto, si no el tema elegido (título, objetivos y contenido); si no, el docente escribe
+                        texto: attachedDoc?.extractedText?.trim()
+                            || (selectedClass
+                                ? [selectedClass.title, ...(selectedClass.objectives ?? []), selectedClass.content ?? ''].filter(Boolean).join('\n')
+                                : ''),
+                        titulo: attachedDoc?.title || selectedClass?.title || subjectName || 'Tema',
+                        subjectId: currentAssignment.subjectId,
+                        subjectName: subjectName || 'Materia',
+                        courseId: currentAssignment.courseId,
+                        courseName: currentAssignment.courseName,
+                        unitName: selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined,
+                    }}
+                    alGuardar={mat => setMaterials(prev => [mat, ...prev])}
+                />
             )}
 
             {mazo && (

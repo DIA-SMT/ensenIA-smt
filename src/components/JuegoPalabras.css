@@ -1,0 +1,123 @@
+/* ── Crucigrama y criptograma ── */
+.jp {
+  --jp-celda: clamp(1.75rem, 7.5vw, 2.4rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.jp-grilla-scroll { overflow-x: auto; padding-bottom: var(--space-2); }
+.jp-grilla {
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  margin: 0 auto;
+}
+.jp-celda {
+  position: relative;
+  width: var(--jp-celda);
+  height: var(--jp-celda);
+  background: var(--bg-surface);
+  border: 1.5px solid var(--text-secondary);
+  border-radius: 4px;
+}
+.jp-vacia { background: transparent; border-color: transparent; }
+.jp-en-palabra { background: var(--acento-suave); border-color: var(--acento); }
+.jp-celda input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: calc(var(--jp-celda) * 0.48);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  padding: 0.2em 0 0;
+  font-family: inherit;
+}
+.jp-celda input:focus { outline: 3px solid var(--acento); outline-offset: 1px; border-radius: 3px; }
+.jp-numero {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: max(0.55rem, calc(var(--jp-celda) * 0.27));
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+.jp-mal { background: var(--danger-light) !important; border-color: var(--danger) !important; }
+.jp-bien { background: var(--success-light); border-color: var(--success); }
+
+.jp-pista-actual {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--acento-suave);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+.jp-largo { color: var(--text-secondary); font-size: 0.85em; white-space: nowrap; }
+.jp-ayuda { margin: 0; color: var(--text-secondary); font-size: 0.875rem; }
+
+.jp-pistas { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-4); }
+.jp-pistas h4 { margin: 0 0 var(--space-2); font-size: 0.95rem; color: var(--text-primary); }
+.jp-pistas ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.jp-pista {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.jp-pista:hover { background: var(--bg-hover); }
+.jp-pista.activa { background: var(--acento-suave); border-color: var(--acento-claro); }
+
+/* Criptograma */
+.jp-frase {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+.jp-palabra { display: inline-flex; gap: 4px; }
+.jp-cripto { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.jp-cripto input {
+  width: var(--jp-celda);
+  height: var(--jp-celda);
+  border: none;
+  border-bottom: 2.5px solid var(--text-primary);
+  background: var(--bg-surface);
+  border-radius: 4px 4px 0 0;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  font-family: inherit;
+}
+.jp-cripto input:focus { outline: 3px solid var(--acento); outline-offset: 1px; }
+.jp-cripto.jp-fija input { color: var(--acento); background: var(--acento-suave); }
+.jp-cripto.jp-mal input { background: var(--danger-light); border-bottom-color: var(--danger); }
+.jp-cripto.jp-bien input { background: var(--success-light); border-bottom-color: var(--success); }
+.jp-num { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+.jp-signo { align-self: flex-start; font-size: 1.1rem; font-weight: 700; padding-top: 0.3em; }
+
+.jp-acciones { display: flex; flex-direction: column; gap: var(--space-3); }
+.jp-botones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.jp-resuelto, .jp-revisado { margin: 0; display: flex; align-items: center; gap: var(--space-2); font-weight: 600; }
+.jp-resuelto { color: var(--success-ink); }
+.jp-revisado { color: var(--danger-ink); }
+
+/* Impresión: el juego en papel, sin botones ni colores de corrección */
+@media print {
+  .jp-acciones, .jp-pista-actual { display: none; }
+  .jp-celda, .jp-cripto input { background: #fff !important; }
+}

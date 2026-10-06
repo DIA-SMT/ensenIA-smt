@@ -27,6 +27,9 @@ import { guardarMazo } from '../services/documents.service';
 import { normalizarMazo, desdeLegado, type Mazo } from '../lib/diapositivas';
 import { marcarDiseno } from '../lib/disenos';
 import AdaptarMaterial from '../components/AdaptarMaterial';
+import GenerarVisual from '../components/GenerarVisual';
+import { esJuego } from '../lib/juegos';
+import { Network, Puzzle } from 'lucide-react';
 import { deckDe, type ParsedPresentation } from '../lib/presentation';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
@@ -155,6 +158,8 @@ export default function Biblioteca() {
   const [guardandoMazo, setGuardandoMazo] = useState(false);
   // Adaptar un material (lectura fácil, paso a paso…)
   const [adaptando, setAdaptando] = useState<LibraryMaterial | null>(null);
+  // Diagrama o juego de palabras a partir de un material
+  const [visualPara, setVisualPara] = useState<{ mat: LibraryMaterial; tipo: 'diagrama' | 'juego' } | null>(null);
 
   // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla)
   const decks = useMemo(() => {
@@ -525,6 +530,8 @@ export default function Biblioteca() {
     // Word o PDF subido que quedó sin texto: se puede volver a leer
     const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
     const textError = textErrors[mat.id];
+    // Crucigrama o criptograma: se juega; su texto son las pistas, no da para resumir ni hacer placas
+    const juegoMat = esJuego(mat.visual);
     return (
       <div key={mat.id} className="card biblioteca-card">
         {mat.videoUrl && parseYouTubeId(mat.videoUrl) ? (
@@ -622,8 +629,8 @@ export default function Biblioteca() {
               </button>
             )}
             {(mat.storagePath || (soloTexto && !deck)) && (
-              <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
-                <Eye size={14} /> Ver
+              <button className="mat-action-btn" title={juegoMat ? 'Probarlo como lo van a jugar tus estudiantes' : 'Verlo acá, sin descargar'} onClick={() => setViendo(mat)}>
+                {juegoMat ? <><Puzzle size={14} /> Jugar</> : <><Eye size={14} /> Ver</>}
               </button>
             )}
             {sinTexto && (
@@ -638,6 +645,7 @@ export default function Biblioteca() {
                   : <><ScanText size={14} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
               </button>
             )}
+            {!juegoMat && (
             <button
               className="mat-action-btn"
               title="Resumen pedagógico con IA"
@@ -646,7 +654,8 @@ export default function Biblioteca() {
             >
               <Sparkles size={14} /> Resumen IA
             </button>
-            {mat.extractedText && (
+            )}
+            {mat.extractedText && !juegoMat && (
               <button
                 className="mat-action-btn"
                 title="Tarjetas visuales para que los chicos repasen en el celu"
@@ -658,7 +667,7 @@ export default function Biblioteca() {
                   : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
               </button>
             )}
-            {mat.extractedText && (
+            {mat.extractedText && !juegoMat && (
               <button
                 className="mat-action-btn"
                 title="Resumen en audio de 2-3 min para que repasen con auriculares"
@@ -670,7 +679,7 @@ export default function Biblioteca() {
                   : <><Headphones size={14} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
               </button>
             )}
-            {mat.extractedText && (
+            {mat.extractedText && !juegoMat && (
               <button
                 className="mat-action-btn"
                 title="Usar como contexto en el Laboratorio IA"
@@ -679,7 +688,7 @@ export default function Biblioteca() {
                 <FlaskConical size={14} /> Usar en IA Lab
               </button>
             )}
-            {mat.extractedText && !deck && (
+            {mat.extractedText && !deck && !juegoMat && (
               <button
                 className="mat-action-btn"
                 title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
@@ -688,7 +697,26 @@ export default function Biblioteca() {
                 <Wand2 size={14} /> Adaptar
               </button>
             )}
-            {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
+            {mat.extractedText && !mat.visual && (
+              <button
+                className="mat-action-btn"
+                title="Flujograma, ciclo, causas y efecto, mapa mental o línea de tiempo con este material"
+                onClick={() => setVisualPara({ mat, tipo: 'diagrama' })}
+              >
+                <Network size={14} /> Diagrama
+              </button>
+            )}
+            {mat.extractedText && !mat.visual && (
+              <button
+                className="mat-action-btn"
+                title="Crucigrama o criptograma con los conceptos clave, para jugar en el celular o imprimir"
+                onClick={() => setVisualPara({ mat, tipo: 'juego' })}
+              >
+                <Puzzle size={14} /> Juego
+              </button>
+            )}
+            {/* La clase en vivo todavía no muestra los juegos: proyectaría solo las pistas */}
+            {(mat.storagePath || mat.extractedText || mat.videoUrl) && !juegoMat && (
               <button
                 className="mat-action-btn"
                 title="Trabajarlo en la clase en vivo: proyectarlo, mostrarlo en los celulares y sacar preguntas"
@@ -940,6 +968,25 @@ export default function Biblioteca() {
           }}
         />
       )}
+
+      {/* ── Diagrama o juego de palabras a partir de un material ── */}
+      <GenerarVisual
+        abierto={visualPara !== null}
+        alCerrar={() => setVisualPara(null)}
+        inicial={visualPara?.tipo}
+        teacherId={user.id}
+        schoolId={user.schoolId}
+        fuente={visualPara && {
+          texto: visualPara.mat.extractedText ?? '',
+          titulo: visualPara.mat.title.replace(/^(Diapositivas|Versión adaptada):\s*/i, ''),
+          subjectId: visualPara.mat.subjectId,
+          subjectName: visualPara.mat.subjectName,
+          courseId: visualPara.mat.courseId ?? null,
+          courseName: asignaciones.find(a => a.subjectId === visualPara.mat.subjectId && a.courseId === visualPara.mat.courseId)?.courseName,
+          unitName: visualPara.mat.unitName,
+        }}
+        alGuardar={nuevo => setAllMaterials(prev => [nuevo, ...prev])}
+      />
 
       {/* ── Adaptar un material: versión nueva, el original no cambia ── */}
       {adaptando && (

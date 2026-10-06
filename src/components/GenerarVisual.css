@@ -1,0 +1,79 @@
+/* ── Generar diagrama o juego ── */
+.gv-dialogo { width: min(980px, 96vw); max-width: none; }
+/* .em-modal trae un tope de 640px (Modals.css): acá el diagrama y la grilla necesitan el ancho */
+.gv-dialogo .em-modal { max-width: none; }
+.gv-cuerpo { display: flex; flex-direction: column; gap: var(--space-5); }
+.gv-opciones { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.gv-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--radius-md); background: var(--bg-input); align-self: flex-start; }
+.gv-tabs button {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: none; border-radius: var(--radius-md);
+  background: transparent; color: var(--text-secondary);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.gv-tabs button.activo { background: var(--bg-surface); color: var(--acento); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+
+.gv-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.gv-chip {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit; font-size: 0.875rem; cursor: pointer;
+}
+.gv-chip:hover { border-color: var(--acento-claro); }
+.gv-chip.activo { background: var(--acento-suave); border-color: var(--acento); color: var(--acento); font-weight: 600; }
+.gv-ayuda { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+
+.gv-resultado { display: flex; flex-direction: column; gap: var(--space-4); }
+.gv-lienzo {
+  min-height: 220px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff; /* el diagrama es claro: se proyecta y se imprime */
+  padding: var(--space-4);
+  overflow: auto;
+  display: flex; align-items: center; justify-content: center;
+}
+.gv-svg { width: 100%; display: flex; justify-content: center; }
+.gv-svg svg { max-width: 100%; height: auto; }
+.gv-cargando { display: flex; align-items: center; gap: var(--space-2); color: #475569; }
+
+.gv-corregir { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.gv-corregir summary { cursor: pointer; font-weight: 600; color: var(--text-primary); }
+.gv-corregir[open] summary { margin-bottom: var(--space-3); }
+.gv-corregir[open] { display: flex; flex-direction: column; gap: var(--space-3); }
+.gv-lista { display: flex; flex-direction: column; gap: var(--space-2); }
+.gv-item { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-2); border-bottom: 1px dashed var(--border-color); }
+.gv-fila { display: flex; gap: var(--space-2); align-items: center; }
+.gv-fila input {
+  flex: 1; min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  background: var(--bg-input); color: var(--text-primary); font: inherit;
+}
+.gv-fila .gv-fecha { flex: 0 0 7rem; }
+.gv-fila .gv-respuesta { flex: 0 0 9rem; text-transform: uppercase; font-weight: 600; }
+.gv-hijo { margin-left: var(--space-5); }
+.gv-agregar {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px dashed var(--border-color); border-radius: var(--radius-md);
+  background: transparent; color: var(--text-secondary);
+  padding: var(--space-1) var(--space-3); font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+.gv-agregar:hover { color: var(--acento); border-color: var(--acento-claro); }
+
+.gv-juego { display: flex; flex-direction: column; gap: var(--space-2); }
+.gv-juego-titulo { margin: 0; font-size: 1.05rem; color: var(--text-primary); }
+.gv-acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
+
+@media (max-width: 600px) {
+  .gv-fila .gv-respuesta { flex-basis: 6.5rem; }
+  .gv-fila .gv-fecha { flex-basis: 5rem; }
+  .gv-acciones { justify-content: stretch; }
+  .gv-acciones .btn { flex: 1 1 45%; }
+}

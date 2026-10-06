@@ -8,14 +8,17 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "pruebas:diapositivas": "tsx src/lib/diapositivas.pruebas.ts"
+    "pruebas:diapositivas": "tsx src/lib/diapositivas.pruebas.ts",
+    "pruebas:visuales": "tsx src/lib/visuales.pruebas.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
+    "crossword-layout-generator": "^0.1.1",
     "dompurify": "^3.4.16",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.576.0",
     "mammoth": "^1.12.0",
+    "mermaid": "^12.1.0",
     "pdfjs-dist": "^5.7.284",
     "pptxgenjs": "^4.0.1",
     "qrcode": "^1.5.4",

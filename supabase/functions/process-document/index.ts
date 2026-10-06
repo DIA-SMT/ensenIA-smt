@@ -25,7 +25,7 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image';
+  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image' | 'diagram' | 'word_game';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -40,6 +40,8 @@ interface ProcessRequest {
   materialId?: string;
   context?: { subjectName?: string; courseName?: string };
   videoUrl?: string;
+  /** diagram: flujo | ciclo | causa_efecto | mapa_mental | linea_tiempo */
+  variante?: string;
 }
 
 /**
@@ -319,6 +321,102 @@ const SLIDES_SCHEMA = {
   },
 };
 
+/**
+ * Diagrama: DATOS, no código. El código de Mermaid lo arma el front
+ * (lib/diagramas), con el texto escapado: si el modelo escribiera la sintaxis,
+ * una coma o un paréntesis de más dejaría el diagrama sin dibujar.
+ * Strict: todo en required; lo que no aplica a la variante va vacío.
+ */
+const DIAGRAM_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['variante', 'titulo', 'descripcion', 'nodos', 'conexiones', 'ramas', 'eventos'],
+  properties: {
+    variante: { type: 'string', enum: ['flujo', 'ciclo', 'causa_efecto', 'mapa_mental', 'linea_tiempo'] },
+    titulo: { type: 'string', description: 'Título corto del diagrama.' },
+    descripcion: { type: 'string', description: 'Qué muestra el diagrama, en una o dos frases (texto alternativo para quien no ve).' },
+    nodos: {
+      type: 'array',
+      description: 'flujo, ciclo y causa_efecto: entre 4 y 12 nodos. Vacío en mapa_mental y linea_tiempo.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['id', 'texto', 'forma'],
+        properties: {
+          id: { type: 'string', description: 'Identificador corto y único: a, b, c…' },
+          texto: { type: 'string', description: 'Máximo 8 palabras.' },
+          forma: { type: 'string', enum: ['inicio', 'proceso', 'decision', 'fin'] },
+        },
+      },
+    },
+    conexiones: {
+      type: 'array',
+      description: 'Flechas entre nodos por id. Vacío en mapa_mental y linea_tiempo.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['desde', 'hacia', 'etiqueta'],
+        properties: {
+          desde: { type: 'string' },
+          hacia: { type: 'string' },
+          etiqueta: { type: 'string', description: 'Rótulo de la flecha (ej: "sí", "no", "provoca"). Vacío si no hace falta.' },
+        },
+      },
+    },
+    ramas: {
+      type: 'array',
+      description: 'Solo mapa_mental: 3 a 6 ideas principales, cada una con 1 a 4 subideas. Vacío en el resto.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['texto', 'hijos'],
+        properties: {
+          texto: { type: 'string', description: 'Máximo 5 palabras.' },
+          hijos: { type: 'array', items: { type: 'string' }, description: 'Subideas de máximo 6 palabras.' },
+        },
+      },
+    },
+    eventos: {
+      type: 'array',
+      description: 'Solo linea_tiempo: 4 a 8 hechos en orden cronológico. Vacío en el resto.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['fecha', 'texto'],
+        properties: {
+          fecha: { type: 'string', description: 'Año o fecha tal como figura en el material.' },
+          texto: { type: 'string', description: 'Qué pasó, en máximo 10 palabras.' },
+        },
+      },
+    },
+  },
+};
+
+/** Palabras con pistas (crucigrama) y una frase clave (criptograma), del mismo material. */
+const WORD_GAME_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titulo', 'palabras', 'frase', 'pista_frase'],
+  properties: {
+    titulo: { type: 'string', description: 'El tema, corto.' },
+    palabras: {
+      type: 'array',
+      description: 'Entre 8 y 12 conceptos clave del material.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['respuesta', 'pista'],
+        properties: {
+          respuesta: { type: 'string', description: 'UNA sola palabra, de 3 a 12 letras, sin espacios ni guiones.' },
+          pista: { type: 'string', description: 'Definición o pregunta para adivinarla. NO puede contener la respuesta.' },
+        },
+      },
+    },
+    frase: { type: 'string', description: 'Una idea central del material en una frase de 5 a 12 palabras (máximo 80 caracteres), para el criptograma.' },
+    pista_frase: { type: 'string', description: 'Una pista corta que ayude a descifrar la frase sin decirla.' },
+  },
+};
+
 const QUESTIONS_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -407,6 +505,29 @@ Cada lámina lleva una nota con algo que le sirva de verdad: qué preguntar para
 
 CAMPOS QUE NO APLICAN
 Mandalos vacíos: '' para texto, [] para listas, -1 para correcta. No los llenes "por las dudas".`,
+
+  diagram: `Sos EstudIA, asistente pedagógico de secundaria argentina. Convertí el material en UN diagrama claro para proyectar en el aula o mirar en el celular.
+
+Te dicen qué variante usar. Llená solo los campos de esa variante; el resto va vacío ([] o '').
+- flujo: los pasos de un proceso en orden. Empezá con un nodo "inicio" y terminá con uno "fin". Usá "decision" solo si el material plantea una pregunta con caminos distintos, y rotulá esas flechas ("sí" / "no").
+- ciclo: 4 a 8 etapas que se repiten. Cada etapa conecta con la siguiente y la última vuelve a la primera.
+- causa_efecto: 2 a 5 causas (proceso) que apuntan a UN efecto central (fin); si el material lo dice, 1 a 3 consecuencias que salen del efecto. Rotulá las flechas con verbos cortos ("provoca", "lleva a").
+- mapa_mental: el título es el tema central; 3 a 6 ramas con 1 a 4 subideas cada una.
+- linea_tiempo: 4 a 8 hechos con su fecha, en orden.
+
+Reglas:
+- Textos MUY cortos: es un diagrama, no un apunte.
+- Nada que no esté en el material. No inventes fechas, datos ni nombres.
+- Español rioplatense, nivel secundaria.
+- "descripcion": qué muestra el diagrama, para alguien que no lo puede ver.`,
+
+  word_game: `Sos EstudIA, asistente pedagógico de secundaria argentina. A partir del material, prepará los datos de dos juegos para repasar: un crucigrama y un criptograma.
+
+- palabras: 8 a 12 conceptos clave del material. Cada respuesta es UNA palabra (de 3 a 12 letras, sin espacios). Elegí palabras que importen para entender el tema, no rellenos. Variá el largo: así se cruzan mejor.
+- Cada pista es una definición clara o una pregunta, a nivel de secundaria. La pista NUNCA contiene la respuesta ni una palabra de la misma familia.
+- frase: una idea central del material, de 5 a 12 palabras (máximo 80 caracteres). Que valga la pena descifrarla.
+- pista_frase: ayuda a descifrarla sin decirla.
+- Nada que no esté en el material. Español rioplatense.`,
 
   study_cards: `Sos EstudIA, asistente pedagógico. Convertí el material de estudio en PLACAS INTERACTIVAS: tarjetas que estudiantes de secundaria recorren desde el celular para repasar de verdad, no solo leer.
 
@@ -798,7 +919,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Build OpenRouter request ──
-  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz' || mode === 'slides';
+  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz' || mode === 'slides'
+    || mode === 'diagram' || mode === 'word_game';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   // Los modos estructurados devuelven JSON: si el techo de tokens corta la
   // respuesta, el JSON queda partido al medio y JSON.parse revienta — el
@@ -811,6 +933,8 @@ Deno.serve(async (req: Request) => {
     study_cards: 12000,
     // Un mazo son 8 a 12 láminas con sus notas del orador: pesa como las placas.
     slides: 12000,
+    diagram: 6000,
+    word_game: 6000,
     extract_questions: 8000,
     student_summary: 3000,
     class_report: 2000,
@@ -849,6 +973,8 @@ Deno.serve(async (req: Request) => {
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
         : mode === 'slides' ? 'Armá las diapositivas de la clase.'
+        : mode === 'diagram' ? `Armá el diagrama. Variante: ${['flujo', 'ciclo', 'causa_efecto', 'mapa_mental', 'linea_tiempo'].includes(body.variante ?? '') ? body.variante : 'mapa_mental'}.`
+        : mode === 'word_game' ? 'Prepará las palabras y la frase para los juegos.'
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
         : mode === 'practice_quiz' ? 'Generá el quiz de práctica.'
         : mode === 'study_guide' ? 'Escribí la guía de estudio.'
@@ -876,6 +1002,8 @@ Deno.serve(async (req: Request) => {
       extract_questions: { name: 'preguntas', schema: QUESTIONS_SCHEMA },
       study_cards: { name: 'placas', schema: STUDY_CARDS_SCHEMA },
       slides: { name: 'diapositivas', schema: SLIDES_SCHEMA },
+      diagram: { name: 'diagrama', schema: DIAGRAM_SCHEMA },
+      word_game: { name: 'juegos', schema: WORD_GAME_SCHEMA },
       practice_quiz: { name: 'quiz_practica', schema: PRACTICE_QUIZ_SCHEMA },
     };
     orBody.response_format = {
@@ -973,6 +1101,8 @@ Deno.serve(async (req: Request) => {
     const parsed = JSON.parse(outputText);
     if (mode === 'import_program') return json({ program: parsed, truncated });
     if (mode === 'slides') return json({ deck: parsed, truncated });
+    if (mode === 'diagram') return json({ diagram: parsed, truncated });
+    if (mode === 'word_game') return json({ game: parsed, truncated });
     if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
 
     // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──

@@ -154,7 +154,7 @@ export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc', title?
 
 // ── Edge function process-document ──
 
-async function callProcessDocument<T>(body: Record<string, unknown>): Promise<T> {
+export async function callProcessDocument<T>(body: Record<string, unknown>): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('No hay sesión activa.');
 
