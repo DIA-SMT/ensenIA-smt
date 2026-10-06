@@ -1,0 +1,109 @@
+/* ── Presentar a pantalla completa ── */
+.pz {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at center, #1b1f2e 0%, #0b0d14 75%);
+  color: #f1f5f9;
+  animation: pz-aparece 0.25s ease;
+}
+@keyframes pz-aparece { from { opacity: 0; } to { opacity: 1; } }
+
+.pz-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  transition: opacity 0.4s ease;
+}
+.pz-titulo { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pz-acciones { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.pz-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit; font-size: 0.85rem;
+  cursor: pointer;
+}
+.pz-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.pz-btn.on { background: rgba(255, 255, 255, 0.22); border-color: rgba(255, 255, 255, 0.4); }
+.pz-btn select { background: transparent; color: inherit; border: none; font: inherit; cursor: pointer; }
+.pz-btn select option { color: #0f172a; }
+.pz-cerrar { padding: 6px 8px; }
+
+.pz-escenario {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+}
+/* La lámina entra entera en la pantalla: el ancho manda salvo que el alto no alcance */
+.pz-caja {
+  width: min(100%, calc((100vh - 170px) * 16 / 9));
+  gap: 0;
+}
+.pz-completa .pz-caja { width: min(100%, calc((100vh - 70px) * 16 / 9)); }
+.pz-caja .mv-lamina { box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); border: none; }
+
+.pz-nav {
+  flex-shrink: 0;
+  width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+  transition: opacity 0.4s ease, background 0.2s;
+}
+.pz-nav:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
+.pz-nav:disabled { opacity: 0.2; cursor: default; }
+
+/* Transición entre láminas */
+.pz-entra { animation: pz-der 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.pz-entra.pz-desde-izq { animation-name: pz-izq; }
+@keyframes pz-der { from { opacity: 0; transform: translateX(28px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes pz-izq { from { opacity: 0; transform: translateX(-28px) scale(0.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .pz, .pz-entra { animation: none; }
+}
+
+.pz-nota {
+  margin: var(--space-3) auto 0;
+  width: min(900px, 92vw);
+  display: flex; gap: var(--space-2); align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  color: #fef3c7;
+  font-size: 0.95rem;
+}
+.pz-nota p { margin: 0; }
+
+.pz-progreso { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--space-3) 0 var(--space-4); transition: opacity 0.4s ease; }
+.pz-barra-avance { position: absolute; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #38bdf8, #a78bfa); transition: width 0.35s ease; }
+.pz-contador { font-size: 0.85rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.pz-puntos { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 90vw; }
+.pz-punto { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; background: rgba(255, 255, 255, 0.25); cursor: pointer; }
+.pz-punto.on { background: #fff; transform: scale(1.3); }
+
+/* Proyectando y sin mover el mouse: solo la lámina */
+.pz-quieto { cursor: none; }
+.pz-quieto .pz-barra, .pz-quieto .pz-nav, .pz-quieto .pz-progreso .pz-puntos, .pz-quieto .pz-contador { opacity: 0; }
+
+@media (max-width: 700px) {
+  .pz-txt { display: none; }
+  .pz-nav { width: 38px; height: 38px; }
+  .pz-escenario { gap: 6px; padding: 0 6px; }
+  .pz-titulo { font-size: 0.9rem; }
+}

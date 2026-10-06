@@ -59,6 +59,8 @@ export async function createMaterial(material: {
   /** Contenido en texto (ej. generado por IA): habilita resumen, placas y quiz sin archivo. */
   extractedText?: string;
   aiSummary?: string;
+  /** Mazo estructurado (lib/diapositivas): se guarda junto con el material, en un solo paso. */
+  slides?: unknown;
 }): Promise<LibraryMaterial> {
   const row = unwrap(
     await supabase
@@ -80,6 +82,7 @@ export async function createMaterial(material: {
         tags: material.tags,
         extracted_text: material.extractedText ?? null,
         ai_summary: material.aiSummary ?? null,
+        slides: (material.slides ?? null) as never,
       })
       .select()
       .single()

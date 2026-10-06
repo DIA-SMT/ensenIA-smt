@@ -21,9 +21,9 @@ import PdfVista from './PdfVista';
 import Dialogo from './shell/Dialogo';
 import { Cargando } from './ui/Esqueleto';
 import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
-import { deckDe } from '../lib/presentation';
+import { mazoDe } from '../lib/mazoDe';
 import { TAG_LETRA_GRANDE } from '../services/library.service';
-import { MazoDiapositivas } from './PresentationViewer';
+import MazoVisor from './MazoVisor';
 import JuegoPalabrasVista from './JuegoPalabrasVista';
 import { esJuego } from '../lib/juegos';
 import { esDiagrama } from '../lib/diagramas';
@@ -104,8 +104,10 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   // Diagrama: es una imagen; su texto alternativo es la descripción
   const diagrama = esDiagrama(material.visual) ? material.visual : null;
   const soloTexto = Boolean(texto) && !conArchivo && !esLink && !videoId && !juego;
-  // Diapositivas guardadas: se pasan una por una en vez de leerse como texto
-  const deck = useMemo(() => (soloTexto ? deckDe(material) : null), [soloTexto, material]);
+  // Diapositivas guardadas: se pasan una por una en vez de leerse como texto.
+  // Las mismas láminas que en el editor (tipos, imágenes y diseño), venga el
+  // mazo en el formato nuevo o en el viejo.
+  const deck = useMemo(() => (soloTexto ? mazoDe(material) : null), [soloTexto, material]);
   // Versión adaptada con "letra grande e interlineado"
   const letraGrande = (material.tags ?? []).includes(TAG_LETRA_GRANDE);
   const seVe = Boolean(videoId) || (esImagen && url) || (esPdf && url && !pdfFallo) || (esWord && wordHtml);
@@ -183,8 +185,8 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
           {/* Material que es solo texto (un tema del temario, un módulo armado
               con IA): se lee directo, sin desplegable. */}
           {deck && (
-            <MazoDiapositivas
-              presentation={deck}
+            <MazoVisor
+              mazo={deck}
               notas={verNotas && !proyectar}
               grande={proyectar}
               pie={material.subjectName || undefined}

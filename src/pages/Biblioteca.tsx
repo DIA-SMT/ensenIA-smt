@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
-import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial, guardarTextoDeck } from '../services/library.service';
+import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
@@ -21,16 +21,15 @@ import MaterialViewer from '../components/MaterialViewer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PlacasEditor from '../components/PlacasEditor';
-import PresentationViewer from '../components/PresentationViewer';
+import Presentador from '../components/Presentador';
 import MazoEditor from '../components/MazoEditor';
 import { guardarMazo } from '../services/documents.service';
-import { normalizarMazo, desdeLegado, type Mazo } from '../lib/diapositivas';
-import { marcarDiseno } from '../lib/disenos';
+import { type Mazo } from '../lib/diapositivas';
+import { mazoDe } from '../lib/mazoDe';
 import AdaptarMaterial from '../components/AdaptarMaterial';
 import GenerarVisual from '../components/GenerarVisual';
 import { esJuego } from '../lib/juegos';
 import { Network, Puzzle } from 'lucide-react';
-import { deckDe, type ParsedPresentation } from '../lib/presentation';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -151,7 +150,7 @@ export default function Biblioteca() {
   const [editError, setEditError] = useState('');
 
   // Diapositivas guardadas desde el Laboratorio: se presentan en vez de leerse
-  const [presentando, setPresentando] = useState<{ deck: ParsedPresentation; mat: LibraryMaterial } | null>(null);
+  const [presentando, setPresentando] = useState<{ mazo: Mazo; mat: LibraryMaterial } | null>(null);
   // Editar el mazo: los guardados en JSON se abren tal cual; los viejos
   // (Markdown) se convierten al vuelo y recién al guardar pasan a JSON.
   const [editando, setEditando] = useState<{ mazo: Mazo; mat: LibraryMaterial } | null>(null);
@@ -161,13 +160,15 @@ export default function Biblioteca() {
   // Diagrama o juego de palabras a partir de un material
   const [visualPara, setVisualPara] = useState<{ mat: LibraryMaterial; tipo: 'diagrama' | 'juego' } | null>(null);
 
-  // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla)
+  // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla).
+  // mazoDe: el formato nuevo si está; si no, el viejo convertido. El mismo
+  // mazo se presenta, se edita y lo ven los chicos.
   const decks = useMemo(() => {
-    const map = new Map<string, ParsedPresentation>();
+    const map = new Map<string, Mazo>();
     for (const m of [...allMaterials, ...(searchResults ?? [])]) {
       if (map.has(m.id)) continue;
-      const deck = deckDe(m);
-      if (deck) map.set(m.id, deck);
+      const mazo = mazoDe(m);
+      if (mazo) map.set(m.id, mazo);
     }
     return map;
   }, [allMaterials, searchResults]);
@@ -553,7 +554,7 @@ export default function Biblioteca() {
           {mat.description && <p className="mat-desc">{mat.description}</p>}
           <div className="mat-meta">
             {deck && (
-              <span className="badge badge-ia" title={`${deck.slides.length} diapositivas, listas para presentar`}>
+              <span className="badge badge-ia" title={`${deck.diapositivas.length} diapositivas, listas para presentar`}>
                 <Presentation size={11} aria-hidden="true" /> Diapositivas
               </span>
             )}
@@ -591,7 +592,7 @@ export default function Biblioteca() {
               <button
                 className="mat-action-btn"
                 title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
-                onClick={() => setPresentando({ deck, mat })}
+                onClick={() => setPresentando({ mazo: deck, mat })}
               >
                 <Play size={14} /> Presentar
               </button>
@@ -600,13 +601,8 @@ export default function Biblioteca() {
               <button
                 className="mat-action-btn"
                 title="Corregir, reordenar o agregar diapositivas"
-                onClick={() => {
-                  // El guardado en JSON manda; si es de los viejos, se
-                  // convierte al vuelo y recién al guardar pasa a JSON.
-                  const mazo = normalizarMazo(mat.slides) ?? desdeLegado(deck);
-                  if (mazo) setEditando({ mazo, mat });
-                  else avisar.error('No pude leer estas diapositivas', 'Probá abrirlas con Presentar.');
-                }}
+                // Si es de los viejos, ya viene convertido; al guardar pasa a JSON
+                onClick={() => setEditando({ mazo: deck, mat })}
               >
                 <PencilLine size={14} /> Editar
               </button>
@@ -926,9 +922,10 @@ export default function Biblioteca() {
               alCambiar={mazo => setEditando(e => e && { ...e, mazo })}
               guardando={guardandoMazo}
               docenteId={editando.mat.teacherId ?? user.id}
-              pie={editando.mat.subjectName}
+              pie={destinoDe(editando.mat)}
               contexto={{
                 subjectName: editando.mat.subjectName,
+                courseName: asignaciones.find(a => a.subjectId === editando.mat.subjectId && a.courseId === editando.mat.courseId)?.courseName,
                 teacherName: `${user.firstName} ${user.lastName}`,
               }}
               alGuardar={async () => {
@@ -951,15 +948,20 @@ export default function Biblioteca() {
 
       {/* ── Diapositivas guardadas: presentarlas ── */}
       {presentando && (
-        <PresentationViewer
-          presentation={presentando.deck}
-          subjectName={presentando.mat.subjectName || undefined}
-          teacherName={`${user.firstName} ${user.lastName}`}
-          onClose={() => setPresentando(null)}
+        <Presentador
+          mazo={presentando.mazo}
+          pie={destinoDe(presentando.mat)}
+          contexto={{
+            subjectName: presentando.mat.subjectName,
+            courseName: asignaciones.find(a => a.subjectId === presentando.mat.subjectId && a.courseId === presentando.mat.courseId)?.courseName,
+            teacherName: `${user.firstName} ${user.lastName}`,
+          }}
+          alCerrar={() => setPresentando(null)}
           alCambiarDiseno={async id => {
-            const { mat } = presentando;
+            const { mat, mazo } = presentando;
             try {
-              await guardarTextoDeck(mat.id, marcarDiseno(mat.extractedText ?? '', id));
+              // El diseño vive en el mazo: lo ven igual el editor, el PowerPoint y los chicos
+              await guardarMazo(mat.id, { ...mazo, diseno: id });
               refresh();
             } catch (err) {
               console.error(err);

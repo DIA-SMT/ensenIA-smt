@@ -42,6 +42,8 @@ interface ProcessRequest {
   videoUrl?: string;
   /** diagram: flujo | ciclo | causa_efecto | mapa_mental | linea_tiempo */
   variante?: string;
+  /** slides: lo que pidió el docente (cantidad, enfoque, extras) cuando el texto es un material adjunto. */
+  pedido?: string;
 }
 
 /**
@@ -482,7 +484,7 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
 Las diapositivas acompañan al docente: no lo reemplazan ni son un apunte. Nadie lee un párrafo proyectado.
 
 REGLAS DE CONTENIDO
-- Entre 8 y 12 láminas, incluida la portada.
+- Entre 8 y 12 láminas, incluida la portada, salvo que el pedido del docente diga otra cantidad: ahí manda el pedido.
 - Frases cortas, de una línea. Si una viñeta ocupa dos renglones, está de más.
 - Sin "Introducción", "Desarrollo", "Conclusión": títulos que digan algo.
 - Nada que no esté en el material. No inventes datos, fechas ni autores.
@@ -707,6 +709,19 @@ Deno.serve(async (req: Request) => {
     const descripcion = (body.text ?? '').trim().slice(0, 500);
     if (!descripcion) return json({ error: 'SIN_DESCRIPCION', message: 'Falta describir la imagen.' }, 400);
 
+    // Cada imagen cuesta (~US$ 0,04): cuenta en el cupo diario y se anota en
+    // Consumo de IA. Antes no contaba para nada y no tenía tope.
+    const hoy = new Date().toISOString().split('T')[0];
+    const { data: usoImg } = await supabase
+      .from('ia_usage')
+      .select('message_count, token_count_in, token_count_out')
+      .eq('teacher_id', user.id)
+      .eq('usage_date', hoy)
+      .maybeSingle();
+    if (usoImg && usoImg.message_count >= DAILY_QUOTA) {
+      return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${DAILY_QUOTA} usos de IA por hoy.` }, 429);
+    }
+
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
     if (!OPENROUTER_API_KEY) return json({ error: 'NO_API_KEY' }, 500);
 
@@ -727,6 +742,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash-image',
           modalities: ['image', 'text'],
+          usage: { include: true },
           messages: [{ role: 'user', content: instruccion }],
         }),
       });
@@ -744,6 +760,23 @@ Deno.serve(async (req: Request) => {
         console.error('slide_image sin imagen:', JSON.stringify(j).slice(0, 300));
         return json({ error: 'SIN_IMAGEN', message: 'La IA no devolvió una imagen. Probá de nuevo.' }, 502);
       }
+
+      await supabase.from('ia_usage').upsert(
+        {
+          teacher_id: user.id,
+          usage_date: hoy,
+          message_count: (usoImg?.message_count ?? 0) + 1,
+          token_count_in: (usoImg?.token_count_in ?? 0) + (j?.usage?.prompt_tokens ?? 0),
+          token_count_out: (usoImg?.token_count_out ?? 0) + (j?.usage?.completion_tokens ?? 0),
+        },
+        { onConflict: 'teacher_id,usage_date' },
+      );
+      await registrarConsumo(supabase, {
+        user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
+        feature: 'documentos', detail: 'slide_image', model: 'google/gemini-2.5-flash-image',
+        tokens_in: j?.usage?.prompt_tokens ?? 0, tokens_out: j?.usage?.completion_tokens ?? 0,
+        cost_usd: costoDe(j?.usage),
+      });
 
       const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
       const ruta = `${user.id}/ia/${crypto.randomUUID()}.png`;
@@ -892,7 +925,13 @@ Deno.serve(async (req: Request) => {
       mat.ai_summary ?? '',
       (mat.study_cards ?? []).map(c => `${c.title}: ${c.body}`).join('\n'),
     ].filter(Boolean).join('\n\n');
-    const source = mat.extracted_text || fallback;
+    // Los mazos viejos guardaban "Nota para el docente: …" en el texto: eso no
+    // es para los chicos (quiz, guía), así que se saca antes de usarlo.
+    const sinNotas = (t: string) => t
+      .split('\n')
+      .filter(l => !/^\s*(?:[-•]\s*)?(?:>\s*)?[*_]*\s*notas?\s+(?:para|del|de la)\s+(?:el\s+|la\s+)?docente/i.test(l))
+      .join('\n');
+    const source = mat.extracted_text ? sinNotas(mat.extracted_text) : fallback;
     if (!source.trim()) {
       return json({
         error: 'NO_TEXT',
@@ -954,6 +993,7 @@ Deno.serve(async (req: Request) => {
   }
   const hints: string[] = [];
   if (title) hints.push(`Título del documento: ${title}`);
+  if (mode === 'slides' && body.pedido?.trim()) hints.push(`Pedido del docente (respetalo): ${body.pedido.trim().slice(0, 1500)}`);
   if (cacheMaterial?.subject_name) hints.push(`Materia: ${cacheMaterial.subject_name}`);
   if (context?.subjectName) hints.push(`Materia esperada: ${context.subjectName}`);
   if (context?.courseName) hints.push(`Curso esperado: ${context.courseName}`);

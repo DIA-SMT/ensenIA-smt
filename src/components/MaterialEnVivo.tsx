@@ -18,7 +18,7 @@ import {
   type MaterialEnLista, type EleccionMaterial,
 } from '../services/live.service';
 import { extractQuestions } from '../services/documents.service';
-import { deckDe } from '../lib/presentation';
+import { mazoDe } from '../lib/mazoDe';
 import ElegirMaterial from './ElegirMaterial';
 import MaterialViewer from './MaterialViewer';
 import EstadoVacio from './ui/EstadoVacio';
@@ -63,7 +63,10 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
 
   const texto = material ? textoDeMaterial(material) : '';
   // Diapositivas guardadas desde el Laboratorio: al proyectar se pasan una por una
-  const deck = material?.tipo === 'material' ? deckDe({ tags: [], extractedText: material.texto }) : null;
+  // Las mismas láminas que en la biblioteca (055 trae el mazo y las etiquetas)
+  const deck = material?.tipo === 'material'
+    ? mazoDe({ slides: material.slides, tags: material.tags ?? [], extractedText: material.texto })
+    : null;
   const puedePreguntar = texto.length >= MIN_TEXTO;
 
   /** Lo que la clase tiene, como lo espera el selector (si es de antes de la 049, el único). */
@@ -205,7 +208,7 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
             <span className="mev-sub">
               {material.tipo === 'tema'
                 ? `Tema del temario · ${material.unidad}`
-                : deck ? `Diapositivas de tu biblioteca · ${deck.slides.length}` : 'De tu biblioteca'}
+                : deck ? `Diapositivas de tu biblioteca · ${deck.diapositivas.length}` : 'De tu biblioteca'}
             </span>
             {deck && (
               <span className="mev-sub">Al proyectarlas, pasalas con los botones o con las flechas del teclado.</span>

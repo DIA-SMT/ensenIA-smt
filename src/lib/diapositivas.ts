@@ -259,7 +259,8 @@ export function aTextoPlano(mazo: Mazo): string {
     }
     d.opciones?.forEach((o, j) => partes.push(`${String.fromCharCode(65 + j)}) ${o}`));
     if (d.imagen?.alt) partes.push(d.imagen.alt);
-    if (d.nota) partes.push(`Nota para el docente: ${d.nota}`);
+    // Las notas del docente NO van: este texto lo usan las herramientas de
+    // los estudiantes (quiz, guía, "Explicámelo fácil") y la clase en vivo.
   });
 
   return partes.join('\n');

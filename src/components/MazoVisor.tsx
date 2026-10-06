@@ -11,8 +11,9 @@
  *
  * Los colores salen de lib/disenos, los mismos que usa el PowerPoint.
  *
- * Es un componente nuevo y no reemplaza a PresentationViewer: ese sigue
- * sirviendo los mazos en formato viejo mientras migramos.
+ * Es el único visor de diapositivas: lo usan el editor, el presentador a
+ * pantalla completa (Presentador), el visor de materiales de los chicos y la
+ * clase en vivo. Los mazos viejos se convierten antes (lib/mazoDe).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';

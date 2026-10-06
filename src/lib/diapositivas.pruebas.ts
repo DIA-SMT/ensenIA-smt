@@ -129,9 +129,11 @@ comprobar('el enunciado no se come como opción',
 
 console.log('\n── Texto plano para la búsqueda de la biblioteca ──');
 const plano = aTextoPlano(legado);
-for (const palabra of ['Números racionales', 'Matemática · 3° A', 'fracción', 'π', 'Arrancar preguntando']) {
+for (const palabra of ['Números racionales', 'Matemática · 3° A', 'fracción', 'π']) {
   comprobar(`se puede buscar "${palabra}"`, plano.includes(palabra));
 }
+// El texto lo usan las herramientas de los chicos: la nota del docente no va
+comprobar('la nota del docente no queda en el texto', !plano.includes('Arrancar preguntando'));
 
 console.log(`\n${fallo === 0 ? '✅' : '❌'}  ${ok} bien, ${fallo} mal\n`);
 process.exit(fallo === 0 ? 0 : 1);

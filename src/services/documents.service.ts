@@ -372,12 +372,15 @@ export async function generateSlides(
   text: string,
   title: string,
   context?: { subjectName?: string; courseName?: string },
+  /** Lo que pidió el docente (cantidad, enfoque, extras) cuando el texto es un material adjunto. */
+  opciones?: { pedido?: string },
 ): Promise<Mazo> {
   const { deck, truncated } = await callProcessDocument<{ deck: unknown; truncated?: boolean }>({
     mode: 'slides',
     text,
     title,
     context,
+    pedido: opciones?.pedido,
   });
 
   const mazo = normalizarMazo(deck);
@@ -399,9 +402,19 @@ export async function generateSlides(
  * resultados de búsqueda.
  */
 export async function guardarMazo(materialId: string, mazo: Mazo): Promise<void> {
+  // Se guarda normalizado: lo que se reabre es lo mismo que se guardó
+  // (sin viñetas vacías ni una "pregunta" con una sola opción).
+  const limpio = normalizarMazo(mazo);
+  if (!limpio) throw new Error('Las diapositivas quedaron vacías: agregá contenido antes de guardar.');
   const { error } = await supabase
     .from('library_materials')
-    .update({ slides: mazo as never, extracted_text: aTextoPlano(mazo) })
+    .update({
+      slides: limpio as never,
+      extracted_text: aTextoPlano(limpio),
+      // El contenido cambió: el quiz y la guía de los chicos se rearman
+      practice_quiz: null,
+      study_guide: null,
+    })
     .eq('id', materialId);
   if (error) throw error;
 }

@@ -201,6 +201,8 @@ export type MaterialDeClase =
       tipo: 'material'; id: string; titulo: string; descripcion: string | null;
       file_type: string; file_name: string; storage_path: string | null;
       video_url: string | null; texto: string | null;
+      /** 055: el mismo mazo que en la biblioteca, sus etiquetas, la materia y el juego/diagrama. */
+      slides?: unknown; tags?: string[]; materia?: string | null; visual?: unknown;
     };
 
 /** Un tema del temario o un material de la biblioteca, elegido para la clase. */
@@ -366,6 +368,7 @@ export function materialParaVisor(m: MaterialDeClase): LibraryMaterial {
   return {
     ...base, description: m.descripcion ?? '', fileType: m.file_type as FileType, fileName: m.file_name,
     storagePath: m.storage_path, extractedText: m.texto, videoUrl: m.video_url,
+    tags: m.tags ?? [], subjectName: m.materia ?? '', slides: m.slides ?? null, visual: m.visual ?? null,
   };
 }
 

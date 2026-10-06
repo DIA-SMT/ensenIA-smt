@@ -18,8 +18,8 @@ import MazoEditor from '../components/MazoEditor';
 import GenerarVisual from '../components/GenerarVisual';
 import { Network, Puzzle } from 'lucide-react';
 import Dialogo from '../components/shell/Dialogo';
-import { aTextoPlano, type Mazo } from '../lib/diapositivas';
-import { generateSlides, guardarMazo } from '../services/documents.service';
+import { aTextoPlano, desdeLegado, normalizarMazo, type Mazo } from '../lib/diapositivas';
+import { generateSlides } from '../services/documents.service';
 import {
     getOrCreateSession, getFreeSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
@@ -28,9 +28,9 @@ import { streamChat } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
-import PresentationViewer from '../components/PresentationViewer';
+import Presentador from '../components/Presentador';
 import { parsePresentation, TAG_PRESENTACION, type ParsedPresentation } from '../lib/presentation';
-import { disenoEnTexto, marcarDiseno, type DisenoId } from '../lib/disenos';
+import { disenoEnTexto, type DisenoId } from '../lib/disenos';
 import ToolBriefForm from '../components/ToolBriefForm';
 import RefineResultModal from '../components/RefineResultModal';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -114,7 +114,8 @@ function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
         case 'act': return `Generá una actividad didáctica${ctx}. Incluií objetivos, materiales, duración y desarrollo paso a paso.`;
         case 'eval': return `Creá una evaluación${ctx}. Incluií consignas variadas, rúbrica y criterios de calificación.`;
         case 'sum': return `Resumí el siguiente texto de forma clara y estructurada:\n\n[Pegá tu texto acá]`;
-        case 'pres': return `Creá una presentación en diapositivas${ctx}, de 8 a 12 diapositivas. Usá EXACTAMENTE este formato para cada una:\n\n## Diapositiva N: [título corto]\n- [punto 1]\n- [punto 2]\n\n> Nota para el docente: [cómo presentarla, 1-2 frases]\n\nIncluí 1 o 2 diapositivas de "🙋 Pregunta al grupo" con opciones A) B) C) D) para hacerla interactiva.`;
+        // Va al generador estructurado (sendMessage con la herramienta 'pres'): alcanza con el tema
+        case 'pres': return `Diapositivas${ctx}: `;
         case 'oral': return `Diseñá una rúbrica para evaluar la exposición oral${ctx}. Incluií dimensiones, escala y preguntas disparadoras.`;
         default: return '';
     }
@@ -172,7 +173,8 @@ export default function IALab() {
     const [attachedDoc, setAttachedDoc] = useState<LibraryMaterial | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [publishSource, setPublishSource] = useState<{ content: string; toolUsed: IAToolType | null; title?: string } | null>(null);
-    const [activePresentation, setActivePresentation] = useState<ParsedPresentation | null>(null);
+    // Lo que se presenta a pantalla completa: siempre un mazo del formato nuevo
+    const [activePresentation, setActivePresentation] = useState<Mazo | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
 
     // ── Flujo guiado: brief antes de generar + revisión antes de consolidar ──
@@ -525,6 +527,14 @@ export default function IALab() {
         const text = rawText.trim();
         if (!text || isStreaming) return;
 
+        // Con "Preparar diapositivas" elegida, el pedido arma un mazo editable
+        // (formato nuevo), nunca diapositivas sueltas en el chat
+        if (activeTool === 'pres') {
+            setChatInput('');
+            await armarMazo(text);
+            return;
+        }
+
         // Validate summary input length
         if (activeTool === 'sum' && text.length > SUMMARY_INPUT_LIMIT) {
             avisar.error(
@@ -708,21 +718,32 @@ export default function IALab() {
             );
             return;
         }
-        setActivePresentation(parsed);
+        setActivePresentation(desdeLegado(parsed));
     };
 
     // ── Diapositivas guardadas: un material de la biblioteca, no un mensaje suelto ──
     const deckGuardado = (content: string) => {
         const limpio = content.trim();
-        // El texto guardado puede llevar la marca del diseño adelante
+        // El texto guardado puede llevar la marca del diseño adelante (formato
+        // viejo) o ser el texto plano del mazo (formato nuevo)
         const sinMarca = (t: string) => t.replace(/<!--[\s\S]*?-->/g, '').trim();
-        return materials.find(m => m.tags.includes(TAG_PRESENTACION) && sinMarca(m.extractedText ?? '') === sinMarca(limpio)) ?? null;
+        const parsed = parsePresentation(limpio);
+        const plano = parsed ? aTextoPlano(desdeLegado(parsed)).trim() : null;
+        return materials.find(m => m.tags.includes(TAG_PRESENTACION) && (
+            sinMarca(m.extractedText ?? '') === sinMarca(limpio) || (plano !== null && (m.extractedText ?? '').trim() === plano)
+        )) ?? null;
     };
 
     const tituloDeck = (deck: ParsedPresentation) => `Diapositivas: ${deck.title}`.slice(0, 120);
 
-    /** Crea el material de las diapositivas. Tira un Error con mensaje para mostrar. */
-    const crearMaterialDeck = async (content: string, title: string) => {
+    /**
+     * Crea el material de las diapositivas, ya en el formato nuevo y en un
+     * solo paso (antes eran dos escrituras y si fallaba la segunda quedaba un
+     * material a medias). Tira un Error con mensaje para mostrar.
+     */
+    const crearMaterialDeck = async (mazoNuevo: Mazo, title: string) => {
+        const limpio = normalizarMazo(mazoNuevo);
+        if (!limpio) throw new Error('Las diapositivas quedaron vacías.');
         if (!currentAssignment) throw new Error('Elegí una materia primero (arriba a la izquierda).');
         const unitTitle = selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined;
         // Sin class_id a propósito: el material con class_id es "el material del
@@ -742,7 +763,8 @@ export default function IALab() {
             teacherId: user.id,
             schoolId: user.schoolId,
             tags: [TAG_PRESENTACION, 'IA'],
-            extractedText: content.trim(),
+            extractedText: aTextoPlano(limpio),
+            slides: limpio,
         });
         setMaterials(prev => [mat, ...prev]);
         return mat;
@@ -761,10 +783,15 @@ export default function IALab() {
         const titulo = selectedClass?.title || attachedDoc?.title || subjectName || 'Clase';
         setArmandoMazo(true);
         try {
-            setMazo(await generateSlides(fuente, titulo, {
+            // Con material adjunto, el material es la fuente y el pedido
+            // (cantidad, enfoque, extras) viaja aparte: antes se perdía
+            const generado = await generateSlides(fuente, titulo, {
                 subjectName: subjectName || undefined,
                 courseName: currentAssignment?.courseName,
-            }));
+            }, { pedido: attachedDoc?.extractedText?.trim() ? brief : undefined });
+            // El diseño elegido en el pedido llega al mazo (antes abría siempre en Institucional)
+            const diseno = disenoEnTexto(brief);
+            setMazo(diseno ? { ...generado, diseno } : generado);
         } catch (err) {
             avisar.error('No se pudieron armar las diapositivas', err instanceof Error ? err.message : '');
         } finally {
@@ -777,8 +804,7 @@ export default function IALab() {
         if (!mazo) return;
         setGuardandoMazo(true);
         try {
-            const mat = await crearMaterialDeck(aTextoPlano(mazo), `Diapositivas: ${mazo.titulo}`.slice(0, 120));
-            await guardarMazo(mat.id, mazo);
+            await crearMaterialDeck(mazo, `Diapositivas: ${mazo.titulo}`.slice(0, 120));
             avisar.exito('Diapositivas guardadas', 'Las encontrás en Mis materiales.');
             setMazo(null);
         } catch (err) {
@@ -798,7 +824,8 @@ export default function IALab() {
         }
         setGuardandoDeckId(msg.id);
         try {
-            await crearMaterialDeck(deck.diseno ? marcarDiseno(msg.content, deck.diseno) : msg.content, tituloDeck(deck));
+            // Se guarda ya en el formato nuevo: se ve igual en todos lados
+            await crearMaterialDeck(desdeLegado(deck), tituloDeck(deck));
             avisar.exito(
                 'Diapositivas guardadas en Mis materiales',
                 'Desde ahí las presentás, las compartís con el curso o las proyectás en la clase en vivo.',
@@ -828,10 +855,12 @@ export default function IALab() {
         if (!currentAssignment) throw new Error('Elegí una materia primero.');
         // Si lo que se guarda son diapositivas, se guardan como diapositivas:
         // con su etiqueta, para presentarlas desde Mis materiales
-        if (parsePresentation(content)) {
+        const parsed = parsePresentation(content);
+        if (parsed) {
             const ya = deckGuardado(content);
             if (ya) throw new Error(`Estas diapositivas ya están guardadas en Mis materiales como "${ya.title}".`);
-            await crearMaterialDeck(content, title);
+            const diseno = disenoEnTexto(content) ?? (refineSource ? decks.get(refineSource.id)?.diseno : undefined);
+            await crearMaterialDeck(desdeLegado(diseno ? { ...parsed, diseno } : parsed), title);
             return;
         }
         await createMaterial({
@@ -1666,12 +1695,15 @@ export default function IALab() {
                 />
             )}
             {activePresentation && (
-                <PresentationViewer
-                    presentation={activePresentation}
-                    subjectName={subjectName || undefined}
-                    courseName={currentAssignment?.courseName}
-                    teacherName={`${user.firstName} ${user.lastName}`}
-                    onClose={() => setActivePresentation(null)}
+                <Presentador
+                    mazo={activePresentation}
+                    pie={[subjectName, currentAssignment?.courseName].filter(Boolean).join(' · ')}
+                    contexto={{
+                        subjectName: subjectName || undefined,
+                        courseName: currentAssignment?.courseName,
+                        teacherName: `${user.firstName} ${user.lastName}`,
+                    }}
+                    alCerrar={() => setActivePresentation(null)}
                 />
             )}
 
