@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAlertsByTeacher, getAlertsBySchool, startFollowUp, closeAlert } from '../services/alerts.service';
-import { getThresholds, saveThresholds } from '../services/thresholds.service';
+import { getThresholds, saveThresholds, REGLAS_DICIEMBRE } from '../services/thresholds.service';
 import { formatRelative } from '../lib/format';
 import WellbeingSignals from '../components/WellbeingSignals';
 import Dialogo from '../components/shell/Dialogo';
@@ -55,13 +55,15 @@ function ThresholdsModal({ initial, onSave, onClose }: {
         { key: 'inactivityDays', label: 'Días sin actividad (abandono)', help: 'Días sin huella digital, entregas ni práctica para marcar posible abandono.', min: 3, max: 60 },
         { key: 'escalationHours', label: 'Horas para escalar a dirección', help: 'Alertas críticas sin intervención pasan a dirección después de estas horas.', min: 12, max: 336 },
         { key: 'gradeRiskMax', label: 'Nota de riesgo (aviso a la familia)', help: 'Al publicar el trimestre, esta nota o menos avisa a la familia: todavía es recuperable.', min: 1, max: 10, decimal: true },
-        { key: 'gradeFailMax', label: 'Nota que se lleva a diciembre', help: 'Esta nota o menos marca la materia como "se lleva a diciembre" y avisa a la familia.', min: 1, max: 10, decimal: true },
+        { key: 'gradeFailMax', label: 'Nota que se lleva a diciembre', help: 'Esta nota o menos, en cualquier trimestre, marca la materia como "se lleva a diciembre" y avisa a la familia.', min: 1, max: 10, decimal: true },
     ];
+    // Con la regla anual no hay "nota que se lleva a diciembre": decide el 3er trimestre y el promedio
+    const visibles = t.decemberRule === 'anual' ? fields.filter(f => f.key !== 'gradeFailMax') : fields;
 
     const handleSave = async () => {
         // Los min/max del input son solo visuales: validar acá con mensaje
         // por campo, espejando los CHECK de las migraciones 010 y 011.
-        for (const f of fields) {
+        for (const f of visibles) {
             const v = t[f.key] as number;
             const okTipo = f.decimal ? Number.isFinite(v) : Number.isInteger(v);
             if (!okTipo || v < f.min || v > f.max) {
@@ -69,14 +71,16 @@ function ThresholdsModal({ initial, onSave, onClose }: {
                 return;
             }
         }
-        if (t.gradeFailMax > t.gradeRiskMax) {
+        if (t.decemberRule === 'trimestre' && t.gradeFailMax > t.gradeRiskMax) {
             setError('La nota que se lleva a diciembre no puede ser mayor que la nota de riesgo.');
             return;
         }
+        // La base exige que no supere a la de riesgo aunque no se use: se acomoda sola
+        const aGuardar = { ...t, gradeFailMax: Math.min(t.gradeFailMax, t.gradeRiskMax) };
         setSaving(true);
         setError('');
         try {
-            await onSave(t);
+            await onSave(aGuardar);
             avisar.exito('Umbrales guardados', 'Rigen para las alertas nuevas.');
             onClose();
         } catch {
@@ -98,7 +102,25 @@ function ThresholdsModal({ initial, onSave, onClose }: {
                         Cada escuela tiene su realidad: ajustá cuándo el sistema debe avisar.
                         Los cambios rigen para las alertas nuevas.
                     </p>
-                    {fields.map(f => (
+                    <fieldset className="umbral-regla">
+                        <legend>¿Cuándo se lleva una materia a diciembre?</legend>
+                        {REGLAS_DICIEMBRE.map(r => (
+                            <label key={r.valor} className={`umbral-regla-opcion ${t.decemberRule === r.valor ? 'activa' : ''}`}>
+                                <input
+                                    type="radio"
+                                    name="regla-diciembre"
+                                    value={r.valor}
+                                    checked={t.decemberRule === r.valor}
+                                    onChange={() => setT(prev => ({ ...prev, decemberRule: r.valor }))}
+                                />
+                                <span>
+                                    <b>{r.titulo}</b>
+                                    <span className="em-hint">{r.detalle}</span>
+                                </span>
+                            </label>
+                        ))}
+                    </fieldset>
+                    {visibles.map(f => (
                         <div key={f.key} className="em-field">
                             <label htmlFor={`umbral-${f.key}`}>{f.label}</label>
                             <input

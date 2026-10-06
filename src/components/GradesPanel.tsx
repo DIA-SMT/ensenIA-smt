@@ -17,7 +17,7 @@ import '../pages/Libreta.css';
 
 interface GradesPanelProps {
   studentId: string;
-  thresholds: Pick<AlertThresholds, 'gradeRiskMax' | 'gradeFailMax'>;
+  thresholds: Pick<AlertThresholds, 'gradeRiskMax'>;
   /** El estudiante se ve a sí mismo; la familia mira a su hijo/a. */
   voice: 'propia' | 'familia';
   /** Para quien quiera resumir las mismas notas sin volver a pedirlas. */
@@ -61,8 +61,10 @@ export default function GradesPanel({ studentId, thresholds, voice, alCargar }: 
     );
   }
 
-  const gradeClass = (g: number) => {
-    if (g <= thresholds.gradeFailMax) return 'grade-fail';
+  // En rojo lo que el servidor marcó con la regla de la escuela (046): con
+  // la regla anual, un 4 del 1er trimestre es riesgo, no diciembre.
+  const gradeClass = (g: number, aDiciembre: boolean) => {
+    if (aDiciembre) return 'grade-fail';
     if (g <= thresholds.gradeRiskMax) return 'grade-risk';
     return 'grade-ok';
   };
@@ -98,7 +100,7 @@ export default function GradesPanel({ studentId, thresholds, voice, alCargar }: 
                   {g.teacherNote && <span className="grade-row-term">{g.teacherNote}</span>}
                 </div>
                 {g.grade !== null && (
-                  <span className={`grade-pill ${gradeClass(g.grade)}`}>
+                  <span className={`grade-pill ${gradeClass(g.grade, g.carriesToDecember)}`}>
                     {formatoNota(g.grade)}
                   </span>
                 )}

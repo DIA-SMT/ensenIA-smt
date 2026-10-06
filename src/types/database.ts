@@ -397,6 +397,7 @@ export type Database = {
       }
       alert_thresholds: {
         Row: {
+          december_rule: string
           escalation_hours: number
           grade_fail_max: number
           grade_risk_max: number
@@ -409,6 +410,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          december_rule?: string
           escalation_hours?: number
           grade_fail_max?: number
           grade_risk_max?: number
@@ -421,6 +423,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          december_rule?: string
           escalation_hours?: number
           grade_fail_max?: number
           grade_risk_max?: number
@@ -3232,6 +3235,7 @@ export type Database = {
       get_alert_thresholds: {
         Args: { p_school_id: string }
         Returns: {
+          december_rule: string
           escalation_hours: number
           grade_fail_max: number
           grade_risk_max: number
