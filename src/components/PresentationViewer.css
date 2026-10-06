@@ -367,3 +367,37 @@
   .pv-mazo-nav-txt { display: none; }
   .pv-mazo-slide { border-left-width: 5px; }
 }
+
+/* ── Diseños (lib/disenos): los colores llegan como variables ──
+   Va al final para ganarle a los colores fijos de arriba. */
+.pv-slide.pv-disenado,
+.pv-mazo-slide.pv-disenado {
+  background: var(--d-fondo);
+  color: var(--d-cuerpo);
+  border-left-color: var(--d-acento);
+}
+.pv-disenado .pv-slide-title,
+.pv-disenado .pv-mazo-titulo { color: var(--d-titulo); }
+.pv-disenado .pv-slide-bullets li,
+.pv-disenado .pv-mazo-puntos li { color: var(--d-cuerpo); }
+.pv-disenado .pv-slide-bullets li::before,
+.pv-disenado .pv-mazo-puntos li::before { background: var(--d-acento); }
+.pv-disenado .pv-slide-footer,
+.pv-disenado .pv-mazo-pie { color: var(--d-pie); }
+
+.pv-diseno { position: relative; cursor: pointer; }
+.pv-diseno select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding-right: 4px;
+  cursor: pointer;
+}
+.pv-diseno select option { color: #111827; }
+@media (max-width: 600px) {
+  .pv-diseno-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}

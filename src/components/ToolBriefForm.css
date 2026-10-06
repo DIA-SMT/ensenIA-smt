@@ -1,0 +1,60 @@
+/* ══════════════════════════════
+   BRIEF DEL LABORATORIO — material y diseño de presentaciones
+   (lo demás del brief vive en pages/IALab.css)
+   ══════════════════════════════ */
+
+.brief-select { font-size: 0.875rem; min-height: 40px; }
+.brief-label svg { vertical-align: -2px; margin-right: 2px; }
+
+.brief-disenos { border: 0; padding: 0; margin: 0; min-width: 0; }
+.brief-disenos legend { padding: 0; margin-bottom: 6px; }
+
+.brief-disenos-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-2);
+}
+
+.brief-diseno {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.brief-diseno:hover { border-color: var(--accent-ia); }
+.brief-diseno.selected {
+  border-color: var(--accent-ia);
+  box-shadow: 0 0 0 2px var(--indigo-glow);
+}
+
+/* Miniatura de una diapositiva con los colores del diseño */
+.brief-diseno-muestra {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  aspect-ratio: 16 / 9;
+  padding: 8px 10px 8px 12px;
+  border-radius: 6px;
+  background: var(--d-fondo);
+  border-left: 4px solid var(--d-acento);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+.brief-diseno-linea { display: block; height: 4px; border-radius: 2px; background: var(--d-cuerpo); opacity: 0.75; }
+.brief-diseno-linea.titulo { height: 6px; width: 70%; background: var(--d-titulo); opacity: 1; }
+.brief-diseno-linea.corta { width: 55%; }
+
+.brief-diseno-nombre {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+}
+.brief-diseno.selected .brief-diseno-nombre { color: #3730A3; }
