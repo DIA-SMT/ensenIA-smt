@@ -1,0 +1,386 @@
+/**
+ * Visor del mazo estructurado.
+ *
+ * Los colores vienen como variables (--d-*) desde lib/disenos, así que
+ * cambiar el tema no toca una sola regla de acá.
+ *
+ * La lámina mantiene 16:9 con aspect-ratio: proyectada, lo que se ve en
+ * pantalla es lo que sale en el PowerPoint.
+ */
+
+.mv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mv-lamina {
+  aspect-ratio: 16 / 9;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(20px, 4%, 48px) clamp(24px, 5%, 64px);
+  background: var(--d-fondo);
+  color: var(--d-cuerpo);
+  border: 1px solid var(--border-color);
+  border-left: 5px solid var(--d-acento);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.mv-titulo {
+  margin: 0 0 clamp(12px, 2.5%, 28px);
+  font-size: clamp(1.1rem, 2.6vw, 1.9rem);
+  line-height: 1.2;
+  color: var(--d-titulo);
+}
+
+/* ── Portada ── */
+
+.mv-portada {
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+}
+
+.mv-portada-titulo {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.9rem);
+  line-height: 1.15;
+  color: var(--d-titulo);
+}
+
+.mv-portada-bajada {
+  margin: clamp(10px, 2%, 22px) 0 0;
+  font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+  color: var(--d-cuerpo);
+  opacity: 0.85;
+}
+
+/* ── Viñetas ── */
+
+.mv-puntos {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4%, 16px);
+}
+
+.mv-puntos li {
+  font-size: clamp(0.82rem, 1.75vw, 1.3rem);
+  line-height: 1.4;
+}
+
+.mv-puntos li::marker { color: var(--d-acento); }
+
+/* ── Destacado: una idea sola, que ocupa la lámina ──
+   Ojo: la lámina ya lleva la clase .mv-destacado por su tipo, así que la
+   cita necesita nombre propio o las reglas se le aplican al contenedor
+   entero y el título hereda el centrado. */
+
+.mv-cita {
+  margin: 0;
+  padding-top: clamp(10px, 2%, 24px);
+  border-top: 3px solid var(--d-acento);
+  align-self: center;
+  max-width: 80%;
+  font-size: clamp(1rem, 2.3vw, 1.75rem);
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.mv-cita::before { content: none; }
+
+/* ── Dos columnas ── */
+
+.mv-columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(16px, 3%, 44px);
+}
+
+.mv-columna h3 {
+  margin: 0 0 clamp(6px, 1.2%, 14px);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--d-acento);
+  font-size: clamp(0.85rem, 1.7vw, 1.25rem);
+  color: var(--d-acento);
+}
+
+.mv-columna ul {
+  margin: 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1%, 11px);
+}
+
+.mv-columna li {
+  font-size: clamp(0.74rem, 1.45vw, 1.05rem);
+  line-height: 1.35;
+}
+
+.mv-columna li::marker { color: var(--d-acento); }
+
+/* ── Pregunta al grupo ── */
+
+.mv-estimulo {
+  margin: 0 0 clamp(10px, 2%, 22px);
+  font-size: clamp(0.9rem, 1.9vw, 1.4rem);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.mv-opciones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.3%, 14px);
+}
+
+.mv-opciones li {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  font-size: clamp(0.82rem, 1.7vw, 1.25rem);
+}
+
+/* La letra en un círculo: desde el fondo del aula se busca "la C", no el texto. */
+.mv-letra {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  background: var(--d-acento);
+  color: var(--d-fondo);
+  font-weight: 700;
+  font-size: 0.85em;
+}
+
+/* ── Pie y barra ── */
+
+.mv-pie {
+  position: absolute;
+  left: clamp(24px, 5%, 64px);
+  bottom: clamp(10px, 2%, 22px);
+  font-size: clamp(0.6rem, 1vw, 0.75rem);
+  color: var(--d-pie);
+}
+
+.mv-barra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mv-nav {
+  display: flex;
+  padding: 7px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mv-nav:disabled { opacity: 0.4; cursor: default; }
+.mv-nav:not(:disabled):hover { color: var(--text-primary); border-color: var(--border-hover); }
+
+.mv-contador {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--text-subtle);
+}
+
+.mv-notas-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mv-notas-btn.on {
+  color: var(--cyan-bright);
+  border-color: var(--cyan-dim);
+  background: var(--cyan-subtle);
+}
+
+.mv-nota {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border-left: 3px solid var(--cyan-bright);
+  border-radius: var(--radius-sm);
+}
+
+/* Para el proyector: la lámina ocupa todo y la letra crece. */
+.mv-grande .mv-lamina {
+  border: none;
+  border-radius: 0;
+}
+
+.mv-grande .mv-titulo { font-size: clamp(1.6rem, 3.4vw, 2.6rem); }
+.mv-grande .mv-puntos li { font-size: clamp(1.1rem, 2.3vw, 1.8rem); }
+.mv-grande .mv-opciones li { font-size: clamp(1.1rem, 2.2vw, 1.7rem); }
+.mv-grande .mv-cita { font-size: clamp(1.4rem, 3vw, 2.3rem); }
+
+@media (max-width: 560px) {
+  .mv-columnas { grid-template-columns: 1fr; gap: var(--space-3); }
+  .mv-lamina { aspect-ratio: auto; min-height: 60vh; }
+}
+
+/* ══════════════════════════════════════
+   Modo edición
+   Los campos no se ven como campos hasta que los tocás: el docente está
+   mirando la lámina que va a proyectar, no completando un formulario.
+   ══════════════════════════════════════ */
+
+.mv-campo {
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+}
+
+.mv-campo::placeholder { color: var(--d-pie); opacity: 0.7; }
+.mv-campo:hover { border-color: color-mix(in srgb, var(--d-acento) 30%, transparent); }
+
+.mv-campo:focus {
+  border-color: var(--d-acento);
+  background: color-mix(in srgb, var(--d-acento) 7%, transparent);
+}
+
+/* La lámina en edición respira: los campos crecen y no puede recortarlos. */
+.mv-editando { aspect-ratio: auto; min-height: 42vh; }
+
+.mv-editando li { display: flex; align-items: flex-start; gap: 6px; }
+
+.mv-quitar {
+  flex-shrink: 0;
+  display: flex;
+  padding: 3px;
+  margin-top: 2px;
+  color: var(--d-pie);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+li:hover > .mv-quitar, .mv-quitar:focus-visible { opacity: 1; }
+.mv-quitar:hover { color: var(--danger); background: var(--danger-light); }
+
+.mv-agregar-li { list-style: none; }
+
+.mv-agregar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--d-pie);
+  background: none;
+  border: 1px dashed currentColor;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mv-agregar:hover { color: var(--d-acento); }
+
+/* La letra de cada opción es el botón de "esta es la correcta". */
+.mv-letra-btn { border: 2px solid transparent; cursor: pointer; }
+.mv-letra-btn:hover { outline: 2px solid var(--d-acento); outline-offset: 1px; }
+
+.mv-letra-btn.ok {
+  background: var(--success);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--success-light);
+}
+
+/* ── Lámina de imagen ── */
+
+.mv-figura {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1.2%, 14px);
+  min-height: 0;
+  flex: 1;
+}
+
+.mv-img {
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.mv-figura figcaption {
+  width: 100%;
+  text-align: center;
+  font-size: clamp(0.72rem, 1.3vw, 0.98rem);
+  color: var(--d-pie);
+}
+
+.mv-img-cargando {
+  width: 100%;
+  flex: 1;
+  min-height: 90px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--d-acento) 8%, transparent);
+}
+
+.mv-img-falla {
+  padding: var(--space-4);
+  font-size: 0.85rem;
+  color: var(--d-pie);
+}
+
+/* Puntos con imagen al costado. El texto manda: la imagen acompaña y por
+   eso se lleva la fracción menor. En celular la imagen va abajo, porque
+   dos columnas de 180 px no se leen. */
+.mv-con-imagen {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: clamp(12px, 2.5%, 32px);
+  align-items: center;
+  min-height: 0;
+  flex: 1;
+}
+
+.mv-con-imagen .mv-puntos { margin: 0; }
+
+@media (max-width: 620px) {
+  .mv-con-imagen { grid-template-columns: 1fr; }
+}

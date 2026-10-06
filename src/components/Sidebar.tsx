@@ -156,7 +156,11 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
                       aria-current={esActivo ? 'page' : undefined}
                       title={colapsada ? i.etiqueta : undefined}
                     >
-                      <span className="nav-icon-wrap"><i.icono size={19} aria-hidden="true" /></span>
+                      <span className={`nav-icon-wrap${i.imagen ? ' nav-avatar-wrap' : ''}`}>
+                        {i.imagen
+                          ? <img src={i.imagen} alt="" className="nav-avatar" aria-hidden="true" />
+                          : <i.icono size={19} aria-hidden="true" />}
+                      </span>
                       <span className="nav-label">{i.etiqueta}</span>
                       {i.ia && <span className="ia-tag" aria-hidden="true">IA</span>}
                       {insignias(i.ruta)}

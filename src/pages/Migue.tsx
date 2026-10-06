@@ -9,13 +9,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info,
+  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   audienceForRole, getOrCreateSession, getMessages, resetSession, streamMigue,
 } from '../services/migue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import IrAlFinal from '../components/ui/IrAlFinal';
+import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Cargando } from '../components/ui/Esqueleto';
 import { confirmar } from '../components/ui/avisar';
@@ -40,12 +42,12 @@ const ENCUADRE: Record<MigueAudience, {
 }> = {
   equipo: {
     titulo: 'Migue',
-    bajada: 'Preguntale por la normativa y los protocolos de la escuela. Responde con lo que dirección cargó, citando la norma.',
-    aviso: 'Migue responde solo con la normativa publicada de tu escuela. Si no encuentra una norma, te lo dice en vez de inventarla.',
+    bajada: 'Tu asistente para pensar clases, estrategias pedagógicas y consultar información de la escuela.',
+    aviso: 'En pedagogía, Migue propone ideas para que vos decidas. Sobre la escuela y su normativa, usa solo la información disponible, cita las normas y te avisa si no encuentra un dato.',
     sugerencias: [
-      '¿Qué hago si un estudiante falta hace tres semanas?',
-      '¿Cómo se procede ante una pelea entre compañeros?',
-      '¿Qué dice el reglamento sobre el uso del celular?',
+      'Ayudame a adaptar una actividad para distintos ritmos de aprendizaje',
+      '¿Cómo puedo comprobar si entendieron sin tomar una prueba?',
+      '¿Qué dice la escuela sobre el uso del celular?',
     ],
   },
   estudiante: {
@@ -70,7 +72,7 @@ const ENCUADRE: Record<MigueAudience, {
   },
 };
 
-export default function Migue() {
+export default function Migue({ enPanel = false, alCerrar }: { enPanel?: boolean; alCerrar?: () => void }) {
   const { user } = useAuth();
   const audience = user ? audienceForRole(user.role) : null;
 
@@ -106,9 +108,11 @@ export default function Migue() {
     return () => { cancelado = true; abortRef.current?.abort(); };
   }, [user, audience]);
 
-  useEffect(() => {
-    finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [burbujas]);
+  // Mientras Migue escribe: texto parejo y el hilo acompaña sin tirones
+  // (antes: un scrollIntoView suave por cada fragmento, que movía la página)
+  const ultima = burbujas[burbujas.length - 1];
+  const textoEnVivo = useTextoSuave(enVuelo && ultima?.role === 'assistant' ? ultima.content : '', enVuelo);
+  const { lejos, irAlFinal } = useSeguirAlFinal(finRef, `${burbujas.length}|${textoEnVivo.length}`);
 
   if (!user) return null;
 
@@ -135,6 +139,8 @@ export default function Migue() {
     const historial: Burbuja[] = [...burbujas, { role: 'user', content: contenido }];
     setBurbujas([...historial, { role: 'assistant', content: '' }]);
     setEnVuelo(true);
+    // La pregunta recién hecha se ve, y la respuesta la sigue debajo
+    requestAnimationFrame(() => irAlFinal());
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -207,15 +213,27 @@ export default function Migue() {
   return (
     <div className="migue-container animate-in">
       <div className="migue-head">
-        <div>
-          <h2><Sparkles size={20} className="text-cyan" /> {enc.titulo}</h2>
-          <p className="text-secondary text-sm">{enc.bajada}</p>
+        <div className="migue-identidad">
+          {user.role === 'docente' || user.role === 'director'
+            ? <span className="migue-avatar migue-avatar-head" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
+            : <Sparkles size={20} className="text-cyan" />}
+          <div>
+            <h2>{enc.titulo}</h2>
+            <p className="text-secondary text-sm">{enc.bajada}</p>
+          </div>
         </div>
-        {burbujas.length > 0 && (
-          <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo}>
-            <RotateCcw size={14} /> Empezar de cero
-          </button>
-        )}
+        <div className="migue-head-acciones">
+          {burbujas.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo}>
+              <RotateCcw size={14} /> Empezar de cero
+            </button>
+          )}
+          {enPanel && alCerrar && (
+            <button type="button" className="btn-icon" onClick={alCerrar} aria-label="Cerrar Migue" data-inicial>
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={`migue-aviso ${audience === 'estudiante' ? 'destacado' : ''}`}>
@@ -228,7 +246,9 @@ export default function Migue() {
 
         {!cargando && burbujas.length === 0 && (
           <div className="migue-vacio">
-            <Sparkles size={28} className="text-cyan" />
+            {user.role === 'docente' || user.role === 'director'
+              ? <span className="migue-avatar migue-avatar-vacio" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
+              : <Sparkles size={28} className="text-cyan" />}
             <p className="text-secondary text-sm">Podés arrancar por acá:</p>
             <div className="migue-sugerencias">
               {enc.sugerencias.map(s => (
@@ -240,12 +260,14 @@ export default function Migue() {
           </div>
         )}
 
-        {burbujas.map((b, i) => (
+        {burbujas.map((b, i) => {
+          const contenido = enVuelo && i === burbujas.length - 1 ? textoEnVivo : b.content;
+          return (
           <div key={i} className={`migue-burbuja ${b.role}`}>
             {b.role === 'assistant' ? (
               <>
-                {b.content
-                  ? <MarkdownRenderer content={b.content} />
+                {contenido
+                  ? <MarkdownRenderer content={contenido} />
                   : b.derivada
                     ? null
                     : <span className="migue-pensando"><Loader2 size={14} className="spin" /> Migue está pensando…</span>}
@@ -272,9 +294,11 @@ export default function Migue() {
               <p>{b.content}</p>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {error && <div className="em-error">{error}</div>}
+        <IrAlFinal visible={lejos && burbujas.length > 0} enCurso={enVuelo} alTocar={() => irAlFinal()} />
         <div ref={finRef} />
       </div>
 

@@ -22,6 +22,9 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PlacasEditor from '../components/PlacasEditor';
 import PresentationViewer from '../components/PresentationViewer';
+import MazoEditor from '../components/MazoEditor';
+import { guardarMazo } from '../services/documents.service';
+import { normalizarMazo, desdeLegado, type Mazo } from '../lib/diapositivas';
 import { marcarDiseno } from '../lib/disenos';
 import AdaptarMaterial from '../components/AdaptarMaterial';
 import { deckDe, type ParsedPresentation } from '../lib/presentation';
@@ -146,6 +149,10 @@ export default function Biblioteca() {
 
   // Diapositivas guardadas desde el Laboratorio: se presentan en vez de leerse
   const [presentando, setPresentando] = useState<{ deck: ParsedPresentation; mat: LibraryMaterial } | null>(null);
+  // Editar el mazo: los guardados en JSON se abren tal cual; los viejos
+  // (Markdown) se convierten al vuelo y recién al guardar pasan a JSON.
+  const [editando, setEditando] = useState<{ mazo: Mazo; mat: LibraryMaterial } | null>(null);
+  const [guardandoMazo, setGuardandoMazo] = useState(false);
   // Adaptar un material (lectura fácil, paso a paso…)
   const [adaptando, setAdaptando] = useState<LibraryMaterial | null>(null);
 
@@ -582,6 +589,21 @@ export default function Biblioteca() {
                 <Play size={14} /> Presentar
               </button>
             )}
+            {deck && (
+              <button
+                className="mat-action-btn"
+                title="Corregir, reordenar o agregar diapositivas"
+                onClick={() => {
+                  // El guardado en JSON manda; si es de los viejos, se
+                  // convierte al vuelo y recién al guardar pasa a JSON.
+                  const mazo = normalizarMazo(mat.slides) ?? desdeLegado(deck);
+                  if (mazo) setEditando({ mazo, mat });
+                  else avisar.error('No pude leer estas diapositivas', 'Probá abrirlas con Presentar.');
+                }}
+              >
+                <PencilLine size={14} /> Editar
+              </button>
+            )}
             {mat.videoUrl && (
               <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
                 <Youtube size={14} /> Ver video
@@ -859,6 +881,44 @@ export default function Biblioteca() {
       {/* ── Modal: ver el material acá adentro ── */}
       {viendo && (
         <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} verNotas />
+      )}
+
+      {/* ── Diapositivas guardadas: corregirlas ── */}
+      {editando && (
+        <Dialogo abierto alCerrar={() => setEditando(null)} etiqueta="Editar diapositivas" className="dialogo-ancho">
+          <div className="lab-mazo">
+            <div className="lab-mazo-head">
+              <h3>{editando.mat.title}</h3>
+              <button className="btn-icon" aria-label="Cerrar" onClick={() => setEditando(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <MazoEditor
+              mazo={editando.mazo}
+              alCambiar={mazo => setEditando(e => e && { ...e, mazo })}
+              guardando={guardandoMazo}
+              docenteId={editando.mat.teacherId ?? user.id}
+              pie={editando.mat.subjectName}
+              contexto={{
+                subjectName: editando.mat.subjectName,
+                teacherName: `${user.firstName} ${user.lastName}`,
+              }}
+              alGuardar={async () => {
+                setGuardandoMazo(true);
+                try {
+                  await guardarMazo(editando.mat.id, editando.mazo);
+                  avisar.exito('Diapositivas guardadas');
+                  setEditando(null);
+                  refresh();
+                } catch (err) {
+                  avisar.error('No se pudo guardar', err instanceof Error ? err.message : '');
+                } finally {
+                  setGuardandoMazo(false);
+                }
+              }}
+            />
+          </div>
+        </Dialogo>
       )}
 
       {/* ── Diapositivas guardadas: presentarlas ── */}

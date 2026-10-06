@@ -24,6 +24,33 @@
   margin-bottom: 2px;
 }
 
+.migue-identidad {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.migue-avatar {
+  display: inline-flex;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid rgba(var(--acento-rgb), 0.28);
+  border-radius: var(--radius-full);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.migue-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.migue-avatar-head { width: 46px; height: 46px; }
+.migue-avatar-head img { transform: scale(1.75); transform-origin: 50% 27%; }
+.migue-avatar-vacio { width: 104px; height: 104px; }
+.migue-avatar-vacio img { transform: scale(1.95); transform-origin: 50% 25%; }
+
 .migue-head p { max-width: 60ch; }
 
 .migue-aviso {

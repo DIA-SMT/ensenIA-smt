@@ -464,6 +464,8 @@ export interface LibraryMaterial {
   aiSummary?: string | null;
   isSharedWithStudents: boolean;
   studyCards?: StudyCard[] | null;
+  /** Mazo de diapositivas estructurado (migración 047). Si está, manda sobre extractedText. */
+  slides?: unknown;
   podcastPath?: string | null;
   podcastStatus?: 'none' | 'generating' | 'ready' | 'error';
   /** Tema de la planificación del que salió (si lo generó Armar módulo). */

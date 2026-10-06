@@ -8,10 +8,16 @@ import {
     Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
 } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
+import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
+import IrAlFinal from '../components/ui/IrAlFinal';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
 import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
+import MazoEditor from '../components/MazoEditor';
+import Dialogo from '../components/shell/Dialogo';
+import { aTextoPlano, type Mazo } from '../lib/diapositivas';
+import { generateSlides, guardarMazo } from '../services/documents.service';
 import {
     getOrCreateSession, getFreeSession, getSessionMessages, saveUserMessage,
     getTodayUsage, clearSession
@@ -98,10 +104,6 @@ function getSuggestions(tool: IAToolType, classTitle?: string): string[] {
     }
 }
 
-/* Formato que espera el visor de diapositivas (parsePresentation). El brief
-   guiado arma el pedido, pero sin esto la IA contesta en cualquier formato y
-   el botón "Presentar" no puede leerlo. */
-const FORMATO_DIAPOSITIVAS = 'Usá EXACTAMENTE este formato para cada diapositiva:\n\n## Diapositiva N: [título corto]\n- [punto 1]\n- [punto 2]\n\n> Nota para el docente: [cómo presentarla, 1-2 frases]\n\nIncluí 1 o 2 diapositivas de "🙋 Pregunta al grupo" con opciones A) B) C) D) para hacerla interactiva.';
 
 /* -- Tool-specific pre-fill prompts (si el docente saltea el brief guiado) -- */
 function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
@@ -173,6 +175,11 @@ export default function IALab() {
 
     // ── Flujo guiado: brief antes de generar + revisión antes de consolidar ──
     const [briefTool, setBriefTool] = useState<IAToolType | null>(null);
+    // Diapositivas estructuradas: el mazo se arma contra un schema y se
+    // edita antes de guardarlo. No pasa por el chat.
+    const [mazo, setMazo] = useState<Mazo | null>(null);
+    const [armandoMazo, setArmandoMazo] = useState(false);
+    const [guardandoMazo, setGuardandoMazo] = useState(false);
     const [refineSource, setRefineSource] = useState<ChatMessage | null>(null);
 
     // ── Diapositivas: qué mensajes son un mazo y cuál se está guardando ──
@@ -275,10 +282,11 @@ export default function IALab() {
         };
     }, []);
 
-    // ── Auto-scroll on new messages / streaming ──
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, streamingContent]);
+    // ── Mientras la IA escribe: texto parejo y el chat acompaña sin tirones ──
+    // (antes: un scrollIntoView suave por cada fragmento, que movía la página
+    // entera y arrastraba hacia abajo aunque el docente estuviera leyendo)
+    const textoEnVivo = useTextoSuave(streamingContent, isStreaming);
+    const { lejos: lejosDelFinal, irAlFinal } = useSeguirAlFinal(chatEndRef, `${messages.length}|${textoEnVivo.length}`);
 
     /* -- Planning data -- */
     const filteredUnits = useMemo(() => {
@@ -553,6 +561,8 @@ export default function IALab() {
             createdAt: new Date().toISOString(),
         };
         setMessages(prev => [...prev, userMsg]);
+        // El mensaje nuevo se ve, y la respuesta lo sigue debajo
+        requestAnimationFrame(() => irAlFinal());
 
         // Save to DB
         saveUserMessage(session.id, text, activeTool !== 'free' ? activeTool : undefined).catch(console.error);
@@ -732,6 +742,46 @@ export default function IALab() {
         });
         setMaterials(prev => [mat, ...prev]);
         return mat;
+    };
+
+    /**
+     * Arma el mazo con la IA.
+     *
+     * No pasa por el chat: la IA responde contra un JSON Schema y las
+     * diapositivas llegan ya estructuradas, con su tipo de lámina. El
+     * camino viejo pedía Markdown y lo reconstruía con expresiones
+     * regulares, que es por lo que una coma de más rompía el mazo.
+     */
+    const armarMazo = async (brief: string) => {
+        const fuente = attachedDoc?.extractedText?.trim() || brief;
+        const titulo = selectedClass?.title || attachedDoc?.title || subjectName || 'Clase';
+        setArmandoMazo(true);
+        try {
+            setMazo(await generateSlides(fuente, titulo, {
+                subjectName: subjectName || undefined,
+                courseName: currentAssignment?.courseName,
+            }));
+        } catch (err) {
+            avisar.error('No se pudieron armar las diapositivas', err instanceof Error ? err.message : '');
+        } finally {
+            setArmandoMazo(false);
+        }
+    };
+
+    /** Guarda el mazo: el JSON manda, el texto plano es para encontrarlo buscando. */
+    const guardarMazoEnBiblioteca = async () => {
+        if (!mazo) return;
+        setGuardandoMazo(true);
+        try {
+            const mat = await crearMaterialDeck(aTextoPlano(mazo), `Diapositivas: ${mazo.titulo}`.slice(0, 120));
+            await guardarMazo(mat.id, mazo);
+            avisar.exito('Diapositivas guardadas', 'Las encontrás en Mis materiales.');
+            setMazo(null);
+        } catch (err) {
+            avisar.error('No se pudo guardar', err instanceof Error ? err.message : '');
+        } finally {
+            setGuardandoMazo(false);
+        }
     };
 
     const handleGuardarDiapositivas = async (msg: ChatMessage) => {
@@ -1137,8 +1187,8 @@ export default function IALab() {
                                 <div className="lab-msg bot-msg">
                                     <div className="msg-avatar bg-ia-gradient"><Bot size={18} className="text-white" /></div>
                                     <div className="msg-content">
-                                        {streamingContent ? (
-                                            <MarkdownRenderer content={streamingContent} />
+                                        {textoEnVivo ? (
+                                            <MarkdownRenderer content={textoEnVivo} />
                                         ) : (
                                             <div className="generation-loader">
                                                 <span className="dot"></span><span className="dot"></span><span className="dot"></span>
@@ -1149,6 +1199,12 @@ export default function IALab() {
                                 </div>
                             )}
 
+                            {/* Subió a leer: no se lo arrastra, se le ofrece volver */}
+                            <IrAlFinal
+                                visible={lejosDelFinal && (isStreaming || messages.length > 0)}
+                                enCurso={isStreaming}
+                                alTocar={() => irAlFinal()}
+                            />
                             <div ref={chatEndRef} />
                         </div>
 
@@ -1165,8 +1221,12 @@ export default function IALab() {
                                         setAttachedDoc(doc?.extractedText ? doc : null);
                                     }}
                                     onGenerate={prompt => {
+                                        const tool = briefTool;
                                         setBriefTool(null);
-                                        sendMessage(briefTool === 'pres' ? `${prompt}\n\n${FORMATO_DIAPOSITIVAS}` : prompt);
+                                        // Las diapositivas no van por el chat: se arman
+                                        // estructuradas y se abren para editar.
+                                        if (tool === 'pres') armarMazo(prompt);
+                                        else sendMessage(prompt);
                                     }}
                                     onSkip={() => {
                                         setChatInput(getToolPrompt(briefTool, selectedClass?.title));
@@ -1588,6 +1648,44 @@ export default function IALab() {
                     teacherName={`${user.firstName} ${user.lastName}`}
                     onClose={() => setActivePresentation(null)}
                 />
+            )}
+
+            {/* Armando: la IA tarda ~un minuto y no hay streaming que mirar,
+                así que al menos se dice qué está pasando. */}
+            {armandoMazo && (
+                <Dialogo abierto alCerrar={() => { /* no se puede cancelar a mitad */ }} etiqueta="Armando las diapositivas">
+                    <div className="lab-armando">
+                        <Loader2 size={30} className="girando" aria-hidden="true" />
+                        <h3>Armando las diapositivas</h3>
+                        <p>Tarda alrededor de un minuto. Las vas a poder corregir antes de guardarlas.</p>
+                    </div>
+                </Dialogo>
+            )}
+
+            {mazo && (
+                <Dialogo abierto alCerrar={() => setMazo(null)} etiqueta="Diapositivas" className="dialogo-ancho">
+                    <div className="lab-mazo">
+                        <div className="lab-mazo-head">
+                            <h3>Diapositivas — corregí lo que quieras</h3>
+                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setMazo(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <MazoEditor
+                            mazo={mazo}
+                            alCambiar={setMazo}
+                            alGuardar={guardarMazoEnBiblioteca}
+                            guardando={guardandoMazo}
+                            docenteId={user.id}
+                            pie={[subjectName, currentAssignment?.courseName].filter(Boolean).join(' · ')}
+                            contexto={{
+                                subjectName: subjectName || undefined,
+                                courseName: currentAssignment?.courseName,
+                                teacherName: `${user.firstName} ${user.lastName}`,
+                            }}
+                        />
+                    </div>
+                </Dialogo>
             )}
         </div>
     );

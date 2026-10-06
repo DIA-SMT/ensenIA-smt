@@ -1219,6 +1219,7 @@ export type Database = {
           practice_quiz: Json | null
           school_id: string
           storage_path: string | null
+          slides: Json | null
           study_cards: Json | null
           study_guide: string | null
           subject_id: string
@@ -1247,6 +1248,7 @@ export type Database = {
           practice_quiz?: Json | null
           school_id: string
           storage_path?: string | null
+          slides?: Json | null
           study_cards?: Json | null
           study_guide?: string | null
           subject_id: string
@@ -1275,6 +1277,7 @@ export type Database = {
           practice_quiz?: Json | null
           school_id?: string
           storage_path?: string | null
+          slides?: Json | null
           study_cards?: Json | null
           study_guide?: string | null
           subject_id?: string

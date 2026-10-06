@@ -19,13 +19,17 @@ interface Props {
   alAbrirPreferencias: () => void;
 }
 
-function ItemBarra({ ruta, etiqueta, icono: Icono, activo, ia }: {
-  ruta: string; etiqueta: string; icono: LucideIcon; activo: boolean; ia?: boolean;
+function ItemBarra({ ruta, etiqueta, icono: Icono, imagen, activo, ia }: {
+  ruta: string; etiqueta: string; icono: LucideIcon; imagen?: string; activo: boolean; ia?: boolean;
 }) {
   return (
     <li>
       <Link to={ruta} className={`barra-item${activo ? ' activo' : ''}${ia ? ' barra-ia' : ''}`} aria-current={activo ? 'page' : undefined}>
-        <span className="barra-icono"><Icono size={22} aria-hidden="true" /></span>
+        <span className="barra-icono">
+          {imagen
+            ? <span className="barra-avatar"><img src={imagen} alt="" aria-hidden="true" /></span>
+            : <Icono size={22} aria-hidden="true" />}
+        </span>
         <span className="barra-etiqueta">{etiqueta}</span>
       </Link>
     </li>
@@ -51,7 +55,7 @@ export default function BarraInferior({ alAbrirPreferencias }: Props) {
       <nav className="barra-inferior" aria-label="Principal">
         <ul>
           {enBarra.map(i => (
-            <ItemBarra key={i.ruta} ruta={i.ruta} etiqueta={i.etiqueta} icono={i.icono} ia={i.ia} activo={activo === i.ruta} />
+            <ItemBarra key={i.ruta} ruta={i.ruta} etiqueta={i.etiqueta} icono={i.icono} imagen={i.imagen} ia={i.ia} activo={activo === i.ruta} />
           ))}
           {resto.length > 0 && (
             <li>
@@ -93,7 +97,9 @@ export default function BarraInferior({ alAbrirPreferencias }: Props) {
                     onClick={() => setMasAbierto(false)}
                     data-inicial={g === grupos[0] && i === resto.find(x => x.grupo === g) ? '' : undefined}
                   >
-                    <i.icono size={20} aria-hidden="true" />
+                    {i.imagen
+                      ? <span className="hoja-avatar-nav"><img src={i.imagen} alt="" aria-hidden="true" /></span>
+                      : <i.icono size={20} aria-hidden="true" />}
                     <span>{i.titulo ?? i.etiqueta}</span>
                     {i.ia && <span className="ia-tag" aria-hidden="true">IA</span>}
                   </Link>
