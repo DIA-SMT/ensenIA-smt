@@ -51,7 +51,9 @@ const ENCUADRE: Record<MigueAudience, {
   estudiante: {
     titulo: 'Migue',
     bajada: 'Para estudiar, para entender algo que no te cierra, o para contarle cómo venís.',
-    aviso: 'Migue no guarda secretos: si le contás algo que preocupa, la escuela se entera para poder darte una mano, y él te lo avisa en el momento.',
+    // No dice "la escuela se entera" a secas: el clasificador puede no
+    // detectarlo, y un chico que la necesita no puede quedarse esperando eso.
+    aviso: 'Migue no guarda secretos: si le contás algo que preocupa, puede compartirlo con la escuela para que te den una mano, y si lo hace te lo dice en el momento. Si necesitás ayuda ya, hablá con un adulto de confianza.',
     sugerencias: [
       'Explicame la tabla periódica como si tuviera 13 años',
       'Ayudame a organizarme para la prueba del viernes',

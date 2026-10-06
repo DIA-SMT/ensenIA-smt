@@ -10,10 +10,20 @@
  * Modelos:
  *   - Sonnet (anthropic/claude-sonnet-5): chat, actividad, evaluación, presentación, oral
  *   - Haiku (anthropic/claude-haiku-4.5): "resumir documento"
+ *
+ * Con un estudiante (la guía de estudio de MiGuia) además:
+ *   - cada mensaje pasa por el clasificador de riesgo compartido con Migue
+ *     (_shared/riesgo.ts) antes de responder;
+ *   - el material lo resuelve el servidor desde library_materials con la RLS
+ *     del estudiante: el texto que mande el cliente no entra al prompt.
  */
 
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildSystemPrompt, type PromptContext } from './_system-prompt.ts';
+import { costoDe, registrarConsumo } from '../_shared/consumo.ts';
+import {
+  avisoDerivacion, evaluarRiesgo, MAX_CHARS_RIESGO, type Derivada,
+} from '../_shared/riesgo.ts';
 
 // ── Config ──
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -40,7 +50,10 @@ interface IAChatRequest {
     difficulty?: number;
     educationLevel?: string;
     documentTitle?: string;
+    /** Solo para docentes. A un estudiante se le ignora: va documentId. */
     documentText?: string;
+    /** Material de library_materials que el estudiante quiere estudiar. */
+    documentId?: string;
   };
 }
 
@@ -57,34 +70,20 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
-// ── Main Handler ──
 /**
- * Anota la llamada para la pantalla "Consumo de IA" del superadmin
- * (tabla ia_events, migración 040). Si falla no frena nada: es
- * contabilidad, no la respuesta.
+ * Error como evento SSE. `derivada` viaja también acá: si la escuela ya fue
+ * avisada y después se cae la IA, el chico igual tiene que enterarse.
  */
-async function registrarConsumo(
-  db: SupabaseClient,
-  ev: {
-    user_id: string; school_id?: string | null; role?: string | null;
-    feature: string; detail?: string | null; model?: string | null;
-    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
-  },
-): Promise<void> {
-  try {
-    const { error } = await db.from('ia_events').insert(ev);
-    if (error) console.error('ia_events insert:', error.message);
-  } catch (e) {
-    console.error('ia_events insert:', String(e));
-  }
+function sseError(
+  code: string, message: string, status = 200, derivada: Derivada | null = null,
+): Response {
+  return new Response(sseEvent('error', { code, message, derivada }), {
+    status,
+    headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' },
+  });
 }
 
-/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
-function costoDe(usage: unknown): number | null {
-  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
-  return typeof c === 'number' && Number.isFinite(c) ? c : null;
-}
-
+// ── Main Handler ──
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -125,7 +124,8 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !supabaseServiceKey) {
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseServiceKey || !anonKey) {
     return new Response(
       sseEvent('error', { code: 'CONFIG_ERROR', message: 'Configuración de Supabase incompleta.' }),
       { status: 500, headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
@@ -155,16 +155,31 @@ Deno.serve(async (req: Request) => {
     .eq('id', user.id)
     .single();
 
-  const teacherName = profile
-    ? `${profile.first_name} ${profile.last_name}`
-    : 'Docente';
-  const isStudent = profile?.role === 'estudiante';
+  // Sin perfil no se sabe el rol, y sin rol no se sabe qué reglas aplicar:
+  // tratarlo como docente le daría el asistente completo a cualquiera.
+  if (!profile) return sseError('AUTH_INVALID', 'No encontramos tu perfil.', 403);
+
+  const teacherName = `${profile.first_name} ${profile.last_name}`;
+  const isStudent = profile.role === 'estudiante';
+
+  // ── 3a. La sesión tiene que ser suya ──
+  // Las escrituras de abajo van con service role: sin este chequeo, con el
+  // id de una sesión ajena se le metían mensajes en el historial a otro.
+  const { data: sesion } = await supabase
+    .from('chat_sessions')
+    .select('teacher_id')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (!sesion || sesion.teacher_id !== user.id) {
+    return sseError('FORBIDDEN', 'Esa conversación no es tuya.', 403);
+  }
 
   // ── 3b. Un estudiante solo puede usar los modos de estudio ──
   // Sin esto, bastaba con mandar tool:'act' para tener el asistente
   // completo del docente y pedirle la tarea resuelta.
   let effectiveTool = tool;
   let studentSubjects: string[] = [];
+  let studentId: string | null = null;
 
   if (isStudent) {
     if (tool !== 'guide' && tool !== 'simplify') {
@@ -178,6 +193,7 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
+    studentId = studentRow?.id ?? null;
     if (studentRow) {
       const { data: enrolled } = await supabase
         .from('enrollments')
@@ -224,24 +240,87 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── 5b. Estudiante: mensaje, material y alerta emocional ──
+  let derivada: Derivada | null = null;
+  let material: { title: string; subject_name: string | null; extracted_text: string | null } | null = null;
+
+  if (isStudent) {
+    const ultimo = messages[messages.length - 1];
+    if (!ultimo || ultimo.role !== 'user' || typeof ultimo.content !== 'string') {
+      return new Response('Last message must be from user', { status: 400, headers: corsHeaders() });
+    }
+    // Lo que pase de este largo no lo leería el clasificador de riesgo.
+    if (ultimo.content.length > MAX_CHARS_RIESGO) {
+      return sseError('INPUT_TOO_LONG',
+        `El mensaje es muy largo (máximo ${MAX_CHARS_RIESGO} caracteres). Probá con un pedazo más corto.`);
+    }
+
+    // El material se busca con el JWT del estudiante: la RLS de la 003
+    // decide si puede verlo (compartido y de una materia en la que está
+    // inscripto). Lo que mande el cliente como texto no entra al prompt.
+    if (context.documentId) {
+      const asUser = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: mat, error: errMat } = await asUser
+        .from('library_materials')
+        .select('title, subject_name, extracted_text')
+        .eq('id', context.documentId)
+        .eq('is_shared_with_students', true)
+        .maybeSingle();
+      if (errMat) console.error('library_materials (guía):', JSON.stringify(errMat));
+      if (!mat) {
+        return sseError('MATERIAL_NOT_FOUND',
+          'No encontramos ese material entre los que te compartieron. Elegilo de nuevo de la lista.');
+      }
+      material = mat;
+    }
+
+    // Se decide ANTES de responder, para que el aviso vaya en la misma
+    // respuesta. derivada solo es no-null si la señal quedó guardada.
+    if (studentId) {
+      derivada = await evaluarRiesgo({
+        admin: supabase, apiKey: OPENROUTER_API_KEY, texto: ultimo.content, origen: 'guia',
+        studentId, schoolId: profile.school_id, userId: user.id, role: profile.role,
+      });
+    } else {
+      // Sin fila en students no hay a quién asignarle una señal.
+      console.error('ia-chat: estudiante sin fila en students, sin evaluación de riesgo', user.id);
+    }
+  }
+
   // ── 6. Build system prompt ──
-  const promptCtx: PromptContext = {
-    audience: isStudent ? 'estudiante' : 'docente',
-    studentSubjects,
-    teacherName,
-    subjectName: context.subjectName,
-    courseName: context.courseName,
-    unitTitle: context.unitTitle,
-    classTitle: context.classTitle,
-    classObjectives: context.classObjectives,
-    classContent: context.classContent,
-    difficulty: context.difficulty,
-    educationLevel: context.educationLevel,
-    tool: effectiveTool ?? undefined,
-    documentTitle: context.documentTitle,
-    documentText: context.documentText,
-  };
-  const systemPrompt = buildSystemPrompt(promptCtx);
+  // Para un estudiante solo entra lo que resolvió el servidor.
+  const promptCtx: PromptContext = isStudent
+    ? {
+      audience: 'estudiante',
+      studentSubjects,
+      teacherName,
+      subjectName: material?.subject_name ?? '',
+      courseName: '',
+      tool: effectiveTool ?? undefined,
+      documentTitle: material?.title,
+      documentText: material?.extracted_text ?? undefined,
+    }
+    : {
+      audience: 'docente',
+      studentSubjects,
+      teacherName,
+      subjectName: context.subjectName,
+      courseName: context.courseName,
+      unitTitle: context.unitTitle,
+      classTitle: context.classTitle,
+      classObjectives: context.classObjectives,
+      classContent: context.classContent,
+      difficulty: context.difficulty,
+      educationLevel: context.educationLevel,
+      tool: effectiveTool ?? undefined,
+      documentTitle: context.documentTitle,
+      documentText: context.documentText,
+    };
+  const systemPrompt = buildSystemPrompt(promptCtx) + avisoDerivacion(derivada) + (derivada
+    ? '\nEn esta respuesta lo primero es él: el repaso queda para después, si quiere.'
+    : '');
 
   // ── 7. Determine model ──
   // Resúmenes y simplificación de lenguaje van al modelo rápido.
@@ -276,10 +355,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(orBody),
     });
   } catch (_err) {
-    return new Response(
-      sseEvent('error', { code: 'API_ERROR', message: 'No se pudo conectar con el servicio de IA.' }),
-      { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
-    );
+    return sseError('API_ERROR', 'No se pudo conectar con el servicio de IA.', 200, derivada);
   }
 
   if (!orResponse.ok) {
@@ -290,10 +366,7 @@ Deno.serve(async (req: Request) => {
       : orResponse.status === 402
         ? 'La cuenta de IA se quedó sin crédito. Avisale al administrador.'
         : 'Error del servicio de IA. Intentá de nuevo.';
-    return new Response(
-      sseEvent('error', { code: 'API_ERROR', message: friendly }),
-      { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
-    );
+    return sseError('API_ERROR', friendly, 200, derivada);
   }
 
   // ── 9. Stream response (SSE estilo OpenAI: choices[0].delta.content) ──
@@ -350,7 +423,7 @@ Deno.serve(async (req: Request) => {
 
         // ── 10. Persist message & update usage ──
         // Save assistant message
-        const { data: savedMsg } = await supabase.from('chat_messages').insert({
+        const { data: savedMsg, error: errMsg } = await supabase.from('chat_messages').insert({
           session_id: sessionId,
           role: 'assistant',
           content: fullContent,
@@ -358,6 +431,7 @@ Deno.serve(async (req: Request) => {
           model_used: modelLabel,
           token_count: tokensOut,
         }).select('id').single();
+        if (errMsg) console.error('chat_messages insert:', JSON.stringify(errMsg));
 
         // Update session timestamp
         await supabase
@@ -384,7 +458,7 @@ Deno.serve(async (req: Request) => {
         }
 
         await registrarConsumo(supabase, {
-          user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
+          user_id: user.id, school_id: profile.school_id, role: profile.role,
           feature: 'chat', detail: effectiveTool ?? 'free', model: modelId,
           tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd,
         });
@@ -397,6 +471,9 @@ Deno.serve(async (req: Request) => {
               model: modelLabel,
               tokensIn,
               tokensOut,
+              // Para que la interfaz muestre, aparte del texto de la IA,
+              // que esto se compartió con la escuela.
+              derivada,
             }),
           ),
         );
@@ -404,7 +481,7 @@ Deno.serve(async (req: Request) => {
         console.error('Stream processing error:', err);
         controller.enqueue(
           encoder.encode(
-            sseEvent('error', { code: 'STREAM_ERROR', message: 'Error durante la generación.' }),
+            sseEvent('error', { code: 'STREAM_ERROR', message: 'Error durante la generación.', derivada }),
           ),
         );
       } finally {

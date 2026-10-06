@@ -11,10 +11,17 @@ import { usoIAGastado } from '../lib/usoIA';
 
 // ── Types ──
 
+/** Solo llega con un estudiante, y solo si la señal quedó guardada en la escuela. */
+export type Derivada = 'seguimiento' | 'urgente' | null;
+
 export interface StreamCallbacks {
   onToken: (text: string) => void;
-  onDone: (metadata: { messageId: string; model: string; tokensIn: number; tokensOut: number }) => void;
-  onError: (error: { code: string; message: string }) => void;
+  onDone: (metadata: {
+    messageId: string; model: string; tokensIn: number; tokensOut: number; derivada?: Derivada;
+  }) => void;
+  /** derivada viaja también en el error: si la escuela ya fue avisada, el
+   *  chico tiene que enterarse aunque la respuesta se haya caído. */
+  onError: (error: { code: string; message: string; derivada?: Derivada }) => void;
 }
 
 interface StreamOptions {

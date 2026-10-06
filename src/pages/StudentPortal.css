@@ -561,6 +561,31 @@
   border-color: rgba(0, 168, 255, 0.2);
 }
 
+/* La escuela quedó avisada (mismo aviso que en Migue) */
+.guia-derivada {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.guia-derivada svg { flex-shrink: 0; margin-top: 2px; }
+
+.guia-derivada.seguimiento {
+  background: var(--cyan-subtle);
+  border: 1px solid var(--cyan-bright);
+}
+
+.guia-derivada.urgente {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid var(--danger, #ff6b6b);
+}
+
 .guia-input-row {
   display: flex;
   gap: 8px;

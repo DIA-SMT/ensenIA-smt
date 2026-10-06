@@ -1,5 +1,6 @@
 /**
- * Señales de bienestar que derivó Migue.
+ * Señales de bienestar que derivó Migue o la guía de estudio (MiGuia).
+ * Las de la guía llevan el motivo con "En la guía de estudio: " adelante.
  *
  * Una alerta que nadie mira no es una alerta. Esto es lo que hace que lo
  * que un chico le contó a Migue llegue a una persona de la escuela con un
@@ -81,9 +82,9 @@ export default function WellbeingSignals({ schoolId }: { schoolId: string }) {
   return (
     <section className="wb-panel">
       <header className="wb-head">
-        <h3><HeartPulse size={17} className="text-cyan" /> Señales de Migue</h3>
+        <h3><HeartPulse size={17} className="text-cyan" /> Señales de bienestar</h3>
         <p className="text-secondary text-sm">
-          Estudiantes que le escribieron algo a Migue que amerita que alguien
+          Estudiantes que le escribieron algo a Migue o a la guía de estudio que amerita que alguien
           de la escuela se acerque. {pendientes.length > 0 && (
             <strong>{pendientes.length} sin cerrar.</strong>
           )}

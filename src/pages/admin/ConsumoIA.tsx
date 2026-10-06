@@ -25,6 +25,7 @@ const ROL: Record<string, string> = {
 };
 const FUNCION: Record<string, string> = {
   chat: 'Laboratorio IA (chat)', migue: 'Migue', migue_riesgo: 'Migue · detección de riesgo',
+  chat_riesgo: 'Guía de estudio · detección de riesgo',
   documentos: 'Documentos (lectura, resúmenes, placas)', podcast: 'Podcast',
 };
 

@@ -13,21 +13,18 @@
  * diferencia entre filtrar y solo pedirle a la IA que no cuente.
  */
 
-import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import {
-  buildSystemPrompt, RIESGO_SYSTEM,
-  type MigueAudience, type PolicyHit,
-} from './_prompts.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildSystemPrompt, type MigueAudience, type PolicyHit } from './_prompts.ts';
+import { costoDe, registrarConsumo } from '../_shared/consumo.ts';
+import { avisoDerivacion, evaluarRiesgo, MAX_CHARS_RIESGO, type Derivada } from '../_shared/riesgo.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
-const MODEL_CLASIF = 'anthropic/claude-haiku-4.5';
 const DAILY_QUOTA = 60;
 const MAX_TOKENS = 4000;
-const MAX_MSG_CHARS = 4000;
+// Nunca más que lo que lee el clasificador de riesgo.
+const MAX_MSG_CHARS = Math.min(4000, MAX_CHARS_RIESGO);
 const HISTORY_LIMIT = 20;
-const REASON_SIN_CLASIFICAR =
-  'Migue no pudo evaluar el mensaje (falló el clasificador). Conviene mirarlo a mano.';
 
 interface MigueRequest {
   sessionId: string;
@@ -51,7 +48,7 @@ function corsHeaders(): Record<string, string> {
 
 function sseError(
   code: string, message: string, status = 200,
-  derivada: 'seguimiento' | 'urgente' | null = null,
+  derivada: Derivada | null = null,
 ): Response {
   return new Response(sseEvent('error', { code, message, derivada }), {
     status,
@@ -64,124 +61,6 @@ function audienceForRole(role: string): MigueAudience | null {
   if (role === 'estudiante') return 'estudiante';
   if (role === 'padre') return 'familia';
   return null;
-}
-
-interface Clasificacion {
-  nivel: 'ninguno' | 'seguimiento' | 'urgente';
-  motivo: string;
-  frase: string | null;
-}
-
-/**
- * Una pasada del clasificador. Devuelve null SOLO si falló — "sin riesgo"
- * es un resultado, no un null. La diferencia importa: en un sistema que
- * protege a un chico, confundir "no pasa nada" con "no pude mirar" es el
- * peor modo de falla posible.
- */
-async function pasadaClasificador(
-  apiKey: string, modelo: string, texto: string,
-  anotar?: (modelo: string, usage: { prompt_tokens?: number; completion_tokens?: number; cost?: number } | undefined) => void,
-): Promise<Clasificacion | null> {
-  try {
-    const r = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'X-Title': 'SMT EstudIA',
-      },
-      body: JSON.stringify({
-        model: modelo,
-        max_tokens: 300,
-        usage: { include: true },
-        messages: [
-          { role: 'system', content: RIESGO_SYSTEM },
-          // El texto del chico va delimitado y el prompt dice que es dato.
-          // Además se recorta: un mensaje larguísimo es una vía para
-          // empujar la instrucción fuera de la ventana de atención.
-          {
-            role: 'user',
-            content: `<mensaje_del_estudiante>\n${texto.slice(0, 3000)}\n</mensaje_del_estudiante>`,
-          },
-        ],
-      }),
-    });
-    if (!r.ok) {
-      console.error('clasificador HTTP', modelo, r.status, (await r.text()).slice(0, 300));
-      return null;
-    }
-    const j = await r.json();
-    anotar?.(modelo, j?.usage);
-    const raw: string = j?.choices?.[0]?.message?.content ?? '';
-    // Objetos planos, sin anidar: se toma el ÚLTIMO, que es la respuesta
-    // del modelo. Un regex greedy podía abarcar desde una llave escrita
-    // por el estudiante hasta el final.
-    const candidatos = raw.match(/\{[^{}]*\}/g);
-    if (!candidatos || candidatos.length === 0) {
-      console.error('clasificador sin JSON', modelo, raw.slice(0, 200));
-      return null;
-    }
-    const parsed = JSON.parse(candidatos[candidatos.length - 1]);
-    if (!['ninguno', 'seguimiento', 'urgente'].includes(parsed?.nivel)) {
-      console.error('clasificador nivel inválido', modelo, String(parsed?.nivel).slice(0, 60));
-      return null;
-    }
-    return {
-      nivel: parsed.nivel,
-      motivo: String(parsed.motivo ?? '').slice(0, 400) || 'Sin motivo especificado.',
-      frase: parsed.frase ? String(parsed.frase).slice(0, 400) : null,
-    };
-  } catch (e) {
-    console.error('clasificador excepción', modelo, String(e).slice(0, 300));
-    return null;
-  }
-}
-
-/**
- * Clasifica con un modelo y, si ese falla, reintenta con el otro. Que
- * fallen los dos a la vez es mucho menos probable que uno solo, y el del
- * chat ya demostró estar respondiendo.
- *
- * Si igual fallan los dos, NO devuelve "ninguno": devuelve 'error', y el
- * llamador deja una señal para que alguien de la escuela lo mire a mano.
- */
-async function clasificarRiesgo(
-  apiKey: string, texto: string,
-  anotar?: Parameters<typeof pasadaClasificador>[3],
-): Promise<Clasificacion | 'error'> {
-  const primera = await pasadaClasificador(apiKey, MODEL_CLASIF, texto, anotar);
-  if (primera) return primera;
-  const segunda = await pasadaClasificador(apiKey, MODEL_CHAT, texto, anotar);
-  if (segunda) return segunda;
-  console.error('clasificador: fallaron los dos modelos');
-  return 'error';
-}
-
-/**
- * Anota la llamada para la pantalla "Consumo de IA" del superadmin
- * (tabla ia_events, migración 040). Si falla no frena nada: es
- * contabilidad, no la respuesta.
- */
-async function registrarConsumo(
-  db: SupabaseClient,
-  ev: {
-    user_id: string; school_id?: string | null; role?: string | null;
-    feature: string; detail?: string | null; model?: string | null;
-    tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
-  },
-): Promise<void> {
-  try {
-    const { error } = await db.from('ia_events').insert(ev);
-    if (error) console.error('ia_events insert:', error.message);
-  } catch (e) {
-    console.error('ia_events insert:', String(e));
-  }
-}
-
-/** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
-function costoDe(usage: unknown): number | null {
-  const c = (usage as { cost?: unknown } | null | undefined)?.cost;
-  return typeof c === 'number' && Number.isFinite(c) ? c : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -329,69 +208,12 @@ Deno.serve(async (req: Request) => {
   // Se decide ANTES de responder para poder avisarle al chico en la misma
   // respuesta. Y solo se le dice que la escuela se enteró si el registro
   // se guardó de verdad: prometerlo sin haberlo hecho sería lo peor.
-  let derivada: 'seguimiento' | 'urgente' | null = null;
-  if (audience === 'estudiante' && studentId) {
-    const pasadas: Parameters<typeof registrarConsumo>[1][] = [];
-    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content, (modelo, u) => {
-      pasadas.push({
-        user_id: user.id, school_id: profile.school_id, role: profile.role,
-        feature: 'migue_riesgo', model: modelo,
-        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
-      });
-    });
-    for (const p of pasadas) await registrarConsumo(admin, p);
-
-    if (clasif === 'error') {
-      // Falló la evaluación. No es "no pasa nada": se deja una señal para
-      // que alguien mire, acotada a una por día para no inundar el tablero
-      // durante una caída del proveedor.
-      const hoyIso = new Date().toISOString().split('T')[0];
-      const { data: yaHay } = await admin
-        .from('wellbeing_signals')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('reason', REASON_SIN_CLASIFICAR)
-        .gte('created_at', `${hoyIso}T00:00:00Z`)
-        .limit(1);
-      if (!yaHay || yaHay.length === 0) {
-        const { error } = await admin.from('wellbeing_signals').insert({
-          student_id: studentId,
-          school_id: profile.school_id,
-          level: 'seguimiento',
-          reason: REASON_SIN_CLASIFICAR,
-          excerpt: null,
-        });
-        if (error) console.error('wellbeing_signals (sin clasificar):', JSON.stringify(error));
-      }
-      // Al chico no se le dice nada: no se evaluó nada sobre él.
-    } else if (clasif.nivel !== 'ninguno') {
-      const { error } = await admin.from('wellbeing_signals').insert({
-        student_id: studentId,
-        school_id: profile.school_id,
-        level: clasif.nivel,
-        reason: clasif.motivo,
-        excerpt: clasif.frase,
-      });
-      if (error) {
-        // No se guardó: Migue NO puede decirle que la escuela ya sabe.
-        console.error('wellbeing_signals insert:', JSON.stringify(error));
-      } else {
-        derivada = clasif.nivel;
-      }
-    }
-  }
-
-  const avisoDerivacion = derivada
-    ? `\n\n## Importante para esta respuesta
-Lo que escribió requiere acompañamiento y YA quedó avisada la escuela.
-Decíselo en tu respuesta, con naturalidad y sin asustarlo: que le pasaste esto al equipo
-de la escuela para que puedan darle una mano, y que no está solo. No le pidas permiso
-—ya está hecho— ni se lo presentes como un castigo.${
-        derivada === 'urgente'
-          ? '\nAdemás, pedile que hable HOY con un adulto de confianza de la escuela o de su casa.'
-          : ''
-      }`
-    : '';
+  const derivada = audience === 'estudiante' && studentId
+    ? await evaluarRiesgo({
+      admin, apiKey: OPENROUTER_API_KEY, texto: ultimo.content, origen: 'migue',
+      studentId, schoolId: profile.school_id, userId: user.id, role: profile.role,
+    })
+    : null;
 
   // El historial sale de la base, no del cliente: así nadie puede
   // fabricar turnos de Migue que no existieron (por ejemplo, uno donde
@@ -416,7 +238,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     // Que el último chunk traiga también el costo (Consumo de IA)
     usage: { include: true },
     messages: [
-      { role: 'system', content: systemPrompt + avisoDerivacion },
+      { role: 'system', content: systemPrompt + avisoDerivacion(derivada) },
       ...historial,
       { role: 'user', content: ultimo.content },
     ],

@@ -886,7 +886,10 @@ export interface IAChatContext {
   difficulty?: number;
   educationLevel?: string;
   documentTitle?: string;
+  /** El servidor lo ignora si quien pregunta es estudiante: va documentId. */
   documentText?: string;
+  /** Material de la biblioteca; con un estudiante el servidor lo busca con su RLS. */
+  documentId?: string;
 }
 
 // ── Quick Note / Reminder ──

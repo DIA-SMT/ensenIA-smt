@@ -10,7 +10,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  GraduationCap, Wand2, Send, Square, Bot, User as UserIcon, Paperclip, X, Sparkles,
+  GraduationCap, Wand2, Send, Square, Bot, User as UserIcon, Paperclip, X, Sparkles, ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
@@ -18,7 +18,7 @@ import {
   getOrCreateSession, getSessionsByTeacher, getSessionMessages,
   saveUserMessage, getTodayUsage,
 } from '../services/chat-history.service';
-import { streamChat } from '../services/ia-chat.service';
+import { streamChat, type Derivada } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { avisar } from '../components/ui/avisar';
@@ -65,6 +65,9 @@ export default function MiGuia() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [usesToday, setUsesToday] = useState(0);
+  // Respuestas tras las que la escuela quedó avisada (id del mensaje → nivel).
+  // Se muestra en la interfaz y no solo dentro del texto de la IA.
+  const [derivadas, setDerivadas] = useState<Record<string, NonNullable<Derivada>>>({});
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -162,15 +165,19 @@ export default function MiGuia() {
       {
         subjectName: attachedDoc?.subjectName ?? 'Estudio',
         courseName: '',
-        documentTitle: attachedDoc?.title,
-        documentText: attachedDoc?.extractedText ?? undefined,
+        // Solo el id: el texto del material lo busca el servidor entre los
+        // que este estudiante puede ver.
+        documentId: attachedDoc?.id,
       },
       { sessionId: session.id, tool: mode as IAToolType },
       {
         onToken: t => { full += t; setStreamingContent(full); },
-        onDone: () => {
+        onDone: meta => {
+          const id = crypto.randomUUID();
+          const derivada = meta.derivada;
+          if (derivada) setDerivadas(prev => ({ ...prev, [id]: derivada }));
           setMessages(prev => [...prev, {
-            id: crypto.randomUUID(),
+            id,
             sessionId: session.id,
             role: 'assistant',
             content: full,
@@ -185,8 +192,13 @@ export default function MiGuia() {
           abortRef.current = null;
         },
         onError: err => {
+          const id = crypto.randomUUID();
+          // Si la escuela YA fue avisada, que la respuesta se haya caído no
+          // puede hacer que el chico no se entere.
+          const derivada = err.derivada;
+          if (derivada) setDerivadas(prev => ({ ...prev, [id]: derivada }));
           setMessages(prev => [...prev, {
-            id: crypto.randomUUID(),
+            id,
             sessionId: session.id,
             role: 'assistant',
             content: `⚠️ ${err.message}`,
@@ -295,6 +307,16 @@ export default function MiGuia() {
                 {msg.role === 'assistant'
                   ? <MarkdownRenderer content={msg.content} />
                   : <p style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>}
+                {derivadas[msg.id] && (
+                  <div className={`guia-derivada ${derivadas[msg.id]}`}>
+                    <ShieldAlert size={14} />
+                    <span>
+                      {derivadas[msg.id] === 'urgente'
+                        ? 'Esto se le avisó a la escuela ahora mismo para que puedan acompañarte. No estás solo.'
+                        : 'Esto se compartió con la escuela para que puedan darte una mano.'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -338,6 +360,10 @@ export default function MiGuia() {
         </div>
         <p className="guia-hint">
           La guía no hace la tarea por vos: te ayuda a entender y repasar. 💪
+          <br />
+          Tampoco guarda secretos: si le contás algo que preocupa, puede compartirlo con la
+          escuela para que te den una mano, y si lo hace te lo dice en el momento. Si
+          necesitás ayuda ya, hablá con un adulto de confianza.
         </p>
       </div>
     </div>
