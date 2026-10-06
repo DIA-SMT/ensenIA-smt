@@ -4,11 +4,15 @@
  * Muestra las diapositivas generadas por la IA en pantalla completa,
  * listas para proyectar: navegación con flechas o teclado, notas del
  * docente ocultables y descarga como PowerPoint real (.pptx).
+ *
+ * El diseño visual (lib/disenos) se elige al generar y se puede cambiar
+ * acá sin volver a generar: el PowerPoint sale con el diseño elegido.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, StickyNote, Download, Presentation } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, StickyNote, Download, Presentation, Palette } from 'lucide-react';
 import type { ParsedPresentation } from '../lib/presentation';
+import { DISENOS, DISENO_PREDETERMINADO, disenoDe, varsDiseno, type DisenoId } from '../lib/disenos';
 import { exportPresentationPptx } from '../lib/pptx';
 import { avisar } from './ui/avisar';
 import './PresentationViewer.css';
@@ -62,7 +66,8 @@ export function MazoDiapositivas({ presentation, notas = false, grande = false, 
       aria-label={presentation.title}
     >
       <div
-        className={`pv-mazo-slide ${esPregunta(slide.title) ? 'pv-slide-question' : ''}`}
+        className={`pv-mazo-slide pv-disenado ${esPregunta(slide.title) ? 'pv-slide-question' : ''}`}
+        style={varsDiseno(disenoDe(presentation.diseno), esPregunta(slide.title))}
         aria-roledescription="diapositiva"
         aria-label={`Diapositiva ${index + 1} de ${total}`}
         aria-live="polite"
@@ -104,12 +109,16 @@ interface PresentationViewerProps {
   courseName?: string;
   teacherName?: string;
   onClose: () => void;
+  /** Si está, el cambio de diseño se guarda (por ejemplo, en el material). */
+  alCambiarDiseno?: (id: DisenoId) => void;
 }
 
 export default function PresentationViewer({
-  presentation, subjectName, courseName, teacherName, onClose,
+  presentation, subjectName, courseName, teacherName, onClose, alCambiarDiseno,
 }: PresentationViewerProps) {
   const [index, setIndex] = useState(0);
+  const [disenoId, setDisenoId] = useState<DisenoId>(presentation.diseno ?? DISENO_PREDETERMINADO);
+  const diseno = disenoDe(disenoId);
   const [showNotes, setShowNotes] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -133,7 +142,7 @@ export default function PresentationViewer({
     if (downloading) return;
     setDownloading(true);
     try {
-      await exportPresentationPptx(presentation, { subjectName, courseName, teacherName });
+      await exportPresentationPptx({ ...presentation, diseno: disenoId }, { subjectName, courseName, teacherName });
     } catch (err) {
       console.error('Error exportando PPTX:', err);
       avisar.error('No se pudo generar el PowerPoint.', 'Probá de nuevo en un rato.');
@@ -153,6 +162,21 @@ export default function PresentationViewer({
           <span>{presentation.title}</span>
         </div>
         <div className="pv-topbar-actions">
+          <label className="pv-btn pv-diseno" title="Cambiar el diseño (no vuelve a generar)">
+            <Palette size={15} aria-hidden="true" />
+            <span className="pv-diseno-txt">Diseño</span>
+            <select
+              value={disenoId}
+              aria-label="Diseño de la presentación"
+              onChange={e => {
+                const id = e.target.value as DisenoId;
+                setDisenoId(id);
+                alCambiarDiseno?.(id);
+              }}
+            >
+              {DISENOS.map(d => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+            </select>
+          </label>
           <button
             className={`pv-btn ${showNotes ? 'active' : ''}`}
             onClick={() => setShowNotes(v => !v)}
@@ -175,7 +199,7 @@ export default function PresentationViewer({
           <ChevronLeft size={26} />
         </button>
 
-        <div className={`pv-slide ${isQuestion ? 'pv-slide-question' : ''}`}>
+        <div className={`pv-slide pv-disenado ${isQuestion ? 'pv-slide-question' : ''}`} style={varsDiseno(diseno, isQuestion)}>
           <h2 className="pv-slide-title">{slide.title}</h2>
           {slide.bullets.length > 0 && (
             <ul className="pv-slide-bullets">

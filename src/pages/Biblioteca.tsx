@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
-import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
+import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial, guardarTextoDeck } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
@@ -22,6 +22,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PlacasEditor from '../components/PlacasEditor';
 import PresentationViewer from '../components/PresentationViewer';
+import { marcarDiseno } from '../lib/disenos';
 import AdaptarMaterial from '../components/AdaptarMaterial';
 import { deckDe, type ParsedPresentation } from '../lib/presentation';
 import PodcastPlayer from '../components/PodcastPlayer';
@@ -770,6 +771,16 @@ export default function Biblioteca() {
           subjectName={presentando.mat.subjectName || undefined}
           teacherName={`${user.firstName} ${user.lastName}`}
           onClose={() => setPresentando(null)}
+          alCambiarDiseno={async id => {
+            const { mat } = presentando;
+            try {
+              await guardarTextoDeck(mat.id, marcarDiseno(mat.extractedText ?? '', id));
+              refresh();
+            } catch (err) {
+              console.error(err);
+              avisar.error('No se pudo guardar el diseño', 'Se ve así ahora, pero la próxima vez vuelve al anterior.');
+            }
+          }}
         />
       )}
 

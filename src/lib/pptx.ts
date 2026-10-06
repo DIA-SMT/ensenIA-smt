@@ -7,11 +7,9 @@
  */
 
 import { esPortada, type ParsedPresentation } from './presentation';
+import { disenoDe } from './disenos';
 
-const INDIGO = '4F46E5';
-const DARK = '1E1B2E';
-const GRAY = '6B7280';
-const LIGHT = 'F8F7FC';
+const esPregunta = (titulo: string) => /pregunta/i.test(titulo);
 
 export async function exportPresentationPptx(
   pres: ParsedPresentation,
@@ -26,6 +24,8 @@ export async function exportPresentationPptx(
   pptx.title = pres.title;
 
   const footerParts = [opts.subjectName, opts.courseName].filter(Boolean).join(' · ');
+  // Los mismos colores que en la pantalla (lib/disenos)
+  const d = disenoDe(pres.diseno);
 
   // ── Portada ──
   // La IA casi siempre arma su propia portada como diapositiva 1 (tema y
@@ -38,31 +38,32 @@ export async function exportPresentationPptx(
     ?? pres.subtitle ?? (footerParts || null);
 
   const cover = pptx.addSlide();
-  cover.background = { color: DARK };
-  cover.addShape('rect', { x: 0, y: 6.9, w: 13.33, h: 0.6, fill: { color: INDIGO } });
+  cover.background = { color: d.portadaFondo };
+  cover.addShape('rect', { x: 0, y: 6.9, w: 13.33, h: 0.6, fill: { color: d.acento } });
   cover.addText(coverTitle, {
     x: 0.8, y: 2.2, w: 11.7, h: 2.2,
-    fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle',
+    fontSize: 40, bold: true, color: d.portadaTexto, align: 'center', valign: 'middle',
   });
   if (coverSubtitle) {
     cover.addText(coverSubtitle, {
       x: 0.8, y: 4.4, w: 11.7, h: 0.8,
-      fontSize: 18, color: 'C7C3E0', align: 'center',
+      fontSize: 18, color: d.portadaTexto, align: 'center',
     });
   }
   cover.addText('Generado con SMT EstudIA', {
-    x: 0.8, y: 6.95, w: 11.7, h: 0.5, fontSize: 12, color: 'FFFFFF', align: 'center',
+    x: 0.8, y: 6.95, w: 11.7, h: 0.5, fontSize: 12, color: d.portadaFondo === d.acento ? d.portadaTexto : d.portadaFondo, align: 'center',
   });
   if (portadaIA?.note) cover.addNotes(portadaIA.note);
 
   // ── Diapositivas de contenido ──
   for (const slide of contenido) {
     const s = pptx.addSlide();
-    s.background = { color: LIGHT };
-    s.addShape('rect', { x: 0, y: 0, w: 0.25, h: 7.5, fill: { color: INDIGO } });
+    const pregunta = esPregunta(slide.title);
+    s.background = { color: pregunta ? d.preguntaFondo : d.fondo };
+    s.addShape('rect', { x: 0, y: 0, w: 0.25, h: 7.5, fill: { color: pregunta ? d.preguntaAcento : d.acento } });
     s.addText(slide.title, {
       x: 0.7, y: 0.45, w: 12, h: 1.1,
-      fontSize: 30, bold: true, color: DARK, valign: 'middle',
+      fontSize: 30, bold: true, color: pregunta ? d.preguntaTitulo : d.titulo, valign: 'middle',
     });
 
     if (slide.bullets.length > 0) {
@@ -73,14 +74,14 @@ export async function exportPresentationPptx(
         })),
         {
           x: 0.9, y: 1.8, w: 11.6, h: 4.9,
-          fontSize: 20, color: '374151', valign: 'top', lineSpacingMultiple: 1.35,
+          fontSize: d.id === 'contraste' ? 24 : 20, color: d.cuerpo, valign: 'top', lineSpacingMultiple: 1.35,
         },
       );
     }
 
     if (footerParts) {
       s.addText(`${footerParts} — SMT EstudIA`, {
-        x: 0.7, y: 7.0, w: 12, h: 0.4, fontSize: 10, color: GRAY,
+        x: 0.7, y: 7.0, w: 12, h: 0.4, fontSize: 10, color: d.pie,
       });
     }
 
