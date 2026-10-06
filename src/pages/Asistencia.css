@@ -82,6 +82,13 @@
   border: 1px solid rgba(129, 140, 248, 0.35);
 }
 
+/* Guardada en el equipo, esperando señal */
+.asis-notice-pendiente {
+  color: var(--warning);
+  background: var(--warning-light);
+  border: 1px solid var(--warning);
+}
+
 /* ── Resumen + acciones masivas ── */
 .asis-summary {
   display: flex;

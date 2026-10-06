@@ -7,6 +7,7 @@ import {
     MessageSquare, PenLine, Copy, Trash2, Square,
     Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
 } from 'lucide-react';
+import { haySenial } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
@@ -116,6 +117,8 @@ export default function IALab() {
     const [allUnits, setAllUnits] = useState<PlanningUnit[]>([]);
     // Hasta que llegan los módulos no se dice "todavía no tenés módulos"
     const [modulosCargados, setModulosCargados] = useState(false);
+    // Si no se pudieron traer, NO es "no tenés módulos": ofrecer importar duplicaba todo
+    const [modulosFallaron, setModulosFallaron] = useState(false);
     const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [selectedClass, setSelectedClass] = useState<PlanningClass | null>(null);
@@ -187,8 +190,8 @@ export default function IALab() {
     useEffect(() => {
         if (!user) return;
         getPlanningByTeacher(user.id)
-            .then(setAllUnits)
-            .catch(console.error)
+            .then(u => { setAllUnits(u); setModulosFallaron(false); })
+            .catch(err => { console.error(err); setModulosFallaron(true); })
             .finally(() => setModulosCargados(true));
         getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
         getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
@@ -803,7 +806,17 @@ export default function IALab() {
                 {/* Units Tree */}
                 <div className="units-tree">
                     {!modulosCargados && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando tus módulos…" />}
-                    {modulosCargados && filteredUnits.length === 0 && (
+                    {modulosCargados && modulosFallaron && filteredUnits.length === 0 && (
+                        <EstadoVacio
+                            compacto
+                            icono={Folder}
+                            titulo={haySenial() ? 'No se pudieron traer tus módulos' : 'Sin conexión'}
+                            texto={haySenial()
+                                ? 'Probá de nuevo en un rato. Tus módulos siguen guardados.'
+                                : 'Tus módulos no están guardados en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y quedan para usar sin conexión.'}
+                        />
+                    )}
+                    {modulosCargados && !modulosFallaron && filteredUnits.length === 0 && (
                         <EstadoVacio
                             compacto
                             icono={Folder}

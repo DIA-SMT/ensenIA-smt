@@ -212,68 +212,39 @@ export interface GradeSavePayload {
 }
 
 /**
- * Guarda o publica la libreta. Insert-o-update explícito (no upsert):
- * los grants por columna de la 011 no permiten reenviar las claves en el
- * SET de un ON CONFLICT.
+ * Guarda o publica la libreta: todas las filas de una vez, o ninguna
+ * (guardar_notas_trimestre, migración 047). Antes iba alumno por alumno y
+ * un corte de señal en el medio dejaba la mitad publicada. Se puede
+ * reintentar: lo que ya había llegado se actualiza, no choca.
+ *
+ * Las reglas de estado por fila las aplica la base:
+ *  - sin nota → 'borrador' (una casilla vacía no puede estar publicada);
+ *  - ya publicada → sigue publicada aunque se guarde un borrador: "guardar"
+ *    no puede retractarle a las familias una nota que ya recibieron;
+ *  - el resto → lo que pidió el botón.
  */
 export async function saveGrades(params: {
   subjectId: string;
   courseId: string;
   termId: string;
-  schoolId: string;
   status: TermGradeStatus;
-  rows: GradeSavePayload[];
+  rows: Omit<GradeSavePayload, 'gradeId' | 'currentStatus'>[];
 }): Promise<void> {
-  const { subjectId, courseId, termId, schoolId, status, rows } = params;
-
-  const toInsert = rows.filter(r => !r.gradeId);
-  const toUpdate = rows.filter(r => r.gradeId);
-
-  /**
-   * Reglas de estado por fila:
-   *  - sin nota → 'borrador' (una casilla vacía no puede estar publicada);
-   *  - ya publicada → sigue publicada aunque se guarde un borrador: "guardar"
-   *    no puede retractarle a las familias una nota que ya recibieron;
-   *  - el resto → lo que pidió el botón.
-   */
-  const statusFor = (r: GradeSavePayload): TermGradeStatus => {
-    if (r.grade === null) return 'borrador';
-    if (r.currentStatus === 'publicada') return 'publicada';
-    return status;
-  };
-
-  if (toInsert.length > 0) {
-    const { error } = await supabase.from('term_grades').insert(
-      toInsert.map(r => ({
-        student_id: r.studentId,
-        subject_id: subjectId,
-        course_id: courseId,
-        term_id: termId,
-        school_id: schoolId,
-        grade: r.grade,
-        suggested_grade: r.suggestedGrade,
-        suggested_from: r.suggestedFrom,
-        status: statusFor(r),
-        teacher_note: r.teacherNote ?? null,
-      }))
-    );
-    if (error) throw error;
-  }
-
-  // Uno por uno: cada fila tiene su propia nota y el volumen es un curso.
-  for (const r of toUpdate) {
-    const { error } = await supabase
-      .from('term_grades')
-      .update({
-        grade: r.grade,
-        suggested_grade: r.suggestedGrade,
-        suggested_from: r.suggestedFrom,
-        status: statusFor(r),
-        teacher_note: r.teacherNote ?? null,
-      })
-      .eq('id', r.gradeId!);
-    if (error) throw error;
-  }
+  const { subjectId, courseId, termId, status, rows } = params;
+  const { error } = await supabase.rpc('guardar_notas_trimestre', {
+    p_subject: subjectId,
+    p_course: courseId,
+    p_term: termId,
+    p_status: status,
+    p_filas: rows.map(r => ({
+      student_id: r.studentId,
+      grade: r.grade,
+      suggested_grade: r.suggestedGrade,
+      suggested_from: r.suggestedFrom,
+      teacher_note: r.teacherNote ?? null,
+    })),
+  });
+  if (error) throw error;
 }
 
 // ── Lectura para estudiante / familia / dirección ──

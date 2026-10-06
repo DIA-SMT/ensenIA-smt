@@ -108,6 +108,19 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 .login-field input::placeholder { color: var(--text-muted); }
+
+/* "Es mi equipo": la casilla y su explicación, que se lea sin apurarse */
+.login-equipo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.login-equipo input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--acento); }
+.login-equipo span { display: flex; flex-direction: column; gap: 2px; }
+.login-equipo small { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.45; }
 .login-field input:focus { border-color: var(--acento); box-shadow: 0 0 0 3px var(--cyan-glow); }
 .login-field input[aria-invalid="true"] { border-color: var(--danger); }
 

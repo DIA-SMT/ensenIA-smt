@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2,
+  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff,
 } from 'lucide-react';
+import { haySenial } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
@@ -51,6 +52,8 @@ export default function Biblioteca() {
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
   // Hasta que llega la primera lista no se dice "no hay materiales"
   const [cargado, setCargado] = useState(false);
+  // No se pudo traer la lista: no es lo mismo que "no hay materiales"
+  const [falloCarga, setFalloCarga] = useState(false);
 
   // Upload modal
   const [showUpload, setShowUpload] = useState(false);
@@ -94,8 +97,8 @@ export default function Biblioteca() {
   const refresh = () => {
     if (!user) return;
     getMaterialsByTeacher(user.id)
-      .then(setAllMaterials)
-      .catch(console.error)
+      .then(lista => { setAllMaterials(lista); setFalloCarga(false); })
+      .catch(err => { console.error(err); setFalloCarga(true); })
       .finally(() => setCargado(true));
   };
 
@@ -532,7 +535,16 @@ export default function Biblioteca() {
         {!cargado && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando tus materiales…" />}
 
         {cargado && filtered.length === 0 && (
-          query.trim() ? (
+          falloCarga ? (
+            <EstadoVacio
+              icono={WifiOff}
+              titulo={haySenial() ? 'No se pudieron traer tus materiales' : 'Sin conexión'}
+              texto={haySenial()
+                ? 'Probá de nuevo en un rato.'
+                : 'Tus materiales no están guardados en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y quedan para usar sin conexión.'}
+              accion={{ etiqueta: 'Reintentar', alTocar: refresh }}
+            />
+          ) : query.trim() ? (
             <EstadoVacio
               icono={Search}
               titulo="Ningún material coincide"

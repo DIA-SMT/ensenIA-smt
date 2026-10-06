@@ -3232,6 +3232,26 @@ export type Database = {
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
       gen_join_code: { Args: never; Returns: string }
+      guardar_asistencia: {
+        Args: {
+          p_course: string
+          p_fecha: string
+          p_nota?: string | null
+          p_registros: Json
+          p_subject: string
+        }
+        Returns: string
+      }
+      guardar_notas_trimestre: {
+        Args: {
+          p_course: string
+          p_filas: Json
+          p_status: string
+          p_subject: string
+          p_term: string
+        }
+        Returns: undefined
+      }
       get_alert_thresholds: {
         Args: { p_school_id: string }
         Returns: {
@@ -3302,6 +3322,16 @@ export type Database = {
       submit_live_guest_response: {
         Args: { p_activity: string; p_payload: Json; p_token: string }
         Returns: undefined
+      }
+      temario_clases: {
+        Args: { p_unidades: string[] }
+        Returns: {
+          id: string
+          objectives: string[]
+          sort_order: number
+          title: string
+          unit_id: string
+        }[]
       }
     }
     Enums: {

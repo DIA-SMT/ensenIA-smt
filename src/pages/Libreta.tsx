@@ -14,7 +14,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle, BookOpen,
-  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users,
+  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users, CloudUpload,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -24,7 +24,13 @@ import {
   getThresholds, DEFAULT_THRESHOLDS, notaLlevaADiciembre, textoReglaDiciembre,
 } from '../services/thresholds.service';
 import {
-  getGradesForCourse, upsertGrade, yearSummary, getAbsencesByTermForCourse,
+  guardarBoletinResiliente, guardarNotasBorradorResiliente, pendientesDe, claveNotas, olvidarPendiente,
+  subscribe as suscribirCola,
+} from '../services/offline-queue.service';
+import { haySenial, esErrorDeRed } from '../lib/conexion';
+import { useSinGuardar } from '../lib/sinGuardar';
+import {
+  getGradesForCourse, yearSummary, getAbsencesByTermForCourse,
   CONDUCT_META, TERM_LABELS, type Conduct, type ReportGrade,
 } from '../services/libreta.service';
 import { getStudentTrace, TRACE_META } from '../services/informes.service';
@@ -48,7 +54,8 @@ const YEAR = new Date().getFullYear();
 const TERMS: number[] = [1, 2, 3, 4, 5];
 
 type Draft = { grade: string; conduct: Conduct | null; comment: string };
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+/** 'pendiente': guardada en este equipo, se envía sola cuando haya señal. */
+type SaveState = 'idle' | 'saving' | 'saved' | 'pendiente' | 'error';
 
 const keyOf = (studentId: string, term: number) => `${studentId}:${term}`;
 
@@ -64,6 +71,8 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
     const [absences, setAbsences] = useState<Record<string, [number, number, number]>>({});
     const [drafts, setDrafts] = useState<Record<string, Draft>>({});
     const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
+    // Por qué no se pudo guardar cada fila en rojo
+    const [errores, setErrores] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [informeFor, setInformeFor] = useState<string | null>(null);
 
@@ -88,12 +97,22 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
             getGradesForCourse(assignment.subjectId, assignment.courseId, YEAR),
             getAbsencesByTermForCourse(assignment.courseId, YEAR),
         ]).then(([studs, gs, abs]) => {
+            // Lo cargado sin señal y todavía sin enviar manda sobre lo del servidor
+            const enEspera = pendientesDe('boletin').filter(op =>
+                op.fila.subjectId === assignment.subjectId && op.fila.courseId === assignment.courseId && op.fila.schoolYear === YEAR);
+            const conPendientes = [
+                ...gs.filter(g => !enEspera.some(op => op.fila.studentId === g.studentId && op.fila.term === g.term)),
+                ...enEspera.map(({ fila: f }) => ({
+                    id: keyOf(f.studentId, f.term), studentId: f.studentId, subjectId: f.subjectId, courseId: f.courseId,
+                    schoolYear: f.schoolYear, term: f.term, grade: f.grade, conduct: f.conduct, comment: f.comment,
+                })),
+            ];
             setStudents(studs);
-            setGrades(gs);
+            setGrades(conPendientes);
             setAbsences(abs);
             // Los borradores arrancan con lo guardado
             const d: Record<string, Draft> = {};
-            for (const g of gs) {
+            for (const g of conPendientes) {
                 d[keyOf(g.studentId, g.term)] = {
                     grade: g.grade != null ? String(g.grade) : '',
                     conduct: g.conduct,
@@ -101,9 +120,20 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
                 };
             }
             setDrafts(d);
-            setSaveStates({});
+            setSaveStates(Object.fromEntries(enEspera.map(op => [keyOf(op.fila.studentId, op.fila.term), 'pendiente' as SaveState])));
+            setErrores({});
         }).catch(console.error).finally(() => setLoading(false));
     }, [assignment?.subjectId, assignment?.courseId]);
+
+    // Cuando la cola manda una fila, deja de estar pendiente
+    useEffect(() => suscribirCola(() => {
+        const siguen = new Set(pendientesDe('boletin').map(op => keyOf(op.fila.studentId, op.fila.term)));
+        setSaveStates(prev => {
+            const enviadas = Object.entries(prev).filter(([k, s]) => s === 'pendiente' && !siguen.has(k));
+            if (enviadas.length === 0) return prev;
+            return { ...prev, ...Object.fromEntries(enviadas.map(([k]) => [k, 'idle' as SaveState])) };
+        });
+    }), []);
 
     const gradesByStudent = useMemo(() => {
         const map = new Map<string, ReportGrade[]>();
@@ -137,11 +167,19 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
         const grade = d.grade.trim() === '' ? null : Number(d.grade.replace(',', '.'));
         if (grade !== null && (Number.isNaN(grade) || grade < 1 || grade > 10)) {
             setSaveStates(prev => ({ ...prev, [k]: 'error' }));
+            setErrores(prev => ({ ...prev, [k]: 'La nota tiene que ser de 1 a 10.' }));
             return;
         }
         setSaveStates(prev => ({ ...prev, [k]: 'saving' }));
+        setErrores(prev => {
+            if (!(k in prev)) return prev;
+            const resto = { ...prev };
+            delete resto[k];
+            return resto;
+        });
+        const st = students.find(s => s.id === studentId);
         try {
-            await upsertGrade({
+            const resultado = await guardarBoletinResiliente({
                 studentId,
                 subjectId: assignment.subjectId,
                 courseId: assignment.courseId,
@@ -151,7 +189,7 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
                 grade,
                 conduct: d.conduct,
                 comment: d.comment.trim() || null,
-            });
+            }, `Boletín de ${st ? `${st.firstName} ${st.lastName}` : 'un estudiante'} · ${subjectName} · ${TERM_LABELS[term]}`);
             setGrades(prev => {
                 const rest = prev.filter(g => !(g.studentId === studentId && g.term === term));
                 return [...rest, {
@@ -159,11 +197,16 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
                     schoolYear: YEAR, term, grade, conduct: d.conduct, comment: d.comment.trim() || null,
                 }];
             });
-            setSaveStates(prev => ({ ...prev, [k]: 'saved' }));
-            setTimeout(() => setSaveStates(prev => (prev[k] === 'saved' ? { ...prev, [k]: 'idle' } : prev)), 1800);
+            if (resultado === 'pendiente') {
+                setSaveStates(prev => ({ ...prev, [k]: 'pendiente' }));
+            } else {
+                setSaveStates(prev => ({ ...prev, [k]: 'saved' }));
+                setTimeout(() => setSaveStates(prev => (prev[k] === 'saved' ? { ...prev, [k]: 'idle' } : prev)), 1800);
+            }
         } catch (err) {
             console.error(err);
             setSaveStates(prev => ({ ...prev, [k]: 'error' }));
+            setErrores(prev => ({ ...prev, [k]: 'El servidor no la aceptó. Probá de nuevo.' }));
         }
     };
 
@@ -330,7 +373,17 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
                                             {st.lastName}, {st.firstName}
                                             {state === 'saving' && <Loader2 size={12} className="spin lib-state" />}
                                             {state === 'saved' && <Check size={13} className="lib-state text-success" />}
-                                            {state === 'error' && <AlertCircle size={13} className="lib-state text-danger" />}
+                                            {state === 'pendiente' && (
+                                                <CloudUpload size={13} className="lib-state text-warning" role="img"
+                                                    aria-label="Guardada en este equipo: se envía sola cuando haya señal">
+                                                    <title>Guardada en este equipo: se envía sola cuando haya señal</title>
+                                                </CloudUpload>
+                                            )}
+                                            {state === 'error' && (
+                                                <AlertCircle size={13} className="lib-state text-danger" role="img" aria-label={errores[k] ?? 'No se pudo guardar'}>
+                                                    <title>{errores[k] ?? 'No se pudo guardar'}</title>
+                                                </AlertCircle>
+                                            )}
                                         </td>
                                         <td data-label="Nota">
                                             <input
@@ -422,6 +475,16 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
                             })}
                         </tbody>
                     </table>
+                    {Object.keys(errores).length > 0 && (
+                        <p className="text-sm text-danger lib-hint" role="alert">
+                            <AlertCircle size={13} aria-hidden="true" /> {Object.keys(errores).length === 1 ? 'Una fila no se guardó' : `${Object.keys(errores).length} filas no se guardaron`} (en rojo): {[...new Set(Object.values(errores))].join(' ')} Tocá la nota de nuevo para reintentar.
+                        </p>
+                    )}
+                    {Object.values(saveStates).some(s => s === 'pendiente') && (
+                        <p className="text-sm text-warning lib-hint" role="status">
+                            <CloudUpload size={13} aria-hidden="true" /> Las filas con la nube están guardadas en este equipo y se envían solas cuando haya señal.
+                        </p>
+                    )}
                     <p className="lib-hint text-xs text-subtle">
                         {isApoyo
                             ? `${TERM_LABELS[term]}: solo va la nota de la instancia de apoyo (quien no llegó a 6 de promedio).`
@@ -446,10 +509,16 @@ export default function Libreta() {
   const [error, setError] = useState('');
   const [okMsg, setOkMsg] = useState('');
   const [tab, setTab] = useState<'notas' | 'temario' | 'boletin'>('notas');
+  // Notas tipeadas y sin guardar: no se pierden por cambiar de materia ni por una actualización
+  const [sucio, setSucio] = useState(false);
+  useSinGuardar('libreta-notas', sucio);
+  // Borrador guardado en este equipo, esperando señal
+  const [pendiente, setPendiente] = useState(false);
 
   const assignments: SubjectAssignment[] = useMemo(() => user?.subjects ?? [], [user]);
   const assignment = assignments[assignmentIdx];
   const term = terms.find(t => t.id === termId) ?? null;
+  const clave = assignment && term ? claveNotas(assignment.subjectId, assignment.courseId, term.id) : '';
 
   // Carga inicial: materias, trimestres y umbrales de la escuela.
   useEffect(() => {
@@ -498,22 +567,49 @@ export default function Libreta() {
     let cancelled = false;
     setLoading(true);
     setOkMsg('');
-    // La nómina son los INSCRIPTOS en esa materia+curso: es exactamente
-    // el conjunto que la RLS deja calificar (enrollments), así que la
-    // libreta no muestra a nadie que después no se pueda guardar.
-    getEnrolledStudents(assignment.subjectId, assignment.courseId)
-      .then(students => getGradebook({
-        subjectId: assignment.subjectId,
-        courseId: assignment.courseId,
-        term,
-        students,
-        teacherId: user.id,
-      }))
+    setError('');
+    setSucio(false);
+    leerLibreta()
       .then(r => { if (!cancelled) setRows(r); })
-      .catch(err => { console.error(err); if (!cancelled) setError('No se pudo cargar la libreta.'); })
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) setError(haySenial()
+          ? 'No se pudo cargar la libreta.'
+          : 'Sin conexión, y esta libreta no está guardada en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y después funciona sin conexión.');
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [user, assignment?.subjectId, assignment?.courseId, term?.id]);
+  }, [user, assignment?.subjectId, assignment?.courseId, term?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cuando la cola manda el borrador, se vuelve a leer lo que quedó en el servidor
+  useEffect(() => suscribirCola(() => {
+    if (!pendiente || pendientesDe('notas').some(op => op.clave === clave)) return;
+    setPendiente(false);
+    if (!sucio) leerLibreta().then(setRows).catch(console.error);
+  }), [clave, pendiente, sucio]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * La libreta de la materia y el trimestre elegidos. La nómina son los
+   * INSCRIPTOS en esa materia+curso: es exactamente el conjunto que la RLS
+   * deja calificar (enrollments), así que no muestra a nadie que después no
+   * se pueda guardar. Si hay un borrador guardado en el equipo sin enviar,
+   * sus notas mandan sobre las del servidor.
+   */
+  async function leerLibreta(): Promise<GradebookRow[]> {
+    if (!user || !assignment || !term) return [];
+    const students = await getEnrolledStudents(assignment.subjectId, assignment.courseId);
+    const leidas = await getGradebook({
+      subjectId: assignment.subjectId, courseId: assignment.courseId, term, students, teacherId: user.id,
+    });
+    const enEspera = pendientesDe('notas').find(op => op.clave === claveNotas(assignment.subjectId, assignment.courseId, term.id));
+    setPendiente(!!enEspera);
+    if (!enEspera) return leidas;
+    const porAlumno = new Map(enEspera.rows.map(r => [r.studentId, r]));
+    return leidas.map(r => {
+      const p = porAlumno.get(r.studentId);
+      return p ? { ...r, grade: p.grade, teacherNote: p.teacherNote ?? r.teacherNote } : r;
+    });
+  }
 
   if (!user) return null;
 
@@ -521,6 +617,7 @@ export default function Libreta() {
     const n = value === '' ? null : Number(value);
     setRows(prev => prev.map(r => r.studentId === studentId ? { ...r, grade: n } : r));
     setOkMsg('');
+    setSucio(true);
   };
 
   const applySuggestions = () => {
@@ -528,6 +625,17 @@ export default function Libreta() {
       ? { ...r, grade: r.suggestedGrade }
       : r));
     setOkMsg('');
+    setSucio(true);
+  };
+
+  /** Cambiar de materia o trimestre con notas sin guardar las perdería: se pregunta. */
+  const cambiarSinPerder = async (cambio: () => void) => {
+    if (sucio && !(await confirmar({
+      titulo: 'Tenés notas sin guardar',
+      mensaje: 'Si cambiás de materia o de trimestre, lo que tipeaste se pierde. Guardalo como borrador primero (funciona sin conexión).',
+      accion: 'Cambiar igual',
+    }))) return;
+    cambio();
   };
 
   const gradeClass = (g: number | null): string => {
@@ -549,6 +657,10 @@ export default function Libreta() {
       setError('Cargá al menos una nota antes de publicar.');
       return;
     }
+    if (status === 'publicada' && !haySenial()) {
+      setError('Para publicar hace falta señal: al publicar se les avisa a las familias. Guardalo como borrador (queda en este equipo) y publicalo cuando vuelva la conexión.');
+      return;
+    }
     if (status === 'publicada') {
       // Las que avisan a la familia: riesgo o diciembre (con la regla anual
       // el 3er trimestre avisa por debajo de 6, aunque supere la nota de riesgo)
@@ -567,47 +679,50 @@ export default function Libreta() {
 
     setBusy(true);
     setError('');
+    // Se mandan las filas con nota Y las que ya existían pero quedaron
+    // vacías: borrar una nota tiene que limpiarla en la base, no dejar
+    // la vieja viva detrás de un input vacío.
+    const filas = rows.filter(r => r.grade !== null || r.gradeId !== null).map(r => ({
+      studentId: r.studentId,
+      grade: r.grade,
+      suggestedGrade: r.suggestedGrade,
+      suggestedFrom: r.suggestedFrom,
+      teacherNote: r.teacherNote,
+    }));
     try {
-      // Se mandan las filas con nota Y las que ya existían pero quedaron
-      // vacías: borrar una nota tiene que limpiarla en la base, no dejar
-      // la vieja viva detrás de un input vacío.
-      const aGuardar = rows.filter(r => r.grade !== null || r.gradeId !== null);
-      await saveGrades({
-        subjectId: assignment.subjectId,
-        courseId: assignment.courseId,
-        termId: term.id,
-        schoolId: user.schoolId,
-        status,
-        rows: aGuardar.map(r => ({
-          gradeId: r.gradeId,
-          studentId: r.studentId,
-          grade: r.grade,
-          suggestedGrade: r.suggestedGrade,
-          suggestedFrom: r.suggestedFrom,
-          teacherNote: r.teacherNote,
-          currentStatus: r.status,
-        })),
-      });
-      setOkMsg(status === 'publicada' ? 'Notas publicadas. Las familias en riesgo ya fueron avisadas.' : 'Borrador guardado.');
+      if (status === 'borrador') {
+        const resultado = await guardarNotasBorradorResiliente({
+          subjectId: assignment.subjectId,
+          courseId: assignment.courseId,
+          termId: term.id,
+          rows: filas,
+          descripcion: `Notas en borrador · ${subjectsMap[assignment.subjectId]?.name ?? 'Materia'} ${assignment.courseName} · ${term.name}`,
+        });
+        setSucio(false);
+        if (resultado === 'pendiente') {
+          // Quedó en el equipo: la pantalla ya muestra lo guardado
+          setPendiente(true);
+          setOkMsg('Borrador guardado en este equipo. Se envía solo cuando haya señal; para publicar hace falta conexión.');
+          return;
+        }
+        setOkMsg('Borrador guardado.');
+      } else {
+        // Publicar va siempre directo: les avisa a las familias
+        await saveGrades({ subjectId: assignment.subjectId, courseId: assignment.courseId, termId: term.id, status, rows: filas });
+        // Un borrador viejo esperando en el equipo ya no corresponde
+        olvidarPendiente(claveNotas(assignment.subjectId, assignment.courseId, term.id));
+        setPendiente(false);
+        setSucio(false);
+        setOkMsg('Notas publicadas. Las familias en riesgo ya fueron avisadas.');
+      }
       // Releer para traer ids, estado y lo que selló el servidor.
-      const students = await getEnrolledStudents(assignment.subjectId, assignment.courseId);
-      setRows(await getGradebook({
-        subjectId: assignment.subjectId, courseId: assignment.courseId,
-        term, students, teacherId: user.id,
-      }));
+      setRows(await leerLibreta());
     } catch (err) {
       console.error(err);
-      // El guardado no es atómico (un insert + N updates): puede haber
-      // quedado a medias, así que no se promete que no se guardó nada.
-      setError('Se cortó el guardado y puede haber quedado incompleto. Recargá la libreta para ver qué se guardó antes de reintentar.');
-      // Releer para que la pantalla muestre el estado real, no el editado.
-      try {
-        const students = await getEnrolledStudents(assignment.subjectId, assignment.courseId);
-        setRows(await getGradebook({
-          subjectId: assignment.subjectId, courseId: assignment.courseId,
-          term, students, teacherId: user.id,
-        }));
-      } catch { /* si tampoco se puede releer, queda el mensaje */ }
+      // Se guarda todo junto o nada (047): lo tipeado sigue en pantalla, intacto.
+      setError(esErrorDeRed(err)
+        ? 'No se pudo publicar: se cortó la señal y no se guardó ninguna nota. Siguen acá: guardalas como borrador (quedan en este equipo) y publicá cuando vuelva la conexión.'
+        : 'El servidor no aceptó las notas y no se guardó ninguna. Siguen acá: probá de nuevo; si sigue pasando, avisá a dirección.');
     } finally {
       setBusy(false);
     }
@@ -646,7 +761,7 @@ export default function Libreta() {
                 id="libreta-materia"
                 className="form-select"
                 value={assignmentIdx}
-                onChange={e => setAssignmentIdx(Number(e.target.value))}
+                onChange={e => { const i = Number(e.target.value); void cambiarSinPerder(() => setAssignmentIdx(i)); }}
               >
                 {assignments.map((a, i) => (
                   <option key={`${a.subjectId}-${a.courseId}`} value={i}>
@@ -657,7 +772,7 @@ export default function Libreta() {
             </div>
             <div className="libreta-field">
               <label htmlFor="libreta-trimestre">Trimestre</label>
-              <select id="libreta-trimestre" className="form-select" value={termId} onChange={e => setTermId(e.target.value)}>
+              <select id="libreta-trimestre" className="form-select" value={termId} onChange={e => { const id = e.target.value; void cambiarSinPerder(() => setTermId(id)); }}>
                 {terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
@@ -709,6 +824,11 @@ export default function Libreta() {
 
           {tab !== 'boletin' && error && <div className="em-error">{error}</div>}
           {tab !== 'boletin' && okMsg && <div className="libreta-ok"><CheckCircle size={14} /> {okMsg}</div>}
+          {tab === 'notas' && pendiente && !okMsg && (
+            <div className="libreta-pendiente" role="status">
+              <CloudUpload size={14} aria-hidden="true" /> Hay un borrador guardado en este equipo que todavía no se envió: se manda solo cuando haya señal.
+            </div>
+          )}
 
           {tab === 'notas' && loading && <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando libreta…" />}
 

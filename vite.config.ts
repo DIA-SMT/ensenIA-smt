@@ -84,7 +84,9 @@ export default defineConfig({
             options: {
               cacheName: 'supabase-rest',
               networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              // "Preparar para el aula" baja varios cientos de respuestas (fichas de
+              // todos los alumnos): con 400 se pisaban unas a otras.
+              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 14 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
