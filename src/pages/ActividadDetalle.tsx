@@ -13,6 +13,9 @@ import {
 } from '../services/activities.service';
 import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { avisar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import {
   FEELING_META, OBSERVATION_META,
   type Activity, type ActivitySubmission, type ActivityEvent, type Student,
@@ -146,8 +149,22 @@ export default function ActividadDetalle() {
   }, [activity, submissions]);
 
   if (!user) return null;
-  if (loading) return <p className="text-secondary p-6">Cargando actividad...</p>;
-  if (!activity) return <p className="text-secondary p-6">Actividad no encontrada.</p>;
+  if (loading) return (
+    <div className="acts-container">
+      <Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Cargando actividad…" />
+      <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando entregas…" />
+    </div>
+  );
+  if (!activity) return (
+    <div className="acts-container">
+      <EstadoVacio
+        icono={FileText}
+        titulo="No encontramos esta actividad"
+        texto="Puede que la hayan eliminado o que el enlace esté incompleto."
+        accion={{ etiqueta: 'Ver mis actividades', a: '/actividades', icono: ArrowLeft }}
+      />
+    </div>
+  );
 
   const submittedCount = submissions.filter(s => s.status === 'submitted' || s.status === 'graded').length;
   const startedCount = submissions.filter(s => s.status === 'in_progress').length;
@@ -221,7 +238,14 @@ export default function ActividadDetalle() {
   const handleGrade = async () => {
     const sub = selected ? subByStudent.get(selected.id) : null;
     if (!sub || gradeInput === '') return;
-    await gradeSubmission(sub.id, Number(gradeInput), feedbackInput.trim() || undefined);
+    try {
+      await gradeSubmission(sub.id, Number(gradeInput), feedbackInput.trim() || undefined);
+    } catch (err) {
+      console.error(err);
+      avisar.error('No se pudo guardar la nota', 'Probá de nuevo.');
+      return;
+    }
+    avisar.exito(selected ? `Nota de ${selected.firstName} guardada` : 'Nota guardada');
     await load();
     setSelected(null);
   };
@@ -238,7 +262,7 @@ export default function ActividadDetalle() {
       setActivity({ ...activity, title });
     } catch (err) {
       console.error(err);
-      alert('No se pudo renombrar. Probá de nuevo.');
+      avisar.error('No se pudo cambiar el nombre', 'Probá de nuevo.');
     }
   };
 

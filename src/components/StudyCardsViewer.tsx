@@ -11,6 +11,8 @@
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Download, Layers, RotateCcw } from 'lucide-react';
 import type { StudyCard } from '../types';
+import Dialogo from './shell/Dialogo';
+import { avisar } from './ui/avisar';
 import './Modals.css';
 import './StudyCardsViewer.css';
 
@@ -39,6 +41,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
       studyCardsToPdf(cards, title, subjectName);
     } catch (err) {
       console.error('No se pudo generar el PDF:', err);
+      avisar.error('No se pudo generar el PDF de las placas.', 'Probá de nuevo en un rato.');
     } finally {
       setGenerando(false);
     }
@@ -64,15 +67,14 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
   const quizDone = Object.keys(picked).length;
 
   return (
-    <div
-      className="em-modal-overlay"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={e => { if (e.key === 'ArrowLeft') prev(); if (e.key === 'ArrowRight') next(); }}
-      tabIndex={-1}
-    >
-      <div className="em-modal sc-modal">
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="sc-titulo" className="dialogo-em">
+      {/* Flechas del teclado para pasar de placa, desde cualquier control de adentro */}
+      <div
+        className="em-modal sc-modal"
+        onKeyDown={e => { if (e.key === 'ArrowLeft') prev(); if (e.key === 'ArrowRight') next(); }}
+      >
         <div className="em-modal-header">
-          <h3><Layers size={17} className="text-ia-accent" /> Placas — {title}</h3>
+          <h3 id="sc-titulo"><Layers size={17} className="text-ia-accent" aria-hidden="true" /> Placas — {title}</h3>
           <div className="flex items-center gap-2">
             {quizTotal > 0 && quizDone > 0 && (
               <span className="sc-score" title="Quiz respondidos correctamente">
@@ -178,6 +180,6 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose }:
           <button className="btn btn-primary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

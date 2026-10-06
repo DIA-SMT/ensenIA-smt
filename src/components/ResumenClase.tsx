@@ -6,12 +6,15 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile } from 'lucide-react';
 import {
   getLiveSessionSummary, saveLiveSessionReport, LIVE_KIND_META, LIVE_REACTIONS, type ResumenClase as Datos,
 } from '../services/live.service';
 import { classReport } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
+import { avisar } from './ui/avisar';
 import { AWARD_META, FEELING_META, type CheckinFeeling } from '../types';
 import './ResumenClase.css';
 
@@ -79,7 +82,10 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
     try {
       const texto = await classReport(datosParaInforme(datos));
       setInforme(texto);
-      await saveLiveSessionReport(sessionId, texto).catch(console.error);
+      await saveLiveSessionReport(sessionId, texto).catch(err => {
+        console.error(err);
+        avisar.info('El informe está listo, pero no se pudo guardar en la clase.', 'Copialo si lo querés conservar.');
+      });
     } catch (err) {
       setErrorInforme(err instanceof Error ? err.message : 'No se pudo escribir el informe.');
     } finally {
@@ -93,11 +99,14 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
       await navigator.clipboard.writeText(informe);
       setCopiado(true);
       window.setTimeout(() => setCopiado(false), 2000);
-    } catch { /* sin portapapeles */ }
+      avisar.exito('Informe copiado', 'Ya lo podés pegar donde quieras.');
+    } catch {
+      avisar.error('No se pudo copiar el informe.', 'Seleccioná el texto y copialo a mano.');
+    }
   };
 
   if (datos === undefined) {
-    return <div className="cv-container"><p className="text-secondary">Armando el resumen…</p></div>;
+    return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={4} etiqueta="Armando el resumen…" /></div>;
   }
   if (!datos) {
     return (
@@ -177,7 +186,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
       <section className="card rc-bloque" aria-labelledby="rc-ambiente">
         <h3 id="rc-ambiente">Ambiente</h3>
         {datos.animo.length === 0 && datos.reacciones.length === 0 && (
-          <p className="text-secondary text-sm">No hubo check-in ni emojis en esta clase.</p>
+          <EstadoVacio compacto icono={Smile} titulo="Sin check-in ni emojis" texto="En esta clase no se usó el check-in de ánimo ni la botonera de emojis." />
         )}
         {datos.animo.length > 0 && (
           <div className="rc-chips" aria-label="Cómo venían (check-in)">
@@ -200,7 +209,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
       <section className="card rc-bloque" aria-labelledby="rc-actividades">
         <h3 id="rc-actividades">Actividades</h3>
         {datos.actividades.length === 0 ? (
-          <p className="text-secondary text-sm">No se lanzaron actividades.</p>
+          <EstadoVacio compacto icono={ClipboardList} titulo="No se lanzaron actividades" texto="En la próxima clase podés lanzar una pregunta, una encuesta o una nube de palabras." />
         ) : (
           <ol className="rc-actividades">
             {datos.actividades.map(a => (
@@ -226,7 +235,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
           </p>
         )}
         {datos.alumnos.length === 0 ? (
-          <p className="text-secondary text-sm">El curso todavía no tiene estudiantes.</p>
+          <EstadoVacio compacto icono={Users} titulo="El curso todavía no tiene estudiantes" texto="Cuando la escuela los cargue, vas a ver acá cómo participó cada uno." />
         ) : (
           <div className="rc-tabla-wrap">
             <table className="rc-tabla">

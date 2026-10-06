@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle, SearchX } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivityForStudent, getStudentByUserId, getOrCreateSubmission, getMySubmissions, getSubmissionById,
@@ -23,6 +23,9 @@ import {
 } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar, confirmar } from '../components/ui/avisar';
 import type { Activity, ActivitySubmission, ActivityAnswer, Student, CheckinFeeling, CheckinMoment } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -58,6 +61,7 @@ export default function RealizarActividad() {
     if (!activity || !student) return;
     if (feeling) {
       saveCheckinResilient({ studentId: student.id, activityId: activity.id, moment, feeling, comment });
+      avisar.exito('¡Gracias por contarnos cómo venís!');
     }
     localStorage.setItem(checkinDoneKey(activity.id, moment), '1');
     if (moment === 'inicio') setStartCheckinDone(true);
@@ -167,8 +171,26 @@ export default function RealizarActividad() {
   }, []);
 
   if (!user) return null;
-  if (loading) return <p className="text-secondary p-6">Cargando actividad...</p>;
-  if (!activity || !student) return <p className="text-secondary p-6">Actividad no encontrada.</p>;
+  if (loading) {
+    return (
+      <div className="sp-container">
+        <Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Cargando la actividad…" />
+        <Esqueleto tipo="filas" cantidad={3} />
+      </div>
+    );
+  }
+  if (!activity || !student) {
+    return (
+      <div className="sp-container">
+        <EstadoVacio
+          icono={SearchX}
+          titulo="No encontramos esta actividad"
+          texto="Puede que la hayan sacado o que el enlace esté mal."
+          accion={{ etiqueta: 'Volver a mis actividades', a: '/mis-actividades', icono: ArrowLeft }}
+        />
+      </div>
+    );
+  }
 
   // ── Handlers ──
 
@@ -211,8 +233,14 @@ export default function RealizarActividad() {
   const handleSubmit = async () => {
     if (!submission) return;
     const unanswered = activity.questions.length - answeredCount;
-    if (unanswered > 0 && !window.confirm(`Te falta${unanswered !== 1 ? 'n' : ''} ${unanswered} pregunta${unanswered !== 1 ? 's' : ''} por responder. ¿Entregar igual?`)) {
-      return;
+    if (unanswered > 0) {
+      const entregar = await confirmar({
+        titulo: '¿Entregar igual?',
+        mensaje: `Te falta${unanswered !== 1 ? 'n' : ''} ${unanswered} pregunta${unanswered !== 1 ? 's' : ''} sin responder.`,
+        accion: 'Entregar igual',
+        cancelar: 'Seguir respondiendo',
+      });
+      if (!entregar) return;
     }
     setSubmitting(true);
     setError('');

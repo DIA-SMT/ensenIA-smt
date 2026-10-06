@@ -20,6 +20,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getCourseClimate, type CourseClimate } from '../services/wellbeing.service';
 import { FEELING_META, type Subject, type CheckinFeeling } from '../types';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import '../components/ui/ui.css';
 import './ClimaDelAula.css';
 
 const RANGES = [
@@ -97,7 +100,7 @@ export default function ClimaDelAula() {
                         ))}
                     </select>
                 )}
-                <div className="clima-ranges">
+                <div className="clima-ranges fila-desplazable">
                     {RANGES.map(r => (
                         <button
                             key={r.days}
@@ -110,20 +113,15 @@ export default function ClimaDelAula() {
                 </div>
             </div>
 
-            {loading && <p className="text-secondary">Leyendo el pulso del curso...</p>}
+            {loading && <Esqueleto tipo="tarjetas" cantidad={3} etiqueta="Leyendo el pulso del curso…" />}
 
             {!loading && (!climate || climate.total === 0) && (
-                <div className="card clima-empty">
-                    <HeartPulse size={34} className="text-cyan" />
-                    <h3>Todavía no hay señales de este curso</h3>
-                    <p className="text-secondary text-sm">
-                        Cuando tus estudiantes hagan su check-in — desde su pantalla o durante
-                        una clase en vivo — acá vas a ver cómo viene el ánimo del grupo.
-                    </p>
-                    <button className="btn btn-primary btn-sm" onClick={() => navigate('/clase-en-vivo')}>
-                        Lanzar un check-in en vivo
-                    </button>
-                </div>
+                <EstadoVacio
+                    icono={HeartPulse}
+                    titulo="Todavía no hay señales de este curso"
+                    texto="Cuando tus estudiantes hagan su check-in, desde su pantalla o durante una clase en vivo, acá vas a ver cómo viene el ánimo del grupo."
+                    accion={{ etiqueta: 'Lanzar un check-in en vivo', a: '/clase-en-vivo' }}
+                />
             )}
 
             {!loading && climate && climate.total > 0 && (

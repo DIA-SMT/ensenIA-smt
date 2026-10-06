@@ -9,6 +9,7 @@ import { UserPlus, KeyRound, Search, GraduationCap, AlertCircle, Printer, Check 
 import { createAccount, resetPassword, moveStudent, type AdminStudent } from '../../services/admin.service';
 import { Barra, Campo, DialogoForm, Iniciales, Vacio } from './ui';
 import { printCredenciales, type Credencial } from './credenciales';
+import { avisar, confirmar } from '../../components/ui/avisar';
 import type { TabProps } from './GestionEscuela';
 
 export default function EstudiantesTab(props: TabProps) {
@@ -18,16 +19,27 @@ export default function EstudiantesTab(props: TabProps) {
   const [query, setQuery] = useState('');
   const sinCursos = data.courses.length === 0;
 
-  const handleMove = (s: AdminStudent, newCourse: string) => {
+  const handleMove = async (s: AdminStudent, newCourse: string) => {
     const course = data.courses.find(c => c.id === newCourse);
     if (!course || newCourse === s.courseId) return;
-    if (!window.confirm(`¿Pasar a ${s.firstName} ${s.lastName} a ${course.name}? Deja de ver las materias de ${s.courseName}.`)) return;
-    run(() => moveStudent(s.id, newCourse));
+    const nombre = `${s.firstName} ${s.lastName}`;
+    const si = await confirmar({
+      titulo: `¿Pasar a ${nombre} a ${course.name}?`,
+      mensaje: `Deja de ver las materias de ${s.courseName} y queda inscripto en las de ${course.name}.`,
+      accion: `Pasar a ${course.name}`,
+    });
+    // Si cancela, el select vuelve solo al curso de antes: su valor sale de los datos
+    if (si && await run(() => moveStudent(s.id, newCourse))) avisar.exito(`${nombre} pasó a ${course.name}`);
   };
 
-  const handleReset = (s: AdminStudent) => {
+  const handleReset = async (s: AdminStudent) => {
     if (!s.userId) return;
-    if (!window.confirm(`¿Generar una clave nueva para ${s.firstName} ${s.lastName}? La actual deja de funcionar.`)) return;
+    const si = await confirmar({
+      titulo: `¿Generar una clave nueva para ${s.firstName} ${s.lastName}?`,
+      mensaje: 'La clave que usa ahora deja de funcionar en el momento. Vas a ver la nueva para entregársela.',
+      accion: 'Generar clave',
+    });
+    if (!si) return;
     run(async () => {
       const r = await resetPassword(s.userId!);
       showCredentials([{ name: `${s.firstName} ${s.lastName}`, login: r.login, password: r.password }]);
@@ -75,9 +87,12 @@ export default function EstudiantesTab(props: TabProps) {
 
         {data.students.length === 0 ? (
           <Vacio icono={GraduationCap} titulo="Sin estudiantes"
-            texto="Cargalos por curso con su DNI: entran con el DNI y quedan inscriptos solos en las materias del curso." />
+            texto="Cargalos por curso con su DNI: entran con el DNI y quedan inscriptos solos en las materias del curso."
+            accion={sinCursos ? undefined : { etiqueta: 'Cargar estudiantes', icono: UserPlus, alTocar: () => setAlta(true) }} />
         ) : visible.length === 0 ? (
-          <p className="adm-ayuda">No hay estudiantes con ese filtro.</p>
+          <Vacio icono={Search} titulo="Nadie coincide con la búsqueda"
+            texto="Probá con otra parte del nombre o del DNI, o mirá todos los cursos."
+            accion={{ etiqueta: 'Ver a todos', alTocar: () => { setQuery(''); setFilterCourse(''); } }} />
         ) : visible.map(s => (
           <div key={s.id} className="adm-persona">
             <div className="adm-persona-fila">

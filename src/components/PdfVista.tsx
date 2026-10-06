@@ -7,8 +7,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { cargarPdfjs } from '../services/documents.service';
+import { Cargando } from './ui/Esqueleto';
 
 export default function PdfVista({ url, titulo, onError }: {
   url: string;
@@ -66,10 +66,10 @@ export default function PdfVista({ url, titulo, onError }: {
       {/* Las páginas las agrega pdf.js: React no toca lo de adentro */}
       <div ref={contRef} className="mv-pdf-paginas" />
       {(!paginas || paginas.hechas < paginas.total) && (
-        <p className="text-secondary text-sm mv-cargando">
-          <Loader2 size={14} className="spin" />
-          {paginas ? `Mostrando página ${paginas.hechas + 1} de ${paginas.total}…` : 'Abriendo el PDF…'}
-        </p>
+        <Cargando
+          className="mv-cargando"
+          texto={paginas ? `Mostrando página ${paginas.hechas + 1} de ${paginas.total}…` : 'Abriendo el PDF…'}
+        />
       )}
     </>
   );

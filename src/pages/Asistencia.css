@@ -232,15 +232,6 @@
   z-index: 50;
 }
 
-.asis-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: var(--space-8);
-  text-align: center;
-}
-
 @media (min-width: 900px) {
   .asis-save-bar {
     left: auto;

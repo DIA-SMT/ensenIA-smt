@@ -10,6 +10,7 @@
 import { useState, useRef, useEffect, useId } from 'react';
 import { Bell, Check, CheckCheck } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
+import EstadoVacio from './ui/EstadoVacio';
 import './NotificationDropdown.css';
 
 const priorityColors: Record<string, string> = {
@@ -87,10 +88,13 @@ export default function NotificationDropdown() {
 
                     <div className="notif-dropdown-list">
                         {notifications.length === 0 ? (
-                            <div className="notif-dropdown-empty">
-                                <Bell size={24} aria-hidden="true" />
-                                <p>No tenés avisos.</p>
-                            </div>
+                            <EstadoVacio
+                                compacto
+                                className="notif-vacio"
+                                icono={Bell}
+                                titulo="No tenés avisos"
+                                texto="Cuando la escuela o tus docentes te avisen algo, aparece acá."
+                            />
                         ) : (
                             <ul className="notif-lista">
                                 {notifications.map(n => (

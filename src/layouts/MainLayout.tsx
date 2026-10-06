@@ -39,7 +39,9 @@ const DETALLES_POR_ROL: Partial<Record<string, RutaPantalla[]>> = {
   estudiante: ['/mis-actividades/:id'],
   // Actividad rápida es una acción, no está en el menú, pero es lo que el
   // docente más usa desde el celular: tiene que andar sin conexión.
-  docente: ['/actividades/:id', '/actividad-rapida'],
+  // Módulo, laboratorio y agenda salieron del menú (se llega por "Crear" y
+  // "Mis clases") pero se siguen anticipando como antes.
+  docente: ['/actividades/:id', '/actividad-rapida', '/modulo', '/ia-lab', '/agenda'],
   director: ['/cursos/:id'],
 };
 

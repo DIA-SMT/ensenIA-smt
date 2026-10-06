@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, HeartPulse, BookMarked, BookOpen, AlertTriangle, CalendarX2, Award, CalendarX, MessageSquare, ChevronRight } from 'lucide-react';
+import { GraduationCap, HeartPulse, BookMarked, BookOpen, AlertTriangle, CalendarX2, Award, CalendarX, MessageSquare, ChevronRight, WifiOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMyChildren, getChildSummary, type ChildSummary } from '../services/guardians.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
@@ -8,6 +8,8 @@ import GradesPanel from '../components/GradesPanel';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
 import { resumirNotas, formatoNota, type ResumenNotas } from '../lib/resumenNotas';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import type { Student, AlertThresholds, AcademicTerm, TermGrade } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -78,17 +80,22 @@ export default function MisHijos() {
 
   return (
     <div className="sp-container fam-v4">
-      {loading && <p className="text-secondary" role="status">Cargando…</p>}
+      {loading && <Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando los datos de tus hijos…" />}
       {!loading && fallo && (
-        <div className="card acts-empty" role="alert">
-          <p className="text-danger">No pudimos traer los datos de tus hijos. Revisá la conexión y volvé a entrar.</p>
+        <div role="alert">
+          <EstadoVacio
+            icono={WifiOff}
+            titulo="No pudimos traer los datos de tus hijos"
+            texto="Revisá la conexión y volvé a entrar."
+          />
         </div>
       )}
       {!loading && !fallo && children.length === 0 && (
-        <div className="card acts-empty">
-          <GraduationCap size={30} className="text-secondary" aria-hidden="true" />
-          <p className="text-secondary">No hay estudiantes vinculados a tu cuenta. Consultá en la escuela.</p>
-        </div>
+        <EstadoVacio
+          icono={GraduationCap}
+          titulo="No hay estudiantes vinculados a tu cuenta"
+          texto="Consultá en la escuela para que los vinculen."
+        />
       )}
 
       {children.map(c => {

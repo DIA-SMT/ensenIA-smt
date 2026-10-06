@@ -6,6 +6,8 @@
 import { useState, useEffect } from 'react';
 import { X, Headphones, Download } from 'lucide-react';
 import { getSignedUrl } from '../services/documents.service';
+import Dialogo from './shell/Dialogo';
+import { Cargando } from './ui/Esqueleto';
 import './Modals.css';
 
 interface Props {
@@ -25,15 +27,15 @@ export default function PodcastPlayer({ path, title, onClose }: Props) {
   }, [path]);
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="podcast-titulo" className="dialogo-em">
       <div className="em-modal">
         <div className="em-modal-header">
-          <h3><Headphones size={17} className="text-ia-accent" /> Podcast — {title}</h3>
+          <h3 id="podcast-titulo"><Headphones size={17} className="text-ia-accent" aria-hidden="true" /> Podcast — {title}</h3>
           <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="em-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {error && <p className="text-sm text-danger">{error}</p>}
-          {!url && !error && <p className="text-sm text-secondary">Cargando audio...</p>}
+          {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+          {!url && !error && <Cargando texto="Cargando el audio…" />}
           {url && (
             <>
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -48,6 +50,6 @@ export default function PodcastPlayer({ path, title, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

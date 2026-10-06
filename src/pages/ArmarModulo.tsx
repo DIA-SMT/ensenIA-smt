@@ -31,6 +31,8 @@ import { startLiveSession, launchActivity, getMyLiveSession } from '../services/
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { avisar } from '../components/ui/avisar';
 import type { Subject, StudyCard, ActivityQuestion, LibraryMaterial, PlanningClass } from '../types';
 import './ArmarModulo.css';
 
@@ -358,6 +360,7 @@ export default function ArmarModulo() {
             setShared(true);
         } catch (err) {
             console.error(err);
+            avisar.error('No se pudo compartir el módulo.', 'Probá de nuevo.');
         }
     };
 
@@ -377,8 +380,17 @@ export default function ArmarModulo() {
 
             {error && <div className="mod-error"><AlertCircle size={15} /> {error}</div>}
 
+            {/* Sin materia asignada no hay para qué curso armar nada */}
+            {step === 1 && assignments.length === 0 && (
+                <EstadoVacio
+                    icono={Boxes}
+                    titulo="Todavía no tenés materias asignadas"
+                    texto="Para armar un módulo hace falta una materia y un curso. Dirección te los asigna; después volvé acá."
+                />
+            )}
+
             {/* ── Paso 1: el tema ── */}
-            {step === 1 && (
+            {step === 1 && assignments.length > 0 && (
                 <section className="card mod-card mod-intro">
                     <div className="mod-hero-icon"><Boxes size={26} /></div>
                     <h2>Armá un módulo completo</h2>

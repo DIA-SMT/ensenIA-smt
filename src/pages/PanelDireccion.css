@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   SMT EstudIA — Panel de dirección
+   SMT EstudIA — Panel de dirección ("Qué está pasando")
    ═══════════════════════════════════════════════ */
 
 .pd-container {
@@ -11,48 +11,109 @@
   width: 100%;
 }
 
+/* El título de la página ya lo pone la barra de arriba: acá va la bajada
+   y el período. */
 .pd-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.pd-header h1 { font-size: 24px; font-weight: 700; color: var(--text-primary); }
+.pd-bajada { font-size: 0.9375rem; color: var(--text-secondary); }
 
-.pd-ranges { display: flex; gap: 5px; flex-wrap: wrap; }
+/* .pd-ranges va con .fila-desplazable: en el celular se desplaza de costado */
+.pd-ranges { gap: 5px; max-width: 100%; }
 
 .pd-range {
-  font-size: 12px;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
-  padding: 5px 13px;
+  min-height: 36px;
+  padding: 5px 14px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .pd-range:hover { color: var(--text-primary); }
 .pd-range.active {
-  color: var(--cyan-bright);
-  background: var(--cyan-glow);
-  border-color: var(--cyan-bright);
-  font-weight: 600;
+  color: var(--acento);
+  background: var(--acento-suave);
+  border-color: var(--acento);
+  font-weight: 650;
 }
 
 .pd-error {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 10px 14px;
   border-radius: var(--radius-md);
   background: var(--danger-light);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #F87171;
-  font-size: 13px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: var(--danger-ink);
+  font-size: 0.875rem;
 }
+.pd-error .btn { margin-left: auto; }
+
+/* ── Para atender ahora: lo primero de la pantalla ── */
+.pd-atencion { border-left: 4px solid var(--acento); }
+
+.pd-atencion-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pd-atencion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+.pd-atencion-item > svg { flex-shrink: 0; color: var(--text-subtle); }
+.pd-atencion-item > span { flex: 1; min-width: 0; }
+.pd-atencion-item strong { color: var(--text-primary); }
+.pd-atencion-item.riesgo > svg { color: var(--warning); }
+.pd-atencion-item.vivo > svg { color: var(--danger); }
+
+.pd-atencion-ir {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--acento);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.pd-atencion-ir:hover { background: var(--acento-suave); }
+
+.pd-tranqui {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+.pd-tranqui svg { flex-shrink: 0; color: var(--success); }
 
 /* ── Resumen ── */
 .pd-summary {
@@ -75,13 +136,13 @@
 }
 
 .pd-sum-val {
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 800;
   line-height: 1.1;
   color: var(--text-primary);
 }
 
-.pd-sum-label { font-size: 11.5px; color: var(--text-subtle); }
+.pd-sum-label { font-size: 0.75rem; color: var(--text-subtle); }
 
 .mood-great { border-left-color: var(--success); }
 .mood-great .pd-sum-val, .mood-great .pd-course-mood { color: var(--success); }
@@ -92,7 +153,7 @@
 .mood-low { border-left-color: var(--danger); }
 .mood-low .pd-sum-val, .mood-low .pd-course-mood { color: var(--danger); }
 .mood-none { border-left-color: var(--border-color); }
-.mood-none .pd-course-mood { color: var(--text-subtle); font-size: 12px; }
+.mood-none .pd-course-mood { color: var(--text-subtle); font-size: 0.75rem; }
 
 /* ── Secciones ── */
 .pd-section {
@@ -100,14 +161,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  scroll-margin-top: var(--space-6);
 }
+.pd-section:focus { outline: none; }
+.pd-section:focus-visible { box-shadow: var(--focus-shadow); }
 
 .pd-title {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 650;
   color: var(--text-primary);
 }
 
@@ -127,16 +191,25 @@
 }
 
 .pd-live-item > div { display: flex; flex-direction: column; min-width: 0; }
-.pd-live-item strong { font-size: 13.5px; color: var(--text-primary); }
-.pd-live-item span { font-size: 11.5px; color: var(--text-subtle); }
+.pd-live-item strong { font-size: 0.875rem; color: var(--text-primary); }
+.pd-live-item span { font-size: 0.75rem; color: var(--text-subtle); }
 
+/* El latido es propio: el de Clase en vivo vive en otra hoja que acá no
+   siempre está cargada. */
 .pd-live-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: #EF4444;
   flex-shrink: 0;
-  animation: cv-pulse 1.6s infinite;
+  animation: pd-latido 1.6s infinite;
+}
+@keyframes pd-latido {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  70%, 100% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pd-live-dot { animation: none; }
 }
 
 /* ── Cursos ── */
@@ -164,8 +237,8 @@
   gap: 8px;
 }
 
-.pd-course-head strong { font-size: 15px; color: var(--text-primary); }
-.pd-course-mood { font-size: 17px; font-weight: 800; }
+.pd-course-head strong { font-size: 0.9375rem; color: var(--text-primary); }
+.pd-course-mood { font-size: 1.0625rem; font-weight: 800; }
 
 .pd-course-bar {
   height: 6px;
@@ -191,7 +264,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--text-subtle);
   flex-wrap: wrap;
 }
@@ -227,16 +300,16 @@
   flex-wrap: wrap;
 }
 
-.pd-teacher-head strong { font-size: 14px; color: var(--text-primary); }
+.pd-teacher-head strong { font-size: 0.875rem; color: var(--text-primary); }
 
-.pd-last { font-size: 11.5px; color: var(--text-subtle); }
+.pd-last { font-size: 0.75rem; color: var(--text-subtle); }
 .pd-last.never { color: var(--warning); font-weight: 600; }
 
 .pd-teacher-stats {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
@@ -247,7 +320,7 @@
 }
 
 .pd-teacher-pending {
-  color: #A5B4FC !important;
+  color: var(--accent-ia) !important;
   font-weight: 600;
   background: var(--indigo-glow);
   border-radius: var(--radius-full);
@@ -256,26 +329,28 @@
 
 .pd-more { align-self: flex-start; }
 
+/* Los números del docente dicen qué son */
+.pd-teacher-stats em {
+  font-style: normal;
+  color: var(--text-subtle);
+  font-size: 0.6875rem;
+}
+
 /* ── Responsive ── */
 @media (max-width: 860px) {
   .pd-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pd-courses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 520px) {
-  .pd-courses { grid-template-columns: 1fr; }
-  .pd-header h1 { font-size: 20px; }
-  .pd-teacher-stats { gap: 9px; font-size: 11.5px; }
-}
-
-/* Los números del docente dicen qué son (added) */
-.pd-teacher-stats em {
-  font-style: normal;
-  color: var(--text-subtle);
-  font-size: 11px;
-}
-
 @media (max-width: 620px) {
   /* En pantalla angosta quedan los iconos y el número */
   .pd-teacher-stats em { display: none; }
+}
+
+@media (max-width: 520px) {
+  .pd-courses { grid-template-columns: 1fr; }
+  .pd-teacher-stats { gap: 9px; }
+  .pd-atencion-item { flex-wrap: wrap; font-size: 0.875rem; }
+  .pd-atencion-item > span { flex-basis: calc(100% - 30px); }
+  .pd-atencion-ir { margin-left: auto; }
 }

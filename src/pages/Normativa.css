@@ -143,15 +143,6 @@
   color: var(--cyan-bright);
 }
 
-.norm-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-6);
-  text-align: center;
-}
-
 @media (max-width: 720px) {
   .norm-container { padding: var(--space-4); }
   .norm-grid { grid-template-columns: 1fr; }

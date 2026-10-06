@@ -10,7 +10,6 @@
   flex-direction: column;
   gap: var(--space-5);
 }
-.elm-cargando { display: flex; align-items: center; gap: 8px; }
 
 .elm-seccion {
   font-size: 0.75rem;

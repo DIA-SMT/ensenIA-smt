@@ -5,9 +5,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
+import Dialogo from './shell/Dialogo';
+import { avisar } from './ui/avisar';
+import './shell/shell.css';
 import './Modals.css';
 import './QrModal.css';
 
@@ -45,20 +47,20 @@ export default function QrModal({ path, title, subtitle, onClose }: Props) {
       a.href = dataUrl;
       a.download = `qr_${title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').slice(0, 50)}.png`;
       a.click();
+      avisar.exito('QR descargado', 'Lo encontrás en la carpeta de descargas.');
     } catch {
       setError('No se pudo descargar el QR.');
     }
   };
 
-  // Portal al body: varias páginas que abren este modal usan .animate-in,
-  // que deja un transform aplicado, y eso hace que el overlay se posicione
-  // contra el contenedor en vez de contra la pantalla — el QR queda corrido
-  // y tapado por la topbar justo cuando lo estás proyectando.
-  return createPortal(
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+  // Sobre el <dialog> nativo: va a la capa de arriba de todo, así que el
+  // .animate-in (con transform) de la página que lo abre ya no lo corre ni
+  // lo deja tapado por la topbar justo cuando lo estás proyectando.
+  return (
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="qr-titulo" className="dialogo-em">
       <div className="em-modal qr-modal">
         <div className="em-modal-header">
-          <h3><QrCode size={17} className="text-cyan" /> {title}</h3>
+          <h3 id="qr-titulo"><QrCode size={17} className="text-cyan" aria-hidden="true" /> {title}</h3>
           <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="em-modal-body qr-body">
@@ -75,10 +77,9 @@ export default function QrModal({ path, title, subtitle, onClose }: Props) {
           <button className="btn btn-outline btn-sm" onClick={handleDownload}>
             <Download size={14} /> Descargar PNG
           </button>
-          <button className="btn btn-primary btn-sm" onClick={onClose}>Listo</button>
+          <button className="btn btn-primary btn-sm" onClick={onClose} data-inicial>Listo</button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Dialogo>
   );
 }

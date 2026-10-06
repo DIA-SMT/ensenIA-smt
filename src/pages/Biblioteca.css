@@ -174,23 +174,6 @@
   flex-shrink: 0;
 }
 
-/* Empty state */
-.biblioteca-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-16);
-  color: var(--text-subtle);
-}
-
-.biblioteca-empty p {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 /* ── Card actions (added) ── */
 .mat-actions {
     display: flex;

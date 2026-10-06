@@ -779,17 +779,6 @@
 .cv-start-material { justify-content: flex-start; }
 .cv-start-material span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Aviso de medalla dada (panel del docente) */
-.cv-aviso-premio {
-  margin: var(--space-2) 0 0;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  background: var(--warning-light);
-  color: var(--warning-ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
 /* Festejo de medalla en el celular del estudiante */
 .cv-festejo {
   position: fixed;

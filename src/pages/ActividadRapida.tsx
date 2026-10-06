@@ -27,6 +27,7 @@ import { streamChat } from '../services/ia-chat.service';
 import { extractQuestions } from '../services/documents.service';
 import { createActivity } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import EstadoVacio from '../components/ui/EstadoVacio';
 import type { Subject, ActivityQuestion, SubjectAssignment } from '../types';
 import './ActividadRapida.css';
 import '../components/Modals.css';
@@ -268,9 +269,12 @@ export default function ActividadRapida() {
         <section className="ar-step card ar-area-1" aria-labelledby="ar-curso">
           <h3 id="ar-curso"><span className="ar-step-num" aria-hidden="true">1</span> ¿Para qué curso?</h3>
           {assignments.length === 0 ? (
-            <p className="text-secondary text-sm">
-              Todavía no tenés materias asignadas. Pedile a dirección que te asigne tus cursos.
-            </p>
+            <EstadoVacio
+              compacto
+              icono={BookOpen}
+              titulo="Todavía no tenés materias asignadas"
+              texto="Pedile a dirección que te asigne tus cursos."
+            />
           ) : (
             <div className="ar-chips" role="group" aria-labelledby="ar-curso">
               {assignments.map((a, i) => (

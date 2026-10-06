@@ -14,6 +14,10 @@ import {
   type CourseGroup,
 } from '../services/groups.service';
 import type { Student } from '../types';
+import Dialogo from './shell/Dialogo';
+import { avisar } from './ui/avisar';
+import { Esqueleto } from './ui/Esqueleto';
+import './shell/shell.css';
 import './GruposModal.css';
 import './Modals.css';
 
@@ -96,6 +100,7 @@ export default function GruposModal({ courseId, teacherId, courseName, students,
       await saveGroups(courseId, teacherId, clean);
       const fresh = await getGroupsByCourse(courseId);
       onSaved(fresh);
+      avisar.exito('Grupos guardados', `${fresh.length} grupo${fresh.length !== 1 ? 's' : ''} en ${courseName}.`);
       onClose();
     } catch (err) {
       console.error(err);
@@ -106,15 +111,15 @@ export default function GruposModal({ courseId, teacherId, courseName, students,
   };
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="em-modal em-modal-lg grupos-modal" role="dialog" aria-label={`Grupos de ${courseName}`}>
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="grupos-titulo" className="dialogo-em">
+      <div className="em-modal em-modal-lg grupos-modal">
         <div className="em-modal-header">
-          <h3>👥 Grupos de {courseName}</h3>
-          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
+          <h3 id="grupos-titulo"><span aria-hidden="true">👥</span> Grupos de {courseName}</h3>
+          <button type="button" className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} aria-hidden="true" /></button>
         </div>
 
         <div className="em-modal-body grupos-body">
-          {loading ? <p className="text-secondary">Cargando...</p> : (
+          {loading ? <Esqueleto tipo="tarjetas" cantidad={3} etiqueta="Cargando grupos…" /> : (
             <>
               <div className="grupos-auto card-inset">
                 <div className="grupos-auto-text">
@@ -213,6 +218,6 @@ export default function GruposModal({ courseId, teacherId, courseName, students,
           </button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

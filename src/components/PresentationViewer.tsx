@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, StickyNote, Download, Presentation } from 'lucide-react';
 import type { ParsedPresentation } from '../lib/presentation';
 import { exportPresentationPptx } from '../lib/pptx';
+import { avisar } from './ui/avisar';
 import './PresentationViewer.css';
 
 interface PresentationViewerProps {
@@ -50,7 +51,7 @@ export default function PresentationViewer({
       await exportPresentationPptx(presentation, { subjectName, courseName, teacherName });
     } catch (err) {
       console.error('Error exportando PPTX:', err);
-      alert('No se pudo generar el PowerPoint. Intentá de nuevo.');
+      avisar.error('No se pudo generar el PowerPoint.', 'Probá de nuevo en un rato.');
     } finally {
       setDownloading(false);
     }

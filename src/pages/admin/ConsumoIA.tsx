@@ -10,8 +10,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Activity, AlertCircle, Info, Wallet } from 'lucide-react';
+import { Activity, AlertCircle, Info, Users, Wallet } from 'lucide-react';
 import { getConsumoIA, getGastoOpenRouter, type ConsumoIA as Datos, type GastoOpenRouter } from '../../services/consumo-ia.service';
+import { Esqueleto, Cargando } from '../../components/ui/Esqueleto';
+import EstadoVacio from '../../components/ui/EstadoVacio';
 import './Admin.css';
 import './ConsumoIA.css';
 
@@ -96,13 +98,15 @@ export default function ConsumoIA() {
       </header>
 
       {error && <div className="adm-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {error}</div>}
-      {cargando && !datos && <p className="text-secondary adm-cargando">Cargando…</p>}
+      {cargando && !datos && (
+        <Esqueleto tipo="tarjetas" cantidad={3} etiqueta="Cargando el consumo de IA…" />
+      )}
 
       {datos && t && (
         <>
           <section className="card cia-bloque" aria-labelledby="cia-gasto-titulo">
             <h3 id="cia-gasto-titulo" className="cia-gasto-titulo"><Wallet size={17} aria-hidden="true" /> Gasto en dinero</h3>
-            {gasto === undefined && <p className="text-secondary text-sm">Consultando a OpenRouter…</p>}
+            {gasto === undefined && <Cargando texto="Consultando a OpenRouter…" />}
             {gasto === null && (
               <div className="adm-aviso" role="status">
                 <Info size={15} aria-hidden="true" />
@@ -227,7 +231,8 @@ export default function ConsumoIA() {
             <h3>Personal que más la usa</h3>
             <p className="cia-nota">Docentes y dirección. Estudiantes y familias se ven solo sumados, por rol y por escuela.</p>
             {datos.personas.length === 0 ? (
-              <p className="text-secondary text-sm">Nadie del personal usó la IA en este período.</p>
+              <EstadoVacio compacto icono={Users} titulo="Nadie del personal usó la IA en este período"
+                texto="Probá con un período más largo." />
             ) : (
               <div className="cia-tabla-wrap">
                 <table className="cia-tabla">
@@ -263,7 +268,7 @@ function Tabla({ titulo, columna, filas }: {
     <section className="card cia-bloque">
       <h3>{titulo}</h3>
       {filas.length === 0 ? (
-        <p className="text-secondary text-sm">Sin uso en este período.</p>
+        <EstadoVacio compacto icono={Activity} titulo="Sin uso en este período" />
       ) : (
         <div className="cia-tabla-wrap">
           <table className="cia-tabla">

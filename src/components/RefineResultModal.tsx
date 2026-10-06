@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { X, PenLine, Eye, ArrowDownToLine, BookOpen, ClipboardList, Sparkles } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+import Dialogo from './shell/Dialogo';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/IALab.css';
@@ -67,11 +68,11 @@ export default function RefineResultModal({
   };
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="refine-titulo" className="dialogo-em">
       <div className="em-modal em-modal-lg refine-modal">
         <div className="em-modal-header">
-          <h3><PenLine size={17} className="text-ia-accent" /> Revisar antes de usar</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <h3 id="refine-titulo"><PenLine size={17} className="text-ia-accent" aria-hidden="true" /> Revisar antes de usar</h3>
+          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className="em-modal-body refine-body">
@@ -160,6 +161,6 @@ export default function RefineResultModal({
           </div>
         )}
       </div>
-    </div>
+    </Dialogo>
   );
 }

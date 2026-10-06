@@ -20,6 +20,8 @@ import {
     ATTENDANCE_META, type AttendanceStatus,
 } from '../services/attendance.service';
 import type { Student, Subject } from '../types';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import './Asistencia.css';
 
 const CYCLE: AttendanceStatus[] = ['presente', 'ausente', 'tarde', 'justificado'];
@@ -205,12 +207,14 @@ export default function Asistencia() {
             )}
 
             {loading ? (
-                <p className="text-secondary p-6">Cargando el curso...</p>
+                <Esqueleto tipo="filas" cantidad={6} etiqueta="Cargando el curso…" />
             ) : students.length === 0 ? (
-                <div className="card asis-empty">
-                    <Users size={32} className="text-secondary" />
-                    <p className="text-secondary">Este curso todavía no tiene estudiantes cargados.</p>
-                </div>
+                <EstadoVacio
+                    icono={Users}
+                    titulo="Este curso todavía no tiene estudiantes cargados"
+                    texto="Cuando dirección los cargue, aparecen acá para pasar lista."
+                    accion={{ etiqueta: 'Volver a Hoy', a: '/hoy', icono: ArrowLeft }}
+                />
             ) : (
                 <>
                     <div className="asis-summary card">

@@ -13,6 +13,9 @@ import {
   getUnitsForTeacher, setUnitTerm, getCriteria, saveCriteria,
 } from '../services/syllabus.service';
 import GrabadasEditor from './GrabadasEditor';
+import { confirmar } from './ui/avisar';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
 import type { AcademicTerm, PlanningUnit, EvaluationCriteria } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
@@ -100,10 +103,11 @@ export default function TemarioEditor({
     // vista de estudiantes y familias. El botón no se lee así, y el que
     // publica notas en la otra pestaña también pregunta antes.
     if (!publicar && publicado) {
-      const ok = window.confirm(
-        'Estos criterios ya están publicados. Si guardás sin publicar, dejan de ' +
-        'verlos estudiantes y familias hasta que los vuelvas a publicar.\n\n¿Los retiro?'
-      );
+      const ok = await confirmar({
+        titulo: '¿Retirar los criterios publicados?',
+        mensaje: 'Si guardás sin publicar, dejan de verlos estudiantes y familias hasta que los vuelvas a publicar.',
+        accion: 'Retirar y guardar',
+      });
       if (!ok) return;
     }
     const mia = clave;
@@ -130,7 +134,7 @@ export default function TemarioEditor({
     }
   };
 
-  if (units === null) return <p className="text-secondary p-6">Cargando temario…</p>;
+  if (units === null) return <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando temario…" />;
 
   const enEsteTrimestre = units.filter(u => u.termId === term.id).length;
 
@@ -152,10 +156,13 @@ export default function TemarioEditor({
 
       <div style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         {units.length === 0 && (
-          <p className="text-secondary text-sm">
-            Esta materia todavía no tiene planificación. Creala desde el Laboratorio IA
-            o importá el programa anual.
-          </p>
+          <EstadoVacio
+            compacto
+            icono={BookOpen}
+            titulo="Esta materia todavía no tiene planificación"
+            texto="Creala desde el Laboratorio IA o importá el programa anual."
+            accion={{ etiqueta: 'Ir al Laboratorio IA', a: '/ia-lab' }}
+          />
         )}
 
         {units.map(u => (

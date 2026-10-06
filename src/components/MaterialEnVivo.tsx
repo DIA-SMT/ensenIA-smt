@@ -17,6 +17,8 @@ import {
 import { extractQuestions } from '../services/documents.service';
 import ElegirMaterial from './ElegirMaterial';
 import MaterialViewer from './MaterialViewer';
+import EstadoVacio from './ui/EstadoVacio';
+import { Cargando } from './ui/Esqueleto';
 import type { ActivityQuestion } from '../types';
 import './MaterialEnVivo.css';
 
@@ -121,18 +123,16 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
       </div>
 
       {!elegido && (
-        <div className="mev-vacio">
-          <p className="text-secondary text-sm">
-            Elegí un tema de tu temario o un material de tu biblioteca: lo proyectás, lo ven en los
-            celulares y la IA saca preguntas para lanzar.
-          </p>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEligiendo(true)}>
-            <BookOpen size={14} aria-hidden="true" /> Elegir material
-          </button>
-        </div>
+        <EstadoVacio
+          compacto
+          icono={BookOpen}
+          titulo="Todavía no elegiste material"
+          texto="Elegí un tema de tu temario o un material de tu biblioteca: lo proyectás, lo ven en los celulares y la IA saca preguntas para lanzar."
+          accion={{ etiqueta: 'Elegir material', alTocar: () => setEligiendo(true), icono: BookOpen }}
+        />
       )}
 
-      {elegido && material === undefined && <p className="text-secondary text-sm"><Loader2 size={14} className="spin" /> Cargando…</p>}
+      {elegido && material === undefined && <Cargando texto="Cargando el material…" />}
 
       {elegido && material && (
         <>

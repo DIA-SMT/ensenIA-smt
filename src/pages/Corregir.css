@@ -67,19 +67,6 @@
   padding: 4px 11px;
 }
 
-/* ── Vacío ── */
-.corr-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-  padding: var(--space-8) var(--space-5);
-}
-
-.corr-empty h3 { font-size: 18px; }
-.corr-empty p { max-width: 380px; }
-
 /* ── Lista ── */
 .corr-list {
   display: flex;

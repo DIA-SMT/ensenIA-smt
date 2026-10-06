@@ -105,7 +105,7 @@
 .mv-texto-solo { line-height: 1.6; }
 
 /* Modo proyector: ocupa toda la pantalla y se lee desde el fondo del aula */
-.mv-overlay-proyector { padding: 0; }
+.dialogo-em.mv-overlay-proyector { padding: 0; }
 .mv-modal.mv-proyector {
   max-width: none;
   width: 100vw;

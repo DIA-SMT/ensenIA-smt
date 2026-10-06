@@ -5,6 +5,7 @@
 
 import { X, GraduationCap } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
+import Dialogo from './shell/Dialogo';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/Biblioteca.css';
@@ -18,11 +19,11 @@ interface Props {
 
 export default function StudyGuideModal({ title, guide, onClose }: Props) {
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="guia-titulo" className="dialogo-em">
       <div className="em-modal em-modal-lg">
         <div className="em-modal-header">
-          <h3><GraduationCap size={17} className="text-ia-accent" /> Guía de estudio — {title}</h3>
-          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+          <h3 id="guia-titulo"><GraduationCap size={17} className="text-ia-accent" aria-hidden="true" /> Guía de estudio — {title}</h3>
+          <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="em-modal-body">
           <div className="summary-markdown">
@@ -33,6 +34,6 @@ export default function StudyGuideModal({ title, guide, onClose }: Props) {
           <button className="btn btn-primary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

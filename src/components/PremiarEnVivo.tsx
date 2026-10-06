@@ -6,11 +6,12 @@
  */
 
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Medal, Send } from 'lucide-react';
 import { giveStudentAwards } from '../services/awards.service';
 import { AWARD_META, type Student } from '../types';
+import Dialogo from './shell/Dialogo';
 import '../pages/IALab.css';
+import './shell/shell.css';
 import './Modals.css';
 import './AwardPickerModal.css';
 import './PremiarEnVivo.css';
@@ -60,13 +61,14 @@ export default function PremiarEnVivo({
     }
   };
 
-  // En el body: dentro de la clase en vivo un ancestro con transform lo
-  // dejaba debajo de las barras de la app
-  return createPortal(
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="em-modal award-modal pev" role="dialog" aria-labelledby="pev-titulo">
+  // Sobre el <dialog> nativo: va a la capa de arriba de todo, así que un
+  // ancestro con transform en la clase en vivo ya no lo deja debajo de las
+  // barras de la app
+  return (
+    <Dialogo abierto alCerrar={onClose} etiquetadoPor="pev-titulo" className="dialogo-em">
+      <div className="em-modal award-modal pev">
         <div className="em-modal-header">
-          <h3 id="pev-titulo"><Medal size={17} className="text-warning" /> {titulo}</h3>
+          <h3 id="pev-titulo"><Medal size={17} className="text-warning" aria-hidden="true" /> {titulo}</h3>
           <button className="btn-icon" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
         </div>
 
@@ -120,7 +122,6 @@ export default function PremiarEnVivo({
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Dialogo>
   );
 }

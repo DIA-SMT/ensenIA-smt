@@ -9,6 +9,8 @@
  */
 
 import { useEffect, useRef, type ReactNode } from 'react';
+// Sus estilos viajan con él: también se usa fuera del armazón (login, avisos)
+import './shell.css';
 
 interface DialogoProps {
   abierto: boolean;
@@ -44,6 +46,10 @@ export default function Dialogo({ abierto, alCerrar, etiqueta, etiquetadoPor, cl
     const d = ref.current;
     if (!d) return;
     const alCerrarse = () => {
+      // El evento 'close' llega en una tarea aparte: si para entonces el
+      // diálogo ya se volvió a abrir (React monta, desmonta y vuelve a montar
+      // en desarrollo; o se cerró y reabrió enseguida), ese cierre es viejo.
+      if (d.open) return;
       alCerrarRef.current();
       const volver = previo.current;
       previo.current = null;

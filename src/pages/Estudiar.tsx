@@ -27,6 +27,9 @@ import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar } from '../components/ui/avisar';
 import {
   BADGE_META, AWARD_META, levelForXp, subjectBadgeLabel,
   type Activity, type ActivitySubmission, type BadgeCode, type LibraryMaterial,
@@ -114,16 +117,23 @@ export default function Estudiar() {
   }, [user, refreshProgress]);
 
   if (!user) return null;
-  if (loading) return <p className="text-secondary p-6">Preparando tu espacio de estudio...</p>;
+  if (loading) {
+    return (
+      <div className="sp-container">
+        <Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Preparando tu espacio de estudio…" />
+        <Esqueleto tipo="filas" cantidad={3} />
+      </div>
+    );
+  }
 
   if (!student) {
     return (
       <div className="sp-container">
-        <div className="card acts-empty">
-          <GraduationCap size={36} className="text-cyan" />
-          <h3>Tu cuenta no está vinculada a un curso</h3>
-          <p className="text-secondary text-sm">Pedile a tu docente que te agregue a la lista del curso.</p>
-        </div>
+        <EstadoVacio
+          icono={GraduationCap}
+          titulo="Tu cuenta no está vinculada a un curso"
+          texto="Pedile a tu docente que te agregue a la lista del curso."
+        />
       </div>
     );
   }
@@ -230,6 +240,8 @@ export default function Estudiar() {
       setNotes(ns => [note, ...ns]);
     } catch (err) {
       console.error(err);
+      setNewNote(text);
+      avisar.error('No se pudo guardar la nota.', 'Probá de nuevo en un ratito.');
     }
   };
 
@@ -243,7 +255,10 @@ export default function Estudiar() {
   };
   const removeNote = (note: StudentNote) => {
     setNotes(ns => ns.filter(n => n.id !== note.id));
-    deleteStudentNote(note.id).catch(console.error);
+    deleteStudentNote(note.id).catch(err => {
+      console.error(err);
+      avisar.error('No se pudo borrar la nota.', 'Va a volver a aparecer cuando recargues.');
+    });
   };
 
   const sortedNotes = [...notes].sort((a, b) =>
@@ -327,10 +342,12 @@ export default function Estudiar() {
       {/* ── Mis medallas (de docentes + de materia) ── */}
       <h3 className="sp-section-title"><Medal size={17} /> Mis medallas</h3>
       {awards.length === 0 && subjectBadges.length === 0 ? (
-        <p className="text-secondary text-sm">
-          Todavía no tenés medallas. Se ganan practicando y participando: tus docentes también pueden darte
-          reconocimientos como <strong>¡Crack!</strong> o <strong>Aura +1</strong> ✨
-        </p>
+        <EstadoVacio
+          compacto
+          icono={Medal}
+          titulo="Todavía no tenés medallas"
+          texto={<>Se ganan practicando y participando: tus docentes también pueden darte reconocimientos como <strong>¡Crack!</strong> o <strong>Aura +1</strong> ✨</>}
+        />
       ) : (
         <div className="est-medal-list">
           {subjectBadges.map(sb => (
@@ -366,7 +383,12 @@ export default function Estudiar() {
       {/* ── Mi semana ── */}
       <h3 className="sp-section-title"><CalendarDays size={17} /> Mi semana</h3>
       {upcoming.length === 0 && !suggestion && (
-        <p className="text-secondary text-sm">No tenés entregas próximas. ¡Buen momento para repasar!</p>
+        <EstadoVacio
+          compacto
+          icono={CalendarDays}
+          titulo="No tenés entregas próximas"
+          texto="¡Buen momento para repasar!"
+        />
       )}
       {upcoming.length > 0 && (
         <div className="sp-activity-list">
@@ -410,10 +432,12 @@ export default function Estudiar() {
       <h3 className="sp-section-title"><BookOpen size={17} /> Practicá con tu material</h3>
       {genError && <div className="sp-notice">{genError}</div>}
       {materials.length === 0 && (
-        <div className="card acts-empty">
-          <BookOpen size={32} className="text-secondary" />
-          <p className="text-secondary">Todavía no hay material compartido para practicar.</p>
-        </div>
+        <EstadoVacio
+          compacto
+          icono={BookOpen}
+          titulo="Todavía no hay material para practicar"
+          texto="Cuando tus docentes compartan material, vas a poder practicar con quiz, guía y placas."
+        />
       )}
       <div className="sp-activity-list">
         {materials.map(mat => {

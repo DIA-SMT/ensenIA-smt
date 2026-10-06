@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Megaphone, CalendarClock, CheckCircle, XCircle, ChevronDown, ArrowRight } from 'lucide-react';
+import { Megaphone, CalendarClock, CheckCircle, XCircle, ChevronDown, ArrowRight, WifiOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNoticesForGuardian, markNoticeRead, respondToNotice } from '../services/guardians.service';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import type { GuardianNotice, NoticeResponse } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -85,17 +87,22 @@ export default function ComunicadosFamilia() {
         )}
       </section>
 
-      {loading && <p className="text-secondary" role="status">Cargando avisos…</p>}
+      {loading && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando avisos…" />}
       {!loading && fallo && (
-        <div className="card acts-empty" role="alert">
-          <p className="text-danger">No pudimos traer los avisos. Revisá la conexión y volvé a entrar.</p>
+        <div role="alert">
+          <EstadoVacio
+            icono={WifiOff}
+            titulo="No pudimos traer los avisos"
+            texto="Revisá la conexión y volvé a entrar."
+          />
         </div>
       )}
       {!loading && !fallo && notices.length === 0 && (
-        <div className="card acts-empty">
-          <Megaphone size={30} className="text-secondary" />
-          <p className="text-secondary">Todavía no hay comunicados.</p>
-        </div>
+        <EstadoVacio
+          icono={Megaphone}
+          titulo="Todavía no hay comunicados"
+          texto="Cuando la escuela mande un comunicado o una citación, te llega acá."
+        />
       )}
 
       <div className="sp-activity-list">

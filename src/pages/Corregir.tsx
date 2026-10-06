@@ -16,6 +16,9 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { getPendingGrading, gradeSubmission, setSubmissionReaction, type PendingGrading } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { avisar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import './Corregir.css';
 
 const QUICK_FEEDBACK = ['👏 Excelente', '👍 Muy bien', '💪 Seguí así', '🤝 Hablemos'];
@@ -75,7 +78,7 @@ export default function Corregir() {
             setDoneCount(n => n + 1);
         } catch (err) {
             console.error(err);
-            alert('No se pudo guardar la nota. Probá de nuevo.');
+            avisar.error(`No se pudo guardar la nota de ${p.studentName}`, 'Probá de nuevo.');
         } finally {
             setSavingId(null);
         }
@@ -115,17 +118,17 @@ export default function Corregir() {
                 )}
             </header>
 
+            {loading && <Esqueleto tipo="filas" cantidad={4} etiqueta="Buscando entregas…" />}
+
             {!loading && pending.length === 0 && (
-                <div className="card corr-empty">
-                    <PartyPopper size={34} className="text-success" />
-                    <h3>{doneCount > 0 ? '¡Terminaste!' : 'Estás al día'}</h3>
-                    <p className="text-secondary text-sm">
-                        {doneCount > 0
-                            ? 'Corregiste todo lo que había pendiente. Tus estudiantes ya pueden ver sus notas.'
-                            : 'Cuando tus estudiantes entreguen, las entregas aparecen acá para corregir de una.'}
-                    </p>
-                    <button className="btn btn-outline btn-sm" onClick={() => navigate('/hoy')}>Volver a Hoy</button>
-                </div>
+                <EstadoVacio
+                    icono={PartyPopper}
+                    titulo={doneCount > 0 ? '¡Terminaste!' : 'Estás al día'}
+                    texto={doneCount > 0
+                        ? 'Corregiste todo lo que había pendiente. Tus estudiantes ya pueden ver sus notas.'
+                        : 'Cuando tus estudiantes entreguen, las entregas aparecen acá para corregir de una.'}
+                    accion={{ etiqueta: 'Volver a Hoy', a: '/hoy', icono: ArrowLeft }}
+                />
             )}
 
             <div className="corr-list">

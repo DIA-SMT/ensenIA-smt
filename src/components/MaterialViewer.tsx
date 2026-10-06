@@ -14,11 +14,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X, FileText, ExternalLink, Loader2, Download } from 'lucide-react';
+import { X, FileText, ExternalLink, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
 import PdfVista from './PdfVista';
+import Dialogo from './shell/Dialogo';
+import { Cargando } from './ui/Esqueleto';
 import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
 import type { LibraryMaterial } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
@@ -77,13 +78,6 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
     return () => { cancelado = true; };
   }, [material.storagePath, necesitaArchivo, esWord]);
 
-  // Cerrar con Escape, como el resto de los modales del proyecto.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const alFallarPdf = useCallback(() => setPdfFallo(true), []);
 
   const abrirAparte = async () => {
@@ -101,13 +95,19 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   // Formato que no se puede mostrar, o falló al mostrarlo
   const sinVistaPrevia = conArchivo && !esLink && !cargando && !seVe;
 
-  // En el body: un ancestro con transform (la animación de entrada de las
-  // páginas) lo dejaba atrapado debajo de la barra de arriba y la de abajo.
-  return createPortal(
-    <div className={`em-modal-overlay ${proyectar ? 'mv-overlay-proyector' : ''}`} onClick={onClose}>
-      <div className={`em-modal mv-modal ${proyectar ? 'mv-proyector' : ''}`} role="dialog" aria-label={material.title} onClick={e => e.stopPropagation()}>
+  // <dialog> con showModal(): va en la capa de arriba del navegador, así que
+  // un ancestro con transform (la animación de entrada de las páginas) ya no
+  // lo deja atrapado debajo de las barras. Escape y tocar afuera cierran.
+  return (
+    <Dialogo
+      abierto
+      alCerrar={onClose}
+      etiqueta={material.title}
+      className={`dialogo-em ${proyectar ? 'mv-overlay-proyector' : ''}`}
+    >
+      <div className={`em-modal mv-modal ${proyectar ? 'mv-proyector' : ''}`}>
         <div className="em-modal-header">
-          <h3><FileText size={17} /> {material.title}</h3>
+          <h3><FileText size={17} aria-hidden="true" /> {material.title}</h3>
           <div className="mv-acciones">
             {onDescargar && conArchivo && (
               <button className="btn btn-ghost btn-sm" onClick={onDescargar} title="Bajar el archivo original">
@@ -126,11 +126,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
           )}
 
           {error && <div className="em-error">{error}</div>}
-          {cargando && (
-            <p className="text-secondary text-sm mv-cargando">
-              <Loader2 size={14} className="spin" /> Abriendo el material…
-            </p>
-          )}
+          {cargando && <Cargando texto="Abriendo el material…" />}
 
           {videoId && (
             <div className="mv-video">
@@ -200,6 +196,6 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
           )}
         </div>
       </div>
-    </div>
-  , document.body);
+    </Dialogo>
+  );
 }

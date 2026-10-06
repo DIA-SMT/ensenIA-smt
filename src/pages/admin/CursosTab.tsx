@@ -6,11 +6,32 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, BookOpen, Layers } from 'lucide-react';
-import { createCourse, deleteCourse, createSubject, deleteSubject } from '../../services/admin.service';
+import { createCourse, deleteCourse, createSubject, deleteSubject, type AdminCourse, type AdminSubject } from '../../services/admin.service';
+import { avisar, confirmar } from '../../components/ui/avisar';
 import { Barra, Vacio } from './ui';
 import type { TabProps } from './GestionEscuela';
 
 export default function CursosTab({ data, run }: TabProps) {
+  const borrarCurso = async (c: AdminCourse) => {
+    const si = await confirmar({
+      titulo: `¿Eliminar el curso ${c.name}?`,
+      mensaje: 'Desaparece de la escuela. Si ya tiene actividades, clases o planificación cargadas, no se va a poder eliminar.',
+      accion: 'Eliminar curso',
+      peligro: true,
+    });
+    if (si && await run(() => deleteCourse(c.id))) avisar.exito(`Se eliminó el curso ${c.name}`);
+  };
+
+  const borrarMateria = async (s: AdminSubject) => {
+    const si = await confirmar({
+      titulo: `¿Eliminar la materia ${s.name}?`,
+      mensaje: 'Desaparece de la lista de materias de la escuela. Si ya tiene actividades, materiales o notas, no se va a poder eliminar.',
+      accion: 'Eliminar materia',
+      peligro: true,
+    });
+    if (si && await run(() => deleteSubject(s.id))) avisar.exito(`Se eliminó la materia ${s.name}`);
+  };
+
   const [year, setYear] = useState('1');
   const [division, setDivision] = useState('');
   const [subject, setSubject] = useState('');
@@ -59,7 +80,7 @@ export default function CursosTab({ data, run }: TabProps) {
                   <span className="adm-lista-meta">{c.studentCount} estudiante{c.studentCount !== 1 ? 's' : ''}</span>
                   {c.studentCount === 0 ? (
                     <button type="button" className="btn-icon" aria-label={`Eliminar ${c.name}`}
-                      onClick={() => window.confirm(`¿Eliminar ${c.name}?`) && run(() => deleteCourse(c.id))}>
+                      onClick={() => borrarCurso(c)}>
                       <Trash2 size={15} aria-hidden="true" />
                     </button>
                   ) : <span className="adm-lista-hueco" aria-hidden="true" />}
@@ -90,7 +111,7 @@ export default function CursosTab({ data, run }: TabProps) {
                     <span className="adm-lista-meta">{cursos.length ? cursos.join(' · ') : 'sin docente asignado'}</span>
                     {cursos.length === 0 ? (
                       <button type="button" className="btn-icon" aria-label={`Eliminar ${s.name}`}
-                        onClick={() => window.confirm(`¿Eliminar ${s.name}?`) && run(() => deleteSubject(s.id))}>
+                        onClick={() => borrarMateria(s)}>
                         <Trash2 size={15} aria-hidden="true" />
                       </button>
                     ) : <span className="adm-lista-hueco" aria-hidden="true" />}

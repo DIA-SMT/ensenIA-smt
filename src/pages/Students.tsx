@@ -22,6 +22,10 @@ import { getPublishedGradesByStudent } from '../services/gradebook.service';
 import { formatoNota } from '../lib/resumenNotas';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import AwardPickerModal from '../components/AwardPickerModal';
+import Dialogo from '../components/shell/Dialogo';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
+import { avisar, confirmar } from '../components/ui/avisar';
 import {
     FEELING_META, OBSERVATION_META, ACHIEVEMENT_PRESETS, AWARD_META, levelForXp,
     type Student, type StudentCheckin, type StudentObservation,
@@ -104,7 +108,7 @@ export default function Students() {
             );
         } catch (err) {
             console.error(err);
-            alert('No se pudo generar el informe. Probá de nuevo.');
+            avisar.error('No se pudo generar el informe.', 'Probá de nuevo en un rato.');
         } finally {
             setInformeLoading(false);
         }
@@ -125,8 +129,10 @@ export default function Students() {
             });
             const obs = await getObservationsByStudent(selectedStudent.id);
             setObservations(obs);
+            avisar.exito('Charla registrada', 'Quedó en las observaciones de la ficha.');
         } catch (err) {
             console.error(err);
+            avisar.error('No se pudo registrar la charla.', 'Probá de nuevo.');
         } finally {
             setTalkSaving(false);
         }
@@ -148,14 +154,21 @@ export default function Students() {
     const [citePlace, setCitePlace] = useState('');
     const [citeSending, setCiteSending] = useState(false);
     const [citeDone, setCiteDone] = useState(false);
+    const [citeError, setCiteError] = useState('');
 
     // Señales tempranas de bienestar (línea base, persistencia, convergencia)
     const [signals, setSignals] = useState<Map<string, WellbeingSignal>>(new Map());
 
+    // Hasta que llega la lista no se dice "no hay estudiantes"
+    const [cargandoLista, setCargandoLista] = useState(true);
+
     useEffect(() => {
         if (!user) return;
         const courseIds = user.subjects?.map(s => s.courseId) ?? [];
-        getStudentsByTeacher(courseIds).then(setAllStudents).catch(console.error);
+        getStudentsByTeacher(courseIds)
+            .then(setAllStudents)
+            .catch(console.error)
+            .finally(() => setCargandoLista(false));
         getWellbeingSignals().then(setSignals).catch(console.error);
     }, [user]);
 
@@ -283,10 +296,9 @@ export default function Students() {
             });
             setCustomTitle('');
             setShowGrantForm(false);
-            await getAchievementsByStudent(selectedStudent.id).then(setAchievements);
-        } catch (err) {
+            await getAchievementsByStudent(selectedStudent.id).then(setAchievements);        } catch (err) {
             console.error('Error otorgando logro:', err);
-            alert('No se pudo otorgar el logro. ¿Está aplicada la migración 007?');
+            avisar.error('No se pudo dar el logro.', 'Probá de nuevo en un rato.');
         } finally {
             setGranting(false);
         }
@@ -294,23 +306,39 @@ export default function Students() {
 
     const handleRevoke = async (a: StudentAchievement) => {
         if (a.grantedBy !== user.id) return;
-        if (!window.confirm(`¿Quitar el logro "${a.title}"?`)) return;
+        const ok = await confirmar({
+            titulo: `¿Quitar el logro "${a.title}"?`,
+            mensaje: `Se le restan los ${a.points} puntos y deja de verlo en su perfil.`,
+            accion: 'Quitar',
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await revokeAchievement(a.id);
             setAchievements(prev => prev.filter(x => x.id !== a.id));
+            avisar.exito('Logro quitado');
         } catch (err) {
             console.error('Error quitando logro:', err);
+            avisar.error('No se pudo quitar el logro.', 'Probá de nuevo.');
         }
     };
 
     const handleDeleteObservation = async (o: StudentObservation) => {
         if (o.teacherId !== user.id) return;
-        if (!window.confirm('¿Borrar esta observación?')) return;
+        const ok = await confirmar({
+            titulo: '¿Borrar esta observación?',
+            mensaje: 'Deja de verse en la ficha para todo el equipo docente. No se puede deshacer.',
+            accion: 'Borrar',
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await deleteObservation(o.id);
             setObservations(prev => prev.filter(x => x.id !== o.id));
+            avisar.exito('Observación borrada');
         } catch (err) {
             console.error('Error borrando observación:', err);
+            avisar.error('No se pudo borrar la observación.', 'Probá de nuevo.');
         }
     };
 
@@ -368,12 +396,14 @@ export default function Students() {
         setCiteTime('');
         setCitePlace('');
         setCiteDone(false);
+        setCiteError('');
         setShowCite(true);
     };
 
     const handleSendCite = async () => {
         if (!selectedStudent || !citeTitle.trim() || !citeBody.trim()) return;
         setCiteSending(true);
+        setCiteError('');
         try {
             await createNotice({
                 schoolId: user.schoolId,
@@ -388,6 +418,7 @@ export default function Students() {
             setCiteDone(true);
         } catch (err) {
             console.error(err);
+            setCiteError('No se pudo enviar la citación. Revisá la conexión y probá de nuevo.');
         } finally {
             setCiteSending(false);
         }
@@ -459,7 +490,7 @@ export default function Students() {
 
                 {/* Filtros por curso */}
                 <div className="stu-filters border-bottom">
-                    <div className="stu-filter-group">
+                    <div className="stu-filter-group fila-desplazable">
                         <button
                             className={`stu-filter-chip ${courseFilter === 'all' ? 'selected' : ''}`}
                             onClick={() => setCourseFilter('all')}
@@ -483,63 +514,80 @@ export default function Students() {
                     </div>
                 </div>
 
-                <div className="table-responsive">
-                    <table className="modern-table">
-                        <thead>
-                            <tr>
-                                <th scope="col" aria-sort={sortAsc ? 'ascending' : 'descending'}>
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleSort('name')}
-                                        title="Ordenar por apellido"
-                                        style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer' }}
-                                    >
-                                        Estudiante <ArrowUpDown size={11} className={sortAsc ? '' : 'flip'} aria-hidden="true" />
-                                    </button>
-                                </th>
-                                <th scope="col">Curso</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredStudents.length === 0 && (
+                {cargandoLista && <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando estudiantes…" className="stu-vacio" />}
+
+                {!cargandoLista && allStudents.length === 0 && (
+                    <EstadoVacio
+                        icono={UsersIcon}
+                        titulo="Todavía no tenés estudiantes"
+                        texto="Aparecen acá cuando dirección te asigna cursos y carga sus listas."
+                        className="stu-vacio"
+                    />
+                )}
+
+                {!cargandoLista && allStudents.length > 0 && filteredStudents.length === 0 && (
+                    <EstadoVacio
+                        icono={Search}
+                        titulo="Nadie coincide con la búsqueda"
+                        texto="Probá con otro nombre o mirá todos los cursos."
+                        accion={{ etiqueta: 'Ver todos', alTocar: () => { setSearch(''); setCourseFilter('all'); } }}
+                        compacto
+                        className="stu-vacio"
+                    />
+                )}
+
+                {!cargandoLista && filteredStudents.length > 0 && (
+                    <div className="table-responsive">
+                        <table className="modern-table">
+                            <thead>
                                 <tr>
-                                    <td colSpan={2} className="stu-empty">
-                                        No hay estudiantes que coincidan con la búsqueda o los filtros.
-                                    </td>
-                                </tr>
-                            )}
-                            {filteredStudents.map(student => (
-                                <tr
-                                    key={student.id}
-                                    onClick={() => setSelectedStudent(student)}
-                                    className={selectedStudent?.id === student.id ? 'selected-row' : ''}
-                                >
-                                    <td>
+                                    <th scope="col" aria-sort={sortAsc ? 'ascending' : 'descending'}>
                                         <button
                                             type="button"
-                                            className="student-cell student-cell-btn"
-                                            onClick={e => { e.stopPropagation(); setSelectedStudent(student); }}
-                                            aria-pressed={selectedStudent?.id === student.id}
+                                            onClick={() => toggleSort('name')}
+                                            title="Ordenar por apellido"
+                                            style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer' }}
                                         >
-                                            <span className="student-avatar" aria-hidden="true">{student.avatarInitials}</span>
-                                            <span className="font-medium">{student.firstName} {student.lastName}</span>
-                                            {(() => {
-                                                const sig = signals.get(student.id);
-                                                if (!sig || sig.level === 'verde') return null;
-                                                return (
-                                                    <span title={`${SIGNAL_META[sig.level].label}: ${sig.reasons[0] ?? ''}`}>
-                                                        {SIGNAL_META[sig.level].emoji}
-                                                    </span>
-                                                );
-                                            })()}
+                                            Estudiante <ArrowUpDown size={11} className={sortAsc ? '' : 'flip'} aria-hidden="true" />
                                         </button>
-                                    </td>
-                                    <td className="text-secondary">{student.courseName}</td>
+                                    </th>
+                                    <th scope="col">Curso</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filteredStudents.map(student => (
+                                    <tr
+                                        key={student.id}
+                                        onClick={() => setSelectedStudent(student)}
+                                        className={selectedStudent?.id === student.id ? 'selected-row' : ''}
+                                    >
+                                        <td>
+                                            <button
+                                                type="button"
+                                                className="student-cell student-cell-btn"
+                                                onClick={e => { e.stopPropagation(); setSelectedStudent(student); }}
+                                                aria-pressed={selectedStudent?.id === student.id}
+                                            >
+                                                <span className="student-avatar" aria-hidden="true">{student.avatarInitials}</span>
+                                                <span className="font-medium">{student.firstName} {student.lastName}</span>
+                                                {(() => {
+                                                    const sig = signals.get(student.id);
+                                                    if (!sig || sig.level === 'verde') return null;
+                                                    return (
+                                                        <span title={`${SIGNAL_META[sig.level].label}: ${sig.reasons[0] ?? ''}`}>
+                                                            {SIGNAL_META[sig.level].emoji}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </button>
+                                        </td>
+                                        <td className="text-secondary">{student.courseName}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {/* Panel de perfil */}
@@ -578,7 +626,7 @@ export default function Students() {
 
                         <div className="profile-section">
                             <h4>Notas publicadas</h4>
-                            {notasFicha === null && <p className="text-sm text-secondary" role="status">Cargando notas…</p>}
+                            {notasFicha === null && <Cargando texto="Cargando notas…" />}
                             {notasFicha && notasFicha.filter(n => n.grade !== null).length === 0 && (
                                 <p className="text-sm text-secondary">Todavía no hay notas publicadas en la libreta.</p>
                             )}
@@ -923,11 +971,11 @@ export default function Students() {
             )}
 
             {/* ── Modal resumen IA ── */}
-            {showSummary && selectedStudent && (
-                <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !summaryLoading) setShowSummary(false); }}>
+            <Dialogo abierto={showSummary && selectedStudent !== null} alCerrar={() => setShowSummary(false)} etiquetadoPor="stu-resumen-titulo" className="dialogo-em">
+                {selectedStudent && (
                     <div className="em-modal em-modal-lg">
                         <div className="em-modal-header">
-                            <h3><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {selectedStudent.firstName} {selectedStudent.lastName}</h3>
+                            <h3 id="stu-resumen-titulo"><Sparkles size={17} className="text-ia-accent" /> Resumen IA — {selectedStudent.firstName} {selectedStudent.lastName}</h3>
                             <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowSummary(false)}><X size={18} /></button>
                         </div>
                         <div className="em-modal-body">
@@ -962,15 +1010,15 @@ export default function Students() {
                             <button className="btn btn-primary btn-sm" onClick={() => setShowSummary(false)}>Cerrar</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Dialogo>
 
             {/* ── Modal citación ── */}
-            {showCite && selectedStudent && (
-                <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !citeSending) setShowCite(false); }}>
+            <Dialogo abierto={showCite && selectedStudent !== null} alCerrar={() => setShowCite(false)} etiquetadoPor="stu-cita-titulo" className="dialogo-em">
+                {selectedStudent && (
                     <div className="em-modal">
                         <div className="em-modal-header">
-                            <h3><CalendarPlus size={17} className="text-cyan" /> Citar a la familia de {selectedStudent.firstName}</h3>
+                            <h3 id="stu-cita-titulo"><CalendarPlus size={17} className="text-cyan" /> Citar a la familia de {selectedStudent.firstName}</h3>
                             <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowCite(false)}><X size={18} /></button>
                         </div>
                         <div className="em-modal-body">
@@ -984,6 +1032,7 @@ export default function Students() {
                                 </div>
                             ) : (
                                 <>
+                                    {citeError && <div className="em-error" role="alert"><AlertTriangle size={15} /> {citeError}</div>}
                                     {guardians.length === 0 && (
                                         <div className="em-error">Este estudiante no tiene tutores vinculados: la citación no la verá nadie todavía.</div>
                                     )}
@@ -1025,8 +1074,8 @@ export default function Students() {
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Dialogo>
         </div>
     );
 }

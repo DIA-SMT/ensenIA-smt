@@ -20,6 +20,8 @@ import {
 } from '../services/chat-history.service';
 import { streamChat } from '../services/ia-chat.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { avisar } from '../components/ui/avisar';
 import type { ChatMessage, ChatSession, LibraryMaterial, IAToolType } from '../types';
 import './StudentPortal.css';
 
@@ -103,6 +105,7 @@ export default function MiGuia() {
         setMessages(await getSessionMessages(s.id));
       } catch (err) {
         console.error('Error cargando sesión de guía:', err);
+        if (!cancelled) avisar.error('No se pudo abrir tu guía.', 'Revisá la conexión y volvé a entrar.');
       }
     })();
     return () => { cancelled = true; };
@@ -122,7 +125,7 @@ export default function MiGuia() {
     const text = (textOverride ?? input).trim();
     if (!text || isStreaming || !session) return;
     if (usesToday >= DAILY_QUOTA) {
-      alert('Llegaste al límite de usos de hoy. ¡Mañana seguimos! 💪');
+      avisar.info('Llegaste al límite de usos de hoy.', '¡Mañana seguimos! 💪');
       return;
     }
 
@@ -269,14 +272,18 @@ export default function MiGuia() {
       <div className="card guia-chat">
         <div className="guia-messages">
           {messages.length === 0 && !isStreaming && (
-            <div className="guia-empty">
-              <div className="guia-empty-icon"><Bot size={22} /></div>
-              <p><strong>{MODES[mode].title}</strong></p>
-              <p className="text-sm text-secondary">{MODES[mode].desc}</p>
-              <button className="btn btn-primary btn-sm" onClick={() => handleSend(MODES[mode].starter)}>
-                {mode === 'guide' ? '🎓 Empezar a repasar' : '🪄 Explicame el material'}
-              </button>
-            </div>
+            <EstadoVacio
+              compacto
+              className="guia-vacio"
+              icono={Bot}
+              titulo={MODES[mode].title}
+              texto={MODES[mode].desc}
+              accion={{
+                etiqueta: mode === 'guide' ? 'Empezar a repasar' : 'Explicame el material',
+                icono: mode === 'guide' ? GraduationCap : Wand2,
+                alTocar: () => handleSend(MODES[mode].starter),
+              }}
+            />
           )}
 
           {messages.map(msg => (

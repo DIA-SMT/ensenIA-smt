@@ -4,6 +4,8 @@ import { X, Users, MapPin, FlaskConical, CheckSquare } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getScheduleByTeacher } from '../services/schedule.service';
 import type { ScheduleBlock } from '../types';
+import Dialogo from '../components/shell/Dialogo';
+import '../components/shell/shell.css';
 import './Agenda.css';
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -117,12 +119,17 @@ export default function Agenda() {
             </div>
 
             {/* Detail Modal */}
-            {selectedBlock && (
-                <div className="modal-overlay" onClick={() => setSelectedBlock(null)}>
-                    <div className="modal-content card" onClick={e => e.stopPropagation()}>
+            <Dialogo
+                abierto={selectedBlock !== null}
+                alCerrar={() => setSelectedBlock(null)}
+                etiquetadoPor="agenda-detalle-titulo"
+                className="agenda-dialogo"
+            >
+                {selectedBlock && (
+                    <>
                         <div className="modal-header">
-                            <h3>Detalle de Clase</h3>
-                            <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedBlock(null)}><X size={20} /></button>
+                            <h3 id="agenda-detalle-titulo">Detalle de clase</h3>
+                            <button type="button" className="btn-icon" aria-label="Cerrar" onClick={() => setSelectedBlock(null)}><X size={20} aria-hidden="true" /></button>
                         </div>
 
                         <div className={`modal-banner ${blockColors[selectedBlock.colorClass] || 'block-blue'}`}>
@@ -163,9 +170,9 @@ export default function Agenda() {
                                 Preparar la clase
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </>
+                )}
+            </Dialogo>
         </div>
     );
 }

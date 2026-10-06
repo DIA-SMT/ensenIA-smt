@@ -23,6 +23,9 @@ import PresentationViewer from '../components/PresentationViewer';
 import { parsePresentation, type ParsedPresentation } from '../lib/presentation';
 import ToolBriefForm from '../components/ToolBriefForm';
 import RefineResultModal from '../components/RefineResultModal';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar, confirmar } from '../components/ui/avisar';
 import type {
     PlanningUnit, PlanningClass, SubjectAssignment, Subject,
     ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
@@ -110,6 +113,8 @@ export default function IALab() {
 
     // ── Planning state ──
     const [allUnits, setAllUnits] = useState<PlanningUnit[]>([]);
+    // Hasta que llegan los módulos no se dice "todavía no tenés módulos"
+    const [modulosCargados, setModulosCargados] = useState(false);
     const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [selectedClass, setSelectedClass] = useState<PlanningClass | null>(null);
@@ -166,7 +171,10 @@ export default function IALab() {
     // ── Load planning data + usage + subjects + materials ──
     useEffect(() => {
         if (!user) return;
-        getPlanningByTeacher(user.id).then(setAllUnits).catch(console.error);
+        getPlanningByTeacher(user.id)
+            .then(setAllUnits)
+            .catch(console.error)
+            .finally(() => setModulosCargados(true));
         getTodayUsage(user.id).then(setTodayUsage).catch(console.error);
         getMaterialsByTeacher(user.id).then(setMaterials).catch(console.error);
 
@@ -186,6 +194,15 @@ export default function IALab() {
         searchParams.delete('doc');
         setSearchParams(searchParams, { replace: true });
     }, [materials, searchParams, setSearchParams]);
+
+    // ── ?herramienta=<id>: llega desde "Crear" con la herramienta ya elegida ──
+    useEffect(() => {
+        const herramienta = searchParams.get('herramienta');
+        if (!herramienta) return;
+        if (tools.some(t => t.id === herramienta)) setBriefTool(herramienta as IAToolType);
+        searchParams.delete('herramienta');
+        setSearchParams(searchParams, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     // ── Cleanup AbortController on unmount ──
     useEffect(() => {
@@ -263,6 +280,7 @@ export default function IALab() {
             setExpandedUnits(prev => new Set(prev).add(unit.id));
         } catch (err) {
             console.error('Error creando unidad:', err);
+            avisar.error('No se pudo crear el módulo.', 'Probá de nuevo.');
         }
     };
 
@@ -281,11 +299,20 @@ export default function IALab() {
             await refreshPlanning();
         } catch (err) {
             console.error('Error creando clase:', err);
+            avisar.error('No se pudo agregar el tema.', 'Probá de nuevo.');
         }
     };
 
     const handleDeleteUnit = async (unit: PlanningUnit) => {
-        const ok = window.confirm(`¿Eliminar el módulo "${unit.title}" y sus ${unit.classes.length} temas?`);
+        const n = unit.classes.length;
+        const ok = await confirmar({
+            titulo: `¿Eliminar el módulo "${unit.title}"?`,
+            mensaje: n > 0
+                ? `Se borran también sus ${n} ${n === 1 ? 'tema' : 'temas'}, con el contenido que escribiste. No se puede deshacer.`
+                : 'No se puede deshacer.',
+            accion: 'Eliminar',
+            peligro: true,
+        });
         if (!ok) return;
         try {
             await deleteUnit(unit.id);
@@ -295,8 +322,10 @@ export default function IALab() {
                 setCenterMode('chat');
             }
             await refreshPlanning();
+            avisar.exito('Módulo eliminado');
         } catch (err) {
             console.error('Error eliminando unidad:', err);
+            avisar.error('No se pudo eliminar el módulo.', 'Probá de nuevo.');
         }
     };
 
@@ -306,8 +335,10 @@ export default function IALab() {
             await updateClass(selectedClass.id, { title: newTitle.trim() });
             setSelectedClass({ ...selectedClass, title: newTitle.trim() });
             refreshPlanning();
+            avisar.exito('Título guardado');
         } catch (err) {
             console.error('Error guardando título:', err);
+            avisar.error('No se pudo guardar el título.', 'Probá de nuevo.');
         }
     };
 
@@ -318,8 +349,11 @@ export default function IALab() {
             setSelectedClass({ ...selectedClass, content: contentDraft });
             setEditingContent(false);
             refreshPlanning();
+            avisar.exito('Contenido guardado');
         } catch (err) {
+            // El borrador sigue abierto: no se pierde lo escrito
             console.error('Error guardando contenido:', err);
+            avisar.error('No se pudo guardar el contenido.', 'Lo que escribiste sigue ahí. Probá de nuevo.');
         }
     };
 
@@ -331,6 +365,7 @@ export default function IALab() {
             refreshPlanning();
         } catch (err) {
             console.error('Error actualizando estado:', err);
+            avisar.error('No se pudo cambiar el estado del tema.', 'Probá de nuevo.');
         }
     };
 
@@ -411,13 +446,16 @@ export default function IALab() {
 
         // Validate summary input length
         if (activeTool === 'sum' && text.length > SUMMARY_INPUT_LIMIT) {
-            alert(`El texto para resumir es demasiado largo (máx. ${SUMMARY_INPUT_LIMIT} caracteres). Intentá con un fragmento más corto.`);
+            avisar.error(
+                'El texto es demasiado largo para resumir.',
+                `Máximo ${SUMMARY_INPUT_LIMIT.toLocaleString('es-AR')} caracteres. Probá con un fragmento más corto.`,
+            );
             return;
         }
 
         // Quota check
         if (usageCount >= DAILY_QUOTA) {
-            alert(`Alcanzaste el límite de ${DAILY_QUOTA} mensajes por hoy. ¡Volvé mañana!`);
+            avisar.info(`Llegaste a los ${DAILY_QUOTA} mensajes de hoy.`, 'Mañana tenés de nuevo. ¡Volvé entonces!');
             return;
         }
 
@@ -432,6 +470,7 @@ export default function IALab() {
                 });
                 setCurrentSession(session);
             } catch {
+                avisar.error('No se pudo abrir la conversación.', 'Revisá la conexión y probá de nuevo.');
                 return;
             }
         }
@@ -555,11 +594,19 @@ export default function IALab() {
     // ── Clear chat ──
     const handleClearChat = async () => {
         if (!currentSession) return;
+        const ok = await confirmar({
+            titulo: '¿Limpiar la conversación?',
+            mensaje: 'Se borran todos los mensajes de este chat. Lo que ya guardaste en un tema, en la biblioteca o como actividad no se toca.',
+            accion: 'Limpiar',
+            peligro: true,
+        });
+        if (!ok) return;
         try {
             await clearSession(currentSession.id);
             setMessages([]);
         } catch (err) {
             console.error('Error clearing session:', err);
+            avisar.error('No se pudo limpiar la conversación.', 'Probá de nuevo.');
         }
     };
 
@@ -578,7 +625,10 @@ export default function IALab() {
     const handlePresent = (msg: ChatMessage) => {
         const parsed = parsePresentation(msg.content);
         if (!parsed) {
-            alert('No pude leer el formato de diapositivas de este mensaje. Volvé a generarla con la herramienta "Preparar diapositivas".');
+            avisar.error(
+                'No pude leer las diapositivas de este mensaje.',
+                'Volvé a generarlas con la herramienta "Preparar diapositivas".',
+            );
             return;
         }
         setActivePresentation(parsed);
@@ -674,10 +724,15 @@ export default function IALab() {
 
                 {/* Units Tree */}
                 <div className="units-tree">
-                    {filteredUnits.length === 0 && (
-                        <div className="tree-empty">
-                            <p className="text-sm text-secondary">Todavía no tenés módulos. Importá tu programa o creá uno.</p>
-                        </div>
+                    {!modulosCargados && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando tus módulos…" />}
+                    {modulosCargados && filteredUnits.length === 0 && (
+                        <EstadoVacio
+                            compacto
+                            icono={Folder}
+                            titulo="Todavía no tenés módulos"
+                            texto="Subí tu programa y la IA arma los módulos, o creá uno a mano."
+                            accion={currentAssignment ? { etiqueta: 'Importar programa', alTocar: () => setShowImportModal(true), icono: FileUp } : undefined}
+                        />
                     )}
                     {filteredUnits.map(unit => {
                         const isExpanded = expandedUnits.has(unit.id);

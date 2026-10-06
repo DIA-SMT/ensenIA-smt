@@ -8,6 +8,7 @@ import { X, Send, Sparkles, Trash2, AlertCircle, CheckCircle, ListChecks } from 
 import { createActivity } from '../services/activities.service';
 import { extractQuestions } from '../services/documents.service';
 import type { ActivityQuestion, IAToolType } from '../types';
+import Dialogo from './shell/Dialogo';
 import './Modals.css';
 
 interface Props {
@@ -84,10 +85,10 @@ export default function PublishActivityModal(props: Props) {
   };
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && !publishing) props.onClose(); }}>
+    <Dialogo abierto alCerrar={props.onClose} etiquetadoPor="publicar-titulo" className="dialogo-em">
       <div className="em-modal">
         <div className="em-modal-header">
-          <h3><Send size={17} className="text-cyan" /> Publicar actividad</h3>
+          <h3 id="publicar-titulo"><Send size={17} className="text-cyan" aria-hidden="true" /> Publicar actividad</h3>
           <button className="btn-icon" aria-label="Cerrar" onClick={props.onClose}><X size={18} /></button>
         </div>
 
@@ -181,6 +182,6 @@ export default function PublishActivityModal(props: Props) {
           )}
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

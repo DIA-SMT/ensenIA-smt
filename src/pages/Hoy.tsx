@@ -12,8 +12,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
-    History, ClipboardList,
+    History, ClipboardList, Wand2, CalendarDays,
 } from 'lucide-react';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
 import { getTodaySchedule } from '../services/schedule.service';
 import { getTeacherStats, getTeacherTimeline, type TimelineItem, type TimelineKind } from '../services/stats.service';
@@ -43,6 +45,18 @@ function timeAgo(iso: string): string {
     if (days === 1) return 'Ayer';
     if (days < 30) return `Hace ${days} días`;
     return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+}
+
+/** Lo mismo varias veces seguidas (tres clases en vivo de Lengua) va en un solo renglón */
+interface GrupoRastro { item: TimelineItem; veces: number }
+function agruparRastro(items: TimelineItem[]): GrupoRastro[] {
+    const grupos: GrupoRastro[] = [];
+    for (const item of items) {
+        const ultimo = grupos[grupos.length - 1];
+        if (ultimo && ultimo.item.kind === item.kind && ultimo.item.title === item.title) ultimo.veces++;
+        else grupos.push({ item, veces: 1 });
+    }
+    return grupos;
 }
 
 function formatHour(h: number): string {
@@ -106,23 +120,16 @@ export default function Hoy() {
 
     return (
         <div className="hoy-container animate-in">
-            {/* Saludo */}
+            {/* Saludo. El <h1> de la pantalla ("Mi día") lo pone la barra superior. */}
             <header className="hoy-greeting">
                 <div>
-                    <h1>{greeting()}, {user.firstName}</h1>
+                    <h2 className="hoy-saludo">{greeting()}, {user.firstName}</h2>
                     <p className="text-secondary">
                         {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
                         {todayClasses.length > 0 && ` · ${todayClasses.length} clase${todayClasses.length !== 1 ? 's' : ''} hoy`}
                     </p>
                 </div>
-                <div className="hoy-header-actions">
-                    <button className="btn btn-primary hoy-create-btn" onClick={() => navigate('/modulo')}>
-                        <Boxes size={16} /> Armar módulo
-                    </button>
-                    <button className="btn btn-outline hoy-create-btn" onClick={() => navigate('/crear')}>
-                        <Sparkles size={16} /> Actividad rápida
-                    </button>
-                </div>
+                {/* Crear está en la barra superior, en todas las pantallas */}
             </header>
 
             {/* Primer uso */}
@@ -136,7 +143,7 @@ export default function Hoy() {
                         Tres pasos y ya estás andando. No hace falta saber nada de IA: la app te guía.
                     </p>
                     <div className="hoy-onb-steps">
-                        <Link to="/mis-clases?tab=materiales" className="hoy-onb-step">
+                        <Link to="/biblioteca" className="hoy-onb-step">
                             <span className="hoy-onb-num">1</span>
                             <span className="hoy-onb-icon"><Upload size={17} /></span>
                             <div>
@@ -196,23 +203,17 @@ export default function Hoy() {
             <section className="hoy-classes">
                 <h2 className="hoy-section-title"><Sun size={17} /> Tus clases de hoy</h2>
 
-                {loading && <p className="text-secondary">Cargando...</p>}
+                {loading && <Esqueleto filas={2} etiqueta="Cargando tus clases de hoy…" />}
 
                 {!loading && todayClasses.length === 0 && (
-                    <div className="card hoy-empty">
-                        <p className="text-secondary">
-                            Hoy no tenés clases en el horario. Igual podés preparar material o
-                            revisar cómo viene tu curso.
-                        </p>
-                        <div className="hoy-empty-actions">
-                            <button className="btn btn-primary btn-sm" onClick={() => navigate('/crear')}>
-                                <Sparkles size={14} /> Crear actividad
-                            </button>
-                            <Link to="/students" className="btn btn-outline btn-sm">
-                                <Users size={14} /> Ver estudiantes
-                            </Link>
-                        </div>
-                    </div>
+                    <EstadoVacio
+                        compacto
+                        icono={CalendarDays}
+                        titulo="Hoy no tenés clases en el horario"
+                        texto="Buen momento para preparar material o ver cómo viene tu curso."
+                        accion={{ etiqueta: 'Crear', a: '/crear', icono: Wand2 }}
+                        accionSecundaria={{ etiqueta: 'Ver mi horario', a: '/mis-clases' }}
+                    />
                 )}
 
                 {todayClasses.map((cls, i) => {
@@ -235,8 +236,8 @@ export default function Hoy() {
                                 <div className="hoy-class-actions">
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate('/ia-lab')}
-                                        title="Generar contenido, actividades o evaluaciones con IA"
+                                        onClick={() => navigate('/crear')}
+                                        title="Armar una actividad, un módulo o una evaluación"
                                     >
                                         <Sparkles size={15} /> Preparar
                                     </button>
@@ -256,7 +257,7 @@ export default function Hoy() {
                                     </button>
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/mis-clases?tab=actividades')}
+                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/actividades')}
                                         title="Entregas, notas y cómo trabajaron"
                                     >
                                         <BarChart3 size={15} /> Cómo les fue
@@ -291,14 +292,17 @@ export default function Hoy() {
                 <section className="hoy-timeline">
                     <h2 className="hoy-section-title"><History size={17} /> Lo que hiciste</h2>
                     <div className="hoy-trail">
-                        {timeline.map(item => {
+                        {agruparRastro(timeline).map(({ item, veces }) => {
                             const meta = TIMELINE_META[item.kind];
                             const Icon = meta.icon;
                             const content = (
                                 <>
-                                    <span className={`hoy-trail-icon k-${item.kind}`}><Icon size={14} /></span>
+                                    <span className={`hoy-trail-icon k-${item.kind}`}><Icon size={14} aria-hidden="true" /></span>
                                     <div className="hoy-trail-body">
-                                        <span className="hoy-trail-label">{meta.label}</span>
+                                        <span className="hoy-trail-label">
+                                            {meta.label}
+                                            {veces > 1 && <span className="hoy-trail-veces"> · {veces} veces</span>}
+                                        </span>
                                         <strong>{item.title}</strong>
                                         {item.detail && <span className="hoy-trail-detail">{item.detail}</span>}
                                     </div>
@@ -313,32 +317,29 @@ export default function Hoy() {
                 </section>
             )}
 
-            {/* Contexto (métricas, en segundo plano) */}
+            {/* Contexto (métricas, en segundo plano). Sin "asistencia
+                promedio": ese número sale de un campo que solo llena el seed
+                de demo, ninguna función lo calcula. */}
             <section className="hoy-stats">
-                <div className="hoy-stat">
-                    <Users size={15} className="text-cyan" />
+                <Link to="/students" className="hoy-stat hoy-stat-action">
+                    <Users size={15} className="text-cyan" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.totalStudents}</span>
-                    <span className="hoy-stat-label">estudiantes</span>
-                </div>
-                <div className="hoy-stat">
-                    <Clock size={15} className="text-warning" />
+                    <span className="hoy-stat-label">{stats.totalStudents === 1 ? 'estudiante' : 'estudiantes'}</span>
+                </Link>
+                <Link to="/mis-clases" className="hoy-stat hoy-stat-action">
+                    <Clock size={15} className="text-warning" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.classesToday}</span>
-                    <span className="hoy-stat-label">clases hoy</span>
-                </div>
-                <button
+                    <span className="hoy-stat-label">{stats.classesToday === 1 ? 'clase hoy' : 'clases hoy'}</span>
+                </Link>
+                <Link
+                    to="/corregir"
                     className="hoy-stat hoy-stat-action"
-                    onClick={() => navigate('/corregir')}
                     title="Ver y corregir todas las entregas pendientes"
                 >
-                    <ClipboardCheck size={15} className="text-ia-accent" />
+                    <ClipboardCheck size={15} className="text-ia-accent" aria-hidden="true" />
                     <span className="hoy-stat-val">{stats.pendingEvaluations}</span>
                     <span className="hoy-stat-label">por corregir</span>
-                </button>
-                <div className="hoy-stat">
-                    <CheckSquare size={15} className="text-success" />
-                    <span className="hoy-stat-val">{stats.avgAttendance}%</span>
-                    <span className="hoy-stat-label">asistencia</span>
-                </div>
+                </Link>
             </section>
         </div>
     );

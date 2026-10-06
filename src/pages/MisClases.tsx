@@ -1,32 +1,37 @@
 /**
  * SMT EstudIA — Mis clases
  *
- * Antes el docente tenía que acordarse de que su horario, sus actividades
- * y sus materiales vivían en tres secciones distintas del menú. Ahora es
- * un solo lugar con tres pestañas.
+ * El horario de la semana y cómo viene el clima de cada curso. Actividades
+ * y materiales tienen su propio lugar en el menú: antes también eran
+ * pestañas acá, y había dos caminos a lo mismo.
  */
 
-import { useSearchParams } from 'react-router-dom';
-import { Calendar, ClipboardList, BookOpen, HeartPulse } from 'lucide-react';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { Calendar, HeartPulse } from 'lucide-react';
 import Agenda from './Agenda';
-import Actividades from './Actividades';
-import Biblioteca from './Biblioteca';
 import ClimaDelAula from './ClimaDelAula';
+import '../components/ui/ui.css';
 import './MisClases.css';
 
-type Tab = 'agenda' | 'actividades' | 'clima' | 'materiales';
+type Tab = 'agenda' | 'clima';
 
 const TABS: { key: Tab; label: string; icon: typeof Calendar }[] = [
     { key: 'agenda', label: 'Mi horario', icon: Calendar },
-    { key: 'actividades', label: 'Actividades', icon: ClipboardList },
     { key: 'clima', label: 'Clima del aula', icon: HeartPulse },
-    { key: 'materiales', label: 'Mis materiales', icon: BookOpen },
 ];
+
+/** Enlaces viejos a pestañas que ya no están acá */
+const MUDADAS: Record<string, string> = {
+    actividades: '/actividades',
+    materiales: '/biblioteca',
+};
 
 export default function MisClases() {
     const [searchParams, setSearchParams] = useSearchParams();
     const raw = searchParams.get('tab');
     const active: Tab = TABS.some(t => t.key === raw) ? (raw as Tab) : 'agenda';
+
+    if (raw && MUDADAS[raw]) return <Navigate to={MUDADAS[raw]} replace />;
 
     const setTab = (tab: Tab) => {
         searchParams.set('tab', tab);
@@ -35,24 +40,26 @@ export default function MisClases() {
 
     return (
         <div className="mc-container">
-            <div className="mc-tabs">
+            <div className="mc-tabs fila-desplazable" role="tablist" aria-label="Mis clases">
                 {TABS.map(t => (
                     <button
                         key={t.key}
+                        role="tab"
+                        id={`mc-tab-${t.key}`}
+                        aria-selected={active === t.key}
+                        aria-controls="mc-panel"
                         className={`mc-tab ${active === t.key ? 'active' : ''}`}
                         onClick={() => setTab(t.key)}
                     >
-                        <t.icon size={15} />
+                        <t.icon size={15} aria-hidden="true" />
                         <span>{t.label}</span>
                     </button>
                 ))}
             </div>
 
-            <div className="mc-panel">
+            <div className="mc-panel" id="mc-panel" role="tabpanel" aria-labelledby={`mc-tab-${active}`}>
                 {active === 'agenda' && <Agenda />}
-                {active === 'actividades' && <Actividades />}
                 {active === 'clima' && <ClimaDelAula />}
-                {active === 'materiales' && <Biblioteca />}
             </div>
         </div>
     );
