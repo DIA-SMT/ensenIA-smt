@@ -39,6 +39,7 @@ import { saveAttendance, type AttendanceEntry } from './attendance.service';
 import { saveGrades } from './gradebook.service';
 import { upsertGrade } from './libreta.service';
 import { guardarEvaluacion, type EvaluacionAGuardar } from './evaluaciones.service';
+import { pedirHablarConDocente } from './alerts.service';
 import { haySenial, esErrorDeRed, suscribirConexion } from '../lib/conexion';
 import type {
   ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment, PracticeAttempt, ObservationCategory,
@@ -64,7 +65,8 @@ type OpEstudiante =
   | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number } }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown> }
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string }
-  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number };
+  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number }
+  | { kind: 'hablar'; teacherId: string | null; motivo: string; descripcion: string };
 
 type OpDocente =
   | { kind: 'asistencia'; clave: string; descripcion: string; courseId: string; subjectId: string; fecha: string; entries: AttendanceEntry[]; note?: string }
@@ -162,6 +164,8 @@ async function run(op: QueuedOp): Promise<void> {
         ...op.metadata,
         offline_ts: new Date(op.ts).toISOString(), // momento real del evento
       });
+    case 'hablar':
+      return pedirHablarConDocente(op.teacherId, op.motivo);
     case 'asistencia':
       return saveAttendance({
         courseId: op.courseId, subjectId: op.subjectId, takenOn: op.fecha, note: op.note, entries: op.entries,
@@ -188,6 +192,7 @@ const DESCRIPCION_ESTUDIANTE: Record<OpEstudiante['kind'], string> = {
   event: 'Registro de actividad',
   checkin: 'Cómo te sentiste',
   practice: 'Una práctica',
+  hablar: 'Pedido para hablar con un docente',
 };
 
 function describir(op: QueuedOp): string {
@@ -381,6 +386,24 @@ export async function recordPracticeAttemptResilient(input: {
     if (esErrorDeRed(err)) {
       enqueue({ kind: 'practice', ...input });
       return null;
+    }
+    throw err;
+  }
+}
+
+/** "Quiero hablar con un docente": sin señal queda guardado y se envía solo. */
+export async function pedirHablarResiliente(teacherId: string | null, motivo: string, descripcion: string): Promise<'enviado' | 'pendiente'> {
+  if (!haySenial()) {
+    enqueue({ kind: 'hablar', teacherId, motivo, descripcion });
+    return 'pendiente';
+  }
+  try {
+    await pedirHablarConDocente(teacherId, motivo);
+    return 'enviado';
+  } catch (err) {
+    if (esErrorDeRed(err)) {
+      enqueue({ kind: 'hablar', teacherId, motivo, descripcion });
+      return 'pendiente';
     }
     throw err;
   }

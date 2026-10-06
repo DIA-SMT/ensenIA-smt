@@ -13,7 +13,7 @@ import {
     ClipboardCheck, X, UserRound,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAlertsByTeacher, getAlertsBySchool, startFollowUp, closeAlert } from '../services/alerts.service';
+import { getAlertsByTeacher, getAlertsBySchool, startFollowUp, closeAlert, avisarADireccion } from '../services/alerts.service';
 import { getThresholds, saveThresholds, REGLAS_DICIEMBRE } from '../services/thresholds.service';
 import { formatRelative } from '../lib/format';
 import WellbeingSignals from '../components/WellbeingSignals';
@@ -32,7 +32,7 @@ import './Alerts.css';
 import '../components/shell/shell.css';
 import '../components/Modals.css';
 
-type StatusFilter = 'activas' | 'cerradas' | 'todas';
+type StatusFilter = 'activas' | 'escaladas' | 'cerradas' | 'todas';
 
 /* ── Modal de umbrales (solo dirección) ── */
 
@@ -208,6 +208,50 @@ function AlertActionForm({ mode, onSubmit, onCancel }: {
     );
 }
 
+/* ── Avisar a dirección (docente, 051) ── */
+
+function AvisarDireccionForm({ onSubmit, onCancel }: {
+    onSubmit: (motivo: string) => Promise<void>;
+    onCancel: () => void;
+}) {
+    const [motivo, setMotivo] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+
+    const enviar = async () => {
+        if (!motivo.trim() || busy) return;
+        setBusy(true);
+        setError('');
+        try {
+            await onSubmit(motivo);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'No se pudo avisar. Probá de nuevo.');
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div className="alert-action-form">
+            <textarea
+                className="form-textarea"
+                rows={3}
+                maxLength={1000}
+                value={motivo}
+                onChange={e => setMotivo(e.target.value)}
+                placeholder="Contale a dirección qué pasa y qué necesitás (le llega a cada directivo)…"
+                aria-label="Motivo del aviso a dirección"
+            />
+            {error && <p className="text-danger text-sm">{error}</p>}
+            <div className="alert-action-buttons">
+                <button className="btn btn-outline btn-sm" onClick={onCancel}>Cancelar</button>
+                <button className="btn btn-primary btn-sm" onClick={enviar} disabled={busy || !motivo.trim()}>
+                    {busy ? 'Avisando…' : 'Avisar a dirección'}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 /* ── Página ── */
 
 export default function Alerts() {
@@ -215,7 +259,7 @@ export default function Alerts() {
     const navigate = useNavigate();
     const [alertsList, setAlertsList] = useState<Alert[]>([]);
     const [filter, setFilter] = useState<StatusFilter>('activas');
-    const [actionOn, setActionOn] = useState<{ id: string; mode: 'seguimiento' | 'cierre' } | null>(null);
+    const [actionOn, setActionOn] = useState<{ id: string; mode: 'seguimiento' | 'cierre' | 'direccion' } | null>(null);
     const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
     const [showThresholds, setShowThresholds] = useState(false);
     const [cargando, setCargando] = useState(true);
@@ -243,10 +287,15 @@ export default function Alerts() {
     }), [alertsList]);
 
     const visible = useMemo(() => {
-        if (filter === 'activas') return alertsList.filter(a => a.status !== 'cerrada');
-        if (filter === 'cerradas') return alertsList.filter(a => a.status === 'cerrada');
-        return alertsList;
-    }, [alertsList, filter]);
+        const lista = filter === 'activas' ? alertsList.filter(a => a.status !== 'cerrada')
+            : filter === 'escaladas' ? alertsList.filter(a => a.escalatedAt && a.status !== 'cerrada')
+                : filter === 'cerradas' ? alertsList.filter(a => a.status === 'cerrada')
+                    : alertsList;
+        // Para dirección, lo escalado va primero: es lo que le toca a ella
+        if (!isDirector) return lista;
+        const escalada = (a: Alert) => (a.escalatedAt && a.status !== 'cerrada' ? 0 : 1);
+        return [...lista].sort((a, b) => escalada(a) - escalada(b));
+    }, [alertsList, filter, isDirector]);
 
     if (!user) return null;
 
@@ -257,6 +306,13 @@ export default function Alerts() {
     const doFollowUp = async (alertId: string, note: string) => {
         await startFollowUp(alertId, note);
         avisar.exito('Alerta en seguimiento', 'La intervención quedó registrada.');
+        setActionOn(null);
+        load();
+    };
+
+    const doAvisar = async (alertId: string, motivo: string) => {
+        await avisarADireccion(alertId, motivo);
+        avisar.exito('Le avisaste a dirección', 'Le llegó a cada directivo. Vas a ver acá cuando la tomen.');
         setActionOn(null);
         load();
     };
@@ -306,10 +362,14 @@ export default function Alerts() {
                     <span className="summary-count text-warning">{counts.seguimiento}</span>
                     <span className="summary-label">En seguimiento</span>
                 </div>
-                <div className="card alert-summary-card static">
+                <button
+                    className={`card alert-summary-card ${filter === 'escaladas' ? 'active' : ''}`}
+                    onClick={() => setFilter(filter === 'escaladas' ? 'activas' : 'escaladas')}
+                    title={isDirector ? 'Las que te avisaron los docentes o se escalaron solas' : 'Las que le avisaste a dirección'}
+                >
                     <span className="summary-count" style={{ color: 'var(--accent-ia)' }}>{counts.escaladas}</span>
-                    <span className="summary-label">Escaladas</span>
-                </div>
+                    <span className="summary-label">{isDirector ? 'Para dirección' : 'Avisadas a dirección'}</span>
+                </button>
                 <button
                     className={`card alert-summary-card ${filter === 'cerradas' ? 'active' : ''}`}
                     onClick={() => setFilter(filter === 'cerradas' ? 'activas' : 'cerradas')}
@@ -323,7 +383,7 @@ export default function Alerts() {
             <div className="card padding-lg">
                 <div className="widget-header" style={{ marginBottom: '1rem' }}>
                     <h3 className="text-lg font-semibold">
-                        {filter === 'cerradas' ? 'Alertas cerradas' : 'Alertas activas'}
+                        {filter === 'cerradas' ? 'Alertas cerradas' : filter === 'escaladas' ? (isDirector ? 'Para dirección' : 'Avisadas a dirección') : 'Alertas activas'}
                     </h3>
                     <span className="badge badge-neutral">{visible.length}</span>
                 </div>
@@ -365,12 +425,27 @@ export default function Alerts() {
                                         <span className={`badge ${statusMeta.badgeClass}`}>{statusMeta.label}</span>
                                         {alert.escalatedAt && alert.status !== 'cerrada' && (
                                             <span className="badge badge-escalada">
-                                                <ArrowUpRight size={11} /> Escalada a dirección
+                                                <ArrowUpRight size={11} /> {alert.escalatedBy ? 'Avisada a dirección' : 'Escalada a dirección'}
                                             </span>
                                         )}
                                         <span className="text-xs text-subtle">{formatRelative(alert.createdAt)}</span>
                                     </div>
+                                    {alert.title && <p className="lifecycle-title">{alert.title}</p>}
                                     <p className="lifecycle-msg">{alert.message}</p>
+
+                                    {/* Quién le avisó a dirección y por qué (051); sin docente, fue el sistema a las 72 h */}
+                                    {alert.escalatedAt && (
+                                        <p className="lifecycle-escalada">
+                                            <ArrowUpRight size={13} aria-hidden="true" />
+                                            {alert.escalatedBy
+                                                ? <>{alert.escalatedBy === user.id ? 'Le avisaste a dirección' : `${alert.teacherName ?? 'Un docente'} le avisó a dirección`}{alert.escalationReason ? `: "${alert.escalationReason}"` : ''}</>
+                                                : 'Escalada sola: pasaron las horas sin intervención.'}
+                                            <span className="text-subtle"> · {formatRelative(alert.escalatedAt)}</span>
+                                        </p>
+                                    )}
+                                    {isDirector && !alert.escalatedAt && alert.teacherName && (
+                                        <p className="text-xs text-subtle">Alerta de {alert.teacherName}</p>
+                                    )}
 
                                     {alert.interventionNote && (
                                         <p className="lifecycle-intervention">
@@ -386,7 +461,7 @@ export default function Alerts() {
                                         </p>
                                     )}
 
-                                    {alert.studentIds?.length ? (
+                                    {!isDirector && alert.studentIds?.length ? (
                                         <div className="timeline-actions">
                                             <button
                                                 className="timeline-action"
@@ -398,9 +473,14 @@ export default function Alerts() {
                                         </div>
                                     ) : null}
 
-                                    {isActing ? (
+                                    {isActing && actionOn.mode === 'direccion' ? (
+                                        <AvisarDireccionForm
+                                            onCancel={() => setActionOn(null)}
+                                            onSubmit={motivo => doAvisar(alert.id, motivo)}
+                                        />
+                                    ) : isActing ? (
                                         <AlertActionForm
-                                            mode={actionOn.mode}
+                                            mode={actionOn.mode as 'seguimiento' | 'cierre'}
                                             onCancel={() => setActionOn(null)}
                                             onSubmit={(note, outcome) =>
                                                 actionOn.mode === 'seguimiento'
@@ -424,6 +504,15 @@ export default function Alerts() {
                                             >
                                                 Cerrar con resultado
                                             </button>
+                                            {!isDirector && !alert.escalatedAt && alert.teacherId === user.id && (
+                                                <button
+                                                    className="btn btn-ghost btn-sm"
+                                                    onClick={() => setActionOn({ id: alert.id, mode: 'direccion' })}
+                                                    title="Le llega a cada directivo con tu motivo"
+                                                >
+                                                    <ArrowUpRight size={14} aria-hidden="true" /> Avisar a dirección
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>

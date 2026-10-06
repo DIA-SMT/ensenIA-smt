@@ -665,3 +665,8 @@
   font-size: 0.875rem;
 }
 .ficha-notas strong { font-size: 1rem; font-weight: 800; }
+
+/* Avisar a dirección desde la ficha (051) */
+.stu-aviso { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.stu-aviso .form-select, .stu-aviso .form-textarea { width: 100%; }
+.stu-aviso-botones { display: flex; justify-content: flex-end; gap: 6px; }

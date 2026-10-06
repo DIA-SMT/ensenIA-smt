@@ -1,0 +1,39 @@
+/* Comunicados de dirección (docente) */
+.cd-container { display: flex; flex-direction: column; gap: var(--space-4); max-width: 760px; }
+
+.cd-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.cd-item { padding: 0; overflow: hidden; }
+.cd-item.sin-leer { border-color: var(--acento); }
+.cd-item.urgente.sin-leer { border-color: var(--danger); }
+
+.cd-cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--touch);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cd-cabecera:hover { background: var(--bg-hover); }
+.cd-punto { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--acento); }
+.cd-item.urgente .cd-punto { background: var(--danger); }
+.cd-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cd-texto strong { font-size: 0.9375rem; overflow-wrap: anywhere; }
+.cd-item:not(.sin-leer) .cd-texto strong { font-weight: 550; }
+.cd-texto small { font-size: 0.75rem; color: var(--text-subtle); }
+.cd-flecha { flex-shrink: 0; color: var(--text-subtle); transition: transform var(--transition-fast); }
+.cd-cabecera[aria-expanded="true"] .cd-flecha { transform: rotate(180deg); }
+
+.cd-cuerpo {
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

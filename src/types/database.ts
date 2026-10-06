@@ -556,6 +556,8 @@ export type Database = {
           created_at: string | null
           date_label: string | null
           escalated_at: string | null
+          escalated_by: string | null
+          escalation_reason: string | null
           id: string
           intervention_at: string | null
           intervention_by: string | null
@@ -575,6 +577,8 @@ export type Database = {
           created_at?: string | null
           date_label?: string | null
           escalated_at?: string | null
+          escalated_by?: string | null
+          escalation_reason?: string | null
           id?: string
           intervention_at?: string | null
           intervention_by?: string | null
@@ -594,6 +598,8 @@ export type Database = {
           created_at?: string | null
           date_label?: string | null
           escalated_at?: string | null
+          escalated_by?: string | null
+          escalation_reason?: string | null
           id?: string
           intervention_at?: string | null
           intervention_by?: string | null
@@ -3415,6 +3421,14 @@ export type Database = {
       detect_silent_students: { Args: never; Returns: number }
       escalate_stale_alerts: { Args: never; Returns: number }
       format_grade: { Args: { g: number }; Returns: string }
+      avisar_a_direccion: {
+        Args: { p_alert: string; p_motivo: string }
+        Returns: undefined
+      }
+      avisar_a_direccion_por_alumno: {
+        Args: { p_motivo: string; p_student: string; p_tema: string }
+        Returns: string
+      }
       gen_join_code: { Args: never; Returns: string }
       guardar_evaluacion: {
         Args: {
@@ -3428,6 +3442,14 @@ export type Database = {
           p_titulo: string
         }
         Returns: string
+      }
+      mis_docentes: {
+        Args: never
+        Returns: { materias: string; nombre: string; teacher_id: string }[]
+      }
+      pedir_hablar_con_docente: {
+        Args: { p_motivo: string | null; p_teacher: string | null }
+        Returns: number
       }
       guardar_asistencia: {
         Args: {

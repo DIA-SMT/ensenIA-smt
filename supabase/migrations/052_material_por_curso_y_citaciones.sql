@@ -1,4 +1,4 @@
--- 051 — Material por curso y citaciones del docente por materia
+-- 052 — Material por curso y citaciones del docente por materia
 --
 -- 1) library_materials.course_id
 --    El material es de un curso. NULL = "todos mis cursos de esta materia":

@@ -554,7 +554,7 @@ Deno.serve(async (req: Request) => {
       const { data: student } = await supabase
         .from('students').select('id').eq('user_id', user.id).maybeSingle();
       if (!student) return json({ error: 'FORBIDDEN', message: 'No encontramos tu ficha de estudiante.' }, 403);
-      // Misma regla que student_sees_material (migración 051): el material es
+      // Misma regla que student_sees_material (migración 052): el material es
       // de su curso, o es de "todos los cursos" de quien lo subió y el
       // estudiante cursa la materia con esa persona.
       const { data: inscripciones } = await supabase

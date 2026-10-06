@@ -11,7 +11,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, LogOut, Accessibility } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo } from '../lib/navegacion';
-import { getUnreadAlertCount } from '../services/alerts.service';
+import { getUnreadAlertCount, getEscaladasPendientes } from '../services/alerts.service';
+import { getCommunicationsBySchool, sinLeer, EVENTO_COMUNICADO_LEIDO } from '../services/communications.service';
 import { getMyLiveSession } from '../services/live.service';
 import './Sidebar.css';
 
@@ -47,14 +48,35 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
   }, [colapsada]);
 
   const userId = user?.id;
+  const schoolId = user?.schoolId;
   const isDocente = user?.role === 'docente';
+  const isDirector = user?.role === 'director';
   const [alertCount, setAlertCount] = useState(0);
+  const [comunicadosSinLeer, setComunicadosSinLeer] = useState(0);
+  const [paraDireccion, setParaDireccion] = useState(0);
   const [liveNow, setLiveNow] = useState(false);
 
+  // Los números del menú se actualizan solos cada 2 minutos: un alumno que
+  // pide hablar, un docente que avisa a dirección o un comunicado nuevo
+  // tienen que verse sin cerrar sesión (051).
   useEffect(() => {
-    if (!userId || !isDocente) return;
-    getUnreadAlertCount(userId).then(setAlertCount).catch(() => {});
-  }, [userId, isDocente]);
+    if (!userId || !schoolId || (!isDocente && !isDirector)) return;
+    let alive = true;
+    const contar = () => {
+      if (isDocente) {
+        getUnreadAlertCount(userId).then(n => { if (alive) setAlertCount(n); }).catch(() => {});
+        getCommunicationsBySchool(schoolId)
+          .then(c => { if (alive) setComunicadosSinLeer(sinLeer(c, userId).length); })
+          .catch(() => {});
+      } else {
+        getEscaladasPendientes(schoolId).then(n => { if (alive) setParaDireccion(n); }).catch(() => {});
+      }
+    };
+    contar();
+    const id = window.setInterval(contar, 120_000);
+    window.addEventListener(EVENTO_COMUNICADO_LEIDO, contar);
+    return () => { alive = false; window.clearInterval(id); window.removeEventListener(EVENTO_COMUNICADO_LEIDO, contar); };
+  }, [userId, schoolId, isDocente, isDirector]);
 
   // Una sesión abierta y olvidada bloquea al curso (hay un único índice de
   // "una clase viva por curso"), así que el punto rojo no es adorno: es cómo
@@ -88,6 +110,12 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
     <>
       {isDocente && ruta === rutaAlertas && alertCount > 0 && (
         <span className="nav-alert-badge" title={`${alertCount} alertas sin ver`}>{alertCount}</span>
+      )}
+      {isDocente && ruta === '/comunicados' && comunicadosSinLeer > 0 && (
+        <span className="nav-alert-badge" title={`${comunicadosSinLeer} comunicados sin leer`}>{comunicadosSinLeer}</span>
+      )}
+      {isDirector && ruta === '/alerts' && paraDireccion > 0 && (
+        <span className="nav-alert-badge" title={`${paraDireccion} avisos para dirección sin cerrar`}>{paraDireccion}</span>
       )}
       {isDocente && ruta === '/clase-en-vivo' && liveNow && (
         <span className="nav-live-dot" title="Tenés una clase en vivo abierta" />

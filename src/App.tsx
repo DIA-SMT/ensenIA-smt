@@ -68,6 +68,7 @@ function App() {
                 {/* Staff */}
                 {ruta('/alerts', STAFF)}
                 {ruta('/familias', STAFF)}
+                {ruta('/comunicados', ['docente'])}
                 {/* Normativa: dirección la carga, el equipo docente la consulta. */}
                 {ruta('/normativa', STAFF)}
 

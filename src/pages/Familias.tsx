@@ -1,7 +1,7 @@
 /**
  * Vista staff: avisos a familias con acuses de recibo y confirmación de
  * asistencia. La dirección manda comunicados y citaciones; el docente solo
- * cita a la familia de un estudiante de sus materias (la base lo exige, 051).
+ * cita a la familia de un estudiante de sus materias (la base lo exige, 052).
  */
 
 import { useState, useEffect } from 'react';
