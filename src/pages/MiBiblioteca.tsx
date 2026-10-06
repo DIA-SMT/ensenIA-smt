@@ -6,6 +6,8 @@ import { getSharedMaterialsForStudent } from '../services/library.service';
 import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.service';
 import { getStudentByUserId } from '../services/activities.service';
 import { getMyMaterialReactions, setMaterialReaction } from '../services/gamification.service';
+import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
+import ClasesEnviadas from '../components/ClasesEnviadas';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
@@ -41,9 +43,12 @@ export default function MiBiblioteca() {
   const [generating, setGenerating] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [viendo, setViendo] = useState<LibraryMaterial | null>(null);
+  const [clases, setClases] = useState<ClaseEnviada[]>([]);
 
   useEffect(() => {
     if (!user) return;
+    // Las clases agrupadas son un extra: si fallan, el material se ve igual
+    getClasesEnviadas(10).then(setClases).catch(console.error);
     Promise.all([
       getSharedMaterialsForStudent(),
       getStudentByUserId(user.id),
@@ -125,6 +130,9 @@ export default function MiBiblioteca() {
 
   return (
     <div className="sp-container animate-in">
+      {/* Lo último que mandaron los docentes, cada clase con sus partes juntas */}
+      {!loading && <ClasesEnviadas clases={clases} materiales={materials} alAbrir={setViendo} />}
+
       <h3 className="sp-section-title" aria-level={2}><BookOpen size={17} aria-hidden="true" /> Material de mis materias</h3>
       <p className="text-secondary text-sm" style={{ marginTop: -8 }}>
         Acá aparece el material que tus docentes comparten con el curso.

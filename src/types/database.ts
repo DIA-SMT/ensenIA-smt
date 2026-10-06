@@ -783,6 +783,67 @@ export type Database = {
           },
         ]
       }
+      clases_enviadas: {
+        Row: {
+          activity_id: string | null
+          class_id: string | null
+          course_id: string
+          enviada_at: string
+          id: string
+          material_ids: string[]
+          school_id: string
+          subject_id: string
+          teacher_id: string
+          titulo: string
+        }
+        Insert: {
+          activity_id?: string | null
+          class_id?: string | null
+          course_id: string
+          enviada_at?: string
+          id?: string
+          material_ids?: string[]
+          school_id: string
+          subject_id: string
+          teacher_id: string
+          titulo: string
+        }
+        Update: {
+          activity_id?: string | null
+          class_id?: string | null
+          course_id?: string
+          enviada_at?: string
+          id?: string
+          material_ids?: string[]
+          school_id?: string
+          subject_id?: string
+          teacher_id?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clases_enviadas_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clases_enviadas_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clases_enviadas_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_reads: {
         Row: {
           communication_id: string

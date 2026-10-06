@@ -108,7 +108,7 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   // Siguen a mano desde el buscador aunque ya no estén sueltas en el menú
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
-    { ruta: '/modulo', etiqueta: 'Armar módulo (placas, podcast y actividad)', icono: Boxes, claves: 'módulo material planificar armar placas diapositivas' },
+    { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase armada material planificar armar placas diapositivas juego crucigrama diagrama tarea enviar' },
     { ruta: '/ia-lab', etiqueta: 'Laboratorio IA', icono: FlaskConical, claves: 'generar evaluación planificación resumen presentación chat' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
   ],
@@ -147,7 +147,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   const item = items.find(i => i.ruta === pathname);
   if (item) return item.titulo ?? item.etiqueta;
   if (pathname === '/actividad-rapida') return 'Actividad rápida';
-  if (pathname === '/modulo') return 'Armar módulo';
+  if (pathname === '/modulo') return 'Armar la clase';
   if (pathname === '/ia-lab') return 'Laboratorio IA';
   if (pathname === '/agenda') return 'Mi horario';
   if (pathname === '/migue') return 'Migue';

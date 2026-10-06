@@ -240,3 +240,20 @@
 }
 
 .me-pedir-acciones { display: flex; justify-content: flex-end; gap: var(--space-2); }
+
+/* El diálogo que envuelve al editor (Laboratorio, Mis materiales, Armar la clase).
+   Vive acá porque cada pantalla importa solo su CSS. */
+/* El editor necesita ancho: con la tira de láminas al costado, en una
+   columna angosta no entra ni la lámina ni la lista. */
+.dialogo-ancho { width: min(1180px, 96vw); max-width: none; }
+
+.lab-mazo { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+
+.lab-mazo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.lab-mazo-head h3 { margin: 0; font-size: 1rem; }

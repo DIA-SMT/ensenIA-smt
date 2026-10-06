@@ -1364,7 +1364,7 @@ export default function IALab() {
                                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                 />
                                 <div className="editor-meta">
-                                    {/* La salida al material: de este tema salen placas, podcast y actividad.
+                                    {/* La salida a la clase armada: de este tema salen diapositivas, juego, tarea…
                                         Si ya se generó, se muestra lo que hay en vez de invitar a rehacerlo. */}
                                     {(() => {
                                         const mat = materials.find(m => m.classId === selectedClass.id);
@@ -1372,9 +1372,9 @@ export default function IALab() {
                                             <button
                                                 className="btn btn-primary btn-sm"
                                                 onClick={() => navigate(`/modulo?tema=${selectedClass.id}`)}
-                                                title="Generar placas, podcast y actividad a partir de este tema"
+                                                title="Diapositivas, juego, diagrama y tarea de este tema, para mandar al curso"
                                             >
-                                                <Boxes size={14} /> Armar el material
+                                                <Boxes size={14} /> Armar la clase
                                             </button>
                                         );
                                         const piezas = [

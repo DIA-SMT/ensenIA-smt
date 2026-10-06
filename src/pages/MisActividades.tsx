@@ -11,6 +11,8 @@ import {
 import { saveCheckin, getCheckinsByStudent } from '../services/wellbeing.service';
 import { getAchievementsByStudent, totalPoints } from '../services/gamification.service';
 import { getLiveSessionForCourse, type LiveSession } from '../services/live.service';
+import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
+import { AvisoClaseNueva } from '../components/ClasesEnviadas';
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
@@ -106,6 +108,8 @@ export default function MisActividades() {
 
   // Clase en vivo
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
+  // La última clase que mandó un docente esta semana
+  const [claseNueva, setClaseNueva] = useState<ClaseEnviada | null>(null);
 
   // Gamificación + check-in del día
   const [achievements, setAchievements] = useState<StudentAchievement[]>([]);
@@ -139,6 +143,9 @@ export default function MisActividades() {
 
           // No bloquean la carga principal
           getLiveSessionForCourse(st.courseId).then(setLiveSession).catch(console.error);
+          getClasesEnviadas(1).then(([c]) => {
+            if (c && Date.now() - new Date(c.enviadaAt).getTime() < 7 * 86400000) setClaseNueva(c);
+          }).catch(console.error);
           getAchievementsByStudent(st.id).then(setAchievements).catch(console.error);
           getCheckinsByStudent(st.id, 60).then(chks => {
             const today = chks.find(c => c.moment === 'libre' && isToday(c.createdAt));
@@ -299,6 +306,9 @@ export default function MisActividades() {
           <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
         </Link>
       )}
+
+      {/* ── La clase que mandó un docente ── */}
+      {claseNueva && <AvisoClaseNueva clase={claseNueva} />}
 
       {/* ── Check-in del día: siempre podés decir cómo venís ── */}
       <div className="card sp-checkin-card">

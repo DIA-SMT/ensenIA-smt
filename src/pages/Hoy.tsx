@@ -178,8 +178,8 @@ export default function Hoy() {
                             <span className="hoy-onb-num">2</span>
                             <span className="hoy-onb-icon"><Boxes size={17} /></span>
                             <div>
-                                <strong>Armá tu primer módulo</strong>
-                                <span>Un tema, y salen placas, podcast y actividad</span>
+                                <strong>Armá tu primera clase</strong>
+                                <span>Un tema, y salen diapositivas, juego y tarea</span>
                             </div>
                         </Link>
                         <Link to="/clase-en-vivo" className="hoy-onb-step">

@@ -35,9 +35,9 @@ const PRINCIPALES: Opcion[] = [
     {
         a: '/modulo',
         icono: Boxes,
-        titulo: 'Módulo de un tema',
-        texto: 'A partir de tu material: placas de estudio para el celular, podcast y actividad.',
-        nota: 'Se genera una vez y queda guardado',
+        titulo: 'Clase armada',
+        texto: 'De un tema de tu planificación: diapositivas, juego, diagrama y tarea. La revisás y la mandás al curso.',
+        nota: 'Todo de una, con un solo envío',
     },
     {
         a: '/clase-en-vivo',
