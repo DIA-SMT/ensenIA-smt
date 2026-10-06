@@ -1,6 +1,8 @@
 export type MiguePose = 'neutral' | 'username' | 'password' | 'surprise' | 'wink';
 export interface StudentController {
   setPose(pose: MiguePose): void;
+  setPasswordVisible(visible: boolean): void;
+  reject(): void;
   trackPointer(x: number, y: number): void;
   clearPointer(): void;
   dispose(): void;

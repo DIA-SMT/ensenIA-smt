@@ -113,7 +113,6 @@ export default function LoginChalkboard() {
       {COLORS.map(c => <button key={c.value} type="button" className="login-chalk-color" style={{ backgroundColor: c.value }} aria-label={c.label} aria-pressed={color === c.value} onClick={() => { colorRef.current = c.value; setColor(c.value); }} />)}
       <button type="button" onClick={() => { clearRef.current(); setMessage('Pizarrón borrado.'); }}>Borrar</button>
     </div>
-    <span className="login-chalk-hint">Clic y arrastrá para garabatear ✎</span>
     <span className="login-chalk-status" role="status">{message}</span>
   </div>;
 }
