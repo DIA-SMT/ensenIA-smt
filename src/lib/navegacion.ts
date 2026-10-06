@@ -22,6 +22,8 @@ export interface ItemNav {
   /** Título de la pantalla, cuando no es igual a la etiqueta. */
   titulo?: string;
   icono: LucideIcon;
+  /** Avatar propio para asistentes con identidad visual. */
+  imagen?: string;
   grupo: string;
   /** Lleva la marca de IA en el menú. */
   ia?: boolean;
@@ -54,7 +56,6 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento hablar avisar dirección' },
   { ruta: '/comunicados', etiqueta: 'Comunicados', titulo: 'Comunicados de dirección', icono: Megaphone, grupo: 'Escuela', claves: 'avisos dirección mensajes reunión' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
-  { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Ayuda', ia: true, claves: 'asistente preguntar protocolo' },
   { ruta: '/settings', etiqueta: 'Ajustes', titulo: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },
 ];
 
@@ -67,7 +68,6 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/comunicaciones', etiqueta: 'Comunicaciones', icono: MessageSquare, grupo: 'Comunidad', enBarra: true, claves: 'comunicados avisos mensajes' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
-  { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Herramientas', ia: true, claves: 'asistente preguntar protocolo' },
   { ruta: '/mi-escuela', etiqueta: 'Mi escuela', titulo: 'Gestión de la escuela', icono: Building2, grupo: 'Cuenta', claves: 'usuarios cuentas docentes alumnos cursos materias alta clave dni' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración umbrales accesibilidad letra contraste datos' },
 ];
@@ -150,6 +150,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname === '/modulo') return 'Armar módulo';
   if (pathname === '/ia-lab') return 'Laboratorio IA';
   if (pathname === '/agenda') return 'Mi horario';
+  if (pathname === '/migue') return 'Migue';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
   if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
