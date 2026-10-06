@@ -10,6 +10,63 @@
 
 import { getToolInstructions } from './_tools.ts';
 
+/** Un fragmento de la Biblioteca de referencia municipal (migración 047). */
+export interface RefHit {
+  fragmento_id: string;
+  referencia_id: string;
+  titulo: string;
+  numero: string | null;
+  capa: string;
+  tipo: string;
+  seccion: string | null;
+  texto: string;
+  fuente_url: string | null;
+}
+
+const REF_LIMIT = 2200; // chars por fragmento
+const CAPA: Record<string, string> = {
+  nacional: 'Nacional', provincial: 'Provincial (Tucumán)', municipal: 'Municipal (SMT)', tecnica: 'Técnica pedagógica',
+};
+
+function citaDe(h: RefHit): string {
+  const base = h.numero || h.titulo;
+  return h.seccion ? `${base} · ${h.seccion}` : base;
+}
+
+/**
+ * Lo que la IA puede citar. Sin referencias, la regla es no citar normas de
+ * memoria: un número de resolución inventado termina en una planificación.
+ */
+function bloqueReferencias(hits: RefHit[] | undefined): string {
+  if (!hits || hits.length === 0) {
+    return `\n## Normativa, NAP y ESI
+Para esta consulta no hay fragmentos de la Biblioteca de referencia municipal. No cites de
+memoria números de leyes, resoluciones ni NAP textuales: si hace falta encuadrar en la
+normativa, decí que se puede consultar en la sección Normativa de la app.`;
+  }
+  const bloques = hits.map(h => {
+    const texto = h.texto.length > REF_LIMIT ? h.texto.slice(0, REF_LIMIT) + ' […]' : h.texto;
+    return `<referencia cita="${citaDe(h)}" tipo="${h.tipo}" capa="${CAPA[h.capa] ?? h.capa}" documento="${h.titulo}">
+${texto}
+</referencia>`;
+  });
+  return `\n## Referencias oficiales y pedagógicas (Biblioteca de referencia municipal)
+Fragmentos de NAP, lineamientos de ESI, leyes, resoluciones, diseño curricular y técnicas
+pedagógicas que cargó la Municipalidad para sus escuelas. La búsqueda trae lo más parecido
+al pedido: usá solo lo que de verdad aplica.
+
+- Si lo que armás trabaja un NAP de abajo, indicalo al principio en una línea:
+  "🎯 NAP que trabaja: …" (con la cita).
+- Si hay un eje de ESI que se cruza de forma natural con el tema, sugerilo en una línea al
+  final como propuesta, sin forzarlo.
+- Cuando te apoyes en una técnica pedagógica de abajo, nombrala.
+- Citá entre paréntesis con el atributo "cita" la primera vez que uses cada referencia, y
+  cerrá con una línea "📎 Fuentes:" listando solo las que usaste.
+- No cites de memoria ninguna norma ni NAP que no esté abajo.
+
+${bloques.join('\n\n')}`;
+}
+
 export interface PromptContext {
   /** Quién está del otro lado. El servidor lo resuelve por el rol real del usuario. */
   audience?: 'docente' | 'estudiante';
@@ -27,6 +84,8 @@ export interface PromptContext {
   tool?: string;
   documentTitle?: string;
   documentText?: string;
+  /** Fragmentos de la Biblioteca de referencia (solo para el docente). */
+  referencias?: RefHit[];
 }
 
 const DOCUMENT_CONTEXT_LIMIT = 30000; // chars
@@ -45,7 +104,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 ## Tu personalidad
 - Hablás en español rioplatense natural: usás "vos", "podés", "fijate", "dale".
 - Sos cálida, alentadora y profesional. Como una colega docente que te banca.
-- Conocés los Núcleos de Aprendizaje Prioritarios (NAP) y los diseños curriculares jurisdiccionales argentinos.
+- Conocés el sistema educativo argentino. Para citar NAP, normativa o lineamientos de ESI te apoyás SOLO en las referencias que te paso (nunca de memoria).
 - Adaptás el nivel de complejidad y vocabulario a la edad de los alumnos.
 - Priorizás el aprendizaje activo, el pensamiento crítico y el trabajo colaborativo.
 
@@ -100,7 +159,10 @@ ${text}
 </documento>`);
   }
 
-  // ── 4. Tool-specific instructions ──
+  // ── 4. Biblioteca de referencia municipal ──
+  parts.push(bloqueReferencias(ctx.referencias));
+
+  // ── 5. Tool-specific instructions ──
   if (ctx.tool && ctx.tool !== 'free') {
     parts.push(getToolInstructions(ctx.tool));
   }

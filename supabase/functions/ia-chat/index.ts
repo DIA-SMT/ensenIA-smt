@@ -13,7 +13,7 @@
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { buildSystemPrompt, type PromptContext } from './_system-prompt.ts';
+import { buildSystemPrompt, type PromptContext, type RefHit } from './_system-prompt.ts';
 
 // ── Config ──
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -242,6 +242,32 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── 5b. Biblioteca de referencia municipal (047) ──
+  // Solo para el docente. Corre con el JWT del usuario: la RLS decide qué
+  // entra (publicado y vigente). Si falla, se sigue sin referencias: la
+  // regla del prompt pasa a ser "no citar normativa de memoria".
+  let referencias: RefHit[] = [];
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!isStudent && anonKey) {
+    try {
+      const asUser = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const ultimoPedido = messages[messages.length - 1]?.content ?? '';
+      const consulta = [context.classTitle, context.unitTitle, ultimoPedido.slice(0, 1500)]
+        .filter(Boolean).join('\n');
+      // "2° A" → 2; "4to Año" → 4
+      const anio = Number((context.courseName.match(/\d/) ?? context.educationLevel?.match(/\d/) ?? [])[0]) || null;
+      const { data } = await asUser.rpc('buscar_referencias', {
+        q: consulta, p_area: context.subjectName || null, p_anio: anio, max_results: 6,
+      });
+      referencias = (data ?? []) as RefHit[];
+    } catch (e) {
+      console.error('buscar_referencias:', String(e).slice(0, 200));
+      referencias = [];
+    }
+  }
+
   // ── 6. Build system prompt ──
   const promptCtx: PromptContext = {
     audience: isStudent ? 'estudiante' : 'docente',
@@ -258,6 +284,7 @@ Deno.serve(async (req: Request) => {
     tool: effectiveTool ?? undefined,
     documentTitle: context.documentTitle,
     documentText: context.documentText,
+    referencias,
   };
   const systemPrompt = buildSystemPrompt(promptCtx);
 

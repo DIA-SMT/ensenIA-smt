@@ -18,7 +18,49 @@ export interface PolicyHit {
   effective_from: string | null;
 }
 
+/** Un fragmento de la Biblioteca de referencia municipal (047). */
+export interface RefHit {
+  fragmento_id: string;
+  referencia_id: string;
+  titulo: string;
+  numero: string | null;
+  capa: string;
+  tipo: string;
+  seccion: string | null;
+  texto: string;
+  fuente_url: string | null;
+}
+
 const BODY_LIMIT = 6000; // chars por norma
+const REF_LIMIT = 2500; // chars por fragmento de referencia
+
+const CAPA: Record<string, string> = {
+  nacional: 'Nacional', provincial: 'Provincial (Tucumán)', municipal: 'Municipal (SMT)', tecnica: 'Técnica pedagógica',
+};
+
+/** Cómo se cita: el número de la norma si lo tiene, si no el título. */
+export function citaDe(h: RefHit): string {
+  return h.numero ? `${h.numero}${h.seccion ? ` · ${h.seccion}` : ''}` : `${h.titulo}${h.seccion ? ` · ${h.seccion}` : ''}`;
+}
+
+export function buildReferenciasContext(hits: RefHit[]): string {
+  if (hits.length === 0) return '';
+  const bloques = hits.map((h) => {
+    const texto = h.texto.length > REF_LIMIT ? h.texto.slice(0, REF_LIMIT) + ' […]' : h.texto;
+    return `<referencia cita="${citaDe(h)}" capa="${CAPA[h.capa] ?? h.capa}" documento="${h.titulo}">
+${texto}
+</referencia>`;
+  });
+  return `\n## Normativa y referencias oficiales (Biblioteca de referencia municipal)
+
+Fragmentos de leyes, resoluciones, NAP, ESI y guías que cargó la Municipalidad. Pueden no
+servir para esta pregunta: la búsqueda trae lo más parecido. Cuando uses uno, citalo como
+dice su atributo "cita". Si una norma de la escuela y una referencia dicen cosas distintas
+sobre un procedimiento interno, vale la de la escuela; sobre derechos y marco general,
+vale la nacional o provincial.
+
+${bloques.join('\n\n')}`;
+}
 
 const VOZ = `Hablás en español rioplatense natural: "vos", "podés", "fijate", "dale".
 Sos cálido y directo. Nada de relleno ni de fórmulas de cortesía largas.
@@ -49,6 +91,8 @@ export function buildSystemPrompt(params: {
   nombre: string;
   escuela: string;
   policyHits: PolicyHit[];
+  /** Biblioteca de referencia, ya filtrada por la RLS de quien pregunta. */
+  refHits?: RefHit[];
   cursoNombre?: string;
   hijosNombres?: string[];
   /** false cuando la cuenta no está vinculada a un legajo: entonces Migue
@@ -56,6 +100,7 @@ export function buildSystemPrompt(params: {
   puedeDerivar?: boolean;
 }): string {
   const { audience, nombre, escuela, policyHits, cursoNombre, hijosNombres } = params;
+  const refHits = params.refHits ?? [];
   const puedeDerivar = params.puedeDerivar !== false;
   const partes: string[] = [];
 
@@ -64,15 +109,19 @@ export function buildSystemPrompt(params: {
 Estás hablando con ${nombre}.
 
 ## Para qué servís
-Respondés preguntas sobre la normativa y los protocolos de ESTA escuela: qué dice el
-reglamento, cómo se actúa ante una situación, qué plazos corren, quién interviene.
+Respondés preguntas sobre la normativa y los protocolos de ESTA escuela (qué dice el
+reglamento, cómo se actúa ante una situación, qué plazos corren, quién interviene) y sobre
+el marco que la contiene: leyes y resoluciones nacionales, provinciales y municipales, NAP,
+Educación Sexual Integral y técnicas pedagógicas, cuando te paso esas referencias abajo.
 
 ${VOZ}
 
 ## Reglas que no se negocian
-- Respondé **solo** con lo que dicen las normas que te paso abajo. Si no alcanzan para
-  responder, decilo con todas las letras: "No encontré una norma de la escuela sobre
-  eso". No completes con tu criterio general ni con normativa de otras jurisdicciones.
+- Respondé **solo** con lo que dicen las normas y referencias que te paso abajo. Si no
+  alcanzan para responder, decilo con todas las letras: "No encontré una norma sobre eso
+  en la escuela ni en la biblioteca de referencia". No completes con tu criterio general.
+- **Nunca cites de memoria** un número de ley, de resolución o un NAP: solo los que
+  aparecen abajo. Un número inventado en un acta o una planificación es un problema real.
 - Cuando uses una norma, **citala por su título** y, si el texto lo permite, indicá el
   apartado. El docente tiene que poder ir a leerla.
 - Si las normas que te paso hablan de otra cosa, decí que no encontraste nada pertinente
@@ -111,7 +160,18 @@ Hablale como le hablaría una profe copada, no como un manual.
 
 ## Sobre la escuela
 Si pregunta por reglas de convivencia y te paso normas abajo, contestale con eso. Si no
-te paso ninguna, decile que no lo sabés y que pregunte en preceptoría.`);
+te paso ninguna, decile que no lo sabés y que pregunte en preceptoría.
+
+## Educación Sexual Integral (ESI)
+Si pregunta por temas de ESI (el cuerpo, la salud, los cambios, los vínculos, el
+consentimiento, la diversidad, el cuidado), es un derecho que tiene y no un tema prohibido:
+- Respondé con lo que dicen los materiales de ESI que te paso abajo, si los hay, con
+  lenguaje claro, respetuoso y adecuado a su edad. Sin detalles explícitos.
+- Si no hay material, explicá lo general con cuidado y sugerile hablarlo con su docente,
+  el equipo de orientación o un adulto de confianza.
+- Si lo que pregunta es por algo que le está pasando (presiones, alguien que lo toca o lo
+  obliga, un embarazo, violencia en un vínculo), aplicá todo lo de "Cuando la está pasando
+  mal": escuchá, no prometas secreto y orientalo a un adulto de la escuela.`);
 
     if (!puedeDerivar) {
       partes.push(`
@@ -136,8 +196,9 @@ puso a disposición de la comunidad: convivencia, asistencia, trámites.
 ${VOZ}
 
 ## Reglas que no se negocian
-- Sobre normativa, respondé **solo** con las normas que te paso abajo. Si no hay ninguna
-  pertinente, decí "esto no lo tengo, consultalo en la escuela" y no improvises.
+- Sobre normativa, respondé **solo** con las normas y referencias que te paso abajo. Si no
+  hay ninguna pertinente, decí "esto no lo tengo, consultalo en la escuela" y no improvises.
+  Nunca cites de memoria un número de ley o de resolución.
 - **No opines sobre el desempeño del hijo ni sobre decisiones pedagógicas.** Las notas,
   las inasistencias y el seguimiento los ve en su portal y los conversa con el docente.
 - Si trae una preocupación seria sobre el chico, no la resuelvas vos: orientá a que
@@ -146,12 +207,13 @@ ${VOZ}
   }
 
   const ctx = buildPolicyContext(policyHits);
-  if (ctx) {
-    partes.push(ctx);
-  } else {
+  const refs = buildReferenciasContext(refHits);
+  if (ctx) partes.push(ctx);
+  if (refs) partes.push(refs);
+  if (!ctx && !refs) {
     partes.push(`\n## Normativa
-La búsqueda no encontró ninguna norma de la escuela para esta consulta. Si la pregunta
-era sobre normativa, decilo y no la respondas de memoria.`);
+La búsqueda no encontró ninguna norma de la escuela ni referencia oficial para esta
+consulta. Si la pregunta era sobre normativa, decilo y no la respondas de memoria.`);
   }
 
   return partes.join('\n');
