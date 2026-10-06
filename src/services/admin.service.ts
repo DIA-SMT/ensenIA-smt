@@ -262,6 +262,12 @@ export async function listStudents(schoolId: string): Promise<AdminStudent[]> {
 }
 
 /** Cambiar de curso: la base lo reinscribe en las materias del curso nuevo. */
+/** La ficha de estudiante de una cuenta (para vincularle la familia recién creada). */
+export async function getStudentIdByUser(userId: string): Promise<string | null> {
+  const { data } = await supabase.from('students').select('id').eq('user_id', userId).maybeSingle();
+  return data?.id ?? null;
+}
+
 export async function moveStudent(studentId: string, courseId: string): Promise<void> {
   const { error } = await supabase.from('students').update({ course_id: courseId }).eq('id', studentId);
   if (error) throw error;
