@@ -81,6 +81,7 @@ export const cargadores = {
   '/admin':               () => import('../pages/admin/AdminEscuelas'),
   '/admin/escuelas/:id':   () => import('../pages/admin/GestionEscuela'),
   '/admin/consumo-ia':     () => import('../pages/admin/ConsumoIA'),
+  '/admin/referencias':    () => import('../pages/admin/Referencias'),
   '/mi-escuela':          () => import('../pages/admin/GestionEscuela'),
 } satisfies Record<string, Cargador>;
 

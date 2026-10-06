@@ -7,13 +7,16 @@
  *  · escribir los criterios de evaluación del trimestre y publicarlos.
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { Save, Eye, EyeOff, CheckCircle, BookOpen } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { Save, Eye, EyeOff, CheckCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
 import {
   getUnitsForTeacher, setUnitTerm, getCriteria, saveCriteria,
 } from '../services/syllabus.service';
 import GrabadasEditor from './GrabadasEditor';
+import NapDelTema from './NapDelTema';
+import CoberturaNap from './CoberturaNap';
+import { useNapDelCurso } from './useNapDelCurso';
 import { confirmar } from './ui/avisar';
 import EstadoVacio from './ui/EstadoVacio';
 import { Esqueleto } from './ui/Esqueleto';
@@ -22,6 +25,7 @@ import type { AcademicTerm, PlanningUnit, EvaluationCriteria } from '../types';
 // para que se vea bien en cualquier pantalla donde aparezca.
 import './Modals.css';
 import '../pages/Libreta.css';
+import './TemarioEditor.css';
 
 interface TemarioEditorProps {
   teacherId: string;
@@ -42,6 +46,9 @@ export default function TemarioEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [okMsg, setOkMsg] = useState('');
+  /** Unidad desplegada para ver sus temas y los NAP de cada uno. */
+  const [unidadAbierta, setUnidadAbierta] = useState<string | null>(null);
+  const nap = useNapDelCurso(subjectId, courseId, units);
 
   // Qué materia/curso/trimestre está mirando el docente AHORA. Una recarga
   // lanzada antes de cambiar de materia no debe pisar el estado de la nueva:
@@ -169,12 +176,20 @@ export default function TemarioEditor({
         )}
 
         {units.map(u => (
-          <div key={u.id} className="temario-unit-row">
+          <Fragment key={u.id}>
+          <div className="temario-unit-row">
             <BookOpen size={15} className="text-subtle" />
             <span className="temario-unit-title">{u.title}</span>
-            <span className="temario-unit-meta">
-              {u.classes.length} {u.classes.length === 1 ? 'clase' : 'clases'}
-            </span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm temario-unit-toggle"
+              aria-expanded={unidadAbierta === u.id}
+              aria-controls={`temas-${u.id}`}
+              onClick={() => setUnidadAbierta(unidadAbierta === u.id ? null : u.id)}
+            >
+              {u.classes.length} {u.classes.length === 1 ? 'clase' : 'clases'} · NAP
+              {unidadAbierta === u.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
             <select
               className="form-select"
               value={u.termId ?? ''}
@@ -191,7 +206,44 @@ export default function TemarioEditor({
               )}
             </select>
           </div>
+
+          {unidadAbierta === u.id && (
+            <div id={`temas-${u.id}`} className="temario-temas">
+              {u.classes.length === 0 && (
+                <p className="text-sm text-secondary">Esta unidad todavía no tiene clases cargadas.</p>
+              )}
+              {u.classes.map(c => (
+                <div key={c.id} className="temario-tema">
+                  <h4 className="temario-tema-titulo">{c.title}</h4>
+                  {(c.objectives ?? []).length > 0 && (
+                    <ul className="temario-tema-objetivos">
+                      {(c.objectives ?? []).map((o, i) => <li key={i}>{o}</li>)}
+                    </ul>
+                  )}
+                  <NapDelTema
+                    tema={c}
+                    area={nap.area}
+                    anio={nap.anio}
+                    vinculos={nap.vinculos.filter(v => v.classId === c.id)}
+                    napDelAnio={nap.napDelAnio}
+                    onCambio={nap.recargarVinculos}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          </Fragment>
         ))}
+
+        {units.length > 0 && (
+          <CoberturaNap
+            napDelAnio={nap.napDelAnio}
+            vinculos={nap.vinculos}
+            temas={Object.fromEntries(units.flatMap(u => u.classes.map(c => [c.id, c.title])))}
+            area={nap.area}
+            anio={nap.anio}
+          />
+        )}
 
         <div className="temario-criteria-box" style={{ marginTop: 'var(--space-3)' }}>
           <label className="text-sm font-medium">

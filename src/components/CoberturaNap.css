@@ -1,0 +1,129 @@
+/* Cobertura de NAP del año (050) */
+
+.nap-cob {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.nap-cob-resumen {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  cursor: pointer;
+}
+
+.nap-cob-resumen::-webkit-details-marker { display: none; }
+
+.nap-cob-titulo {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.nap-cob-sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+
+.nap-cob-cuenta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.nap-cob-flecha { transition: transform var(--transition-fast); }
+.nap-cob[open] .nap-cob-flecha { transform: rotate(180deg); }
+
+.nap-cob-barra {
+  flex-basis: 100%;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.nap-cob-barra > span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+  border-radius: inherit;
+}
+
+.nap-cob-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.nap-cob-ayuda {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+}
+
+.nap-cob-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nap-cob-doc {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.nap-cob-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nap-cob-lista > li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.nap-cob-icono {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: var(--text-subtle);
+}
+
+.nap-cob-icono.ok { color: var(--success); }
+
+.nap-cob-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.nap-cob-seccion {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.nap-cob-temas {
+  font-size: 0.75rem;
+  color: var(--success-ink);
+}
