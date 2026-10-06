@@ -128,15 +128,15 @@ export default function Agenda() {
             teacherId: user.id, schoolId: user.schoolId, subjectId: a.subjectId, courseId: a.courseId,
             startHour: inicio, duration: form.duracion / 60, room: form.aula, colorClass: colorDe(a.subjectId),
         };
-        // Superposición con otra clase propia: se avisa, no se impide (puede ser a propósito)
+        // Superposición con otra clase propia: la base no la deja guardar (045),
+        // así que se avisa antes en vez de ofrecer "guardar igual"
         const choca = [...form.dias].some(d => bloques.some(b =>
             b.id !== editando && b.dayIndex === d &&
             inicio < b.startHour + b.duration && b.startHour < inicio + form.duracion / 60));
-        if (choca && !(await confirmar({
-            titulo: 'Se superpone con otra clase tuya',
-            mensaje: 'En ese horario ya tenés otra clase cargada. ¿La guardo igual?',
-            accion: 'Guardar igual',
-        }))) return;
+        if (choca) {
+            avisar.error('Se superpone con otra clase tuya', 'En ese horario ya tenés otra clase cargada. Cambiá el día o la hora.');
+            return;
+        }
 
         setGuardando(true);
         try {
