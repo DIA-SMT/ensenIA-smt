@@ -4,9 +4,10 @@
  * estas pantallas se vean como el resto de la app y no como un agregado.
  */
 
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { X, type LucideIcon } from 'lucide-react';
 import Dialogo from '../../components/shell/Dialogo';
+import EstadoVacio from '../../components/ui/EstadoVacio';
 
 /** Etiqueta + control + ayuda opcional. */
 export function Campo({ label, htmlFor, ayuda, children }: {
@@ -50,21 +51,19 @@ export function DialogoForm({ abierto, alCerrar, titulo, bajada, id, children, p
   );
 }
 
-/** Lo que se ve cuando una lista está vacía: qué es y qué hacer. */
-export function Vacio({ icono: Icono, titulo, texto, accion }: {
+/**
+ * Lo que se ve cuando una lista está vacía: qué es y qué hacer. Es el
+ * EstadoVacio de toda la app en su versión compacta (va adentro de una
+ * tarjeta), para que gestión no tenga un vacío propio con otra cara.
+ */
+export function Vacio({ icono, titulo, texto, accion }: {
   icono: LucideIcon;
   titulo: string;
   texto: string;
-  accion?: ReactNode;
+  /** { etiqueta, alTocar | a, icono? }, como en EstadoVacio */
+  accion?: ComponentProps<typeof EstadoVacio>['accion'];
 }) {
-  return (
-    <div className="adm-vacio">
-      <span className="adm-vacio-icono" aria-hidden="true"><Icono size={22} /></span>
-      <strong>{titulo}</strong>
-      <p>{texto}</p>
-      {accion}
-    </div>
-  );
+  return <EstadoVacio icono={icono} titulo={titulo} texto={texto} accion={accion} compacto />;
 }
 
 /** Círculo con iniciales, como el resto de la app. */

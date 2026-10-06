@@ -142,3 +142,18 @@ html[data-contraste="alto"] .topbar { background: #FFFFFF; backdrop-filter: none
 @media (max-width: 640px) {
     .topbar-school { max-width: 140px; }
 }
+
+/* Celular angosto: el título no se corta ("Clase en …"). Sin la marca (el
+   color del rol y la barra inferior ya dicen dónde estás) y, si igual no
+   entra, en dos renglones. */
+@media (max-width: 480px) {
+  .topbar-logo { display: none; }
+  .page-title {
+    font-size: 1.0625rem;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+  }
+}

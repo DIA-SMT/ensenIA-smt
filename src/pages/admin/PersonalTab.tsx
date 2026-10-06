@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { UserPlus, KeyRound, UserMinus, Plus, X, Users, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  createAccount, resetPassword, removeMember, addAssignment, removeAssignment, type AdminMember,
+  createAccount, resetPassword, removeMember, addAssignment, removeAssignment, type AdminMember, type AdminAssignment,
 } from '../../services/admin.service';
 import { loginLabel } from '../../lib/dni';
+import { avisar, confirmar } from '../../components/ui/avisar';
 import { Barra, Campo, DialogoForm, Iniciales, Vacio } from './ui';
 import type { TabProps } from './GestionEscuela';
 
@@ -22,18 +23,30 @@ export default function PersonalTab(props: TabProps) {
   // El director no toca a otros directores (la base tampoco lo deja)
   const canManage = (m: AdminMember) => m.userId !== user?.id && (isSuperadmin || m.role !== 'director');
 
-  const handleReset = (m: AdminMember) => {
-    if (!window.confirm(`¿Generar una clave nueva para ${m.firstName} ${m.lastName}? La actual deja de funcionar.`)) return;
+  const handleReset = async (m: AdminMember) => {
+    const si = await confirmar({
+      titulo: `¿Generar una clave nueva para ${m.firstName} ${m.lastName}?`,
+      mensaje: 'La clave que usa ahora deja de funcionar en el momento. Vas a ver la nueva para entregársela.',
+      accion: 'Generar clave',
+    });
+    if (!si) return;
     run(async () => {
       const r = await resetPassword(m.userId);
       showCredentials([{ name: `${m.firstName} ${m.lastName}`, login: r.login, password: r.password }]);
     });
   };
 
-  const handleRemove = (m: AdminMember) => {
-    const extra = m.role === 'docente' ? ' Se borran sus materias asignadas en esta escuela.' : '';
-    if (!window.confirm(`¿Quitar a ${m.firstName} ${m.lastName} de ${data.school.name}? Su cuenta sigue existiendo.${extra}`)) return;
-    run(() => removeMember(m.membershipId));
+  const handleRemove = async (m: AdminMember) => {
+    const nombre = `${m.firstName} ${m.lastName}`;
+    const si = await confirmar({
+      titulo: `¿Quitar a ${nombre} de ${data.school.name}?`,
+      mensaje: m.role === 'docente'
+        ? 'Deja de entrar a esta escuela y se borran sus materias asignadas acá: sus cursos quedan sin ese docente. Su cuenta sigue existiendo.'
+        : 'Deja de entrar a esta escuela. Su cuenta sigue existiendo.',
+      accion: 'Quitar de la escuela',
+      peligro: true,
+    });
+    if (si && await run(() => removeMember(m.membershipId))) avisar.exito(`${nombre} ya no está en ${data.school.name}`);
   };
 
   return (
@@ -47,11 +60,11 @@ export default function PersonalTab(props: TabProps) {
       <section className="card adm-tarjeta" aria-labelledby="t-direccion">
         <h4 id="t-direccion" className="adm-subtitulo"><ShieldCheck size={16} aria-hidden="true" /> Dirección</h4>
         {directors.length === 0 ? (
-          <p className="adm-ayuda">
-            {isSuperadmin
-              ? 'Todavía no tiene director/a. Sumalo con "Sumar persona" y el rol Director/a.'
-              : 'Sin director/a asignado/a.'}
-          </p>
+          isSuperadmin ? (
+            <Vacio icono={ShieldCheck} titulo="Todavía no tiene director/a"
+              texto="Sumá a quien dirige la escuela con el rol Director/a: va a poder armar cursos, docentes y estudiantes."
+              accion={{ etiqueta: 'Sumar persona', icono: UserPlus, alTocar: () => setAlta(true) }} />
+          ) : <p className="adm-ayuda">Sin director/a asignado/a.</p>
         ) : directors.map(m => (
           <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove} />
         ))}
@@ -67,7 +80,7 @@ export default function PersonalTab(props: TabProps) {
         )}
         {teachers.length === 0 ? (
           <Vacio icono={Users} titulo="Sin docentes" texto="Sumá a los docentes y asignales sus materias en cada curso."
-            accion={<button type="button" className="btn btn-secondary btn-sm" onClick={() => setAlta(true)}><UserPlus size={14} /> Sumar docente</button>} />
+            accion={{ etiqueta: 'Sumar docente', icono: UserPlus, alTocar: () => setAlta(true) }} />
         ) : teachers.map(m => (
           <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove}>
             <Assignments teacherId={m.userId} data={data} run={run} />
@@ -208,6 +221,16 @@ function Assignments({ teacherId, data, run }: { teacherId: string; data: TabPro
     }
   };
 
+  const quitar = async (a: AdminAssignment) => {
+    const si = await confirmar({
+      titulo: `¿Quitarle ${a.subjectName} en ${a.courseName}?`,
+      mensaje: `Deja de ver esa materia en ${a.courseName} y, si nadie más la tiene, el curso se queda sin docente para ${a.subjectName}.`,
+      accion: 'Quitar materia',
+      peligro: true,
+    });
+    if (si && await run(() => removeAssignment(a.id))) avisar.exito(`Se quitó ${a.subjectName} en ${a.courseName}`);
+  };
+
   return (
     <div className="adm-asignaciones">
       <div className="adm-chips">
@@ -215,7 +238,7 @@ function Assignments({ teacherId, data, run }: { teacherId: string; data: TabPro
         {mine.map(a => (
           <span key={a.id} className="adm-chip">
             {a.subjectName} · {a.courseName}
-            <button type="button" onClick={() => window.confirm(`¿Quitar ${a.subjectName} en ${a.courseName}?`) && run(() => removeAssignment(a.id))}
+            <button type="button" onClick={() => quitar(a)}
               aria-label={`Quitar ${a.subjectName} en ${a.courseName}`}><X size={12} aria-hidden="true" /></button>
           </span>
         ))}

@@ -1,0 +1,174 @@
+/* ══════════════════════════════
+   QUÉ REPASAR — los temas que le costaron al curso
+   ══════════════════════════════ */
+
+.repaso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.repaso-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+}
+.repaso-cabecera-textos { min-width: 0; flex: 1 1 280px; }
+.repaso-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.25rem;
+  font-weight: 750;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+.repaso-titulo svg { color: var(--acento); flex-shrink: 0; }
+.repaso-bajada {
+  margin-top: var(--space-1);
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.repaso-filtro { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 0 1 300px; }
+.repaso-filtro label { font-size: 0.8125rem; font-weight: 650; color: var(--text-secondary); }
+.repaso-filtro .form-select { width: 100%; min-height: var(--touch); font-size: 0.9375rem; }
+
+.repaso-resumen { font-size: 0.9375rem; color: var(--text-secondary); }
+
+/* ── Tarjetas de tema ── */
+.repaso-lista {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--space-4);
+}
+.repaso-tema { display: flex; }
+.repaso-tema > article {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--warning);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+.repaso-tema-bajo > article { border-left-color: var(--danger); }
+
+.repaso-tema-titulo {
+  font-size: 1.0625rem;
+  font-weight: 750;
+  line-height: 1.3;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.repaso-tema-meta {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--text-subtle);
+  line-height: 1.4;
+}
+.repaso-tema-meta:empty { display: none; }
+
+/* Porcentaje: el texto dice el número; la barra solo lo acompaña */
+.repaso-medida { display: flex; flex-direction: column; gap: 6px; }
+.repaso-medida-texto { font-size: 0.875rem; color: var(--text-secondary); }
+.repaso-medida-texto strong { font-size: 1rem; font-weight: 750; color: var(--warning-ink); }
+.repaso-tema-bajo .repaso-medida-texto strong { color: var(--danger-ink); }
+.repaso-barra {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.repaso-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--warning);
+}
+.repaso-tema-bajo .repaso-barra span { background: var(--danger); }
+
+/* ── Preguntas ── */
+.repaso-preguntas {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.repaso-pregunta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+}
+.repaso-pregunta-texto {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.repaso-pregunta-dato {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.repaso-fuente {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 650;
+  background: var(--acento-suave);
+  color: var(--acento-hover);
+}
+.repaso-fuente-vivo { background: var(--indigo-glow); color: var(--indigo); }
+.repaso-pregunta-error {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.repaso-pregunta-error q { font-weight: 650; color: var(--text-primary); }
+
+.repaso-resto { font-size: 0.8125rem; color: var(--text-subtle); }
+
+.repaso-acciones {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.repaso-acciones .btn { white-space: normal; text-align: left; }
+
+/* ── Compacto (inicio) ── */
+.repaso-compacto { gap: var(--space-3); }
+.repaso-compacto .repaso-titulo { font-size: 1.125rem; }
+.repaso-compacto .repaso-tema > article { padding: var(--space-4); gap: var(--space-3); }
+
+@media (max-width: 600px) {
+  .repaso-lista { grid-template-columns: 1fr; }
+  .repaso-filtro { flex-basis: 100%; }
+  .repaso-tema > article { padding: var(--space-4); }
+  .repaso-acciones .btn { flex: 1 1 100%; justify-content: center; text-align: center; }
+}
+
+html[data-contraste="alto"] .repaso-tema > article { border-width: 2px; border-left-width: 6px; border-color: var(--border-strong); }
+html[data-contraste="alto"] .repaso-tema > article { border-left-color: var(--warning-ink); }
+html[data-contraste="alto"] .repaso-tema-bajo > article { border-left-color: var(--danger-ink); }
+html[data-contraste="alto"] .repaso-barra { border: 1px solid var(--border-strong); }

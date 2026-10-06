@@ -11,10 +11,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { BookOpen, ClipboardCheck, ChevronRight, Video, ExternalLink } from 'lucide-react';
+import { BookOpen, ClipboardCheck, ChevronRight, Video, ExternalLink, X, CalendarRange, AlertCircle } from 'lucide-react';
 import { getSyllabusForTerm } from '../services/syllabus.service';
 import { getPublishedRecordings, embedUrl, PROVIDER_LABELS } from '../services/recordings.service';
 import { usePreferencias } from '../contexts/PreferencesContext';
+import Dialogo from './shell/Dialogo';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
 import type { AcademicTerm, RecordedClass, SyllabusSubject } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
@@ -76,48 +79,56 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
 
   const termName = terms?.find(t => t.id === termId)?.name;
 
+  // La fila de trimestres se desliza de costado en el celular en vez de
+  // partirse en dos renglones.
   const selector = terms && terms.length > 1 && (
-    <div className="syllabus-terms" role="tablist" aria-label="Trimestre">
-      {terms.map(t => (
-        <button
-          key={t.id}
-          role="tab"
-          aria-selected={t.id === termId}
-          className={`syllabus-term-chip ${t.id === termId ? 'active' : ''}`}
-          onClick={() => setTermId(t.id)}
-        >
-          {t.name}
-        </button>
-      ))}
+    <div className="syllabus-terms">
+      <div className="fila-desplazable" role="tablist" aria-label="Trimestre">
+        {terms.map(t => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={t.id === termId}
+            className={`syllabus-term-chip ${t.id === termId ? 'active' : ''}`}
+            onClick={() => setTermId(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
   let cuerpo;
-  if (terms === null) {
-    // Los trimestres siguen en vuelo: no es un error, es la carga normal.
-    cuerpo = <p className="text-secondary text-sm">Cargando temario…</p>;
+  if (terms === null || (termId && subjects === null)) {
+    // Los trimestres o el temario siguen en vuelo: es la carga normal.
+    cuerpo = <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando el temario…" />;
   } else if (!termId) {
     cuerpo = (
-      <p className="text-secondary text-sm">
-        La escuela todavía no cargó los trimestres de este año, así que no hay
-        dónde ubicar el temario.
-      </p>
+      <EstadoVacio
+        compacto
+        icono={CalendarRange}
+        titulo="Todavía no hay trimestres cargados"
+        texto="La escuela todavía no cargó los trimestres de este año, así que no hay dónde ubicar el temario."
+      />
     );
-  } else if (subjects === null) {
-    cuerpo = <p className="text-secondary text-sm">Cargando temario…</p>;
   } else if (fallo) {
     cuerpo = (
-      <p className="text-secondary text-sm">
-        No se pudo cargar el temario. Probá de nuevo en un rato; si sigue igual,
-        avisale a la escuela.
-      </p>
+      <EstadoVacio
+        compacto
+        icono={AlertCircle}
+        titulo="No se pudo cargar el temario"
+        texto="Probá de nuevo en un rato; si sigue igual, avisale a la escuela."
+      />
     );
-  } else if (subjects.length === 0) {
+  } else if (!subjects || subjects.length === 0) {
     cuerpo = (
-      <p className="text-secondary text-sm">
-        {voice === 'propia' ? 'Tus docentes' : 'Sus docentes'} todavía no publicaron
-        el temario{termName ? ` del ${termName}` : ''}.
-      </p>
+      <EstadoVacio
+        compacto
+        icono={BookOpen}
+        titulo={`Todavía no hay temario${termName ? ` del ${termName}` : ''}`}
+        texto={`${voice === 'propia' ? 'Tus docentes' : 'Sus docentes'} todavía no lo publicaron. Cuando lo hagan, aparece acá.`}
+      />
     );
   } else {
     cuerpo = (
@@ -239,11 +250,11 @@ function VisorVideo({ rec, onCerrar }: { rec: RecordedClass; onCerrar: () => voi
   const { ahorroActivo } = usePreferencias();
   const [confirmado, setConfirmado] = useState(!ahorroActivo);
   return (
-    <div className="em-modal-overlay" onClick={onCerrar}>
-      <div className="em-modal visor-modal" onClick={e => e.stopPropagation()}>
+    <Dialogo abierto alCerrar={onCerrar} etiquetadoPor="visor-grabacion-titulo" className="dialogo-em">
+      <div className="em-modal visor-modal">
         <div className="em-modal-header">
-          <h3><Video size={17} /> {rec.title}</h3>
-          <button className="btn btn-ghost" onClick={onCerrar} aria-label="Cerrar el video">✕</button>
+          <h3 id="visor-grabacion-titulo"><Video size={17} aria-hidden="true" /> {rec.title}</h3>
+          <button className="btn-icon" onClick={onCerrar} aria-label="Cerrar el video"><X size={18} aria-hidden="true" /></button>
         </div>
         <div className="em-modal-body">
           {rec.description && <p className="text-secondary text-sm">{rec.description}</p>}
@@ -281,6 +292,6 @@ function VisorVideo({ rec, onCerrar }: { rec: RecordedClass; onCerrar: () => voi
           )}
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

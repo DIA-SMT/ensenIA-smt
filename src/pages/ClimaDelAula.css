@@ -22,7 +22,7 @@
 .clima-ranges {
   display: flex;
   gap: 5px;
-  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .clima-range {
@@ -260,18 +260,6 @@
 .clima-comment-meta { font-size: 11px; color: var(--text-subtle); }
 
 /* ── Vacío ── */
-.clima-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 11px;
-  text-align: center;
-  padding: var(--space-8) var(--space-5);
-}
-
-.clima-empty h3 { font-size: 17px; }
-.clima-empty p { max-width: 420px; }
-
 @media (max-width: 560px) {
   .clima-dist-row { grid-template-columns: 104px 1fr 24px; gap: 7px; }
   .clima-dist-label { font-size: 12px; }

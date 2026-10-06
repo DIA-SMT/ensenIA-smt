@@ -8,7 +8,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, AlertCircle, ChevronRight, Search, MapPin } from 'lucide-react';
 import { listSchools, createSchool, type AdminSchool } from '../../services/admin.service';
-import { Campo, DialogoForm, Vacio } from './ui';
+import { avisar } from '../../components/ui/avisar';
+import { Esqueleto } from '../../components/ui/Esqueleto';
+import EstadoVacio from '../../components/ui/EstadoVacio';
+import { Campo, DialogoForm } from './ui';
 import './Admin.css';
 
 export default function AdminEscuelas() {
@@ -39,7 +42,7 @@ export default function AdminEscuelas() {
         <div>
           <h2><Building2 size={20} aria-hidden="true" /> Escuelas municipales</h2>
           <p>
-            {loading ? 'Cargando...' : `${schools.length} escuela${schools.length !== 1 ? 's' : ''} · ${totalPersonas} persona${totalPersonas !== 1 ? 's' : ''} con cuenta`}
+            {loading ? 'Contando escuelas…' : `${schools.length} escuela${schools.length !== 1 ? 's' : ''} · ${totalPersonas} persona${totalPersonas !== 1 ? 's' : ''} con cuenta`}
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={() => setAbierto(true)}>
@@ -57,12 +60,18 @@ export default function AdminEscuelas() {
         </div>
       )}
 
-      {!loading && schools.length === 0 && (
-        <div className="card">
-          <Vacio icono={Building2} titulo="Todavía no hay escuelas"
-            texto="Creá la primera. Después vas a poder nombrar a su dirección y armar cursos, docentes y estudiantes."
-            accion={<button type="button" className="btn btn-primary" onClick={() => setAbierto(true)}><Plus size={16} /> Nueva escuela</button>} />
-        </div>
+      {loading && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando escuelas…" />}
+
+      {!loading && !error && schools.length === 0 && (
+        <EstadoVacio icono={Building2} titulo="Todavía no hay escuelas"
+          texto="Creá la primera. Después vas a poder nombrar a su dirección y armar cursos, docentes y estudiantes."
+          accion={{ etiqueta: 'Nueva escuela', icono: Plus, alTocar: () => setAbierto(true) }} />
+      )}
+
+      {!loading && query.trim() !== '' && visibles.length === 0 && (
+        <EstadoVacio compacto icono={Search} titulo={`Ninguna escuela coincide con «${query.trim()}»`}
+          texto="Probá con otra parte del nombre o con el barrio."
+          accion={{ etiqueta: 'Ver todas', alTocar: () => setQuery('') }} />
       )}
 
       <ul className="adm-escuelas">
@@ -110,7 +119,9 @@ function NuevaEscuela({ abierto, alCerrar, alCrear }: {
     setCreating(true);
     setError('');
     try {
-      alCrear(await createSchool({ name: name.trim(), shortName: shortName.trim(), address, district }));
+      const id = await createSchool({ name: name.trim(), shortName: shortName.trim(), address, district });
+      avisar.exito(`Escuela creada: ${shortName.trim()}`, 'Ahora armala: cursos, dirección, docentes y estudiantes.');
+      alCrear(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la escuela.');
       setCreating(false);

@@ -71,6 +71,7 @@ export const cargadores = {
   '/asistencia':          () => import('../pages/Asistencia'),
   '/corregir':            () => import('../pages/Corregir'),
   '/modulo':              () => import('../pages/ArmarModulo'),
+  '/crear':               () => import('../pages/Crear'),
   '/clase-en-vivo':       () => import('../pages/ClaseEnVivo'),
   '/mi-guia':             () => import('../pages/MiGuia'),
   '/clase':               () => import('../pages/ClaseEnVivoAlumno'),

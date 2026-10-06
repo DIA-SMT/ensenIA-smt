@@ -9,6 +9,8 @@ import { BookMarked, AlertTriangle } from 'lucide-react';
 import { getPublishedGradesByStudent } from '../services/gradebook.service';
 import { formatoNota } from '../lib/resumenNotas';
 import type { TermGrade, AlertThresholds } from '../types';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/Libreta.css';
@@ -38,7 +40,7 @@ export default function GradesPanel({ studentId, thresholds, voice, alCargar }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
-  if (grades === null) return <p className="text-secondary text-sm" role="status">Cargando notas…</p>;
+  if (grades === null) return <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando notas…" />;
 
   // Un error no es "no hay notas": decirlo así haría creer que no hay nada
   // que ver cuando en realidad no se pudo consultar.
@@ -48,11 +50,14 @@ export default function GradesPanel({ studentId, thresholds, voice, alCargar }: 
 
   if (grades.length === 0) {
     return (
-      <p className="text-secondary text-sm">
-        {voice === 'propia'
-          ? 'Todavía no hay notas publicadas.'
-          : 'Todavía no hay notas publicadas. Aparecen acá cuando sus docentes las cargan en la libreta.'}
-      </p>
+      <EstadoVacio
+        compacto
+        icono={BookMarked}
+        titulo="Todavía no hay notas publicadas"
+        texto={voice === 'propia'
+          ? 'Aparecen acá cuando tus docentes las publican en la libreta.'
+          : 'Aparecen acá cuando sus docentes las cargan en la libreta.'}
+      />
     );
   }
 

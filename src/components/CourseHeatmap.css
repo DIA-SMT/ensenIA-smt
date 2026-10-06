@@ -10,11 +10,8 @@
   gap: var(--space-2);
 }
 
-.heatmap-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
+/* .heatmap-tabs va con .fila-desplazable (ui.css): en el celular se
+   desplaza de costado en vez de partirse en dos renglones. */
 
 .heatmap-tab {
   background: var(--bg-elevated);

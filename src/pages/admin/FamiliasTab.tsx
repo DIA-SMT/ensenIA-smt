@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   createAccount, resetPassword, removeMember, addGuardianLink, removeGuardianLink, type AdminMember,
 } from '../../services/admin.service';
+import { avisar, confirmar } from '../../components/ui/avisar';
 import { PersonRow } from './PersonalTab';
 import { Barra, Campo, DialogoForm, Vacio } from './ui';
 import type { SchoolData, TabProps } from './GestionEscuela';
@@ -39,17 +40,28 @@ export default function FamiliasTab(props: TabProps) {
     return s ? `${s.firstName} ${s.lastName} (${s.courseName})` : '—';
   };
 
-  const handleReset = (m: AdminMember) => {
-    if (!window.confirm(`¿Generar una clave nueva para ${m.firstName} ${m.lastName}? La actual deja de funcionar.`)) return;
+  const handleReset = async (m: AdminMember) => {
+    const si = await confirmar({
+      titulo: `¿Generar una clave nueva para ${m.firstName} ${m.lastName}?`,
+      mensaje: 'La clave que usa ahora deja de funcionar en el momento. Vas a ver la nueva para entregársela.',
+      accion: 'Generar clave',
+    });
+    if (!si) return;
     run(async () => {
       const r = await resetPassword(m.userId);
       showCredentials([{ name: `${m.firstName} ${m.lastName}`, login: r.login, password: r.password }]);
     });
   };
 
-  const handleRemove = (m: AdminMember) => {
-    if (!window.confirm(`¿Quitar a ${m.firstName} ${m.lastName} de ${data.school.name}? Se desvincula de sus hijos en esta escuela.`)) return;
-    run(() => removeMember(m.membershipId));
+  const handleRemove = async (m: AdminMember) => {
+    const nombre = `${m.firstName} ${m.lastName}`;
+    const si = await confirmar({
+      titulo: `¿Quitar a ${nombre} de ${data.school.name}?`,
+      mensaje: 'Se desvincula de sus hijos en esta escuela: deja de ver sus notas, asistencia y comunicados. Su cuenta sigue existiendo.',
+      accion: 'Quitar de la escuela',
+      peligro: true,
+    });
+    if (si && await run(() => removeMember(m.membershipId))) avisar.exito(`${nombre} ya no está en ${data.school.name}`);
   };
 
   return (
@@ -70,7 +82,8 @@ export default function FamiliasTab(props: TabProps) {
       <section className="card adm-tarjeta">
         {guardians.length === 0 ? (
           <Vacio icono={HeartHandshake} titulo="Sin familias"
-            texto="Cada adulto responsable tiene su cuenta y ve solo lo de sus hijos. Si tiene varios en la escuela, se vinculan todos a la misma cuenta." />
+            texto="Cada adulto responsable tiene su cuenta y ve solo lo de sus hijos. Si tiene varios en la escuela, se vinculan todos a la misma cuenta."
+            accion={sinEstudiantes ? undefined : { etiqueta: 'Sumar familia', icono: UserPlus, alTocar: () => setAlta(true) }} />
         ) : guardians.map(m => (
           <PersonRow key={m.membershipId} m={m} canManage={m.userId !== user?.id} onReset={handleReset} onRemove={handleRemove}>
             <Links guardianId={m.userId} data={data} run={run} studentLabel={studentLabel} />
@@ -107,8 +120,11 @@ function AltaFamilia({ abierto, alCerrar, data, reload, showCredentials }: TabPr
         schoolId: data.school.id, role: 'padre', firstName, lastName,
         dni: dni.trim() || undefined, email: email.trim() || undefined,
       });
-      // Si falla el vínculo la cuenta ya existe: se vincula después desde la lista
-      await addGuardianLink(studentId, c.userId, relationship).catch(() => {});
+      // Si falla el vínculo la cuenta ya existe: se vincula después desde la
+      // lista. Pero se avisa: si no, la familia queda creada sin ver a nadie.
+      await addGuardianLink(studentId, c.userId, relationship).catch(() => {
+        avisar.error('La cuenta se creó, pero no se pudo vincular con el estudiante.', 'Vinculalo desde la lista con "Vincular otro".');
+      });
       await reload();
       setFirstName(''); setLastName(''); setDni(''); setEmail(''); setStudentId('');
       alCerrar();
@@ -183,6 +199,17 @@ function Links({ guardianId, data, run, studentLabel }: {
     if (await run(() => addGuardianLink(studentId, guardianId, relationship))) { setStudentId(''); setAbierto(false); }
   };
 
+  const desvincular = async (linkId: string, alumnoId: string) => {
+    const alumno = studentLabel(alumnoId);
+    const si = await confirmar({
+      titulo: `¿Desvincular de ${alumno}?`,
+      mensaje: 'Deja de ver las notas, la asistencia y los comunicados de ese estudiante. La cuenta de la familia sigue existiendo.',
+      accion: 'Desvincular',
+      peligro: true,
+    });
+    if (si && await run(() => removeGuardianLink(linkId))) avisar.exito(`Se desvinculó de ${alumno}`);
+  };
+
   return (
     <div className="adm-asignaciones">
       <div className="adm-chips">
@@ -190,7 +217,7 @@ function Links({ guardianId, data, run, studentLabel }: {
         {mine.map(l => (
           <span key={l.id} className="adm-chip">
             {studentLabel(l.studentId)} · {l.relationship}
-            <button type="button" onClick={() => window.confirm('¿Desvincular?') && run(() => removeGuardianLink(l.id))}
+            <button type="button" onClick={() => desvincular(l.id, l.studentId)}
               aria-label={`Desvincular de ${studentLabel(l.studentId)}`}><X size={12} aria-hidden="true" /></button>
           </span>
         ))}

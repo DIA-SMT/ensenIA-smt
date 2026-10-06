@@ -20,6 +20,9 @@ import {
   CATEGORY_LABELS, AUDIENCE_LABELS,
 } from '../services/policies.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { confirmar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import type { SchoolPolicy, PolicyCategory, PolicyAudience } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -64,10 +67,17 @@ export default function Normativa() {
    * queda arriba del formulario de otra— y traer el editor a la vista,
    * que se renderiza al tope y con la lista larga queda fuera de cuadro.
    */
-  const abrirEditor = (datos: typeof VACIA) => {
+  const abrirEditor = async (datos: typeof VACIA) => {
     // Nada que preguntar si el formulario abierto está intacto.
     if (form && JSON.stringify(form) !== JSON.stringify(formInicial.current)) {
-      if (!window.confirm('Tenés cambios sin guardar en el formulario. ¿Los descarto?')) return;
+      const descartar = await confirmar({
+        titulo: '¿Descartar los cambios sin guardar?',
+        mensaje: 'Tenés cambios sin guardar en el formulario. Si seguís, se pierden.',
+        accion: 'Descartar',
+        cancelar: 'Seguir editando',
+        peligro: true,
+      });
+      if (!descartar) return;
     }
     setError(''); setOkMsg('');
     setForm(datos);
@@ -106,10 +116,11 @@ export default function Normativa() {
     // Despublicar algo que la escuela ya estaba leyendo no puede pasar
     // desapercibido detrás de un botón que dice "guardar borrador".
     if (!publicar && form.isPublished) {
-      const ok = window.confirm(
-        `"${form.title}" está publicada. Si la guardás como borrador, deja de verla ` +
-        'el equipo y Migue deja de citarla.\n\n¿La retiro?'
-      );
+      const ok = await confirmar({
+        titulo: `¿Retirar "${form.title}"?`,
+        mensaje: 'Está publicada. Si la guardás como borrador, deja de verla el equipo y Migue deja de citarla.',
+        accion: 'Retirar y guardar',
+      });
       if (!ok) return;
     }
     setBusy(true); setError(''); setOkMsg('');
@@ -130,9 +141,12 @@ export default function Normativa() {
   };
 
   const borrar = async (p: SchoolPolicy) => {
-    const ok = window.confirm(
-      `Se elimina "${p.title}" para siempre y Migue deja de poder citarla.\n\n¿La borro?`
-    );
+    const ok = await confirmar({
+      titulo: `¿Borrar "${p.title}"?`,
+      mensaje: 'Se elimina para siempre y Migue deja de poder citarla.',
+      accion: 'Borrar',
+      peligro: true,
+    });
     if (!ok) return;
     setBusy(true); setError(''); setOkMsg('');
     try {
@@ -316,19 +330,30 @@ export default function Normativa() {
       )}
 
       {/* ── Listado ── */}
-      {policies === null && <p className="text-secondary p-6">Cargando normativa…</p>}
+      {policies === null && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando normativa…" />}
 
       {policies !== null && listadas.length === 0 && (
-        <div className="card norm-empty">
-          <BookMarked size={30} className="text-subtle" />
-          <p className="text-secondary text-sm">
-            {policies.length === 0
-              ? (puedeEditar
-                ? 'Todavía no cargaste ninguna norma. Empezá por el reglamento interno o el protocolo que más consultan los docentes.'
-                : 'La escuela todavía no cargó normativa.')
-              : 'Ninguna norma coincide con lo que buscás.'}
-          </p>
-        </div>
+        policies.length > 0 ? (
+          <EstadoVacio
+            icono={Search}
+            titulo="Ninguna norma coincide con lo que buscás"
+            texto="Probá con otra palabra o mirá todas las categorías."
+            accion={{ etiqueta: 'Ver todas', alTocar: () => { setBusqueda(''); setCategoria('todas'); } }}
+          />
+        ) : puedeEditar ? (
+          <EstadoVacio
+            icono={BookMarked}
+            titulo="Todavía no cargaste ninguna norma"
+            texto="Empezá por el reglamento interno o el protocolo que más consultan los docentes."
+            accion={{ etiqueta: 'Cargar norma', icono: Plus, alTocar: () => { setAbierta(null); void abrirEditor({ ...VACIA }); } }}
+          />
+        ) : (
+          <EstadoVacio
+            icono={BookMarked}
+            titulo="La escuela todavía no cargó normativa"
+            texto="Si tenés una duda sobre una norma, preguntale a Migue."
+          />
+        )
       )}
 
       <div className="norm-list">

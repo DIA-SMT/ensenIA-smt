@@ -7,6 +7,7 @@
 
 import { supabase } from './_helpers';
 import type { IAToolType, IAModel, IAChatContext } from '../types';
+import { usoIAGastado } from '../lib/usoIA';
 
 // ── Types ──
 
@@ -117,6 +118,7 @@ export async function streamChat(
                 callbacks.onToken(data.text);
                 break;
               case 'done':
+                usoIAGastado();
                 callbacks.onDone(data);
                 break;
               case 'error':

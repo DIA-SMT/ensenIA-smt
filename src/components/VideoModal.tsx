@@ -6,6 +6,7 @@
 
 import { X } from 'lucide-react';
 import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
+import Dialogo from './shell/Dialogo';
 import './VideoModal.css';
 import './Modals.css';
 
@@ -17,8 +18,8 @@ export default function VideoModal({ url, title, onClose }: {
   const videoId = parseYouTubeId(url);
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="em-modal video-modal" role="dialog" aria-label={title}>
+    <Dialogo abierto alCerrar={onClose} etiqueta={title} className="dialogo-em">
+      <div className="em-modal video-modal">
         <div className="em-modal-header">
           <h3>🎬 {title}</h3>
           <button className="btn-icon" aria-label="Cerrar" onClick={onClose}><X size={18} /></button>
@@ -40,6 +41,6 @@ export default function VideoModal({ url, title, onClose }: {
           El video se transmite desde YouTube (consume datos). Lo generado a partir de él —resumen, placas, podcast— sí queda disponible sin conexión.
         </p>
       </div>
-    </div>
+    </Dialogo>
   );
 }

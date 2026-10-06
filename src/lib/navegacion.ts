@@ -10,7 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
-  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2,
+  Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, Wand2,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -38,21 +38,22 @@ export interface AccionRapida {
   claves?: string;
 }
 
+// Lo del día a día arriba; crear es UNA entrada que pregunta qué armar
+// (antes eran cuatro: Armar módulo, Laboratorio IA, Actividad rápida y el
+// botón de la barra). Agenda vive en "Mis clases".
 const DOCENTE: ItemNav[] = [
   { ruta: '/hoy', etiqueta: 'Hoy', titulo: 'Mi día', icono: Sun, grupo: 'Mi día', enBarra: true, claves: 'inicio panel resumen hoy clases' },
   { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Mi día', enBarra: true, claves: 'qr proyectar sala preguntas presencia' },
-  { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario asistencia' },
-  { ruta: '/agenda', etiqueta: 'Agenda', icono: Calendar, grupo: 'Mi día', claves: 'horario semana calendario' },
-  { ruta: '/modulo', etiqueta: 'Armar módulo', icono: Boxes, grupo: 'Aula', ia: true, claves: 'módulo material planificar armar' },
-  { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', claves: 'tareas entregas consignas resultados' },
+  { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula repasar entendieron temas difíciles comprensión' },
+  { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo placas diapositivas evaluación resumen laboratorio ia generar' },
+  { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', enBarra: true, claves: 'tareas entregas consignas resultados corregir' },
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
-  { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', enBarra: true, claves: 'alumnos chicos ficha curso' },
+  { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
-  { ruta: '/ia-lab', etiqueta: 'Laboratorio IA', icono: FlaskConical, grupo: 'Herramientas', ia: true, claves: 'generar evaluación planificación resumen presentación' },
-  { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Herramientas', ia: true, claves: 'asistente preguntar protocolo' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'padres citación tutores' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
+  { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Ayuda', ia: true, claves: 'asistente preguntar protocolo' },
   { ruta: '/settings', etiqueta: 'Ajustes', titulo: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },
 ];
 
@@ -101,8 +102,12 @@ export const NAV_POR_ROL: Record<UserRole, ItemNav[]> = {
 };
 
 export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
+  // Siguen a mano desde el buscador aunque ya no estén sueltas en el menú
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
+    { ruta: '/modulo', etiqueta: 'Armar módulo (placas, podcast y actividad)', icono: Boxes, claves: 'módulo material planificar armar placas diapositivas' },
+    { ruta: '/ia-lab', etiqueta: 'Laboratorio IA', icono: FlaskConical, claves: 'generar evaluación planificación resumen presentación chat' },
+    { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
   ],
   director: [],
   estudiante: [],
@@ -129,7 +134,8 @@ export function inicioDe(rol: UserRole | undefined): RutaPantalla {
   if (rol === 'padre') return '/comunicados-familia';
   if (rol === 'docente') return '/hoy';
   if (rol === 'superadmin') return '/admin';
-  return '/dashboard';
+  // Dirección arranca en "Qué está pasando", el primer ítem de su menú
+  return '/panel';
 }
 
 /** Título de la pantalla actual, incluidas las de detalle. */
@@ -138,6 +144,9 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   const item = items.find(i => i.ruta === pathname);
   if (item) return item.titulo ?? item.etiqueta;
   if (pathname === '/actividad-rapida') return 'Actividad rápida';
+  if (pathname === '/modulo') return 'Armar módulo';
+  if (pathname === '/ia-lab') return 'Laboratorio IA';
+  if (pathname === '/agenda') return 'Mi horario';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
   if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
@@ -150,7 +159,10 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   const items = rol ? NAV_POR_ROL[rol] : [];
   const exacto = items.find(i => i.ruta === pathname);
   if (exacto) return exacto.ruta;
-  if (pathname.startsWith('/actividades/') || pathname === '/actividad-rapida') return '/actividades';
+  if (pathname.startsWith('/actividades/')) return '/actividades';
+  // Lo que se abre desde "Crear" se marca en "Crear"
+  if (['/actividad-rapida', '/modulo', '/ia-lab'].includes(pathname)) return rol === 'docente' ? '/crear' : null;
+  if (pathname === '/agenda') return '/mis-clases';
   if (pathname.startsWith('/mis-actividades/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';
   if (pathname.startsWith('/admin/escuelas/')) return '/admin';

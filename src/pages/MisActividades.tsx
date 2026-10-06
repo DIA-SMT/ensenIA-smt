@@ -16,6 +16,9 @@ import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.servic
 import GradesPanel from '../components/GradesPanel';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar } from '../components/ui/avisar';
 import {
   FEELING_META,
   type Activity, type ActivitySubmission, type Enrollment, type Student,
@@ -176,23 +179,29 @@ export default function MisActividades() {
       setStreak(v => v + 1);
     } catch (err) {
       console.error('Error guardando check-in:', err);
-      alert('No se pudo guardar. Probá de nuevo en un ratito.');
+      avisar.error('No se pudo enviar cómo venís hoy.', 'Probá de nuevo en un ratito.');
     } finally {
       setSavingCheckin(false);
     }
   };
 
   if (!user) return null;
-  if (loading) return <p className="text-secondary p-6" role="status">Cargando tus actividades…</p>;
+  if (loading) {
+    return (
+      <div className="sp-container">
+        <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando tus actividades…" />
+      </div>
+    );
+  }
 
   if (fallo && !student) {
     return (
-      <div className="sp-container">
-        <div className="card acts-empty" role="alert">
-          <WifiOff size={32} className="text-secondary" aria-hidden="true" />
-          <h2>No pudimos traer tus actividades</h2>
-          <p className="text-secondary text-sm">Revisá la conexión. Lo que ya abriste en este celular sigue disponible.</p>
-        </div>
+      <div className="sp-container" role="alert">
+        <EstadoVacio
+          icono={WifiOff}
+          titulo="No pudimos traer tus actividades"
+          texto="Revisá la conexión. Lo que ya abriste en este celular sigue disponible."
+        />
       </div>
     );
   }
@@ -200,11 +209,11 @@ export default function MisActividades() {
   if (!student) {
     return (
       <div className="sp-container">
-        <div className="card acts-empty">
-          <GraduationCap size={36} className="text-cyan" aria-hidden="true" />
-          <h2>Tu cuenta no está vinculada a un curso</h2>
-          <p className="text-secondary text-sm">Pedile a tu docente que te agregue a la lista del curso.</p>
-        </div>
+        <EstadoVacio
+          icono={GraduationCap}
+          titulo="Tu cuenta no está vinculada a un curso"
+          texto="Pedile a tu docente que te agregue a la lista del curso."
+        />
       </div>
     );
   }
@@ -390,10 +399,12 @@ export default function MisActividades() {
       <section aria-labelledby="sp-acts">
         <h2 className="sp-section-title" id="sp-acts"><ClipboardList size={18} aria-hidden="true" /> Mis actividades</h2>
         {activities.length === 0 && (
-          <div className="card acts-empty">
-            <ClipboardList size={32} className="text-secondary" aria-hidden="true" />
-            <p className="text-secondary">Tus docentes todavía no publicaron actividades.</p>
-          </div>
+          <EstadoVacio
+            compacto
+            icono={ClipboardList}
+            titulo="Todavía no hay actividades"
+            texto="Cuando tus docentes publiquen una, aparece acá."
+          />
         )}
         <ul className="sp-activity-list">
           {[...pendientes, ...hechas].map(a => {

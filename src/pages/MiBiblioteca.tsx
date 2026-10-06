@@ -13,12 +13,17 @@ import StudyGuideModal from '../components/StudyGuideModal';
 import MaterialViewer from '../components/MaterialViewer';
 import PodcastPlayer from '../components/PodcastPlayer';
 import VideoModal from '../components/VideoModal';
+import Dialogo from '../components/shell/Dialogo';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import { avisar } from '../components/ui/avisar';
 import type { LibraryMaterial, MaterialReactionType, PracticeQuestion, Student } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
 import './Actividades.css';
 import './Biblioteca.css';
 import './StudentPortal.css';
+import '../components/shell/shell.css';
 import '../components/Modals.css';
 
 export default function MiBiblioteca() {
@@ -48,7 +53,10 @@ export default function MiBiblioteca() {
         setStudent(st);
         if (st) getMyMaterialReactions(st.id).then(setReactions).catch(console.error);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        avisar.error('No pudimos traer el material.', 'Revisá la conexión y volvé a entrar.');
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -69,6 +77,7 @@ export default function MiBiblioteca() {
       await setMaterialReaction(mat.id, student.id, next);
     } catch (err) {
       console.error('Error guardando reacción:', err);
+      avisar.error('No se pudo guardar tu opinión. Probá de nuevo.');
       setReactions(prev => {
         const copy = { ...prev };
         if (current) copy[mat.id] = current;
@@ -121,14 +130,15 @@ export default function MiBiblioteca() {
         Acá aparece el material que tus docentes comparten con el curso.
       </p>
 
-      {loading && <p className="text-secondary">Cargando material...</p>}
+      {loading && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando material…" />}
       {genError && <div className="sp-notice">{genError}</div>}
 
       {!loading && materials.length === 0 && (
-        <div className="card acts-empty">
-          <BookOpen size={32} className="text-secondary" />
-          <p className="text-secondary">Todavía no hay material compartido.</p>
-        </div>
+        <EstadoVacio
+          icono={BookOpen}
+          titulo="Todavía no hay material compartido"
+          texto="Cuando tus docentes compartan apuntes, videos o PDFs con el curso, aparecen acá."
+        />
       )}
 
       <div className="sp-activity-list">
@@ -254,10 +264,10 @@ export default function MiBiblioteca() {
       )}
 
       {summaryFor && (
-        <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setSummaryFor(null); }}>
+        <Dialogo abierto alCerrar={() => setSummaryFor(null)} etiquetadoPor="mb-resumen-titulo" className="dialogo-em">
           <div className="em-modal em-modal-lg">
             <div className="em-modal-header">
-              <h3><Sparkles size={17} className="text-ia-accent" /> Resumen — {summaryFor.title}</h3>
+              <h3 id="mb-resumen-titulo"><Sparkles size={17} className="text-ia-accent" aria-hidden="true" /> Resumen — {summaryFor.title}</h3>
               <button className="btn-icon" aria-label="Cerrar" onClick={() => setSummaryFor(null)}><X size={18} /></button>
             </div>
             <div className="em-modal-body">
@@ -266,10 +276,10 @@ export default function MiBiblioteca() {
               </div>
             </div>
             <div className="em-modal-footer">
-              <button className="btn btn-primary btn-sm" onClick={() => setSummaryFor(null)}>Cerrar</button>
+              <button className="btn btn-primary btn-sm" onClick={() => setSummaryFor(null)} data-inicial>Cerrar</button>
             </div>
           </div>
-        </div>
+        </Dialogo>
       )}
     </div>
   );

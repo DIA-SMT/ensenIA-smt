@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Save, Check } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { updateSchool } from '../../services/admin.service';
+import { avisar } from '../../components/ui/avisar';
 import { Barra, Campo } from './ui';
 import type { TabProps } from './GestionEscuela';
 
@@ -10,14 +11,16 @@ export default function DatosTab({ data, run }: TabProps) {
   const [shortName, setShortName] = useState(s.shortName);
   const [address, setAddress] = useState(s.address);
   const [district, setDistrict] = useState(s.district);
-  const [saved, setSaved] = useState(false);
+  const [guardando, setGuardando] = useState(false);
   const cambio = name !== s.name || shortName !== s.shortName || address !== s.address || district !== s.district;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !shortName.trim()) return;
+    if (!name.trim() || !shortName.trim() || guardando) return;
+    setGuardando(true);
     const ok = await run(() => updateSchool(s.id, { name: name.trim(), shortName: shortName.trim(), address, district }));
-    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+    setGuardando(false);
+    if (ok) avisar.exito('Datos de la escuela guardados');
   };
 
   return (
@@ -39,8 +42,8 @@ export default function DatosTab({ data, run }: TabProps) {
           </Campo>
         </div>
         <div>
-          <button type="submit" className="btn btn-primary" disabled={!cambio || !name.trim() || !shortName.trim()}>
-            {saved ? <><Check size={15} aria-hidden="true" /> Guardado</> : <><Save size={15} aria-hidden="true" /> Guardar cambios</>}
+          <button type="submit" className="btn btn-primary" disabled={!cambio || !name.trim() || !shortName.trim() || guardando}>
+            <Save size={15} aria-hidden="true" /> {guardando ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </div>
       </form>

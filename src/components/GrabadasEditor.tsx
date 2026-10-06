@@ -13,6 +13,9 @@ import {
   detectProvider, PROVIDER_LABELS,
 } from '../services/recordings.service';
 import type { AcademicTerm, PlanningUnit, RecordedClass } from '../types';
+import { confirmar } from './ui/avisar';
+import EstadoVacio from './ui/EstadoVacio';
+import { Esqueleto } from './ui/Esqueleto';
 // Reusa la grilla de formulario de Normativa: mismo gesto de carga, y el
 // proyecto ya cruza CSS entre páginas y componentes.
 // Estilos que este componente usa y viven en otra hoja: se importan acá
@@ -80,10 +83,11 @@ export default function GrabadasEditor({
     // Guardar sin publicar algo que YA estaba publicado lo saca del
     // temario. El botón no se lee así.
     if (!publicar && form.isPublished) {
-      const ok = window.confirm(
-        `"${form.title}" ya está publicada. Si la guardás sin publicar, deja de verla ` +
-        'el curso.\n\n¿La retiro del temario?'
-      );
+      const ok = await confirmar({
+        titulo: `¿Retirar "${form.title}" del temario?`,
+        mensaje: 'Ya está publicada. Si la guardás sin publicar, deja de verla el curso.',
+        accion: 'Retirar y guardar',
+      });
       if (!ok) return;
     }
 
@@ -111,7 +115,13 @@ export default function GrabadasEditor({
   };
 
   const borrar = async (r: RecordedClass) => {
-    if (!window.confirm(`Se elimina "${r.title}" del temario. El video en sí no se toca.\n\n¿La saco?`)) return;
+    const ok = await confirmar({
+      titulo: `¿Sacar "${r.title}" del temario?`,
+      mensaje: 'Se elimina del temario. El video en sí no se toca.',
+      accion: 'Sacar',
+      peligro: true,
+    });
+    if (!ok) return;
     setBusy(true); setError(''); setOkMsg('');
     try {
       await deleteRecording(r.id);
@@ -125,7 +135,7 @@ export default function GrabadasEditor({
     }
   };
 
-  if (grabadas === null) return <p className="text-secondary p-6">Cargando grabaciones…</p>;
+  if (grabadas === null) return <Esqueleto tipo="filas" cantidad={2} etiqueta="Cargando grabaciones…" className="mt-4" />;
 
   return (
     <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -230,10 +240,13 @@ export default function GrabadasEditor({
         )}
 
         {grabadas.length === 0 && !form && (
-          <p className="text-secondary text-sm">
-            Todavía no hay clases grabadas de esta materia. Si grabás con Meet, el link
-            que queda en Drive sirve tal cual.
-          </p>
+          <EstadoVacio
+            compacto
+            icono={Video}
+            titulo="Todavía no hay clases grabadas de esta materia"
+            texto="Si grabás con Meet, el link que queda en Drive sirve tal cual."
+            accion={{ etiqueta: 'Agregar grabación', icono: Plus, alTocar: () => { setForm({ ...VACIA }); setError(''); setOkMsg(''); } }}
+          />
         )}
 
         {grabadas.map(r => {
@@ -250,8 +263,8 @@ export default function GrabadasEditor({
               {r.isPublished
                 ? <span className="badge badge-success"><Eye size={11} /> Publicada</span>
                 : <span className="badge badge-warning"><EyeOff size={11} /> Borrador</span>}
-              <a className="btn btn-ghost btn-sm" href={r.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink size={13} />
+              <a className="btn btn-ghost btn-sm" href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`Abrir "${r.title}" en otra pestaña`}>
+                <ExternalLink size={13} aria-hidden="true" />
               </a>
               <button
                 className="btn btn-outline btn-sm"
@@ -265,8 +278,8 @@ export default function GrabadasEditor({
               >
                 Editar
               </button>
-              <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => borrar(r)}>
-                <Trash2 size={13} />
+              <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => borrar(r)} aria-label={`Sacar "${r.title}" del temario`}>
+                <Trash2 size={13} aria-hidden="true" />
               </button>
             </div>
           );

@@ -8,6 +8,7 @@
 
 import { supabase } from './_helpers';
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
+import { usoIAGastado } from '../lib/usoIA';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -169,6 +170,7 @@ async function callProcessDocument<T>(body: Record<string, unknown>): Promise<T>
   if (!resp.ok) {
     throw new Error(json.message || `Error del servidor de IA (${resp.status}).`);
   }
+  if (!json.cached) usoIAGastado();
   return json as T;
 }
 
@@ -252,13 +254,32 @@ export async function importProgram(input: {
 }
 
 /** Placas de estudio: tarjetas visuales de conceptos a partir del material. */
+/** Que una placa tenga lo que su tipo necesita para mostrarse bien. */
+export function placaCompleta(c: StudyCard): boolean {
+  const lleno = (s?: string) => Boolean(s && s.trim());
+  const tipo = c.type ?? 'concept';
+  if (tipo === 'concept') return lleno(c.title) && lleno(c.body);
+  if (tipo === 'flashcard') return lleno(c.question) && lleno(c.answer);
+  const opciones = c.options ?? [];
+  return lleno(c.question) && opciones.length >= 2 && opciones.every(o => lleno(o))
+    && typeof c.correct_index === 'number' && c.correct_index >= 0 && c.correct_index < opciones.length;
+}
+
 export async function generateStudyCards(text: string, title: string): Promise<StudyCard[]> {
-  const { cards } = await callProcessDocument<{ cards: StudyCard[] }>({
+  const { cards, truncated } = await callProcessDocument<{ cards: StudyCard[]; truncated?: boolean }>({
     mode: 'study_cards',
     text,
     title,
   });
-  return cards ?? [];
+  // Si la respuesta se cortó, las últimas placas pueden venir a medias:
+  // se descartan las incompletas en vez de mostrar un quiz sin opciones.
+  const completas = (cards ?? []).filter(placaCompleta);
+  if (completas.length < 4) {
+    throw new Error(truncated
+      ? 'Las placas salieron cortadas. Probá de nuevo; si el material es muy largo, acotá el tema.'
+      : 'La IA no armó suficientes placas con este material. Probá de nuevo.');
+  }
+  return completas;
 }
 
 /** Síntesis IA del estudiante para reuniones/boletín (señales + observaciones + métricas). */

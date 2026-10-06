@@ -11,9 +11,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { getNoticesForStaff, createNotice, deleteNotice } from '../services/guardians.service';
 import { getStudentsByTeacher, getAllStudents } from '../services/students.service';
 import type { GuardianNotice, NoticeReceipt, NoticeType, Student } from '../types';
+import { avisar, confirmar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
-import './Actividades.css';
 import './Familias.css';
 import '../components/Modals.css';
 
@@ -84,8 +86,21 @@ export default function Familias() {
   };
 
   const handleDelete = async (n: StaffNotice) => {
-    if (!window.confirm(`¿Eliminar "${n.title}"?`)) return;
-    await deleteNotice(n.id);
+    const ok = await confirmar({
+      titulo: `¿Eliminar "${n.title}"?`,
+      mensaje: 'Las familias dejan de verlo en su portal. No se puede deshacer.',
+      accion: 'Eliminar',
+      peligro: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteNotice(n.id);
+    } catch (err) {
+      console.error(err);
+      avisar.error('No se pudo eliminar el aviso', 'Probá de nuevo.');
+      return;
+    }
+    avisar.exito('Aviso eliminado', n.title);
     load();
   };
 
@@ -165,12 +180,14 @@ export default function Familias() {
 
         {/* ── Historial ── */}
         <div className="fam-list">
-          {loading && <p className="text-secondary">Cargando...</p>}
+          {loading && <Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando avisos…" />}
           {!loading && notices.length === 0 && (
-            <div className="card acts-empty">
-              <Megaphone size={30} className="text-secondary" />
-              <p className="text-secondary">Todavía no hay avisos enviados.</p>
-            </div>
+            <EstadoVacio
+              icono={Megaphone}
+              titulo="Todavía no hay avisos enviados"
+              texto="Lo que mandes a las familias aparece acá, con quién lo leyó y quién confirmó."
+              accion={{ etiqueta: 'Escribir un aviso', alTocar: () => document.getElementById('fam-titulo')?.focus() }}
+            />
           )}
           {notices.map(n => {
             const rs = receiptSummary(n);

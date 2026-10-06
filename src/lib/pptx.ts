@@ -6,7 +6,7 @@
  * (dynamic import) para no engordar el bundle inicial.
  */
 
-import type { ParsedPresentation } from './presentation';
+import { esPortada, type ParsedPresentation } from './presentation';
 
 const INDIGO = '4F46E5';
 const DARK = '1E1B2E';
@@ -28,15 +28,24 @@ export async function exportPresentationPptx(
   const footerParts = [opts.subjectName, opts.courseName].filter(Boolean).join(' · ');
 
   // ── Portada ──
+  // La IA casi siempre arma su propia portada como diapositiva 1 (tema y
+  // curso). Si la hay, esa ES la portada: antes se sumaba otra encima y la
+  // presentación arrancaba con el título dos veces.
+  const portadaIA = esPortada(pres.slides[0], pres.title) ? pres.slides[0] : null;
+  const contenido = portadaIA ? pres.slides.slice(1) : pres.slides;
+  const coverTitle = portadaIA?.title || pres.title;
+  const coverSubtitle = (portadaIA && portadaIA.bullets.length > 0 ? portadaIA.bullets.join(' · ') : null)
+    ?? pres.subtitle ?? (footerParts || null);
+
   const cover = pptx.addSlide();
   cover.background = { color: DARK };
   cover.addShape('rect', { x: 0, y: 6.9, w: 13.33, h: 0.6, fill: { color: INDIGO } });
-  cover.addText(pres.title, {
+  cover.addText(coverTitle, {
     x: 0.8, y: 2.2, w: 11.7, h: 2.2,
     fontSize: 40, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle',
   });
-  if (pres.subtitle || footerParts) {
-    cover.addText(pres.subtitle ?? footerParts, {
+  if (coverSubtitle) {
+    cover.addText(coverSubtitle, {
       x: 0.8, y: 4.4, w: 11.7, h: 0.8,
       fontSize: 18, color: 'C7C3E0', align: 'center',
     });
@@ -44,9 +53,10 @@ export async function exportPresentationPptx(
   cover.addText('Generado con SMT EstudIA', {
     x: 0.8, y: 6.95, w: 11.7, h: 0.5, fontSize: 12, color: 'FFFFFF', align: 'center',
   });
+  if (portadaIA?.note) cover.addNotes(portadaIA.note);
 
   // ── Diapositivas de contenido ──
-  for (const slide of pres.slides) {
+  for (const slide of contenido) {
     const s = pptx.addSlide();
     s.background = { color: LIGHT };
     s.addShape('rect', { x: 0, y: 0, w: 0.25, h: 7.5, fill: { color: INDIGO } });

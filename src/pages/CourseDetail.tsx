@@ -19,6 +19,8 @@ import { getAlertsBySchool } from '../services/alerts.service';
 import { getTerms, pickCurrentTerm, getPublishedGradesBySchool } from '../services/gradebook.service';
 import { formatLatencyHours } from '../lib/format';
 import { promedioDe, formatoNota } from '../lib/resumenNotas';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 import type {
   Course, Student, DirectorInsights, Alert as AlertType, TermGrade, AcademicTerm,
 } from '../types';
@@ -76,7 +78,12 @@ export default function CourseDetail() {
   }, [user, id]);
 
   if (course === undefined || !insights) {
-    return <div className="dashboard-container"><p className="text-secondary">Cargando ficha de curso…</p></div>;
+    return (
+      <div className="dashboard-container">
+        <Esqueleto tipo="tarjetas" cantidad={4} etiqueta="Cargando ficha de curso…" />
+        <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando la nómina…" />
+      </div>
+    );
   }
 
   if (!course) {
@@ -85,9 +92,12 @@ export default function CourseDetail() {
         <button className="btn btn-ghost text-sm mb-4" onClick={() => navigate('/dashboard')}>
           <ArrowLeft size={14} /> Volver
         </button>
-        <div className="card acts-empty">
-          <p className="text-secondary">No se encontró el curso, o no pertenece a tu escuela.</p>
-        </div>
+        <EstadoVacio
+          icono={Users}
+          titulo="No encontramos este curso"
+          texto="Puede que no exista o que no pertenezca a tu escuela."
+          accion={{ etiqueta: 'Volver al tablero', a: '/dashboard', icono: ArrowLeft }}
+        />
       </div>
     );
   }

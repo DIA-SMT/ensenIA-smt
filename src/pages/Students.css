@@ -392,12 +392,11 @@
 .th-sortable svg { vertical-align: -1px; margin-left: 2px; }
 .th-sortable svg.flip { transform: scaleY(-1); }
 
-.stu-empty {
-  text-align: center;
-  padding: var(--space-8) var(--space-4) !important;
-  color: var(--text-subtle);
-  font-style: italic;
-}
+/* Los cursos van en una fila que se desliza de costado en el celular */
+.stu-filter-group.fila-desplazable { flex-wrap: nowrap; }
+
+/* Carga y lista vacía, dentro de la tarjeta de la lista */
+.stu-vacio { margin: var(--space-4) var(--space-5); }
 
 /* ── Trabajo académico (added) ── */
 .stu-work-list {

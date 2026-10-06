@@ -13,7 +13,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle, BookOpen,
-  NotebookText, Download, Check, Loader2, FileText, AlertCircle,
+  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -30,11 +30,15 @@ import type {
   AcademicTerm, GradebookRow, Subject, SubjectAssignment, AlertThresholds, Student,
 } from '../types';
 import TemarioEditor from '../components/TemarioEditor';
+import { avisar, confirmar } from '../components/ui/avisar';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Esqueleto } from '../components/ui/Esqueleto';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
 import './Actividades.css';
 import '../components/Modals.css';
 import './Students.css';
+import '../components/ui/ui.css';
 import './Libreta.css';
 
 const YEAR = new Date().getFullYear();
@@ -238,7 +242,7 @@ function BoletinTeclado() {
             );
         } catch (err) {
             console.error(err);
-            alert('No se pudo generar el informe. Probá de nuevo.');
+            avisar.error('No se pudo generar el informe', 'Probá de nuevo en un rato.');
         } finally {
             setInformeFor(null);
         }
@@ -272,7 +276,7 @@ function BoletinTeclado() {
                 </div>
             </div>
 
-            <div className="lib-terms" role="tablist" aria-label="Trimestre">
+            <div className="lib-terms fila-desplazable" role="tablist" aria-label="Trimestre">
                 {TERMS.map(t => (
                     <button
                         key={t}
@@ -287,12 +291,16 @@ function BoletinTeclado() {
             </div>
 
             {loading ? (
-                <p className="text-secondary p-6">Cargando el curso...</p>
+                <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando el curso…" />
             ) : students.length === 0 ? (
-                <div className="card p-6"><p className="text-secondary">No hay estudiantes en este curso.</p></div>
+                <EstadoVacio
+                    icono={Users}
+                    titulo="Este curso todavía no tiene estudiantes"
+                    texto="Cuando se inscriban en esta materia, aparecen acá para cargar el boletín."
+                />
             ) : (
                 <div className="card lib-table-card">
-                    <table className="lib-table">
+                    <table className="lib-table lib-table-boletin">
                         <thead>
                             <tr>
                                 <th>Estudiante</th>
@@ -321,7 +329,7 @@ function BoletinTeclado() {
                                             {state === 'saved' && <Check size={13} className="lib-state text-success" />}
                                             {state === 'error' && <AlertCircle size={13} className="lib-state text-danger" />}
                                         </td>
-                                        <td>
+                                        <td data-label="Nota">
                                             <input
                                                 className={`lib-grade ${d.grade && (Number(d.grade.replace(',', '.')) < 6) ? 'low' : ''}`}
                                                 inputMode="decimal"
@@ -336,7 +344,7 @@ function BoletinTeclado() {
                                             />
                                         </td>
                                         {!isApoyo && (
-                                            <td>
+                                            <td data-label="Conducta">
                                                 <div className="lib-conduct" role="group" aria-label="Conducta">
                                                     {(Object.entries(CONDUCT_META) as [Conduct, typeof CONDUCT_META[Conduct]][]).map(([c, meta]) => (
                                                         <button
@@ -352,7 +360,7 @@ function BoletinTeclado() {
                                             </td>
                                         )}
                                         {!isApoyo && (
-                                            <td>
+                                            <td data-label="Observación">
                                                 <input
                                                     className="lib-comment"
                                                     placeholder="..."
@@ -365,9 +373,9 @@ function BoletinTeclado() {
                                             </td>
                                         )}
                                         {!isApoyo && (
-                                            <td className="lib-abs">{term <= 3 ? (abs[term - 1] ?? 0) : ''}</td>
+                                            <td className="lib-abs" data-label="Inasistencias">{term <= 3 ? (abs[term - 1] ?? 0) : ''}</td>
                                         )}
-                                        <td className="lib-year">
+                                        <td className="lib-year" data-label="Año">
                                             <span className="lib-year-terms" title="Notas de los tres trimestres">
                                                 {[1, 2, 3].map(t => (
                                                     <em key={t} className={t === term ? 'now' : ''}>{byTerm.get(t) ?? '·'}</em>
@@ -385,7 +393,7 @@ function BoletinTeclado() {
                                                 </span>
                                             )}
                                         </td>
-                                        <td>
+                                        <td data-label="Informe">
                                             <div className="lib-informe">
                                                 <button
                                                     className="btn-icon"
@@ -540,10 +548,14 @@ export default function Libreta() {
     }
     if (status === 'publicada') {
       const enRiesgo = conNota.filter(r => thresholds && r.grade! <= thresholds.gradeRiskMax).length;
-      const msg = enRiesgo > 0
-        ? `Vas a publicar ${conNota.length} nota${conNota.length !== 1 ? 's' : ''}. ${enRiesgo} ${enRiesgo !== 1 ? 'están' : 'está'} en riesgo: se avisa automáticamente a esas familias. ¿Confirmás?`
-        : `Vas a publicar ${conNota.length} nota${conNota.length !== 1 ? 's' : ''}. Las van a ver estudiantes y familias. ¿Confirmás?`;
-      if (!window.confirm(msg)) return;
+      const ok = await confirmar({
+        titulo: `¿Publicar ${conNota.length} nota${conNota.length !== 1 ? 's' : ''} del trimestre?`,
+        mensaje: enRiesgo > 0
+          ? `Las van a ver estudiantes y familias. ${enRiesgo} ${enRiesgo !== 1 ? 'están' : 'está'} en riesgo: se avisa automáticamente a esas familias.`
+          : 'Las van a ver estudiantes y familias.',
+        accion: 'Publicar',
+      });
+      if (!ok) return;
     }
 
     setBusy(true);
@@ -602,18 +614,19 @@ export default function Libreta() {
     <div className="libreta-container animate-in">
       <header className="libreta-header">
         <div>
-          <h2 className="flex items-center gap-2"><BookMarked size={22} className="text-cyan" /> Libreta</h2>
-          <p className="text-secondary text-sm">
+          {/* El título ("Libreta") ya está en la barra de arriba */}
+          <p className="text-secondary">
             La plataforma sugiere una nota con el trabajo del trimestre. Vos decidís.
           </p>
         </div>
       </header>
 
       {assignments.length === 0 && (
-        <div className="card acts-empty">
-          <BookMarked size={32} className="text-secondary" />
-          <p className="text-secondary">No tenés materias asignadas todavía.</p>
-        </div>
+        <EstadoVacio
+          icono={BookMarked}
+          titulo="No tenés materias asignadas todavía"
+          texto="Cuando dirección te asigne una materia y un curso, la libreta aparece acá."
+        />
       )}
 
       {assignments.length > 0 && (
@@ -653,7 +666,7 @@ export default function Libreta() {
           </div>
           )}
 
-          <div className="libreta-tabs">
+          <div className="libreta-tabs fila-desplazable">
             <button
               className={`libreta-tab ${tab === 'notas' ? 'active' : ''}`}
               onClick={() => setTab('notas')}
@@ -690,12 +703,14 @@ export default function Libreta() {
           {tab !== 'boletin' && error && <div className="em-error">{error}</div>}
           {tab !== 'boletin' && okMsg && <div className="libreta-ok"><CheckCircle size={14} /> {okMsg}</div>}
 
-          {tab === 'notas' && loading && <p className="text-secondary p-6">Cargando libreta…</p>}
+          {tab === 'notas' && loading && <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando libreta…" />}
 
           {tab === 'notas' && !loading && rows.length === 0 && (
-            <div className="card acts-empty">
-              <p className="text-secondary">Este curso todavía no tiene estudiantes.</p>
-            </div>
+            <EstadoVacio
+              icono={Users}
+              titulo="Este curso todavía no tiene estudiantes"
+              texto="Cuando se inscriban en esta materia, aparecen acá para cargarles la nota."
+            />
           )}
 
           {tab === 'notas' && !loading && rows.length > 0 && (
@@ -719,7 +734,7 @@ export default function Libreta() {
                             <span className="font-medium">{r.firstName} {r.lastName}</span>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Sugerida">
                           {r.suggestedGrade !== null ? (
                             <span
                               className="libreta-suggested"
@@ -732,7 +747,7 @@ export default function Libreta() {
                             <span className="text-subtle text-sm" title="No hay entregas calificadas de tus actividades en este trimestre">—</span>
                           )}
                         </td>
-                        <td>
+                        <td data-label="Nota del trimestre">
                           <input
                             type="number"
                             aria-label={`Nota del trimestre de ${r.firstName} ${r.lastName}`}
@@ -745,7 +760,7 @@ export default function Libreta() {
                             onChange={e => setGrade(r.studentId, e.target.value)}
                           />
                         </td>
-                        <td>
+                        <td data-label="Estado" className="libreta-estado">
                           {r.carriesToDecember && (
                             <span className="badge badge-danger" title="Se lleva la materia a diciembre">
                               <AlertTriangle size={11} /> A diciembre

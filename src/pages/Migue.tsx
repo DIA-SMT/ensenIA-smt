@@ -16,6 +16,9 @@ import {
   audienceForRole, getOrCreateSession, getMessages, resetSession, streamMigue,
 } from '../services/migue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import EstadoVacio from '../components/ui/EstadoVacio';
+import { Cargando } from '../components/ui/Esqueleto';
+import { confirmar } from '../components/ui/avisar';
 import type { MigueAudience, MigueSession } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -112,7 +115,11 @@ export default function Migue() {
   if (!audience) {
     return (
       <div className="migue-container">
-        <p className="text-secondary p-6">Tu rol no tiene acceso a Migue.</p>
+        <EstadoVacio
+          icono={Info}
+          titulo="Migue no está disponible para tu cuenta"
+          texto="Tu rol no tiene acceso a Migue."
+        />
       </div>
     );
   }
@@ -180,7 +187,13 @@ export default function Migue() {
 
   const limpiar = async () => {
     if (!sesion) return;
-    if (!window.confirm('Se borra esta conversación. ¿Empezamos de cero?')) return;
+    const ok = await confirmar({
+      titulo: '¿Empezamos de cero?',
+      mensaje: 'Se borra esta conversación con Migue.',
+      accion: 'Borrar y empezar',
+      peligro: true,
+    });
+    if (!ok) return;
     try {
       await resetSession(sesion.id);
       setBurbujas([]);
@@ -211,7 +224,7 @@ export default function Migue() {
       </div>
 
       <div className="migue-hilo">
-        {cargando && <p className="text-secondary text-sm">Abriendo la conversación…</p>}
+        {cargando && <Cargando texto="Abriendo la conversación…" />}
 
         {!cargando && burbujas.length === 0 && (
           <div className="migue-vacio">

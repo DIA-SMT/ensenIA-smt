@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Send, Users, User as UserIcon, Clock, ChevronRight, MessageSquare, Plus } from 'lucide-react';
+import { Send, Users, User as UserIcon, Clock, ChevronRight, MessageSquare, Plus, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getCommunicationsBySchool, sendCommunication } from '../services/communications.service';
 import { getTeacherUsers } from '../services/profiles.service';
+import { avisar } from '../components/ui/avisar';
+import { Esqueleto } from '../components/ui/Esqueleto';
+import EstadoVacio from '../components/ui/EstadoVacio';
 import type { Communication, NotificationPriority, User } from '../types';
+import '../components/ui/ui.css';
 import './Comunicaciones.css';
 
 const priorityLabels: Record<NotificationPriority, string> = {
@@ -24,6 +28,8 @@ export default function Comunicaciones() {
   const [composing, setComposing] = useState(false);
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [enviando, setEnviando] = useState(false);
 
   // Compose form state
   const [toAll, setToAll] = useState(true);
@@ -34,12 +40,23 @@ export default function Comunicaciones() {
 
   useEffect(() => {
     if (!user) return;
-    getCommunicationsBySchool(user.schoolId).then(setCommunications).catch(console.error);
+    getCommunicationsBySchool(user.schoolId)
+      .then(setCommunications)
+      .catch(console.error)
+      .finally(() => setCargando(false));
     getTeacherUsers(user.schoolId).then(setTeachers).catch(console.error);
   }, [user]);
 
+  function escribir() {
+    setComposing(true);
+    setSelectedComm(null);
+  }
+
   async function handleSend() {
-    if (!user) return;
+    if (!user || enviando) return;
+    setEnviando(true);
+    const elegido = teachers.find(t => t.id === selectedTeacherId);
+    const destino = toAll ? 'A todo el equipo docente' : elegido ? `A ${elegido.firstName} ${elegido.lastName}` : undefined;
     try {
       await sendCommunication({
         fromUserId: user.id,
@@ -55,9 +72,12 @@ export default function Comunicaciones() {
       setComposing(false);
       setSubject('');
       setBody('');
+      avisar.exito('Comunicado enviado', destino);
     } catch (err) {
       console.error(err);
-      alert('Error al enviar el comunicado.');
+      avisar.error('No se pudo enviar el comunicado.', 'Lo que escribiste sigue ahí. Revisá la conexión y probá de nuevo.');
+    } finally {
+      setEnviando(false);
     }
   }
 
@@ -69,13 +89,14 @@ export default function Comunicaciones() {
       <div className="card comms-list-panel">
         <div className="comms-list-header">
           <h3 aria-level={2}>Comunicaciones</h3>
-          <button className="btn btn-primary btn-sm" onClick={() => { setComposing(true); setSelectedComm(null); }}>
-            <Plus size={16} />
+          <button type="button" className="btn btn-primary btn-sm" onClick={escribir}>
+            <Plus size={16} aria-hidden="true" />
             Nuevo
           </button>
         </div>
 
         <div className="comms-list">
+          {cargando && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando comunicados…" />}
           {communications.map(comm => (
             <button
               key={comm.id}
@@ -127,8 +148,8 @@ export default function Comunicaciones() {
                   </label>
                 </div>
                 {!toAll && (
-                  <select className="form-select" value={selectedTeacherId} onChange={e => setSelectedTeacherId(e.target.value)}>
-                    <option value="">Seleccionar docente...</option>
+                  <select className="form-select" aria-label="Docente" value={selectedTeacherId} onChange={e => setSelectedTeacherId(e.target.value)}>
+                    <option value="">Elegí un docente…</option>
                     {teachers.map(t => (
                       <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>
                     ))}
@@ -137,13 +158,13 @@ export default function Comunicaciones() {
               </div>
 
               <div className="login-field">
-                <label>Asunto</label>
-                <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Asunto del comunicado..." />
+                <label htmlFor="comms-asunto">Asunto</label>
+                <input id="comms-asunto" type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Asunto del comunicado…" />
               </div>
 
               <div className="login-field">
-                <label>Prioridad</label>
-                <select className="form-select" value={priority} onChange={e => setPriority(e.target.value as NotificationPriority)}>
+                <label htmlFor="comms-prioridad">Prioridad</label>
+                <select id="comms-prioridad" className="form-select" value={priority} onChange={e => setPriority(e.target.value as NotificationPriority)}>
                   <option value="low">Baja</option>
                   <option value="medium">Media</option>
                   <option value="high">Alta</option>
@@ -151,19 +172,20 @@ export default function Comunicaciones() {
               </div>
 
               <div className="login-field">
-                <label>Mensaje</label>
+                <label htmlFor="comms-mensaje">Mensaje</label>
                 <textarea
+                  id="comms-mensaje"
                   className="form-textarea"
                   rows={8}
                   value={body}
                   onChange={e => setBody(e.target.value)}
-                  placeholder="Escribí tu comunicado..."
+                  placeholder="Escribí tu comunicado…"
                 />
               </div>
 
-              <button className="btn btn-primary" onClick={handleSend} disabled={!subject.trim() || !body.trim() || (!toAll && !selectedTeacherId)}>
-                <Send size={16} />
-                Enviar Comunicado
+              <button type="button" className="btn btn-primary" onClick={handleSend} disabled={enviando || !subject.trim() || !body.trim() || (!toAll && !selectedTeacherId)}>
+                {enviando ? <Loader2 size={16} className="girando" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
+                {enviando ? 'Enviando…' : 'Enviar comunicado'}
               </button>
             </div>
           </div>
@@ -193,11 +215,14 @@ export default function Comunicaciones() {
               </span>
             </div>
           </div>
+        ) : cargando ? null : communications.length === 0 ? (
+          <EstadoVacio className="comms-vacio" icono={MessageSquare} titulo="Todavía no mandaste comunicados"
+            texto="Le llegan al equipo docente como aviso en su panel, y ves quién lo leyó."
+            accion={{ etiqueta: 'Escribir un comunicado', icono: Plus, alTocar: escribir }} />
         ) : (
-          <div className="comms-empty">
-            <MessageSquare size={40} />
-            <p>Seleccioná un comunicado o creá uno nuevo</p>
-          </div>
+          <EstadoVacio className="comms-vacio" icono={MessageSquare} titulo="Elegí un comunicado de la lista"
+            texto="Vas a ver el mensaje completo y cuántos lo leyeron."
+            accion={{ etiqueta: 'Escribir uno nuevo', icono: Plus, alTocar: escribir }} />
         )}
       </div>
     </div>

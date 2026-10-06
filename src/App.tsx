@@ -5,6 +5,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import CargandoPantalla from './components/CargandoPantalla';
+import Avisos from './components/ui/Avisos';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import { Pantalla } from './lib/pantallas';
@@ -82,7 +83,7 @@ function App() {
                 {ruta('/asistencia', ['docente'])}
                 {ruta('/corregir', ['docente'])}
                 {ruta('/modulo', ['docente'])}
-                <Route path="crear" element={<Navigate to="/actividad-rapida" replace />} />
+                {ruta('/crear', ['docente'])}
                 {ruta('/agenda', ['docente'])}
                 {ruta('/ia-lab', ['docente'])}
                 {ruta('/clase-en-vivo', ['docente'])}
@@ -123,6 +124,8 @@ function App() {
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            {/* Avisos y confirmaciones: en todas las pantallas, login incluido */}
+            <Avisos />
           </NotificationProvider>
         </AuthProvider>
       </PreferencesProvider>

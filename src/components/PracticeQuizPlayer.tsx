@@ -13,6 +13,7 @@ import { X, Lightbulb, ChevronRight, Sparkles, Trophy, WifiOff } from 'lucide-re
 import { recordPracticeAttemptResilient } from '../services/offline-queue.service';
 import { getStudentBadges } from '../services/practice.service';
 import { BADGE_META, type BadgeCode, type PracticeAttempt, type PracticeQuestion } from '../types';
+import { avisar } from './ui/avisar';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
 import '../pages/StudentPortal.css';
@@ -84,6 +85,7 @@ export default function PracticeQuizPlayer({
       onFinished?.(saved);
     } catch (err) {
       console.error('No se pudo registrar la práctica:', err);
+      avisar.error('No se pudo guardar tu práctica.', 'Esta vez no suma XP. Probá de nuevo más tarde.');
     } finally {
       setSaving(false);
       setFinished(true);

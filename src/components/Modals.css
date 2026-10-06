@@ -2,6 +2,15 @@
    SMT EstudIA — Shared modal styles (em-*)
    ═══════════════════════════════════════════════ */
 
+/* ── Sobre <Dialogo> (className="dialogo-em"): el <dialog> nativo pone el
+   fondo, Escape, el foco y la capa de arriba; .em-modal sigue siendo la
+   tarjeta. El cuerpo del diálogo no dibuja nada: la tarjeta es .em-modal. */
+.dialogo-em { align-items: center; justify-content: center; padding: var(--space-6); }
+.dialogo-em > .dialogo-cuerpo { display: contents; }
+@media (max-width: 480px) {
+  .dialogo-em { padding: var(--space-3); }
+}
+
 .em-modal-overlay {
   position: fixed;
   inset: 0;
