@@ -121,6 +121,7 @@ export default function ComunicadosFamilia() {
                   <span className={`badge ${n.type === 'citacion' ? 'badge-warning' : 'badge-cyan'}`}>
                     {n.type === 'citacion' ? '📅 Citación' : '📢 Comunicado'}
                   </span>
+                  {n.subjectName && <span className="badge badge-cyan">{n.subjectName}</span>}
                   {/* Es el estudiante del que trata el aviso, no quien lo envía
                       (el emisor va abajo, en "Enviado por"). */}
                   {n.studentName && <span className="badge badge-neutral">Sobre {n.studentName}</span>}

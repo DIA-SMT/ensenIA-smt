@@ -11,6 +11,7 @@ import { logAccess } from '../services/audit.service';
 import { getCheckinsByStudent, getObservationsByStudent, deleteObservation } from '../services/wellbeing.service';
 import { guardarObservacionResiliente, pendientesDe, subscribe as suscribirCola } from '../services/offline-queue.service';
 import { getGuardiansOfStudent, createNotice } from '../services/guardians.service';
+import { getSubjects } from '../services/subjects.service';
 import { getAchievementsByStudent, grantAchievement, revokeAchievement, totalPoints } from '../services/gamification.service';
 import { getAbsencesByStudent, ATTENDANCE_META, type AttendanceStatus } from '../services/attendance.service';
 import { summarizeStudent } from '../services/documents.service';
@@ -182,6 +183,9 @@ export default function Students() {
     const [citeSending, setCiteSending] = useState(false);
     const [citeDone, setCiteDone] = useState(false);
     const [citeError, setCiteError] = useState('');
+    // La citación es de una materia del docente en el curso del estudiante (051)
+    const [citeMaterias, setCiteMaterias] = useState<{ id: string; name: string }[]>([]);
+    const [citeSubjectId, setCiteSubjectId] = useState('');
 
     // Señales tempranas de bienestar (línea base, persistencia, convergencia)
     const [signals, setSignals] = useState<Map<string, WellbeingSignal>>(new Map());
@@ -424,11 +428,23 @@ export default function Students() {
         setCitePlace('');
         setCiteDone(false);
         setCiteError('');
+        const ids = [...new Set((user.subjects ?? [])
+            .filter(a => a.courseId === selectedStudent.courseId)
+            .map(a => a.subjectId))];
+        setCiteMaterias(ids.map(id => ({ id, name: '' })));
+        setCiteSubjectId(ids[0] ?? '');
+        getSubjects(user.schoolId)
+            .then(lista => setCiteMaterias(ids.map(id => ({ id, name: lista.find(m => m.id === id)?.name ?? 'Materia' }))))
+            .catch(console.error);
         setShowCite(true);
     };
 
     const handleSendCite = async () => {
         if (!selectedStudent || !citeTitle.trim() || !citeBody.trim()) return;
+        if (!citeSubjectId) {
+            setCiteError('No das ninguna materia en el curso de este estudiante: no lo podés citar.');
+            return;
+        }
         setCiteSending(true);
         setCiteError('');
         try {
@@ -437,6 +453,7 @@ export default function Students() {
                 studentId: selectedStudent.id,
                 fromUserId: user.id,
                 type: 'citacion',
+                subjectId: citeSubjectId,
                 title: citeTitle,
                 body: citeBody,
                 meetingAt: citeDate ? new Date(`${citeDate}T${citeTime || '08:00'}`).toISOString() : null,
@@ -445,7 +462,10 @@ export default function Students() {
             setCiteDone(true);
         } catch (err) {
             console.error(err);
-            setCiteError('No se pudo enviar la citación. Revisá la conexión y probá de nuevo.');
+            // La base rechaza si el estudiante no cursa esa materia con el docente
+            setCiteError(err && typeof err === 'object' && 'code' in err && err.code === '42501'
+                ? 'Este estudiante no cursa esa materia con vos: no lo podés citar por ella.'
+                : 'No se pudo enviar la citación. Revisá la conexión y probá de nuevo.');
         } finally {
             setCiteSending(false);
         }
@@ -1059,7 +1079,7 @@ export default function Students() {
                                     <CheckCircle size={38} className="text-success" />
                                     <p><strong>Citación enviada</strong></p>
                                     <p className="text-sm text-secondary">
-                                        La familia la ve en su portal y puede confirmar asistencia. Seguí los acuses en la sección <strong>Familias</strong>.
+                                        La familia la ve en su portal y puede confirmar asistencia. Seguí los acuses en <strong>Citaciones</strong>.
                                     </p>
                                 </div>
                             ) : (
@@ -1068,9 +1088,19 @@ export default function Students() {
                                     {guardians.length === 0 && (
                                         <div className="em-error">Este estudiante no tiene tutores vinculados: la citación no la verá nadie todavía.</div>
                                     )}
+                                    {citeMaterias.length > 1 ? (
+                                        <div className="em-field">
+                                            <label htmlFor="stu-cita-materia">Por qué materia</label>
+                                            <select id="stu-cita-materia" className="form-select" value={citeSubjectId} onChange={e => setCiteSubjectId(e.target.value)}>
+                                                {citeMaterias.map(m => <option key={m.id} value={m.id}>{m.name || 'Materia'}</option>)}
+                                            </select>
+                                        </div>
+                                    ) : citeMaterias.length === 1 && citeMaterias[0].name && (
+                                        <p className="text-xs text-subtle">La familia ve que la cita es por {citeMaterias[0].name}.</p>
+                                    )}
                                     <div className="em-field">
-                                        <label>Título</label>
-                                        <input type="text" value={citeTitle} onChange={e => setCiteTitle(e.target.value)} />
+                                        <label htmlFor="stu-cita-asunto">Título</label>
+                                        <input id="stu-cita-asunto" type="text" value={citeTitle} onChange={e => setCiteTitle(e.target.value)} />
                                     </div>
                                     <div className="em-field">
                                         <label>Motivo / mensaje para la familia</label>

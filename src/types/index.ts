@@ -249,6 +249,9 @@ export interface GuardianNotice {
   fromUserId: string;
   fromName?: string;
   type: NoticeType;
+  /** Materia de la citación (las del docente siempre la traen). */
+  subjectId?: string | null;
+  subjectName?: string;
   title: string;
   body: string;
   meetingAt?: string | null;
@@ -443,6 +446,8 @@ export interface LibraryMaterial {
   fileSize: string;
   subjectId: string;
   subjectName: string;
+  /** Curso del material. null = todos los cursos donde quien lo subió da la materia. */
+  courseId?: string | null;
   unitName?: string;
   teacherId: string;
   schoolId: string;

@@ -46,6 +46,8 @@ function mapNotice(row: any): GuardianNotice {
     fromUserId: row.from_user_id,
     fromName: row.profiles ? `${row.profiles.first_name} ${row.profiles.last_name}` : undefined,
     type: row.type,
+    subjectId: row.subject_id ?? null,
+    subjectName: row.subjects?.name ?? undefined,
     title: row.title,
     body: row.body,
     meetingAt: row.meeting_at,
@@ -59,7 +61,7 @@ export async function getNoticesForGuardian(guardianUserId: string): Promise<Gua
   const data = unwrap(
     await supabase
       .from('guardian_notices')
-      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name)')
+      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name)')
       .order('created_at', { ascending: false })
   );
   const notices = data.map(mapNotice);
@@ -107,6 +109,8 @@ export async function createNotice(n: {
   studentId?: string | null;
   fromUserId: string;
   type: NoticeType;
+  /** Obligatoria para el docente: la citación es de una materia suya. */
+  subjectId?: string | null;
   title: string;
   body: string;
   meetingAt?: string | null;
@@ -117,6 +121,7 @@ export async function createNotice(n: {
     student_id: n.studentId ?? null,
     from_user_id: n.fromUserId,
     type: n.type,
+    subject_id: n.subjectId ?? null,
     title: n.title.trim(),
     body: n.body.trim(),
     meeting_at: n.meetingAt ?? null,
@@ -129,7 +134,7 @@ export async function getNoticesForStaff(): Promise<(GuardianNotice & { receipts
   const data = unwrap(
     await supabase
       .from('guardian_notices')
-      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name)')
+      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name)')
       .order('created_at', { ascending: false })
   );
   const notices = data.map(mapNotice);

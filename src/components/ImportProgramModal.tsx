@@ -141,6 +141,7 @@ export default function ImportProgramModal(props: Props) {
             fileSize: formatFileSize(fileSizeBytes),
             subjectId: props.subjectId,
             subjectName: props.subjectName,
+            courseId: props.courseId,
             teacherId: props.teacherId,
             schoolId: props.schoolId,
             tags: ['programa', 'planificación'],

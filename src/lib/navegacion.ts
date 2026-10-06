@@ -50,7 +50,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
-  { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'padres citación tutores' },
+  { ruta: '/familias', etiqueta: 'Citaciones', titulo: 'Citaciones a familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'familias padres citar citación tutores reunión' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Ayuda', ia: true, claves: 'asistente preguntar protocolo' },

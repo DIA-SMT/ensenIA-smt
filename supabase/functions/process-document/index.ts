@@ -531,7 +531,7 @@ Deno.serve(async (req: Request) => {
   // (el cache-hit va ANTES del chequeo de cuota: releer no gasta usos de IA)
   let cacheMaterial: {
     id: string; title: string; subject_name: string; subject_id: string;
-    teacher_id: string; school_id: string; is_shared_with_students: boolean;
+    teacher_id: string; school_id: string; is_shared_with_students: boolean; course_id: string | null;
     extracted_text: string | null; ai_summary: string | null;
     study_cards: { title: string; body: string }[] | null;
     practice_quiz: unknown | null; study_guide: string | null;
@@ -540,7 +540,7 @@ Deno.serve(async (req: Request) => {
   if (isCached) {
     const { data: mat } = await supabase
       .from('library_materials')
-      .select('id, title, subject_name, subject_id, teacher_id, school_id, is_shared_with_students, extracted_text, ai_summary, study_cards, practice_quiz, study_guide')
+      .select('id, title, subject_name, subject_id, course_id, teacher_id, school_id, is_shared_with_students, extracted_text, ai_summary, study_cards, practice_quiz, study_guide')
       .eq('id', materialId)
       .maybeSingle();
 
@@ -554,12 +554,28 @@ Deno.serve(async (req: Request) => {
       const { data: student } = await supabase
         .from('students').select('id').eq('user_id', user.id).maybeSingle();
       if (!student) return json({ error: 'FORBIDDEN', message: 'No encontramos tu ficha de estudiante.' }, 403);
-      const { data: enrollment } = await supabase
-        .from('enrollments').select('id')
-        .eq('student_id', student.id).eq('subject_id', mat.subject_id)
-        .limit(1).maybeSingle();
-      if (!enrollment) {
+      // Misma regla que student_sees_material (migración 051): el material es
+      // de su curso, o es de "todos los cursos" de quien lo subió y el
+      // estudiante cursa la materia con esa persona.
+      const { data: inscripciones } = await supabase
+        .from('enrollments').select('course_id')
+        .eq('student_id', student.id).eq('subject_id', mat.subject_id);
+      const cursos = (inscripciones ?? []).map((e: { course_id: string }) => e.course_id);
+      if (cursos.length === 0) {
         return json({ error: 'FORBIDDEN', message: 'No estás inscripto/a en esta materia.' }, 403);
+      }
+      let deSuCurso = false;
+      if (mat.course_id) {
+        deSuCurso = cursos.includes(mat.course_id);
+      } else {
+        const { data: asignaciones } = await supabase
+          .from('teacher_assignments').select('course_id')
+          .eq('teacher_id', mat.teacher_id).eq('subject_id', mat.subject_id);
+        const delDocente = (asignaciones ?? []).map((a: { course_id: string }) => a.course_id);
+        deSuCurso = delDocente.length === 0 || cursos.some((c) => delDocente.includes(c));
+      }
+      if (!deSuCurso) {
+        return json({ error: 'FORBIDDEN', message: 'Este material es de otro curso.' }, 403);
       }
     } else if (profile?.role === 'docente') {
       if (mat.teacher_id !== user.id) {
