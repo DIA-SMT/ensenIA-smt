@@ -104,6 +104,29 @@ export async function getOrCreateSession(
 }
 
 /**
+ * La última conversación libre (sin tema) del docente para esa materia y
+ * curso, o null. getOrCreateSession con classId null siempre crea una nueva,
+ * así que sin esto la conversación se perdía al recargar la página.
+ */
+export async function getFreeSession(
+  teacherId: string,
+  subjectId: string | null,
+  courseId: string | null,
+  title = 'Chat libre',
+): Promise<ChatSession | null> {
+  let query = supabase
+    .from('chat_sessions')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .is('class_id', null)
+    .eq('title', title);
+  query = subjectId ? query.eq('subject_id', subjectId) : query.is('subject_id', null);
+  query = courseId ? query.eq('course_id', courseId) : query.is('course_id', null);
+  const { data } = await query.order('updated_at', { ascending: false }).limit(1).maybeSingle();
+  return data ? mapSession(data) : null;
+}
+
+/**
  * Get all sessions for a teacher, ordered by last updated.
  */
 export async function getSessionsByTeacher(teacherId: string): Promise<ChatSession[]> {

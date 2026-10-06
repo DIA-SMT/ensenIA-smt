@@ -36,9 +36,11 @@ interface Props {
   /** Consolidar: crea un material de Biblioteca con el contenido editado. */
   onSaveAsMaterial: (content: string, title: string) => Promise<void>;
   /** Consolidar: abre el flujo de publicación de actividad con el contenido editado. */
-  onPublish: (content: string) => void;
-  /** Pide un ajuste a la IA (cierra el modal y manda el pedido al chat). */
-  onAskAdjust: (instruction: string) => void;
+  onPublish: (content: string, title: string) => void;
+  /** Pide un ajuste a la IA (cierra el modal y manda el pedido al chat).
+      Va con el texto que se está revisando: puede no ser la última respuesta
+      del chat, y puede tener cambios a mano. */
+  onAskAdjust: (instruction: string, content: string) => void;
 }
 
 export default function RefineResultModal({
@@ -112,7 +114,7 @@ export default function RefineResultModal({
               <div className="refine-adjust">
                 <span className="text-xs text-subtle"><Sparkles size={12} /> Pedile un ajuste a la IA:</span>
                 {QUICK_ADJUSTMENTS.map(a => (
-                  <button key={a} className="hint-chip" onClick={() => onAskAdjust(a)}>{a}</button>
+                  <button key={a} className="hint-chip" onClick={() => onAskAdjust(a, content)}>{a}</button>
                 ))}
               </div>
 
@@ -154,7 +156,7 @@ export default function RefineResultModal({
             <button
               className="btn btn-primary btn-sm"
               disabled={busy !== null}
-              onClick={() => onPublish(content)}
+              onClick={() => onPublish(content, title.trim())}
             >
               <ClipboardList size={14} /> Publicar actividad
             </button>
