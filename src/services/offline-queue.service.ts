@@ -11,8 +11,8 @@
  *
  * Del estudiante: avance y entrega de actividades, huellas, check-ins y
  * prácticas. Del docente: asistencia, notas del trimestre en borrador,
- * boletín y observaciones (publicar notas sí necesita señal: les avisa a
- * las familias).
+ * notas de las evaluaciones, boletín y observaciones (publicar notas sí
+ * necesita señal: les avisa a las familias).
  *
  * Lo que el SERVIDOR rechaza (permisos, validación) no se reintenta, pero
  * tampoco se tira en silencio: queda en "no se pudo guardar", con el
@@ -38,6 +38,7 @@ import { recordPracticeAttempt } from './practice.service';
 import { saveAttendance, type AttendanceEntry } from './attendance.service';
 import { saveGrades } from './gradebook.service';
 import { upsertGrade } from './libreta.service';
+import { guardarEvaluacion, type EvaluacionAGuardar } from './evaluaciones.service';
 import { haySenial, esErrorDeRed, suscribirConexion } from '../lib/conexion';
 import type {
   ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment, PracticeAttempt, ObservationCategory,
@@ -69,7 +70,8 @@ type OpDocente =
   | { kind: 'asistencia'; clave: string; descripcion: string; courseId: string; subjectId: string; fecha: string; entries: AttendanceEntry[]; note?: string }
   | { kind: 'notas'; clave: string; descripcion: string; subjectId: string; courseId: string; termId: string; rows: FilaNotaPendiente[] }
   | { kind: 'boletin'; clave: string; descripcion: string; fila: FilaBoletinPendiente }
-  | { kind: 'observacion'; clave: string; descripcion: string; id: string; studentId: string; teacherId: string; subjectId: string | null; category: ObservationCategory; note: string };
+  | { kind: 'observacion'; clave: string; descripcion: string; id: string; studentId: string; teacherId: string; subjectId: string | null; category: ObservationCategory; note: string }
+  | { kind: 'evaluacion'; clave: string; descripcion: string; evaluacion: EvaluacionAGuardar };
 
 type Op = OpEstudiante | OpDocente;
 type QueuedOp = Op & { ts: number; owner?: string };
@@ -170,6 +172,8 @@ async function run(op: QueuedOp): Promise<void> {
       });
     case 'boletin':
       return upsertGrade(op.fila);
+    case 'evaluacion':
+      return guardarEvaluacion(op.evaluacion);
     case 'observacion':
       return addObservation({
         id: op.id, studentId: op.studentId, teacherId: op.teacherId,
@@ -414,6 +418,12 @@ export const claveNotas = (subjectId: string, courseId: string, termId: string) 
   `notas|${subjectId}|${courseId}|${termId}`;
 export const claveBoletin = (f: { studentId: string; subjectId: string; schoolYear: number; term: number }) =>
   `boletin|${f.studentId}|${f.subjectId}|${f.schoolYear}|${f.term}`;
+export const claveEvaluacion = (id: string) => `evaluacion|${id}`;
+
+/** Una evaluación con todas sus notas (el id lo elige la app: reintentar no la duplica). */
+export function guardarEvaluacionResiliente(e: EvaluacionAGuardar, descripcion: string): Promise<ResultadoGuardado> {
+  return guardarDocente({ kind: 'evaluacion', clave: claveEvaluacion(e.id), descripcion, evaluacion: e }, () => guardarEvaluacion(e));
+}
 
 export function guardarAsistenciaResiliente(input: {
   courseId: string; subjectId: string; fecha: string; entries: AttendanceEntry[]; note?: string; descripcion: string;

@@ -14,18 +14,25 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle, BookOpen,
-  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users, CloudUpload,
+  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users, CloudUpload, Plus,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getEnrolledStudents } from '../services/activities.service';
-import { getTerms, ensureTerms, pickCurrentTerm, getGradebook, saveGrades } from '../services/gradebook.service';
+import {
+  getTerms, ensureTerms, pickCurrentTerm, getGradebook, saveGrades, promedioDeNotas,
+  type ColumnaLibreta, type LibretaTrimestre,
+} from '../services/gradebook.service';
+import { TIPOS_EVALUACION, type Evaluacion } from '../services/evaluaciones.service';
+import EvaluacionEditor from '../components/EvaluacionEditor';
+import { formatoNota } from '../lib/resumenNotas';
 import {
   getThresholds, DEFAULT_THRESHOLDS, notaLlevaADiciembre, textoReglaDiciembre,
 } from '../services/thresholds.service';
 import {
   guardarBoletinResiliente, guardarNotasBorradorResiliente, pendientesDe, claveNotas, olvidarPendiente,
-  subscribe as suscribirCola,
+  subscribe as suscribirCola, type ResultadoGuardado,
 } from '../services/offline-queue.service';
 import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useSinGuardar } from '../lib/sinGuardar';
@@ -496,6 +503,38 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
     );
 }
 
+/**
+ * La libreta con una evaluación puesta (nueva o corregida): su columna y la
+ * nota de cada alumno, y el promedio recalculado.
+ */
+function conEvaluacion(lib: LibretaTrimestre, e: Evaluacion): LibretaTrimestre {
+  const col: ColumnaLibreta = { id: e.id, origen: 'evaluacion', tipo: e.tipo, titulo: e.titulo, fecha: e.fecha, evaluacion: e };
+  const columnas = [...lib.columnas.filter(c => c.id !== e.id), col].sort((x, y) => x.fecha.localeCompare(y.fecha));
+  const filas = lib.filas.map(r => {
+    const notas = { ...r.notas };
+    delete notas[e.id];
+    if (e.notas[r.studentId]) notas[e.id] = e.notas[r.studentId];
+    const { suggested, from } = promedioDeNotas(notas);
+    return { ...r, notas, suggestedGrade: suggested, suggestedFrom: from };
+  });
+  return { filas, columnas };
+}
+
+function sinEvaluacion(lib: LibretaTrimestre, id: string): LibretaTrimestre {
+  return {
+    columnas: lib.columnas.filter(c => c.id !== id),
+    filas: lib.filas.map(r => {
+      const notas = { ...r.notas };
+      delete notas[id];
+      const { suggested, from } = promedioDeNotas(notas);
+      return { ...r, notas, suggestedGrade: suggested, suggestedFrom: from };
+    }),
+  };
+}
+
+/** "2026-10-05" → "5/10" */
+const diaMes = (f: string) => `${Number(f.slice(8, 10))}/${Number(f.slice(5, 7))}`;
+
 export default function Libreta() {
   const { user } = useAuth();
   const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
@@ -503,6 +542,10 @@ export default function Libreta() {
   const [termId, setTermId] = useState<string>('');
   const [assignmentIdx, setAssignmentIdx] = useState(0);
   const [rows, setRows] = useState<GradebookRow[]>([]);
+  // Las evaluaciones y actividades del trimestre (una columna cada una, 050)
+  const [columnas, setColumnas] = useState<ColumnaLibreta[]>([]);
+  // La evaluación que se está cargando: 'nueva' o una existente
+  const [editando, setEditando] = useState<Evaluacion | 'nueva' | null>(null);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -562,6 +605,7 @@ export default function Libreta() {
     if (!assignment || !term) {
       setLoading(false);
       setRows([]);
+      setColumnas([]);
       return;
     }
     let cancelled = false;
@@ -570,7 +614,7 @@ export default function Libreta() {
     setError('');
     setSucio(false);
     leerLibreta()
-      .then(r => { if (!cancelled) setRows(r); })
+      .then(l => { if (!cancelled) { setRows(l.filas); setColumnas(l.columnas); } })
       .catch(err => {
         console.error(err);
         if (!cancelled) setError(haySenial()
@@ -585,7 +629,7 @@ export default function Libreta() {
   useEffect(() => suscribirCola(() => {
     if (!pendiente || pendientesDe('notas').some(op => op.clave === clave)) return;
     setPendiente(false);
-    if (!sucio) leerLibreta().then(setRows).catch(console.error);
+    if (!sucio) leerLibreta().then(l => { setRows(l.filas); setColumnas(l.columnas); }).catch(console.error);
   }), [clave, pendiente, sucio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -595,21 +639,51 @@ export default function Libreta() {
    * se pueda guardar. Si hay un borrador guardado en el equipo sin enviar,
    * sus notas mandan sobre las del servidor.
    */
-  async function leerLibreta(): Promise<GradebookRow[]> {
-    if (!user || !assignment || !term) return [];
+  async function leerLibreta(): Promise<LibretaTrimestre> {
+    if (!user || !assignment || !term) return { filas: [], columnas: [] };
     const students = await getEnrolledStudents(assignment.subjectId, assignment.courseId);
-    const leidas = await getGradebook({
+    let libreta = await getGradebook({
       subjectId: assignment.subjectId, courseId: assignment.courseId, term, students, teacherId: user.id,
     });
+    // Evaluaciones cargadas sin señal, todavía sin enviar: se ven igual
+    for (const op of pendientesDe('evaluacion')) {
+      const e = op.evaluacion;
+      if (e.subjectId !== assignment.subjectId || e.courseId !== assignment.courseId || e.termId !== term.id) continue;
+      libreta = conEvaluacion(libreta, {
+        ...e, pendiente: true,
+        notas: Object.fromEntries(e.notas.filter(n => n.ausente || n.nota !== null).map(n => [n.studentId, { nota: n.nota, ausente: n.ausente }])),
+      });
+    }
     const enEspera = pendientesDe('notas').find(op => op.clave === claveNotas(assignment.subjectId, assignment.courseId, term.id));
     setPendiente(!!enEspera);
-    if (!enEspera) return leidas;
+    if (!enEspera) return libreta;
     const porAlumno = new Map(enEspera.rows.map(r => [r.studentId, r]));
-    return leidas.map(r => {
-      const p = porAlumno.get(r.studentId);
-      return p ? { ...r, grade: p.grade, teacherNote: p.teacherNote ?? r.teacherNote } : r;
-    });
+    return {
+      ...libreta,
+      filas: libreta.filas.map(r => {
+        const p = porAlumno.get(r.studentId);
+        return p ? { ...r, grade: p.grade, teacherNote: p.teacherNote ?? r.teacherNote } : r;
+      }),
+    };
   }
+
+  /** Lo que devolvió el editor: se pone en la libreta sin volver a leer (no pisa notas tipeadas). */
+  const alGuardarEvaluacion = (e: Evaluacion, resultado: ResultadoGuardado) => {
+    const l = conEvaluacion({ filas: rows, columnas }, e);
+    setRows(l.filas);
+    setColumnas(l.columnas);
+    setEditando(null);
+    setOkMsg(resultado === 'pendiente'
+      ? `Notas de «${e.titulo}» guardadas en este equipo. Se envían solas cuando haya señal.`
+      : `Notas de «${e.titulo}» guardadas. Ya las ven los alumnos y sus familias.`);
+  };
+  const alBorrarEvaluacion = (id: string) => {
+    const l = sinEvaluacion({ filas: rows, columnas }, id);
+    setRows(l.filas);
+    setColumnas(l.columnas);
+    setEditando(null);
+    setOkMsg('Evaluación borrada.');
+  };
 
   if (!user) return null;
 
@@ -716,7 +790,9 @@ export default function Libreta() {
         setOkMsg('Notas publicadas. Las familias en riesgo ya fueron avisadas.');
       }
       // Releer para traer ids, estado y lo que selló el servidor.
-      setRows(await leerLibreta());
+      const l = await leerLibreta();
+      setRows(l.filas);
+      setColumnas(l.columnas);
     } catch (err) {
       console.error(err);
       // Se guarda todo junto o nada (047): lo tipeado sigue en pantalla, intacto.
@@ -842,12 +918,43 @@ export default function Libreta() {
 
           {tab === 'notas' && !loading && rows.length > 0 && (
             <div className="card">
+              <div className="libreta-evals">
+                <span className="text-sm text-secondary">
+                  {columnas.length === 0
+                    ? 'Todavía no hay notas cargadas en este trimestre: cargá las de una prueba, un TP o un oral.'
+                    : [
+                      [columnas.filter(c => c.origen === 'evaluacion').length, 'evaluación cargada', 'evaluaciones cargadas'],
+                      [columnas.filter(c => c.origen === 'actividad').length, 'actividad de la app', 'actividades de la app'],
+                    ].filter(([n]) => n).map(([n, uno, varios]) => `${n} ${n === 1 ? uno : varios}`).join(' · ')}
+                </span>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditando('nueva')}>
+                  <Plus size={14} aria-hidden="true" /> Cargar notas de una evaluación
+                </button>
+              </div>
               <div className="table-responsive">
                 <table className="modern-table libreta-table">
                   <thead>
                     <tr>
                       <th>Estudiante</th>
-                      <th title="Calculada con las entregas de tus actividades del trimestre">Sugerida</th>
+                      {columnas.map(c => (
+                        <th key={c.id} className="libreta-col" scope="col">
+                          {c.origen === 'evaluacion' && c.evaluacion ? (
+                            <button type="button" className="libreta-col-btn" onClick={() => setEditando(c.evaluacion!)}
+                              title={`${TIPOS_EVALUACION[c.evaluacion.tipo].label} · ${diaMes(c.fecha)}. Tocá para corregir las notas.`}>
+                              <span aria-hidden="true">{TIPOS_EVALUACION[c.evaluacion.tipo].emoji}</span>
+                              <span className="libreta-col-titulo">{c.titulo}</span>
+                              <span className="libreta-col-fecha">{diaMes(c.fecha)}{c.evaluacion.pendiente && <CloudUpload size={11} aria-label=" sin enviar" />}</span>
+                            </button>
+                          ) : (
+                            <Link to={`/actividades/${c.id}`} className="libreta-col-btn" title={`Actividad de la app · ${diaMes(c.fecha)}`}>
+                              <span aria-hidden="true">💻</span>
+                              <span className="libreta-col-titulo">{c.titulo}</span>
+                              <span className="libreta-col-fecha">{diaMes(c.fecha)}</span>
+                            </Link>
+                          )}
+                        </th>
+                      ))}
+                      <th title="Promedio de las notas del trimestre: evaluaciones cargadas y actividades corregidas">Promedio</th>
                       <th>Nota del trimestre</th>
                       <th>Estado</th>
                     </tr>
@@ -861,17 +968,28 @@ export default function Libreta() {
                             <span className="font-medium">{r.firstName} {r.lastName}</span>
                           </div>
                         </td>
-                        <td data-label="Sugerida">
+                        {columnas.map(c => {
+                          const n = r.notas[c.id];
+                          return (
+                            <td key={c.id} data-label={c.titulo} className="libreta-celda">
+                              {!n ? <span className="text-subtle" aria-label="sin nota">·</span>
+                                : n.ausente ? <span className="libreta-ausente" title="Ausente">A</span>
+                                  : n.sinCorregir ? <span className="text-subtle" title="La entregó y falta corregirla">s/c</span>
+                                    : <span className={n.nota !== null && n.nota < 6 ? 'libreta-baja' : undefined}>{formatoNota(n.nota as number)}</span>}
+                            </td>
+                          );
+                        })}
+                        <td data-label="Promedio">
                           {r.suggestedGrade !== null ? (
                             <span
                               className="libreta-suggested"
-                              title={`Promedio de ${r.suggestedFrom} entrega${r.suggestedFrom !== 1 ? 's' : ''} calificada${r.suggestedFrom !== 1 ? 's' : ''} de TUS actividades en este trimestre`}
+                              title={`Promedio de ${r.suggestedFrom} nota${r.suggestedFrom !== 1 ? 's' : ''} del trimestre`}
                             >
-                              <Sparkles size={12} /> {r.suggestedGrade.toFixed(1)}
+                              <Sparkles size={12} /> {formatoNota(r.suggestedGrade)}
                               <span className="text-subtle text-xs"> ({r.suggestedFrom})</span>
                             </span>
                           ) : (
-                            <span className="text-subtle text-sm" title="No hay entregas calificadas de tus actividades en este trimestre">—</span>
+                            <span className="text-subtle text-sm" title="Todavía no tiene notas en este trimestre">—</span>
                           )}
                         </td>
                         <td data-label="Nota del trimestre">
@@ -908,7 +1026,7 @@ export default function Libreta() {
 
               <div className="libreta-actions">
                 <button className="btn btn-outline btn-sm" onClick={applySuggestions} disabled={busy}>
-                  <Sparkles size={14} /> Usar sugeridas donde falta
+                  <Sparkles size={14} /> Usar el promedio donde falta
                 </button>
                 <div className="libreta-actions-right">
                   <button className="btn btn-outline btn-sm" onClick={() => persist('borrador')} disabled={busy}>
@@ -919,6 +1037,21 @@ export default function Libreta() {
                   </button>
                 </div>
               </div>
+
+              {editando && assignment && term && (
+                <EvaluacionEditor
+                  contexto={{
+                    subjectId: assignment.subjectId, courseId: assignment.courseId, termId: term.id,
+                    subjectName: subjectsMap[assignment.subjectId]?.name ?? 'Materia', courseName: assignment.courseName,
+                    termName: term.name, termStartsOn: term.startsOn, termEndsOn: term.endsOn,
+                  }}
+                  alumnos={[...rows].sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`))}
+                  evaluacion={editando === 'nueva' ? null : editando}
+                  alCerrar={() => setEditando(null)}
+                  alGuardar={alGuardarEvaluacion}
+                  alBorrar={alBorrarEvaluacion}
+                />
+              )}
 
               {thresholds && (
                 <p className="libreta-rule">
