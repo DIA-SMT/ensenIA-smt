@@ -1,0 +1,43 @@
+/* Temas de una unidad, con los NAP de cada uno (047) */
+
+.temario-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.temario-temas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: calc(-1 * var(--space-2)) 0 0 var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-color);
+}
+
+.temario-tema {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.temario-tema-titulo {
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.temario-tema-objetivos {
+  margin: 0;
+  padding-left: 1.125rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+@media (max-width: 30rem) {
+  .temario-temas { margin-left: 0; padding-left: var(--space-2); }
+}
