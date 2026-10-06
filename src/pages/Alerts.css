@@ -101,11 +101,28 @@
 
 /* .badge-escalada vive en index.css: la comparten Alertas y Dashboard. */
 
+.lifecycle-title {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
 .lifecycle-msg {
   font-size: 0.875rem;
   color: var(--text-primary);
   line-height: 1.45;
 }
+
+/* Quién le avisó a dirección y por qué (051) */
+.lifecycle-escalada {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--accent-ia);
+  line-height: 1.4;
+}
+.lifecycle-escalada svg { flex-shrink: 0; margin-top: 2px; }
 
 .lifecycle-intervention {
   display: flex;

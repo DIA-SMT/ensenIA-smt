@@ -5,7 +5,7 @@ export async function getAlertsByTeacher(teacherId: string): Promise<Alert[]> {
   const data = unwrap(
     await supabase
       .from('alerts')
-      .select('*, alert_students(student_id)')
+      .select('*, alert_students(student_id), docente:profiles!alerts_teacher_id_fkey(first_name, last_name)')
       .eq('teacher_id', teacherId)
       .order('created_at', { ascending: false })
   );
@@ -17,7 +17,7 @@ export async function getAlertsBySchool(schoolId: string): Promise<Alert[]> {
   const data = unwrap(
     await supabase
       .from('alerts')
-      .select('*, alert_students(student_id)')
+      .select('*, alert_students(student_id), docente:profiles!alerts_teacher_id_fkey(first_name, last_name)')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
   );
@@ -106,5 +106,68 @@ function mapAlert(row: any): Alert {
     closedOutcome: row.closed_outcome,
     closedAt: row.closed_at,
     escalatedAt: row.escalated_at,
+    escalatedBy: row.escalated_by ?? null,
+    escalationReason: row.escalation_reason ?? null,
+    teacherName: row.docente ? `${row.docente.first_name} ${row.docente.last_name}` : undefined,
   };
+}
+
+// ── Avisos entre personas (051) ──
+
+/** De qué se trata el aviso a dirección desde la ficha de un alumno. */
+export const TEMAS_AVISO: { valor: string; label: string }[] = [
+  { valor: 'convivencia', label: 'Convivencia' },
+  { valor: 'bienestar', label: 'Bienestar' },
+  { valor: 'aprendizaje', label: 'Aprendizaje' },
+  { valor: 'asistencia', label: 'Asistencia' },
+  { valor: 'familia', label: 'La familia' },
+  { valor: 'otro', label: 'Otro' },
+];
+
+const sinLa051 = (code?: string) => code === 'PGRST202';
+const MENSAJE_SIN_051 = 'Falta correr la migración 051_avisos_entre_personas.sql en Supabase.';
+
+/** El docente le avisa a dirección desde una alerta suya: queda escalada y le llega a cada directivo. */
+export async function avisarADireccion(alertId: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('avisar_a_direccion', { p_alert: alertId, p_motivo: motivo.trim() });
+  if (error) throw new Error(sinLa051(error.code) ? MENSAJE_SIN_051 : error.message);
+}
+
+/** El docente le avisa a dirección sobre un alumno que tiene a cargo, sin alerta previa. */
+export async function avisarADireccionPorAlumno(studentId: string, tema: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('avisar_a_direccion_por_alumno', { p_student: studentId, p_tema: tema, p_motivo: motivo.trim() });
+  if (error) throw new Error(sinLa051(error.code) ? MENSAJE_SIN_051 : error.message);
+}
+
+/** Lo que dirección tiene pendiente: alertas escaladas (por un docente o por el tiempo) y sin cerrar. */
+export async function getEscaladasPendientes(schoolId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('alerts')
+    .select('id', { count: 'exact', head: true })
+    .eq('school_id', schoolId)
+    .not('escalated_at', 'is', null)
+    .neq('status', 'cerrada');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export interface DocenteDelAlumno {
+  teacherId: string;
+  nombre: string;
+  materias: string;
+}
+
+/** Los docentes del curso del alumno, para elegir con quién quiere hablar. */
+export async function getMisDocentes(): Promise<DocenteDelAlumno[]> {
+  const { data, error } = await supabase.rpc('mis_docentes');
+  if (error) throw new Error(sinLa051(error.code) ? MENSAJE_SIN_051 : error.message);
+  return (data ?? []).map(d => ({ teacherId: d.teacher_id, nombre: d.nombre, materias: d.materias }));
+}
+
+/** El alumno pide hablar con un docente (o con cualquiera de los suyos, con null). */
+export async function pedirHablarConDocente(teacherId: string | null, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('pedir_hablar_con_docente', {
+    p_teacher: teacherId, p_motivo: motivo.trim() || null,
+  });
+  if (error) throw new Error(sinLa051(error.code) ? MENSAJE_SIN_051 : error.message);
 }

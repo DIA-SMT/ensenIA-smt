@@ -322,6 +322,11 @@ export interface Alert {
   closedOutcome?: AlertOutcome | null;
   closedAt?: string | null;
   escalatedAt?: string | null;
+  /** Quién la escaló a dirección (un docente); null si fue el sistema a las 72 h (051) */
+  escalatedBy?: string | null;
+  escalationReason?: string | null;
+  /** Nombre del docente de la alerta */
+  teacherName?: string;
 }
 
 export const ALERT_STATUS_META: Record<AlertStatus, { label: string; badgeClass: string }> = {

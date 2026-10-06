@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import {
     Search, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
-    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload,
+    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload, ArrowUpRight,
 } from 'lucide-react';
+import { avisarADireccionPorAlumno, TEMAS_AVISO } from '../services/alerts.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentsByTeacher, getWorkByStudent, type StudentWork } from '../services/students.service';
 import { logAccess } from '../services/audit.service';
@@ -139,6 +140,28 @@ export default function Students() {
         }
     };
 
+    // Avisar a dirección sobre este alumno (051)
+    const [avisoAbierto, setAvisoAbierto] = useState(false);
+    const [avisoTema, setAvisoTema] = useState('convivencia');
+    const [avisoMotivo, setAvisoMotivo] = useState('');
+    const [avisoEnviando, setAvisoEnviando] = useState(false);
+    const [avisoError, setAvisoError] = useState('');
+    const handleAvisarDireccion = async () => {
+        if (!selectedStudent || !avisoMotivo.trim() || avisoEnviando) return;
+        setAvisoEnviando(true);
+        setAvisoError('');
+        try {
+            await avisarADireccionPorAlumno(selectedStudent.id, avisoTema, avisoMotivo);
+            avisar.exito('Le avisaste a dirección', 'Le llegó a cada directivo. Lo seguís en Alertas → Avisadas a dirección.');
+            setAvisoAbierto(false);
+            setAvisoMotivo('');
+        } catch (err) {
+            setAvisoError(err instanceof Error ? err.message : 'No se pudo avisar. Probá de nuevo.');
+        } finally {
+            setAvisoEnviando(false);
+        }
+    };
+
     // Cierre del círculo: registrar que la conversación pasó
     const [talkSaving, setTalkSaving] = useState(false);
     const handleTalked = async () => {
@@ -223,6 +246,9 @@ export default function Students() {
         setObsNote('');
         setObsError('');
         setObsSaved(false);
+        setAvisoAbierto(false);
+        setAvisoMotivo('');
+        setAvisoError('');
         setAwards([]);
         setStudentProgress(null);
         setNotasFicha(null);
@@ -831,7 +857,7 @@ export default function Students() {
                                     </ul>
                                     {sig.nextStep && <p className="senal-step">👉 {sig.nextStep}</p>}
                                     <p className="senal-disclaimer">
-                                        Es una señal para conversar, no un diagnóstico. Si algo te preocupa, derivá a dirección o al gabinete.
+                                        Es una señal para conversar, no un diagnóstico. Si algo te preocupa, avisale a dirección desde «Avisar a dirección», más abajo.
                                     </p>
                                     <button className="btn btn-outline btn-sm" onClick={handleTalked} disabled={talkSaving}>
                                         {talkSaving ? 'Registrando...' : '✓ Lo hablamos — registrar'}
@@ -976,6 +1002,42 @@ export default function Students() {
                             <button className="btn btn-outline btn-sm mt-2 w-full" onClick={openCite}>
                                 <CalendarPlus size={14} /> Citar a la familia
                             </button>
+                        </div>
+
+                        {/* ── Avisar a dirección (051) ── */}
+                        <div className="profile-section">
+                            <h4><ArrowUpRight size={14} className="text-secondary inline ml-1" /> Dirección</h4>
+                            {!avisoAbierto ? (
+                                <>
+                                    <p className="text-sm text-secondary">Si algo te preocupa de {selectedStudent.firstName}, contáselo a dirección: le llega a cada directivo y lo ven en Alertas.</p>
+                                    <button className="btn btn-outline btn-sm mt-2 w-full" onClick={() => { setAvisoAbierto(true); setAvisoError(''); }}>
+                                        <ArrowUpRight size={14} /> Avisar a dirección
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="stu-aviso">
+                                    <label className="text-xs text-secondary" htmlFor="stu-aviso-tema">Sobre</label>
+                                    <select id="stu-aviso-tema" className="form-select" value={avisoTema} onChange={e => setAvisoTema(e.target.value)}>
+                                        {TEMAS_AVISO.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+                                    </select>
+                                    <textarea
+                                        className="form-textarea"
+                                        rows={3}
+                                        maxLength={1000}
+                                        value={avisoMotivo}
+                                        onChange={e => setAvisoMotivo(e.target.value)}
+                                        placeholder="Qué pasa y qué necesitás de dirección…"
+                                        aria-label="Motivo del aviso a dirección"
+                                    />
+                                    {avisoError && <p className="text-xs text-danger">{avisoError}</p>}
+                                    <div className="stu-aviso-botones">
+                                        <button className="btn btn-ghost btn-sm" onClick={() => setAvisoAbierto(false)} disabled={avisoEnviando}>Cancelar</button>
+                                        <button className="btn btn-primary btn-sm" onClick={handleAvisarDireccion} disabled={avisoEnviando || !avisoMotivo.trim()}>
+                                            {avisoEnviando ? 'Avisando…' : 'Avisar a dirección'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

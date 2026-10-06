@@ -55,6 +55,7 @@ export const cargadores = {
   '/actividades/:id':     () => import('../pages/ActividadDetalle'),
   '/libreta':             () => import('../pages/Libreta'),
   '/familias':            () => import('../pages/Familias'),
+  '/comunicados':         () => import('../pages/ComunicadosDireccion'),
   '/comunicados-familia': () => import('../pages/ComunicadosFamilia'),
   '/mis-hijos':           () => import('../pages/MisHijos'),
   '/mis-actividades':     () => import('../pages/MisActividades'),
