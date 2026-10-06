@@ -332,3 +332,26 @@ export function createAccount(a: NewAccount): Promise<AccountCredentials> {
 export function resetPassword(userId: string): Promise<{ login: string; password: string }> {
   return callAdminUsuarios({ action: 'reset_password', userId });
 }
+
+// ── Alumnos de muestra (solo superadmin, migración 048) ──
+
+/** Cuántos alumnos de muestra hay en cada curso: { courseId: cantidad } */
+export async function getDemoStudents(schoolId: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('demo_alumnos_estado', { p_school: schoolId });
+  if (error) throw error;
+  return (data ?? {}) as Record<string, number>;
+}
+
+/** Carga 20 alumnos inventados con su historia (si ya había, empieza de cero). */
+export async function loadDemoStudents(courseId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('demo_alumnos_cargar', { p_course: courseId });
+  if (error) throw error;
+  return data ?? 0;
+}
+
+/** Los borra con todo lo suyo. Los alumnos reales no se tocan. */
+export async function removeDemoStudents(courseId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('demo_alumnos_quitar', { p_course: courseId });
+  if (error) throw error;
+  return data ?? 0;
+}

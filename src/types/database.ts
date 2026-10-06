@@ -3194,6 +3194,18 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      demo_alumnos_estado: {
+        Args: { p_school: string }
+        Returns: Json
+      }
+      demo_alumnos_cargar: {
+        Args: { p_course: string }
+        Returns: number
+      }
+      demo_alumnos_quitar: {
+        Args: { p_course: string }
+        Returns: number
+      }
       live_class_material: {
         Args: { p_session: string }
         Returns: Json
