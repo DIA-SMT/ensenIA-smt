@@ -422,3 +422,23 @@ export function mazoDeMaterial(
   const viejo = material.extractedText ? parsearLegado(material.extractedText) : null;
   return viejo ? desdeLegado(viejo) : null;
 }
+
+/**
+ * Genera la ilustración de una diapositiva y la deja en el bucket.
+ *
+ * Devuelve la ruta, no la imagen: la sube el servidor, que es el único con
+ * la clave del modelo. Es opt-in del docente y nunca automático, porque
+ * cuesta por imagen.
+ */
+export async function generarImagenDeLamina(
+  descripcion: string,
+  context?: { subjectName?: string },
+): Promise<string> {
+  const { ruta } = await callProcessDocument<{ ruta: string }>({
+    mode: 'slide_image',
+    text: descripcion,
+    context,
+  });
+  if (!ruta) throw new Error('La IA no devolvió una imagen. Probá de nuevo.');
+  return ruta;
+}

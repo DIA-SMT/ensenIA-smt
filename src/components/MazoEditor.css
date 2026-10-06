@@ -197,3 +197,46 @@
 }
 
 .me-alt input:focus { border-color: var(--border-focus); }
+
+/* ── Pedirle la ilustración a la IA ── */
+
+.me-pedir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--cyan-dim);
+  border-radius: var(--radius-sm);
+}
+
+.me-pedir label { display: flex; flex-direction: column; gap: 5px; }
+
+.me-pedir label > span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.me-pedir input {
+  padding: 8px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.me-pedir input:focus { border-color: var(--border-focus); }
+
+.me-pedir-aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-subtle);
+}
+
+.me-pedir-acciones { display: flex; justify-content: flex-end; gap: var(--space-2); }

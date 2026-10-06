@@ -14,13 +14,13 @@
 import { useState } from 'react';
 import {
     ChevronUp, ChevronDown, Copy, Trash2, Plus, Save, Download,
-    Palette, LayoutTemplate, StickyNote, Loader2, ImagePlus,
+    Palette, LayoutTemplate, StickyNote, Loader2, ImagePlus, Sparkles,
 } from 'lucide-react';
 import { Lamina } from './MazoVisor';
 import { DISENOS, disenoDe, varsDiseno, DISENO_PREDETERMINADO } from '../lib/disenos';
 import { TIPOS_LAMINA, type Mazo, type Diapositiva, type TipoLamina } from '../lib/diapositivas';
 import { exportarMazoPptx } from '../lib/pptxMazo';
-import { uploadFile } from '../services/documents.service';
+import { uploadFile, generarImagenDeLamina } from '../services/documents.service';
 import { avisar } from './ui/avisar';
 import './MazoEditor.css';
 
@@ -44,6 +44,44 @@ function laminaNueva(tipo: TipoLamina): Diapositiva {
     return { ...base, puntos: [''] };
 }
 
+/**
+ * Qué dibujar. Se ofrece el título de la lámina como punto de partida,
+ * pero conviene reescribirlo: "el target de un aviso publicitario" da una
+ * ilustración mejor que "¿A quién le habla el aviso?".
+ */
+function PedirIlustracion({ sugerencia, alPedir, alCancelar }: {
+    sugerencia: string;
+    alPedir: (descripcion: string) => void;
+    alCancelar: () => void;
+}) {
+    const [texto, setTexto] = useState(sugerencia);
+    const pedir = () => { if (texto.trim()) alPedir(texto.trim()); };
+
+    return (
+        <div className="me-pedir">
+            <label>
+                <span>¿Qué querés que dibuje?</span>
+                <input
+                    type="text"
+                    value={texto}
+                    autoFocus
+                    placeholder="Una escena, un objeto, una idea"
+                    onChange={e => setTexto(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') pedir(); }}
+                />
+            </label>
+            <p className="me-pedir-aviso">
+                Hace una ilustración conceptual, sin texto. Para un mapa, un esquema o una
+                foto real, subila vos: la IA los inventa y quedan mal.
+            </p>
+            <div className="me-pedir-acciones">
+                <button className="btn btn-outline btn-sm" onClick={alCancelar}>Cancelar</button>
+                <button className="btn btn-primary btn-sm" disabled={!texto.trim()} onClick={pedir}>Dibujar</button>
+            </div>
+        </div>
+    );
+}
+
 export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie, contexto, docenteId }: {
     mazo: Mazo;
     alCambiar: (m: Mazo) => void;
@@ -59,6 +97,8 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
     const [verNotas, setVerNotas] = useState(true);
     const [bajando, setBajando] = useState(false);
     const [subiendo, setSubiendo] = useState(false);
+    const [generando, setGenerando] = useState(false);
+    const [pidiendoIA, setPidiendoIA] = useState(false);
 
     const total = mazo.diapositivas.length;
     const idx = Math.min(i, total - 1);
@@ -140,6 +180,28 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
             avisar.error('No se pudo subir la imagen', err instanceof Error ? err.message : '');
         } finally {
             setSubiendo(false);
+        }
+    };
+
+    /**
+     * Pide la ilustración a la IA.
+     *
+     * El prompt del servidor la empuja a algo conceptual y sin texto: una
+     * IA dibujando un mapa, un esquema del aparato digestivo o el retrato
+     * de un prócer produce algo que PARECE material didáctico y está mal,
+     * y termina proyectado como si fuera una fuente. Para eso está subir
+     * la imagen real.
+     */
+    const generarImagen = async (descripcion: string) => {
+        setPidiendoIA(false);
+        setGenerando(true);
+        try {
+            const ruta = await generarImagenDeLamina(descripcion, { subjectName: contexto?.subjectName });
+            reemplazar(idx, { ...dia, imagen: { ruta, alt: dia.imagen?.alt || descripcion.slice(0, 200) } });
+        } catch (err) {
+            avisar.error('No se pudo generar la imagen', err instanceof Error ? err.message : '');
+        } finally {
+            setGenerando(false);
         }
     };
 
@@ -245,6 +307,15 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
 
                     {dia.tipo === 'imagen' && (
                         <div className="me-imagen">
+                            <button
+                                className="btn btn-outline btn-sm"
+                                onClick={() => setPidiendoIA(true)}
+                                disabled={subiendo || generando}
+                                title="La IA dibuja una ilustración a partir de lo que le pidas"
+                            >
+                                {generando ? <Loader2 size={14} className="girando" /> : <Sparkles size={14} />}
+                                {generando ? 'Dibujando...' : 'Generar con IA'}
+                            </button>
                             <label className="btn btn-outline btn-sm">
                                 {subiendo ? <Loader2 size={14} className="girando" /> : <ImagePlus size={14} />}
                                 {dia.imagen ? 'Cambiar imagen' : 'Subir imagen'}
@@ -272,6 +343,14 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
                                 </label>
                             )}
                         </div>
+                    )}
+
+                    {pidiendoIA && (
+                        <PedirIlustracion
+                            sugerencia={dia.titulo}
+                            alCancelar={() => setPidiendoIA(false)}
+                            alPedir={generarImagen}
+                        />
                     )}
 
                     {verNotas && (

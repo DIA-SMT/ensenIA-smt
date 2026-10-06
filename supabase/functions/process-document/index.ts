@@ -25,7 +25,7 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides';
+  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -530,7 +530,7 @@ Deno.serve(async (req: Request) => {
   const { mode, pdfBase64, materialId, context } = body;
   let { text, title } = body;
 
-  if (!mode || (mode !== 'youtube_transcript' && !PROMPTS[mode])) return json({ error: 'INVALID_MODE' }, 400);
+  if (!mode || (mode !== 'youtube_transcript' && mode !== 'slide_image' && !PROMPTS[mode])) return json({ error: 'INVALID_MODE' }, 400);
   const isCached = CACHED_MODES.includes(mode);
   if (mode === 'youtube_transcript') {
     if (!body.videoUrl) return json({ error: 'MISSING_INPUT', message: 'Falta videoUrl.' }, 400);
@@ -571,6 +571,74 @@ Deno.serve(async (req: Request) => {
   // Lista de permitidos: familias y cuentas sin perfil no usan la IA de docente.
   if (profile?.role !== 'estudiante' && profile?.role !== 'docente' && profile?.role !== 'director') {
     return json({ error: 'FORBIDDEN_ROLE', message: 'Tu cuenta no puede usar esta función.' }, 403);
+  }
+
+  // ── Imagen para una diapositiva ──
+  //
+  // Opt-in del docente, nunca automático: cuesta por imagen.
+  //
+  // El prompt empuja a ilustración conceptual a propósito. Una IA dibujando
+  // un mapa de Tucumán, el aparato digestivo o el retrato de un prócer
+  // produce algo que PARECE material didáctico y está mal, y termina
+  // proyectado en un aula como si fuera una fuente. Para eso está subir la
+  // imagen real, que ya se puede.
+  if (mode === 'slide_image') {
+    const descripcion = (body.text ?? '').trim().slice(0, 500);
+    if (!descripcion) return json({ error: 'SIN_DESCRIPCION', message: 'Falta describir la imagen.' }, 400);
+
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) return json({ error: 'NO_API_KEY' }, 500);
+
+    const instruccion = [
+      'Ilustración para una diapositiva de clase de secundaria.',
+      `Qué mostrar: ${descripcion}.`,
+      body.context?.subjectName ? `Materia: ${body.context.subjectName}.` : '',
+      'Estilo: ilustración plana, limpia, colores sobrios, mucho aire, sin texto ni letras de ningún tipo.',
+      'Conceptual y evocativa, NO un diagrama ni un esquema técnico.',
+      'Nada de datos, rótulos, cifras, mapas ni retratos de personas reales.',
+      'Formato apaisado.',
+    ].filter(Boolean).join(' ');
+
+    try {
+      const r = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image',
+          modalities: ['image', 'text'],
+          messages: [{ role: 'user', content: instruccion }],
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error('slide_image:', r.status, JSON.stringify(j).slice(0, 300));
+        return json({ error: 'IA_ERROR', message: 'No se pudo generar la imagen. Probá de nuevo.' }, 502);
+      }
+
+      // OpenRouter devuelve las imágenes en message.images[].image_url.url,
+      // como data URL.
+      const dataUrl: string | undefined = j?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      const base64 = dataUrl?.split(',')[1];
+      if (!base64) {
+        console.error('slide_image sin imagen:', JSON.stringify(j).slice(0, 300));
+        return json({ error: 'SIN_IMAGEN', message: 'La IA no devolvió una imagen. Probá de nuevo.' }, 502);
+      }
+
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const ruta = `${user.id}/ia/${crypto.randomUUID()}.png`;
+      const { error: upErr } = await supabase.storage
+        .from('library')
+        .upload(ruta, bytes, { contentType: 'image/png', upsert: false });
+      if (upErr) {
+        console.error('slide_image storage:', upErr.message);
+        return json({ error: 'STORAGE_ERROR', message: 'Se generó la imagen pero no se pudo guardar.' }, 500);
+      }
+
+      return json({ ruta });
+    } catch (err) {
+      console.error('slide_image:', err);
+      return json({ error: 'IA_ERROR', message: 'No se pudo generar la imagen.' }, 502);
+    }
   }
 
   // ── Transcripción de YouTube: subtítulos primero (gratis, sin cupo);
