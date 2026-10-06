@@ -7,7 +7,7 @@
  */
 
 import { supabase } from './_helpers';
-import { normalizarMazo, type Mazo } from '../lib/diapositivas';
+import { normalizarMazo, desdeLegado, aTextoPlano, type Mazo, type MazoLegado } from '../lib/diapositivas';
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
 import { usoIAGastado } from '../lib/usoIA';
 
@@ -387,4 +387,38 @@ export async function generateSlides(
       : 'La IA no pudo armar las diapositivas con este material. Probá de nuevo.');
   }
   return mazo;
+}
+
+/**
+ * Guarda el mazo editado en el material.
+ *
+ * Escribe las dos cosas a propósito: el JSON es la fuente de verdad, y
+ * extracted_text queda como copia en texto plano porque es el campo donde
+ * busca la biblioteca ("buscar por título, tag o contenido"). Si el mazo
+ * viviera solo en JSON, las presentaciones dejarían de aparecer en los
+ * resultados de búsqueda.
+ */
+export async function guardarMazo(materialId: string, mazo: Mazo): Promise<void> {
+  const { error } = await supabase
+    .from('library_materials')
+    .update({ slides: mazo as never, extracted_text: aTextoPlano(mazo) })
+    .eq('id', materialId);
+  if (error) throw error;
+}
+
+/**
+ * Lee el mazo de un material, venga del formato nuevo o del viejo.
+ *
+ * Los mazos guardados antes son Markdown en extracted_text: se convierten
+ * al vuelo con el parser de siempre. Nadie migra nada a mano; recién
+ * cuando alguien edita uno se guarda como JSON.
+ */
+export function mazoDeMaterial(
+  material: { slides?: unknown; extractedText?: string | null },
+  parsearLegado: (texto: string) => MazoLegado | null,
+): Mazo | null {
+  const estructurado = normalizarMazo(material.slides);
+  if (estructurado) return estructurado;
+  const viejo = material.extractedText ? parsearLegado(material.extractedText) : null;
+  return viejo ? desdeLegado(viejo) : null;
 }

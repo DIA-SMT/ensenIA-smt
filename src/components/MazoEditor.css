@@ -1,0 +1,168 @@
+/**
+ * Editor del mazo.
+ *
+ * La lámina conserva su aspecto real mientras se edita: los campos no
+ * tienen caja ni borde hasta que los tocás. El docente está mirando lo
+ * que va a proyectar, no un formulario.
+ */
+
+.me { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.me-barra,
+.me-herramientas {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.me-espaciador { flex: 1; }
+
+.me-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.me-select select {
+  padding: 6px 2px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.btn.activo {
+  color: var(--cyan-bright);
+  border-color: var(--cyan-dim);
+  background: var(--cyan-subtle);
+}
+
+.me-cuerpo {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ── La tira de láminas ── */
+
+.me-tira {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.me-mini {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.me-mini:hover { border-color: var(--border-color); }
+
+.me-mini.activa {
+  color: var(--text-primary);
+  background: var(--cyan-subtle);
+  border-color: var(--cyan-dim);
+}
+
+.me-mini-n {
+  flex-shrink: 0;
+  width: 1.7em;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.me-mini.activa .me-mini-n { color: var(--cyan-bright); }
+
+.me-mini-txt { display: flex; flex-direction: column; min-width: 0; }
+
+.me-mini-tipo {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.me-mini-titulo {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.me-mini-agregar {
+  justify-content: center;
+  color: var(--text-subtle);
+  background: none;
+  border: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+}
+
+.me-mini-agregar:hover { color: var(--cyan-bright); border-color: var(--cyan-dim); }
+
+/* ── El panel de edición ── */
+
+.me-panel { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+
+.me-borrar:not(:disabled):hover { color: var(--danger); }
+
+.me-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.me-nota > span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.me-nota textarea {
+  padding: 9px 11px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--cyan-bright);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  outline: none;
+}
+
+.me-nota textarea:focus { border-color: var(--border-focus); border-left-color: var(--cyan-bright); }
+
+@media (max-width: 820px) {
+  .me-cuerpo { grid-template-columns: 1fr; }
+  .me-tira { flex-direction: row; max-height: none; overflow-x: auto; padding-bottom: 4px; }
+  .me-mini { width: auto; flex-shrink: 0; }
+  .me-mini-titulo { max-width: 11ch; }
+}

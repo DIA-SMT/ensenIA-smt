@@ -247,3 +247,81 @@
   .mv-columnas { grid-template-columns: 1fr; gap: var(--space-3); }
   .mv-lamina { aspect-ratio: auto; min-height: 60vh; }
 }
+
+/* ══════════════════════════════════════
+   Modo edición
+   Los campos no se ven como campos hasta que los tocás: el docente está
+   mirando la lámina que va a proyectar, no completando un formulario.
+   ══════════════════════════════════════ */
+
+.mv-campo {
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+}
+
+.mv-campo::placeholder { color: var(--d-pie); opacity: 0.7; }
+.mv-campo:hover { border-color: color-mix(in srgb, var(--d-acento) 30%, transparent); }
+
+.mv-campo:focus {
+  border-color: var(--d-acento);
+  background: color-mix(in srgb, var(--d-acento) 7%, transparent);
+}
+
+/* La lámina en edición respira: los campos crecen y no puede recortarlos. */
+.mv-editando { aspect-ratio: auto; min-height: 42vh; }
+
+.mv-editando li { display: flex; align-items: flex-start; gap: 6px; }
+
+.mv-quitar {
+  flex-shrink: 0;
+  display: flex;
+  padding: 3px;
+  margin-top: 2px;
+  color: var(--d-pie);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+li:hover > .mv-quitar, .mv-quitar:focus-visible { opacity: 1; }
+.mv-quitar:hover { color: var(--danger); background: var(--danger-light); }
+
+.mv-agregar-li { list-style: none; }
+
+.mv-agregar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--d-pie);
+  background: none;
+  border: 1px dashed currentColor;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mv-agregar:hover { color: var(--d-acento); }
+
+/* La letra de cada opción es el botón de "esta es la correcta". */
+.mv-letra-btn { border: 2px solid transparent; cursor: pointer; }
+.mv-letra-btn:hover { outline: 2px solid var(--d-acento); outline-offset: 1px; }
+
+.mv-letra-btn.ok {
+  background: var(--success);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--success-light);
+}
