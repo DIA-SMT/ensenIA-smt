@@ -15,6 +15,7 @@ import type { StudyCard } from '../types';
 import { placaCompleta } from '../services/documents.service';
 import Dialogo from './shell/Dialogo';
 import { avisar, confirmar } from './ui/avisar';
+import UsosIA from './ui/UsosIA';
 import './Modals.css';
 import './ui/ui.css';
 import './PlacasEditor.css';
@@ -184,6 +185,7 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
                         <p>
                             {placas.length} placa{placas.length !== 1 ? 's' : ''} · quedan guardadas en el material y no se vuelven a generar.
                         </p>
+                        {alRehacer && <UsosIA />}
                         {alRehacer && (
                             <button className="btn btn-outline btn-sm" onClick={rehacer} disabled={ocupado}>
                                 {rehaciendo

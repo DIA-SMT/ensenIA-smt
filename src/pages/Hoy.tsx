@@ -12,12 +12,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
-    History, ClipboardList, Wand2, CalendarDays,
+    History, ClipboardList, Wand2, CalendarDays, Target,
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
-import { getTodaySchedule } from '../services/schedule.service';
+import { getScheduleByTeacher } from '../services/schedule.service';
+import { horaATexto } from '../lib/horas';
+import { useResumenRepaso } from '../services/comprension.service';
 import { getTeacherStats, getTeacherTimeline, type TimelineItem, type TimelineKind } from '../services/stats.service';
 import { getAlertsByTeacher } from '../services/alerts.service';
 import { getRecentAttendance, todayISO } from '../services/attendance.service';
@@ -59,12 +61,6 @@ function agruparRastro(items: TimelineItem[]): GrupoRastro[] {
     return grupos;
 }
 
-function formatHour(h: number): string {
-    const hh = Math.floor(h);
-    const mm = h % 1 ? '30' : '00';
-    return `${hh}:${mm}`;
-}
-
 function greeting(): string {
     const h = new Date().getHours();
     if (h < 13) return 'Buen día';
@@ -77,21 +73,28 @@ export default function Hoy() {
     const navigate = useNavigate();
 
     const [todayClasses, setTodayClasses] = useState<ScheduleBlock[]>([]);
+    // Todo el horario: para saber si está cargado y qué viene el lunes
+    const [semana, setSemana] = useState<ScheduleBlock[]>([]);
     const [stats, setStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, entregasParaCorregir: 0, avgAttendance: 0 });
     const [alerts, setAlerts] = useState<AlertType[]>([]);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
     const [isNew, setIsNew] = useState(false);
     const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+    // Temas donde el curso viene flojo (de actividades y clases en vivo)
+    const { temas: temasRepaso } = useResumenRepaso(user?.id);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) return;
-        const dayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
+        // 0 = lunes … 4 = viernes; el fin de semana no hay clases (antes el
+        // domingo mostraba las del viernes)
+        const dia = new Date().getDay();
+        const dayIndex = dia >= 1 && dia <= 5 ? dia - 1 : -1;
         const today = todayISO();
 
         Promise.all([
-            getTodaySchedule(user.id, dayIndex).catch(() => [] as ScheduleBlock[]),
+            getScheduleByTeacher(user.id).catch(() => [] as ScheduleBlock[]),
             getTeacherStats(user.id, dayIndex).catch(() => stats),
             getAlertsByTeacher(user.id).catch(() => [] as AlertType[]),
             getRecentAttendance(user.id, 20).catch(() => []),
@@ -99,8 +102,9 @@ export default function Hoy() {
             getActivitiesByTeacher(user.id).catch(() => []),
             getMaterialsByTeacher(user.id).catch(() => []),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
-        ]).then(([classes, st, al, attendance, live, activities, materials, trail]) => {
-            setTodayClasses(classes);
+        ]).then(([horario, st, al, attendance, live, activities, materials, trail]) => {
+            setSemana(horario);
+            setTodayClasses(horario.filter(b => b.dayIndex === dayIndex).sort((a, b) => a.startHour - b.startHour));
             setStats(st);
             setAlerts(al.filter(a => !a.isRead).slice(0, 3));
             setLiveSession(live);
@@ -116,6 +120,8 @@ export default function Hoy() {
     if (!user) return null;
 
     const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
+    const finDeSemana = [0, 6].includes(new Date().getDay());
+    const lunes = semana.filter(b => b.dayIndex === 0).length;
     const nextIdx = todayClasses.findIndex(c => c.startHour + c.duration > nowHour);
 
     return (
@@ -199,6 +205,20 @@ export default function Hoy() {
                 </Link>
             )}
 
+            {/* Hay temas que el curso no entendió */}
+            {temasRepaso !== null && temasRepaso > 0 && (
+                <Link to="/mis-clases?tab=repasar" className="card hoy-pending-banner hoy-repaso-banner">
+                    <span className="hoy-pending-icon"><Target size={18} aria-hidden="true" /></span>
+                    <div>
+                        <h4>{temasRepaso === 1 ? 'Hay un tema para repasar' : `Hay ${temasRepaso} temas para repasar`}</h4>
+                        <p className="text-sm text-secondary">
+                            Menos de 6 de cada 10 acertaron en actividades o en la clase en vivo.
+                        </p>
+                    </div>
+                    <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
+                </Link>
+            )}
+
             {/* Clases de hoy */}
             <section className="hoy-classes">
                 <h2 className="hoy-section-title"><Sun size={17} /> Tus clases de hoy</h2>
@@ -206,14 +226,26 @@ export default function Hoy() {
                 {loading && <Esqueleto filas={2} etiqueta="Cargando tus clases de hoy…" />}
 
                 {!loading && todayClasses.length === 0 && (
-                    <EstadoVacio
-                        compacto
-                        icono={CalendarDays}
-                        titulo="Hoy no tenés clases en el horario"
-                        texto="Buen momento para preparar material o ver cómo viene tu curso."
-                        accion={{ etiqueta: 'Crear', a: '/crear', icono: Wand2 }}
-                        accionSecundaria={{ etiqueta: 'Ver mi horario', a: '/mis-clases' }}
-                    />
+                    semana.length === 0 ? (
+                        <EstadoVacio
+                            compacto
+                            icono={CalendarDays}
+                            titulo="Cargá tu horario"
+                            texto="Una sola vez: con tu horario, acá te aparece la próxima clase con pasar lista y preparar a un toque."
+                            accion={{ etiqueta: 'Cargar mi horario', a: '/mis-clases', icono: CalendarDays }}
+                        />
+                    ) : (
+                        <EstadoVacio
+                            compacto
+                            icono={CalendarDays}
+                            titulo={finDeSemana ? 'Es fin de semana' : 'Hoy no tenés clases'}
+                            texto={finDeSemana
+                                ? (lunes > 0 ? `El lunes tenés ${lunes} clase${lunes !== 1 ? 's' : ''}. Si querés, dejá algo preparado.` : 'Buen momento para preparar material.')
+                                : 'Buen momento para preparar material o ver cómo viene tu curso.'}
+                            accion={{ etiqueta: 'Crear', a: '/crear', icono: Wand2 }}
+                            accionSecundaria={{ etiqueta: 'Ver mi horario', a: '/mis-clases' }}
+                        />
+                    )
                 )}
 
                 {todayClasses.map((cls, i) => {
@@ -223,8 +255,8 @@ export default function Hoy() {
                     return (
                         <div key={cls.id} className={`card hoy-class ${isNext ? 'next' : ''} ${isPast ? 'past' : ''}`}>
                             <div className="hoy-class-time">
-                                <span className="hoy-hour">{formatHour(cls.startHour)}</span>
-                                <span className="hoy-hour-end">{formatHour(cls.startHour + cls.duration)}</span>
+                                <span className="hoy-hour">{horaATexto(cls.startHour)}</span>
+                                <span className="hoy-hour-end">{horaATexto(cls.startHour + cls.duration)}</span>
                                 {isNext && <span className="hoy-next-pill">Ahora</span>}
                             </div>
                             <div className="hoy-class-body">

@@ -12,6 +12,7 @@ import {
     Zap, Boxes, Radio, ListChecks, FileInput, Presentation, Mic, MessagesSquare,
     ArrowRight, type LucideIcon,
 } from 'lucide-react';
+import UsosIA from '../components/ui/UsosIA';
 import './Crear.css';
 
 interface Opcion {
@@ -58,7 +59,10 @@ const HERRAMIENTAS: Opcion[] = [
 export default function Crear() {
     return (
         <div className="crear">
-            <p className="crear-bajada">Elegí qué necesitás. La IA arma un borrador y vos lo revisás antes de que llegue a tus estudiantes.</p>
+            <div className="crear-cabeza">
+                <p className="crear-bajada">Elegí qué necesitás. La IA arma un borrador y vos lo revisás antes de que llegue a tus estudiantes.</p>
+                <UsosIA />
+            </div>
 
             <ul className="crear-principales">
                 {PRINCIPALES.map(o => (

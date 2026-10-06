@@ -253,3 +253,117 @@
   .pv-btn span { display: none; }
   .pv-notes { max-width: calc(100vw - 24px); }
 }
+
+/* ═══ Diapositivas dentro de otra pantalla (visor de materiales, clase en vivo) ═══ */
+.pv-mazo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* La diapositiva es clara siempre: se lee igual en el proyector */
+.pv-mazo-slide {
+  background: #FDFDFE;
+  color: #1E1B2E;
+  border: 1px solid var(--border-color);
+  border-left: 8px solid #4F46E5;
+  border-radius: var(--radius-lg);
+  padding: clamp(1rem, 3vw, 2.25rem) clamp(1.125rem, 4vw, 2.75rem);
+  min-height: min(52vh, 26rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.pv-mazo-slide.pv-slide-question { border-left-color: #F59E0B; background: #FFFDF6; }
+
+.pv-mazo-titulo {
+  font-size: clamp(1.25rem, 2.6vw, 1.875rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: #1E1B2E;
+}
+.pv-mazo-slide.pv-slide-question .pv-mazo-titulo { color: #92600A; }
+
+.pv-mazo-puntos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.pv-mazo-puntos li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  line-height: 1.5;
+  color: #374151;
+}
+
+.pv-mazo-puntos li::before {
+  content: '';
+  position: absolute;
+  left: 0.375rem;
+  top: 0.62em;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #818CF8;
+}
+.pv-mazo-slide.pv-slide-question .pv-mazo-puntos li::before { background: #F59E0B; }
+
+.pv-mazo-pie {
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.pv-mazo-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pv-mazo-nav .btn { min-height: var(--touch, 44px); }
+
+.pv-mazo-contador {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pv-mazo-notas {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.pv-mazo-notas p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Proyector: la diapositiva ocupa la pantalla y se lee desde el fondo */
+.pv-mazo-grande { flex: 1; max-width: 1200px; margin: 0 auto; }
+.pv-mazo-grande .pv-mazo-slide { min-height: calc(100dvh - 15rem); }
+.pv-mazo-grande .pv-mazo-titulo { font-size: clamp(1.75rem, 3.6vw, 3rem); }
+.pv-mazo-grande .pv-mazo-puntos li { font-size: clamp(1.25rem, 2.4vw, 2rem); }
+.pv-mazo-grande .pv-mazo-contador { font-size: 1.125rem; }
+
+@media (max-width: 480px) {
+  .pv-mazo-nav-txt { display: none; }
+  .pv-mazo-slide { border-left-width: 5px; }
+}

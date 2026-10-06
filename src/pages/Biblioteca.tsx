@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText, Eye, Radio, Check,
+  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
@@ -20,6 +20,9 @@ import MaterialViewer from '../components/MaterialViewer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PlacasEditor from '../components/PlacasEditor';
+import PresentationViewer from '../components/PresentationViewer';
+import AdaptarMaterial from '../components/AdaptarMaterial';
+import { deckDe, type ParsedPresentation } from '../lib/presentation';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -133,6 +136,22 @@ export default function Biblioteca() {
   const [editDesc, setEditDesc] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Diapositivas guardadas desde el Laboratorio: se presentan en vez de leerse
+  const [presentando, setPresentando] = useState<{ deck: ParsedPresentation; mat: LibraryMaterial } | null>(null);
+  // Adaptar un material (lectura fácil, paso a paso…)
+  const [adaptando, setAdaptando] = useState<LibraryMaterial | null>(null);
+
+  // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla)
+  const decks = useMemo(() => {
+    const map = new Map<string, ParsedPresentation>();
+    for (const m of [...allMaterials, ...(searchResults ?? [])]) {
+      if (map.has(m.id)) continue;
+      const deck = deckDe(m);
+      if (deck) map.set(m.id, deck);
+    }
+    return map;
+  }, [allMaterials, searchResults]);
 
   // Todos los hooks van antes de este return: al cerrar sesión user pasa
   // a null, y si quedaba alguno abajo React rompía la pantalla con
@@ -541,7 +560,10 @@ export default function Biblioteca() {
 
         <div className="biblioteca-grid">
           {filtered.map(mat => {
-            const Icon = fileIcons[mat.fileType] || FileText;
+            const deck = decks.get(mat.id) ?? null;
+            const Icon = deck ? Presentation : fileIcons[mat.fileType] || FileText;
+            // Material que es solo texto (armado con IA, adaptado): se lee acá adentro
+            const soloTexto = !mat.storagePath && !mat.videoUrl && !!mat.extractedText && mat.fileType !== 'link';
             const processing = processingIds.has(mat.id);
             // Word o PDF subido que quedó sin texto: se puede volver a leer
             const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
@@ -566,6 +588,11 @@ export default function Biblioteca() {
                   <h4 className="mat-title" aria-level={3}>{mat.title}</h4>
                   {mat.description && <p className="mat-desc">{mat.description}</p>}
                   <div className="mat-meta">
+                    {deck && (
+                      <span className="badge badge-ia" title={`${deck.slides.length} diapositivas, listas para presentar`}>
+                        <Presentation size={11} aria-hidden="true" /> Diapositivas
+                      </span>
+                    )}
                     <span className="badge badge-cyan">{mat.subjectName}</span>
                     {mat.unitName && <span className="badge badge-neutral">{mat.unitName}</span>}
                     <span className="mat-size">{mat.fileSize}</span>
@@ -596,6 +623,15 @@ export default function Biblioteca() {
                     ))}
                   </div>
                   <div className="mat-actions">
+                    {deck && (
+                      <button
+                        className="mat-action-btn"
+                        title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
+                        onClick={() => setPresentando({ deck, mat })}
+                      >
+                        <Play size={14} /> Presentar
+                      </button>
+                    )}
                     {mat.videoUrl && (
                       <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
                         <Youtube size={14} /> Ver video
@@ -613,7 +649,7 @@ export default function Biblioteca() {
                           : <><Captions size={14} /> Transcribir</>}
                       </button>
                     )}
-                    {mat.storagePath && (
+                    {(mat.storagePath || (soloTexto && !deck)) && (
                       <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
                         <Eye size={14} /> Ver
                       </button>
@@ -671,6 +707,15 @@ export default function Biblioteca() {
                         <FlaskConical size={14} /> Usar en IA Lab
                       </button>
                     )}
+                    {mat.extractedText && !deck && (
+                      <button
+                        className="mat-action-btn"
+                        title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
+                        onClick={() => setAdaptando(mat)}
+                      >
+                        <Wand2 size={14} /> Adaptar
+                      </button>
+                    )}
                     {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
                       <button
                         className="mat-action-btn"
@@ -703,7 +748,28 @@ export default function Biblioteca() {
 
       {/* ── Modal: ver el material acá adentro ── */}
       {viendo && (
-        <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} />
+        <MaterialViewer material={viendo} onClose={() => setViendo(null)} onDescargar={() => handleDownload(viendo)} verNotas />
+      )}
+
+      {/* ── Diapositivas guardadas: presentarlas ── */}
+      {presentando && (
+        <PresentationViewer
+          presentation={presentando.deck}
+          subjectName={presentando.mat.subjectName || undefined}
+          teacherName={`${user.firstName} ${user.lastName}`}
+          onClose={() => setPresentando(null)}
+        />
+      )}
+
+      {/* ── Adaptar un material: versión nueva, el original no cambia ── */}
+      {adaptando && (
+        <AdaptarMaterial
+          material={adaptando}
+          teacherId={user.id}
+          courseName={user.subjects?.find(s => s.subjectId === adaptando.subjectId)?.courseName}
+          alCerrar={() => setAdaptando(null)}
+          alGuardar={nuevo => setAllMaterials(prev => [nuevo, ...prev])}
+        />
       )}
 
       {/* ── Modal: ver video ── */}

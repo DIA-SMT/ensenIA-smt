@@ -33,6 +33,7 @@ import StudyCardsViewer from '../components/StudyCardsViewer';
 import PlacasEditor from '../components/PlacasEditor';
 import PodcastPlayer from '../components/PodcastPlayer';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import UsosIA from '../components/ui/UsosIA';
 import { avisar } from '../components/ui/avisar';
 import type { Subject, StudyCard, ActivityQuestion, LibraryMaterial, PlanningClass } from '../types';
 import './ArmarModulo.css';
@@ -423,6 +424,7 @@ export default function ArmarModulo() {
                         De un módulo salen sus temas, y de ahí las placas, el podcast, la actividad
                         y las preguntas para el aula. Todo junto, en un minuto.
                     </p>
+                    <UsosIA />
 
                     <div className="mod-form">
                         <label className="mod-label">¿Para qué curso?</label>

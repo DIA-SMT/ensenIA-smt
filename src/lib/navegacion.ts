@@ -44,7 +44,7 @@ export interface AccionRapida {
 const DOCENTE: ItemNav[] = [
   { ruta: '/hoy', etiqueta: 'Hoy', titulo: 'Mi día', icono: Sun, grupo: 'Mi día', enBarra: true, claves: 'inicio panel resumen hoy clases' },
   { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Mi día', enBarra: true, claves: 'qr proyectar sala preguntas presencia' },
-  { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula' },
+  { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula repasar entendieron temas difíciles comprensión' },
   { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo placas diapositivas evaluación resumen laboratorio ia generar' },
   { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', enBarra: true, claves: 'tareas entregas consignas resultados corregir' },
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },

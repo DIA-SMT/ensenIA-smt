@@ -208,3 +208,19 @@ html[data-ahorro="si"] .esq-circulo { animation: none; }
 }
 .fila-desplazable::-webkit-scrollbar { display: none; }
 .fila-desplazable > * { flex-shrink: 0; scroll-snap-align: start; }
+
+
+/* ── Usos de IA que quedan hoy ── */
+.usos-ia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  background: var(--indigo-glow);
+  color: var(--indigo);
+}
+.usos-ia-poco { background: var(--warning-light); color: var(--warning-ink); }
+.usos-ia-agotado { background: var(--danger-light); color: var(--danger-ink); }

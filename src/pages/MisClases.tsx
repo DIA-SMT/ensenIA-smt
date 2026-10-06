@@ -1,22 +1,26 @@
 /**
  * SMT EstudIA — Mis clases
  *
- * El horario de la semana y cómo viene el clima de cada curso. Actividades
+ * El horario de la semana, qué temas conviene repasar (según lo que
+ * respondieron en actividades y clases en vivo) y cómo viene el clima de
+ * cada curso. Actividades
  * y materiales tienen su propio lugar en el menú: antes también eran
  * pestañas acá, y había dos caminos a lo mismo.
  */
 
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { Calendar, HeartPulse } from 'lucide-react';
+import { Calendar, HeartPulse, Target } from 'lucide-react';
 import Agenda from './Agenda';
 import ClimaDelAula from './ClimaDelAula';
+import QueRepasar from '../components/QueRepasar';
 import '../components/ui/ui.css';
 import './MisClases.css';
 
-type Tab = 'agenda' | 'clima';
+type Tab = 'agenda' | 'repasar' | 'clima';
 
 const TABS: { key: Tab; label: string; icon: typeof Calendar }[] = [
     { key: 'agenda', label: 'Mi horario', icon: Calendar },
+    { key: 'repasar', label: 'Qué repasar', icon: Target },
     { key: 'clima', label: 'Clima del aula', icon: HeartPulse },
 ];
 
@@ -59,6 +63,7 @@ export default function MisClases() {
 
             <div className="mc-panel" id="mc-panel" role="tabpanel" aria-labelledby={`mc-tab-${active}`}>
                 {active === 'agenda' && <Agenda />}
+                {active === 'repasar' && <QueRepasar />}
                 {active === 'clima' && <ClimaDelAula />}
             </div>
         </div>

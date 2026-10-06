@@ -5,7 +5,7 @@ import {
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
     MessageSquare, PenLine, Copy, Trash2, Square,
-    Paperclip, X, Play, Boxes
+    Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
@@ -20,7 +20,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
 import PresentationViewer from '../components/PresentationViewer';
-import { parsePresentation, type ParsedPresentation } from '../lib/presentation';
+import { parsePresentation, TAG_PRESENTACION, type ParsedPresentation } from '../lib/presentation';
 import ToolBriefForm from '../components/ToolBriefForm';
 import RefineResultModal from '../components/RefineResultModal';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -31,6 +31,7 @@ import type {
     ChatSession, ChatMessage, IAUsage, IAToolType, IAChatContext,
     LibraryMaterial
 } from '../types';
+import '../components/ui/ui.css';
 import './IALab.css';
 
 /* -- Tool definitions -- */
@@ -163,6 +164,20 @@ export default function IALab() {
     // ── Flujo guiado: brief antes de generar + revisión antes de consolidar ──
     const [briefTool, setBriefTool] = useState<IAToolType | null>(null);
     const [refineSource, setRefineSource] = useState<ChatMessage | null>(null);
+
+    // ── Diapositivas: qué mensajes son un mazo y cuál se está guardando ──
+    const [guardandoDeckId, setGuardandoDeckId] = useState<string | null>(null);
+    const decks = useMemo(() => {
+        const map = new Map<string, ParsedPresentation>();
+        for (const m of messages) {
+            if (m.role !== 'assistant' || m.content.startsWith('⚠️')) continue;
+            const parsed = parsePresentation(m.content);
+            // Fuera de la herramienta de diapositivas se pide un poco más, para
+            // que un mensaje que nombra "la diapositiva 3" no se ofrezca como mazo
+            if (parsed && (m.toolUsed === 'pres' || parsed.slides.length >= 3)) map.set(m.id, parsed);
+        }
+        return map;
+    }, [messages]);
 
     /* -- Subject / Course selector (user está garantizado por ProtectedRoute) -- */
     const assignments = user?.subjects ?? [];
@@ -619,11 +634,9 @@ export default function IALab() {
     };
 
     // ── Presentation: detect + open viewer ──
-    const looksLikePresentation = (msg: ChatMessage) =>
-        msg.role === 'assistant' && (msg.toolUsed === 'pres' || /diapositiva\s*\d+/i.test(msg.content));
-
+    // Solo se ofrece "Presentar" si el mensaje se lee como diapositivas de verdad
     const handlePresent = (msg: ChatMessage) => {
-        const parsed = parsePresentation(msg.content);
+        const parsed = decks.get(msg.id);
         if (!parsed) {
             avisar.error(
                 'No pude leer las diapositivas de este mensaje.',
@@ -632,6 +645,63 @@ export default function IALab() {
             return;
         }
         setActivePresentation(parsed);
+    };
+
+    // ── Diapositivas guardadas: un material de la biblioteca, no un mensaje suelto ──
+    const deckGuardado = (content: string) => {
+        const limpio = content.trim();
+        return materials.find(m => m.tags.includes(TAG_PRESENTACION) && m.extractedText?.trim() === limpio) ?? null;
+    };
+
+    const tituloDeck = (deck: ParsedPresentation) => `Diapositivas: ${deck.title}`.slice(0, 120);
+
+    /** Crea el material de las diapositivas. Tira un Error con mensaje para mostrar. */
+    const crearMaterialDeck = async (content: string, title: string) => {
+        if (!currentAssignment) throw new Error('Elegí una materia primero (arriba a la izquierda).');
+        const unitTitle = selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined;
+        // Sin class_id a propósito: el material con class_id es "el material del
+        // tema" (placas y podcast de Armar módulo) y las diapositivas lo taparían.
+        const mat = await createMaterial({
+            title,
+            description: selectedClass
+                ? `Diapositivas del tema "${selectedClass.title}" · Laboratorio IA`
+                : 'Diapositivas armadas con el Laboratorio IA',
+            fileType: 'doc',
+            fileName: '',
+            fileSize: '—',
+            subjectId: currentAssignment.subjectId,
+            subjectName: subjectName || 'Materia',
+            unitName: unitTitle,
+            teacherId: user.id,
+            schoolId: user.schoolId,
+            tags: [TAG_PRESENTACION, 'IA'],
+            extractedText: content.trim(),
+        });
+        setMaterials(prev => [mat, ...prev]);
+        return mat;
+    };
+
+    const handleGuardarDiapositivas = async (msg: ChatMessage) => {
+        const deck = decks.get(msg.id);
+        if (!deck || guardandoDeckId) return;
+        const ya = deckGuardado(msg.content);
+        if (ya) {
+            avisar.info('Estas diapositivas ya están guardadas', `Las encontrás en Mis materiales como "${ya.title}".`);
+            return;
+        }
+        setGuardandoDeckId(msg.id);
+        try {
+            await crearMaterialDeck(msg.content, tituloDeck(deck));
+            avisar.exito(
+                'Diapositivas guardadas en Mis materiales',
+                'Desde ahí las presentás, las compartís con el curso o las proyectás en la clase en vivo.',
+            );
+        } catch (err) {
+            console.error('Error guardando diapositivas:', err);
+            avisar.error('No se pudieron guardar las diapositivas.', err instanceof Error && err.message.startsWith('Elegí') ? err.message : 'Probá de nuevo.');
+        } finally {
+            setGuardandoDeckId(null);
+        }
     };
 
     // ── Consolidar: insertar contenido (revisado) en la clase ──
@@ -649,6 +719,14 @@ export default function IALab() {
     // ── Consolidar: guardar contenido (revisado) como material de Biblioteca ──
     const handleSaveAsMaterial = async (content: string, title: string) => {
         if (!currentAssignment) throw new Error('Elegí una materia primero.');
+        // Si lo que se guarda son diapositivas, se guardan como diapositivas:
+        // con su etiqueta, para presentarlas desde Mis materiales
+        if (parsePresentation(content)) {
+            const ya = deckGuardado(content);
+            if (ya) throw new Error(`Estas diapositivas ya están guardadas en Mis materiales como "${ya.title}".`);
+            await crearMaterialDeck(content, title);
+            return;
+        }
         await createMaterial({
             title,
             description: 'Generado con el Laboratorio IA',
@@ -918,8 +996,14 @@ export default function IALab() {
                                                     </span>
                                                 )}
                                                 <MarkdownRenderer content={msg.content} />
-                                                <div className="msg-actions">
-                                                    {looksLikePresentation(msg) && (
+                                                {decks.has(msg.id) && currentAssignment && !deckGuardado(msg.content) && (
+                                                    <p className="text-xs text-subtle" style={{ marginTop: 'var(--space-3)' }}>
+                                                        Estas diapositivas viven solo en este chat. Guardalas y las tenés en
+                                                        Mis materiales para presentarlas, compartirlas o usarlas en la clase en vivo.
+                                                    </p>
+                                                )}
+                                                <div className="msg-actions" style={{ flexWrap: 'wrap' }}>
+                                                    {decks.has(msg.id) && (
                                                         <button
                                                             className="msg-action-btn btn-present"
                                                             onClick={() => handlePresent(msg)}
@@ -927,6 +1011,24 @@ export default function IALab() {
                                                         >
                                                             <Play size={13} /> Presentar
                                                         </button>
+                                                    )}
+                                                    {decks.has(msg.id) && currentAssignment && (
+                                                        deckGuardado(msg.content) ? (
+                                                            <span className="msg-action-btn" title="Ya está en Mis materiales">
+                                                                <CheckCircle size={13} /> Guardadas en Mis materiales
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                className="msg-action-btn btn-present"
+                                                                onClick={() => handleGuardarDiapositivas(msg)}
+                                                                disabled={guardandoDeckId !== null}
+                                                                title="Guardarlas en Mis materiales para presentarlas cuando quieras"
+                                                            >
+                                                                {guardandoDeckId === msg.id
+                                                                    ? <><Loader2 size={13} className="girando" aria-hidden="true" /> Guardando…</>
+                                                                    : <><BookmarkPlus size={13} /> Guardar diapositivas</>}
+                                                            </button>
+                                                        )
                                                     )}
                                                     <button
                                                         className="msg-action-btn"
@@ -1357,7 +1459,9 @@ export default function IALab() {
                 <RefineResultModal
                     initialContent={refineSource.content}
                     defaultTitle={
-                        selectedClass
+                        decks.get(refineSource.id)
+                            ? tituloDeck(decks.get(refineSource.id)!)
+                            : selectedClass
                             ? `${refineSource.toolUsed === 'eval' ? 'Evaluación' : 'Actividad'}: ${selectedClass.title}`
                             : refineSource.toolUsed
                                 ? `${tools.find(t => t.id === refineSource.toolUsed)?.label ?? 'Actividad'} — ${subjectName}`

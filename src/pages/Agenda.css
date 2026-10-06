@@ -297,3 +297,87 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* ══ Mi horario editable (v2) ══ */
+.agenda-bajada { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.5; max-width: 62ch; }
+.day-hoy {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--acento);
+  color: #FFFFFF;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: none;
+  vertical-align: middle;
+}
+.day-header-cell .day-hoy { margin: 4px 0 0; }
+
+/* Los bloques ahora son botones: sin el estilo del navegador */
+.days-grid-content > .schedule-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  font: inherit;
+  border-top: 0; border-right: 0; border-bottom: 0;
+}
+
+/* Compu: grilla · celular: lista por día */
+.agenda-lista { display: none; }
+@media (max-width: 760px) {
+  .agenda-container { height: auto; }
+  .agenda-grilla { display: none; }
+  .agenda-lista { display: flex; flex-direction: column; gap: var(--space-3); }
+}
+
+.agenda-dia {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+.agenda-dia.es-hoy { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
+.agenda-dia-cabeza { display: flex; align-items: center; justify-content: space-between; }
+.agenda-dia-cabeza h3 { font-size: 1rem; font-weight: 750; }
+.agenda-dia-vacio { font-size: 0.875rem; color: var(--text-muted); padding: 2px 0 4px; }
+.agenda-dia ul { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+.agenda-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  text-align: left;
+  font: inherit;
+}
+.agenda-item-hora { display: flex; flex-direction: column; font-weight: 750; font-size: 0.9375rem; min-width: 3.25rem; }
+.agenda-item-hora em { font-style: normal; font-weight: 500; font-size: 0.75rem; opacity: 0.8; }
+.agenda-item-textos { display: flex; flex-direction: column; min-width: 0; }
+.agenda-item-textos strong { font-size: 0.9375rem; }
+.agenda-item-textos span { font-size: 0.8125rem; opacity: 0.85; }
+
+/* Formulario */
+.agenda-form .modal-body { display: flex; flex-direction: column; gap: var(--space-4); }
+.agenda-campo { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.agenda-campo > span,
+.agenda-campo > legend { font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); padding: 0; margin-bottom: 2px; }
+.agenda-fila { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.agenda-dia-chip {
+  min-width: var(--touch);
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-panel);
+  font-weight: 650;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.agenda-dia-chip.on { background: var(--acento); border-color: var(--acento); color: #FFFFFF; }
+.agenda-form-acciones { display: flex; flex-direction: row; justify-content: flex-end; gap: var(--space-2); }
+.agenda-acciones-bloque { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
+.agenda-sacar { color: var(--danger-ink); }
+.agenda-sacar:hover { background: var(--danger-light); color: var(--danger-ink); }

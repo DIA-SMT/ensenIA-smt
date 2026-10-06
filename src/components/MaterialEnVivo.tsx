@@ -15,6 +15,7 @@ import {
   type LiveSession, type LiveActivityKind, type LiveActivityConfig, type MaterialDeClase,
 } from '../services/live.service';
 import { extractQuestions } from '../services/documents.service';
+import { deckDe } from '../lib/presentation';
 import ElegirMaterial from './ElegirMaterial';
 import MaterialViewer from './MaterialViewer';
 import EstadoVacio from './ui/EstadoVacio';
@@ -50,6 +51,8 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
   }, [session.id, elegido]);
 
   const texto = material ? textoDeMaterial(material) : '';
+  // Diapositivas guardadas desde el Laboratorio: al proyectar se pasan una por una
+  const deck = material?.tipo === 'material' ? deckDe({ tags: [], extractedText: material.texto }) : null;
   const puedePreguntar = texto.length >= MIN_TEXTO;
 
   const elegir = async (e: Parameters<Parameters<typeof ElegirMaterial>[0]['alElegir']>[0]) => {
@@ -139,8 +142,13 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
           <div className="mev-material">
             <strong>{material.titulo}</strong>
             <span className="mev-sub">
-              {material.tipo === 'tema' ? `Tema del temario · ${material.unidad}` : 'De tu biblioteca'}
+              {material.tipo === 'tema'
+                ? `Tema del temario · ${material.unidad}`
+                : deck ? `Diapositivas de tu biblioteca · ${deck.slides.length}` : 'De tu biblioteca'}
             </span>
+            {deck && (
+              <span className="mev-sub">Al proyectarlas, pasalas con los botones o con las flechas del teclado.</span>
+            )}
           </div>
 
           <div className="mev-acciones">

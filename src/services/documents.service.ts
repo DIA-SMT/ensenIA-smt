@@ -8,6 +8,7 @@
 
 import { supabase } from './_helpers';
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
+import { usoIAGastado } from '../lib/usoIA';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -169,6 +170,7 @@ async function callProcessDocument<T>(body: Record<string, unknown>): Promise<T>
   if (!resp.ok) {
     throw new Error(json.message || `Error del servidor de IA (${resp.status}).`);
   }
+  if (!json.cached) usoIAGastado();
   return json as T;
 }
 

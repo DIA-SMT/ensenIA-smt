@@ -10,6 +10,8 @@
   gap: var(--space-8);
 }
 
+.crear-cabeza { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+
 .crear-bajada {
   font-size: 1rem;
   color: var(--text-secondary);

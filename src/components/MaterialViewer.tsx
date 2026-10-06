@@ -13,7 +13,7 @@
  * querían: que el chico no termine con veinte PDF sueltos en el celular.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { X, FileText, ExternalLink, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -21,6 +21,9 @@ import PdfVista from './PdfVista';
 import Dialogo from './shell/Dialogo';
 import { Cargando } from './ui/Esqueleto';
 import { parseYouTubeId, youTubeEmbedUrl } from '../lib/youtube';
+import { deckDe } from '../lib/presentation';
+import { TAG_LETRA_GRANDE } from '../services/library.service';
+import { MazoDiapositivas } from './PresentationViewer';
 import type { LibraryMaterial } from '../types';
 // Estilos que este componente usa y viven en otra hoja: se importan acá
 // para que se vea bien en cualquier pantalla donde aparezca.
@@ -34,11 +37,13 @@ interface MaterialViewerProps {
   onDescargar?: () => void;
   /** Pantalla completa y letra grande, para el proyector del aula. */
   proyectar?: boolean;
+  /** Solo para el docente: si el material son diapositivas, ofrecer sus notas. */
+  verNotas?: boolean;
 }
 
 const ERROR_ABRIR = 'No se pudo abrir el material. Probá de nuevo en un rato.';
 
-export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false }: MaterialViewerProps) {
+export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false, verNotas = false }: MaterialViewerProps) {
   const conArchivo = Boolean(material.storagePath);
   const esImagen = conArchivo && material.fileType === 'image';
   const esPdf = conArchivo && material.fileType === 'pdf';
@@ -91,6 +96,11 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   };
 
   const texto = material.extractedText?.trim();
+  const soloTexto = Boolean(texto) && !conArchivo && !esLink && !videoId;
+  // Diapositivas guardadas: se pasan una por una en vez de leerse como texto
+  const deck = useMemo(() => (soloTexto ? deckDe(material) : null), [soloTexto, material]);
+  // Versión adaptada con "letra grande e interlineado"
+  const letraGrande = (material.tags ?? []).includes(TAG_LETRA_GRANDE);
   const seVe = Boolean(videoId) || (esImagen && url) || (esPdf && url && !pdfFallo) || (esWord && wordHtml);
   // Formato que no se puede mostrar, o falló al mostrarlo
   const sinVistaPrevia = conArchivo && !esLink && !cargando && !seVe;
@@ -163,8 +173,16 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
 
           {/* Material que es solo texto (un tema del temario, un módulo armado
               con IA): se lee directo, sin desplegable. */}
-          {texto && !conArchivo && !esLink && !videoId && (
-            <div className="mv-texto-solo"><MarkdownRenderer content={texto} /></div>
+          {deck && (
+            <MazoDiapositivas
+              presentation={deck}
+              notas={verNotas && !proyectar}
+              grande={proyectar}
+              pie={material.subjectName || undefined}
+            />
+          )}
+          {soloTexto && !deck && texto && (
+            <div className={`mv-texto-solo ${letraGrande ? 'mv-letra-grande' : ''}`}><MarkdownRenderer content={texto} /></div>
           )}
 
           {/* El texto extraído sirve para buscar, copiar una cita o leer

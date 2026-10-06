@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
@@ -13,7 +13,10 @@ import {
 } from '../services/activities.service';
 import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import { avisar, pedirTexto } from '../components/ui/avisar';
+import SugerirDevolucion from '../components/SugerirDevolucion';
+import BotonCopiarActividad from '../components/CopiarActividad';
+import { sugerirDevolucion } from '../components/devolucion-ia';
+import { avisar, confirmar, pedirTexto } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import {
@@ -70,6 +73,11 @@ export default function ActividadDetalle() {
   const [obsSaving, setObsSaving] = useState(false);
   const [obsError, setObsError] = useState('');
   const [obsHistory, setObsHistory] = useState<StudentObservation[]>([]);
+  // Devolución sugerida por IA (un borrador: se guarda con el botón de siempre)
+  const [sugiriendo, setSugiriendo] = useState(false);
+  const [notaSugerida, setNotaSugerida] = useState(false);
+  const sugerirRef = useRef<AbortController | null>(null);
+  useEffect(() => () => sugerirRef.current?.abort(), []);
 
   const load = async () => {
     if (!id) return;
@@ -181,7 +189,21 @@ export default function ActividadDetalle() {
     return { label: 'Sin actividad', cls: 'badge-danger' };
   };
 
+  // El borrador es de un estudiante: si se cambia o se cierra el panel, se corta
+  const cortarSugerencia = () => {
+    sugerirRef.current?.abort();
+    sugerirRef.current = null;
+    setSugiriendo(false);
+    setNotaSugerida(false);
+  };
+
+  const closeStudent = () => {
+    cortarSugerencia();
+    setSelected(null);
+  };
+
   const openStudent = (st: EnrolledStudent) => {
+    cortarSugerencia();
     setSelected(st);
     const sub = subByStudent.get(st.id);
     setGradeInput(sub?.score != null ? String(sub.score) : sub?.autoScore != null ? String(sub.autoScore) : '');
@@ -247,7 +269,54 @@ export default function ActividadDetalle() {
     }
     avisar.exito(selected ? `Nota de ${selected.firstName} guardada` : 'Nota guardada');
     await load();
-    setSelected(null);
+    closeStudent();
+  };
+
+  // Al pedido va la actividad y las respuestas: nunca el nombre ni otros datos del estudiante
+  const handleSugerirDevolucion = async () => {
+    const sub = selected ? subByStudent.get(selected.id) : null;
+    if (!sub || !activity || sugiriendo) return;
+    if (feedbackInput.trim()) {
+      const ok = await confirmar({
+        titulo: '¿Reemplazar lo que escribiste?',
+        mensaje: 'La IA escribe un borrador nuevo en lugar de tu devolución. Usa 1 uso de IA.',
+        accion: 'Reemplazar',
+      });
+      if (!ok) return;
+    }
+    const controller = new AbortController();
+    sugerirRef.current = controller;
+    setSugiriendo(true);
+    try {
+      const d = await sugerirDevolucion({
+        teacherId: user.id,
+        materia: activity.subjectName ?? '',
+        curso: activity.courseName ?? '',
+        titulo: activity.title,
+        descripcion: activity.description,
+        consigna: activity.contentMd,
+        preguntas: activity.questions,
+        respuestas: sub.answers,
+        textoLibre: sub.responseText,
+        puntos: activity.points ?? null,
+        signal: controller.signal,
+      });
+      if (!d || sugerirRef.current !== controller) return;
+      setFeedbackInput(d.devolucion);
+      if (d.puntaje != null) {
+        setGradeInput(String(d.puntaje));
+        setNotaSugerida(true);
+      }
+      requestAnimationFrame(() => document.getElementById('ad-devolucion')?.focus());
+    } catch (err) {
+      if (sugerirRef.current !== controller) return;
+      avisar.error('No se pudo sugerir la devolución', err instanceof Error ? err.message : 'Probá de nuevo.');
+    } finally {
+      if (sugerirRef.current === controller) {
+        sugerirRef.current = null;
+        setSugiriendo(false);
+      }
+    }
   };
 
   // Renombrar la actividad: lo que el docente creó lo puede corregir
@@ -294,7 +363,8 @@ export default function ActividadDetalle() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+            <BotonCopiarActividad activity={activity} />
             <button className="btn btn-secondary btn-sm" onClick={() => setShowQr(true)} title="Para proyectar en el aula">
               <QrCode size={14} /> QR
             </button>
@@ -410,7 +480,7 @@ export default function ActividadDetalle() {
                   <span className="text-xs text-secondary">{selected.enrollmentCode}</span>
                 </div>
               </div>
-              <button className="btn-icon" aria-label="Cerrar" onClick={() => setSelected(null)}><X size={18} /></button>
+              <button className="btn-icon" aria-label="Cerrar" onClick={closeStudent}><X size={18} /></button>
             </div>
 
             <div className="acts-side-body">
@@ -487,14 +557,35 @@ export default function ActividadDetalle() {
                     <div className="acts-grade-box">
                       <div className="em-row">
                         <div className="em-field">
-                          <label>Nota final {activity.points != null ? `(sobre ${activity.points})` : ''}</label>
-                          <input type="number" value={gradeInput} onChange={e => setGradeInput(e.target.value)} min={0} max={activity.points ?? 100} />
+                          <label htmlFor="ad-nota">Nota final {activity.points != null ? `(sobre ${activity.points})` : ''}</label>
+                          <input
+                            id="ad-nota"
+                            type="number"
+                            value={gradeInput}
+                            onChange={e => { setGradeInput(e.target.value); setNotaSugerida(false); }}
+                            min={0}
+                            max={activity.points ?? 100}
+                          />
                         </div>
                       </div>
+                      {notaSugerida && <p className="sdev-aviso mt-1">Nota sugerida por la IA: revisala antes de guardar.</p>}
                       <div className="em-field mt-2">
-                        <label>Devolución (opcional)</label>
-                        <textarea rows={2} value={feedbackInput} onChange={e => setFeedbackInput(e.target.value)} placeholder="¡Muy buen trabajo con...!" />
+                        <label htmlFor="ad-devolucion">Devolución (opcional)</label>
+                        <textarea
+                          id="ad-devolucion"
+                          rows={sugiriendo || feedbackInput.length > 120 ? 4 : 2}
+                          value={feedbackInput}
+                          onChange={e => setFeedbackInput(e.target.value)}
+                          placeholder="¡Muy buen trabajo con...!"
+                          aria-busy={sugiriendo}
+                        />
                       </div>
+                      <SugerirDevolucion
+                        className="mt-2"
+                        cargando={sugiriendo}
+                        alTocar={handleSugerirDevolucion}
+                        alCancelar={cortarSugerencia}
+                      />
                       <button className="btn btn-primary btn-sm w-full mt-2" onClick={handleGrade} disabled={gradeInput === ''}>
                         <CheckCircle size={14} /> Guardar calificación
                       </button>

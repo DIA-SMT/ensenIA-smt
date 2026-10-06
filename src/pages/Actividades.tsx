@@ -9,6 +9,7 @@ import {
   getActivitiesByTeacher, getSubmissionsByActivity, updateActivityStatus, deleteActivity,
 } from '../services/activities.service';
 import QrModal from '../components/QrModal';
+import BotonCopiarActividad from '../components/CopiarActividad';
 import { avisar, confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -227,6 +228,7 @@ export default function Actividades() {
                 >
                   {a.status === 'closed' ? <Unlock size={16} /> : <Lock size={16} />}
                 </button>
+                <BotonCopiarActividad activity={a} compacto alCopiar={load} />
                 <button className="btn-icon" title="Eliminar" onClick={() => handleDelete(a)}>
                   <Trash2 size={16} />
                 </button>
