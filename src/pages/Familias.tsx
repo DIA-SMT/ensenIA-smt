@@ -1,6 +1,7 @@
 /**
- * Vista staff (docente/director): comunicados oficiales y citaciones
- * a familias, con acuses de recibo y confirmación de asistencia.
+ * Vista staff: avisos a familias con acuses de recibo y confirmación de
+ * asistencia. La dirección manda comunicados y citaciones; el docente solo
+ * cita a la familia de un estudiante de sus materias (la base lo exige, 052).
  */
 
 import { useState, useEffect } from 'react';
@@ -9,7 +10,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNoticesForStaff, createNotice, deleteNotice } from '../services/guardians.service';
-import { getStudentsByTeacher, getAllStudents } from '../services/students.service';
+import { getAllStudents } from '../services/students.service';
+import { getEnrolledStudents } from '../services/activities.service';
+import { getSubjects } from '../services/subjects.service';
+import { asignacionesDe, type Asignacion } from '../lib/asignaciones';
 import type { GuardianNotice, NoticeReceipt, NoticeType, Student } from '../types';
 import { avisar, confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -25,10 +29,14 @@ export default function Familias() {
   const { user, isDirector } = useAuth();
   const [notices, setNotices] = useState<StaffNotice[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  // Docente: sus estudiantes, por materia · curso (la citación es de una materia)
+  const [porMateria, setPorMateria] = useState<{ asignacion: Asignacion; students: Student[] }[]>([]);
+  const [cargandoEstudiantes, setCargandoEstudiantes] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Form
-  const [type, setType] = useState<NoticeType>('comunicado');
+  const [type, setType] = useState<NoticeType>(isDirector ? 'comunicado' : 'citacion');
+  // Director: id del estudiante ('' = toda la escuela). Docente: "materia|estudiante".
   const [targetStudentId, setTargetStudentId] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -47,26 +55,38 @@ export default function Familias() {
     if (!user) return;
     load();
     if (isDirector) {
-      getAllStudents(user.schoolId).then(setStudents).catch(console.error);
+      getAllStudents(user.schoolId).then(setStudents).catch(console.error).finally(() => setCargandoEstudiantes(false));
     } else {
-      const courseIds = user.subjects?.map(s => s.courseId) ?? [];
-      getStudentsByTeacher(courseIds).then(setStudents).catch(console.error);
+      // Inscriptos en cada materia y curso del docente: "estudiantes de su materia"
+      (async () => {
+        const materias = await getSubjects(user.schoolId).catch(() => []);
+        const asignaciones = asignacionesDe(user.subjects, id => materias.find(m => m.id === id)?.name ?? '');
+        const listas = await Promise.all(asignaciones.map(async asignacion => ({
+          asignacion,
+          students: (await getEnrolledStudents(asignacion.subjectId, asignacion.courseId).catch(() => []))
+            .sort((a, b) => a.lastName.localeCompare(b.lastName, 'es') || a.firstName.localeCompare(b.firstName, 'es')),
+        })));
+        setPorMateria(listas.filter(l => l.students.length > 0));
+      })().catch(console.error).finally(() => setCargandoEstudiantes(false));
     }
-  }, [user]);
+  }, [user, isDirector]);
 
   if (!user) return null;
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) { setError('Completá título y mensaje.'); return; }
     if (type === 'citacion' && !targetStudentId) { setError('Las citaciones son para la familia de un estudiante específico.'); return; }
+    // El docente elige estudiante y materia juntos
+    const [subjectId, studentId] = isDirector ? [null, targetStudentId] : targetStudentId.split('|');
     setSending(true);
     setError('');
     try {
       await createNotice({
         schoolId: user.schoolId,
-        studentId: targetStudentId || null,
+        studentId: studentId || null,
         fromUserId: user.id,
-        type,
+        type: isDirector ? type : 'citacion',
+        subjectId,
         title,
         body,
         meetingAt: type === 'citacion' && meetingDate
@@ -75,6 +95,7 @@ export default function Familias() {
         meetingPlace: type === 'citacion' ? meetingPlace : null,
       });
       setTitle(''); setBody(''); setMeetingDate(''); setMeetingTime(''); setMeetingPlace('');
+      if (!isDirector) setTargetStudentId('');
       setSentOk(true);
       setTimeout(() => setSentOk(false), 3000);
       load();
@@ -114,34 +135,61 @@ export default function Familias() {
   return (
     <div className="fam-container animate-in">
       <div>
-        <h2 className="flex items-center gap-2"><Megaphone size={20} className="text-cyan" /> Comunicación con familias</h2>
-        <p className="text-secondary text-sm">Comunicados oficiales y citaciones con acuse de recibo.</p>
+        {/* El título ya está en la barra de arriba */}
+        <p className="text-secondary text-sm">
+          {isDirector
+            ? 'Comunicados oficiales y citaciones con acuse de recibo.'
+            : 'Citá a la familia de un estudiante de tus materias y mirá si la leyó y si confirma. Los comunicados generales los manda la dirección.'}
+        </p>
       </div>
 
       <div className="fam-grid">
         {/* ── Crear ── */}
         <div className="card fam-form">
-          <h3 className="fam-form-title">Nuevo aviso</h3>
+          <h3 className="fam-form-title">{isDirector ? 'Nuevo aviso' : 'Nueva citación'}</h3>
           {error && <div className="em-error"><AlertCircle size={14} /> {error}</div>}
           {sentOk && <div className="fam-ok"><CheckCircle size={14} /> Enviado. Las familias ya lo ven en su portal.</div>}
 
-          <div className="fam-type-toggle">
-            <button className={type === 'comunicado' ? 'active' : ''} onClick={() => setType('comunicado')}>
-              <Megaphone size={14} /> Comunicado
-            </button>
-            <button className={type === 'citacion' ? 'active' : ''} onClick={() => setType('citacion')}>
-              <CalendarPlus size={14} /> Citación
-            </button>
-          </div>
+          {isDirector && (
+            <div className="fam-type-toggle">
+              <button className={type === 'comunicado' ? 'active' : ''} aria-pressed={type === 'comunicado'} onClick={() => setType('comunicado')}>
+                <Megaphone size={14} /> Comunicado
+              </button>
+              <button className={type === 'citacion' ? 'active' : ''} aria-pressed={type === 'citacion'} onClick={() => setType('citacion')}>
+                <CalendarPlus size={14} /> Citación
+              </button>
+            </div>
+          )}
 
           <div className="em-field">
-            <label htmlFor="fam-dest">Destinatario</label>
-            <select id="fam-dest" className="form-select" value={targetStudentId} onChange={e => setTargetStudentId(e.target.value)}>
-              <option value="">📢 Todas las familias de la escuela</option>
-              {students.map(s => (
-                <option key={s.id} value={s.id}>Familia de {s.firstName} {s.lastName} ({s.courseName})</option>
-              ))}
-            </select>
+            <label htmlFor="fam-dest">{isDirector ? 'Destinatario' : 'Familia de'}</label>
+            {isDirector ? (
+              <select id="fam-dest" className="form-select" value={targetStudentId} onChange={e => setTargetStudentId(e.target.value)}>
+                <option value="">📢 Todas las familias de la escuela</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>Familia de {s.firstName} {s.lastName} ({s.courseName})</option>
+                ))}
+              </select>
+            ) : (
+              <select id="fam-dest" className="form-select" value={targetStudentId} onChange={e => setTargetStudentId(e.target.value)}
+                disabled={cargandoEstudiantes || porMateria.length === 0}>
+                <option value="">
+                  {cargandoEstudiantes ? 'Cargando tus estudiantes…' : porMateria.length === 0 ? 'No tenés estudiantes inscriptos' : 'Elegí un estudiante'}
+                </option>
+                {porMateria.map(({ asignacion, students: lista }) => (
+                  <optgroup key={asignacion.clave} label={asignacion.etiqueta}>
+                    {lista.map(s => (
+                      <option key={s.id} value={`${asignacion.subjectId}|${s.id}`}>{s.lastName}, {s.firstName}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            )}
+            {!isDirector && targetStudentId && (
+              <p className="text-xs text-subtle mt-1">
+                La familia ve que la cita es por {porMateria.find(g => g.asignacion.subjectId === targetStudentId.split('|')[0])?.asignacion.subjectName ?? 'tu materia'}.
+              </p>
+            )}
           </div>
 
           <div className="em-field">
@@ -151,7 +199,7 @@ export default function Familias() {
 
           <div className="em-field">
             <label htmlFor="fam-mensaje">Mensaje</label>
-            <textarea id="fam-mensaje" rows={4} value={body} onChange={e => setBody(e.target.value)} placeholder="Estimadas familias..." />
+            <textarea id="fam-mensaje" rows={4} value={body} onChange={e => setBody(e.target.value)} placeholder={type === 'citacion' ? 'Los convocamos a una reunión para...' : 'Estimadas familias...'} />
           </div>
 
           {type === 'citacion' && (
@@ -174,7 +222,7 @@ export default function Familias() {
           )}
 
           <button className="btn btn-primary w-full" onClick={handleSend} disabled={sending}>
-            <Send size={15} /> {sending ? 'Enviando...' : 'Enviar a las familias'}
+            <Send size={15} /> {sending ? 'Enviando...' : isDirector ? 'Enviar a las familias' : 'Enviar la citación'}
           </button>
         </div>
 
@@ -184,9 +232,9 @@ export default function Familias() {
           {!loading && notices.length === 0 && (
             <EstadoVacio
               icono={Megaphone}
-              titulo="Todavía no hay avisos enviados"
+              titulo={isDirector ? 'Todavía no hay avisos enviados' : 'Todavía no hay citaciones'}
               texto="Lo que mandes a las familias aparece acá, con quién lo leyó y quién confirmó."
-              accion={{ etiqueta: 'Escribir un aviso', alTocar: () => document.getElementById('fam-titulo')?.focus() }}
+              accion={{ etiqueta: isDirector ? 'Escribir un aviso' : 'Escribir una citación', alTocar: () => document.getElementById('fam-dest')?.focus() }}
             />
           )}
           {notices.map(n => {
@@ -198,6 +246,7 @@ export default function Familias() {
                     <span className={`badge ${n.type === 'citacion' ? 'badge-warning' : 'badge-cyan'}`}>
                       {n.type === 'citacion' ? '📅 Citación' : '📢 Comunicado'}
                     </span>
+                    {n.subjectName && <span className="badge badge-cyan" style={{ marginLeft: 6 }}>{n.subjectName}</span>}
                     <span className="badge badge-neutral" style={{ marginLeft: 6 }}>
                       {n.studentName ? `Familia de ${n.studentName}` : 'Toda la escuela'}
                     </span>

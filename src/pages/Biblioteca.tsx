@@ -30,6 +30,7 @@ import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar, confirmar } from '../components/ui/avisar';
+import { asignacionesDe, destinosDeMaterial, etiquetaDestino, claveAsignacion, cursosDeMateria, type DestinoMaterial } from '../lib/asignaciones';
 import type { LibraryMaterial, Subject } from '../types';
 import './Biblioteca.css';
 import '../components/Modals.css';
@@ -47,7 +48,8 @@ export default function Biblioteca() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [activeSubject, setActiveSubject] = useState<string | null>(null);
+  // Filtro: la clave "materia|curso" de una asignación del docente
+  const [filtro, setFiltro] = useState<string | null>(null);
   const [allMaterials, setAllMaterials] = useState<LibraryMaterial[]>([]);
   const [searchResults, setSearchResults] = useState<LibraryMaterial[] | null>(null);
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
@@ -60,7 +62,7 @@ export default function Biblioteca() {
   const [showUpload, setShowUpload] = useState(false);
   const [uplFile, setUplFile] = useState<File | null>(null);
   const [uplTitle, setUplTitle] = useState('');
-  const [uplSubjectId, setUplSubjectId] = useState('');
+  const [uplDestino, setUplDestino] = useState('');
   const [uplTags, setUplTags] = useState('');
   const [uplShare, setUplShare] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -127,7 +129,7 @@ export default function Biblioteca() {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDesc, setVideoDesc] = useState('');
-  const [videoSubjectId, setVideoSubjectId] = useState('');
+  const [videoDestino, setVideoDestino] = useState('');
   const [videoSaving, setVideoSaving] = useState(false);
   const [videoError, setVideoError] = useState('');
   const [playing, setPlaying] = useState<LibraryMaterial | null>(null);
@@ -138,6 +140,7 @@ export default function Biblioteca() {
   const [editFor, setEditFor] = useState<LibraryMaterial | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editDestino, setEditDestino] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -162,21 +165,52 @@ export default function Biblioteca() {
   // "Rendered fewer hooks than expected".
   if (!user) return null;
 
-  let filtered = searchResults ?? allMaterials;
-  if (activeSubject) filtered = filtered.filter(m => m.subjectId === activeSubject);
+  // ── Materia × curso: el orden de la biblioteca ──
+  const nombreMateria = (id: string) => subjectsList.find(s => s.id === id)?.name
+    ?? allMaterials.find(m => m.subjectId === id)?.subjectName ?? '';
+  const asignaciones = asignacionesDe(user.subjects, nombreMateria);
+  const destinos = destinosDeMaterial(asignaciones);
+  const asignacionFiltro = asignaciones.find(a => a.clave === filtro) ?? null;
+  const destinoDe = (m: LibraryMaterial) => etiquetaDestino(asignaciones, m.subjectId, m.subjectName, m.courseId);
+  const buscarDestino = (clave: string): DestinoMaterial | undefined => destinos.find(d => d.clave === clave);
 
-  const mySubjectIds = new Set([
-    ...allMaterials.map(m => m.subjectId),
-    ...(user.subjects?.map(s => s.subjectId) ?? []),
-  ]);
-  const mySubjects = subjectsList.filter(s => mySubjectIds.has(s.id));
+  // Con un curso elegido se ven sus materiales y los de "todos mis cursos" de esa materia
+  let filtered = searchResults ?? allMaterials;
+  if (asignacionFiltro) {
+    filtered = filtered.filter(m => m.subjectId === asignacionFiltro.subjectId
+      && (m.courseId === asignacionFiltro.courseId || !m.courseId));
+  }
+
+  // Sin filtro ni búsqueda: una sección por curso (y "todos tus cursos" si la materia se da en varios)
+  const grupos: { clave: string; titulo: string; items: LibraryMaterial[]; destino?: string }[] = [];
+  if (!asignacionFiltro && !searchResults) {
+    const ubicados = new Set<string>();
+    for (const subjectId of [...new Set(asignaciones.map(a => a.subjectId))]) {
+      const cursos = cursosDeMateria(asignaciones, subjectId);
+      for (const a of cursos) {
+        const items = allMaterials.filter(m => m.subjectId === subjectId
+          && (m.courseId === a.courseId || (!m.courseId && cursos.length === 1)));
+        items.forEach(m => ubicados.add(m.id));
+        grupos.push({ clave: a.clave, titulo: a.etiqueta, items, destino: a.clave });
+      }
+      if (cursos.length > 1) {
+        const items = allMaterials.filter(m => m.subjectId === subjectId && !m.courseId);
+        items.forEach(m => ubicados.add(m.id));
+        if (items.length) {
+          grupos.push({ clave: claveAsignacion(subjectId, null), titulo: `${cursos[0].subjectName} · todos tus cursos`, items, destino: claveAsignacion(subjectId, null) });
+        }
+      }
+    }
+    const resto = allMaterials.filter(m => !ubicados.has(m.id));
+    if (resto.length) grupos.push({ clave: 'otros', titulo: 'Otras materias y cursos', items: resto });
+  }
 
   // ── Upload flow ──
 
   const openUpload = () => {
     setUplFile(null);
     setUplTitle('');
-    setUplSubjectId(user.subjects?.[0]?.subjectId ?? mySubjects[0]?.id ?? '');
+    setUplDestino(asignacionFiltro?.clave ?? destinos[0]?.clave ?? '');
     setUplTags('');
     setUplShare(false);
     setUplError('');
@@ -186,7 +220,7 @@ export default function Biblioteca() {
   const openVideo = () => {
     setShowVideo(true);
     setVideoError('');
-    setVideoSubjectId(mySubjects[0]?.id ?? '');
+    setVideoDestino(asignacionFiltro?.clave ?? destinos[0]?.clave ?? '');
   };
 
   const handlePickFile = (f: File | null) => {
@@ -200,14 +234,14 @@ export default function Biblioteca() {
   };
 
   const handleUpload = async () => {
-    if (!uplFile || !uplTitle.trim() || !uplSubjectId) {
-      setUplError('Completá título, materia y archivo.');
+    const destino = buscarDestino(uplDestino);
+    if (!uplFile || !uplTitle.trim() || !destino) {
+      setUplError('Completá título, materia y curso, y archivo.');
       return;
     }
     setUploading(true);
     setUplError('');
     try {
-      const subject = subjectsList.find(s => s.id === uplSubjectId);
       const { storagePath, fileSizeBytes } = await uploadFile(user.id, uplFile);
 
       const material = await createMaterial({
@@ -216,8 +250,9 @@ export default function Biblioteca() {
         fileType: uplFile.type === 'application/pdf' ? 'pdf' : uplFile.type === DOCX_MIME ? 'doc' : 'image',
         fileName: uplFile.name,
         fileSize: formatFileSize(fileSizeBytes),
-        subjectId: uplSubjectId,
-        subjectName: subject?.name ?? '',
+        subjectId: destino.subjectId,
+        subjectName: destino.subjectName,
+        courseId: destino.courseId,
         teacherId: user.id,
         schoolId: user.schoolId,
         tags: uplTags.split(',').map(t => t.trim()).filter(Boolean),
@@ -230,7 +265,7 @@ export default function Biblioteca() {
 
       setShowUpload(false);
       refresh();
-      avisar.exito('Material subido', uplShare ? 'Ya lo ven tus estudiantes de la materia.' : undefined);
+      avisar.exito('Material subido', uplShare ? `Ya lo ven tus estudiantes de ${destino.etiqueta.replace('mis cursos', 'tus cursos')}.` : undefined);
 
       // Word y PDF: leer el texto para que la IA pueda usarlo
       void leerTexto({ ...material, storagePath }, uplFile);
@@ -310,9 +345,9 @@ export default function Biblioteca() {
       setVideoError('Esa dirección no parece de YouTube. Pegá el link del video (youtube.com o youtu.be).');
       return;
     }
-    const subject = subjectsList.find(x => x.id === videoSubjectId);
-    if (!subject || !videoTitle.trim()) {
-      setVideoError('Falta el título o la materia.');
+    const destino = buscarDestino(videoDestino);
+    if (!destino || !videoTitle.trim()) {
+      setVideoError('Falta el título, o la materia y el curso.');
       return;
     }
     setVideoSaving(true);
@@ -324,8 +359,9 @@ export default function Biblioteca() {
         fileType: 'video',
         fileName: '',
         fileSize: '—',
-        subjectId: subject.id,
-        subjectName: subject.name,
+        subjectId: destino.subjectId,
+        subjectName: destino.subjectName,
+        courseId: destino.courseId,
         teacherId: user.id,
         schoolId: user.schoolId,
         tags: ['video'],
@@ -365,6 +401,7 @@ export default function Biblioteca() {
     setEditFor(mat);
     setEditTitle(mat.title);
     setEditDesc(mat.description ?? '');
+    setEditDestino(claveAsignacion(mat.subjectId, mat.courseId));
     setEditError('');
   };
 
@@ -373,9 +410,12 @@ export default function Biblioteca() {
     setEditSaving(true);
     setEditError('');
     try {
-      await renameMaterial(editFor.id, editTitle.trim(), editDesc.trim());
+      // El curso se cambia dentro de la misma materia (el destino trae materia y curso)
+      const destino = buscarDestino(editDestino);
+      const courseId = destino && destino.subjectId === editFor.subjectId ? destino.courseId : undefined;
+      await renameMaterial(editFor.id, editTitle.trim(), editDesc.trim(), courseId);
       setAllMaterials(prev => prev.map(m => m.id === editFor.id
-        ? { ...m, title: editTitle.trim(), description: editDesc.trim() }
+        ? { ...m, title: editTitle.trim(), description: editDesc.trim(), ...(courseId !== undefined ? { courseId } : {}) }
         : m));
       setEditFor(null);
       avisar.exito('Cambios guardados');
@@ -393,7 +433,7 @@ export default function Biblioteca() {
       await updateMaterial(mat.id, { isSharedWithStudents: !mat.isSharedWithStudents });
       refresh();
       if (mat.isSharedWithStudents) avisar.exito('Dejaste de compartirlo');
-      else avisar.exito('Compartido con tus estudiantes', `Lo ven en ${mat.subjectName}.`);
+      else avisar.exito('Compartido con tus estudiantes', `Lo ven en ${destinoDe(mat)}.`);
     } catch (err) {
       console.error(err);
       avisar.error('No se pudo cambiar si se comparte.', 'Probá de nuevo.');
@@ -468,6 +508,192 @@ export default function Biblioteca() {
     }
   };
 
+  // Una tarjeta de material (se usa en la lista filtrada y en cada sección)
+  const tarjeta = (mat: LibraryMaterial) => {
+    const deck = decks.get(mat.id) ?? null;
+    const Icon = deck ? Presentation : fileIcons[mat.fileType] || FileText;
+    // Material que es solo texto (armado con IA, adaptado): se lee acá adentro
+    const soloTexto = !mat.storagePath && !mat.videoUrl && !!mat.extractedText && mat.fileType !== 'link';
+    const processing = processingIds.has(mat.id);
+    // Word o PDF subido que quedó sin texto: se puede volver a leer
+    const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
+    const textError = textErrors[mat.id];
+    return (
+      <div key={mat.id} className="card biblioteca-card">
+        {mat.videoUrl && parseYouTubeId(mat.videoUrl) ? (
+          <button
+            className="mat-video-thumb"
+            title="Ver el video"
+            onClick={() => setPlaying(mat)}
+          >
+            <img src={youTubeThumbnail(parseYouTubeId(mat.videoUrl)!)} alt="" loading="lazy" />
+            <span className="mat-video-play">▶</span>
+          </button>
+        ) : (
+          <div className="mat-icon-wrap">
+            <Icon size={24} />
+          </div>
+        )}
+        <div className="mat-info">
+          <h4 className="mat-title" aria-level={3}>{mat.title}</h4>
+          {mat.description && <p className="mat-desc">{mat.description}</p>}
+          <div className="mat-meta">
+            {deck && (
+              <span className="badge badge-ia" title={`${deck.slides.length} diapositivas, listas para presentar`}>
+                <Presentation size={11} aria-hidden="true" /> Diapositivas
+              </span>
+            )}
+            <span className="badge badge-cyan">{destinoDe(mat)}</span>
+            {mat.unitName && <span className="badge badge-neutral">{mat.unitName}</span>}
+            <span className="mat-size">{mat.fileSize}</span>
+            {processing && (
+              <span className="badge badge-ia" title="No cierres ni cambies de pantalla hasta que termine">
+                <Loader2 size={11} className="spin" /> Leyendo texto...
+              </span>
+            )}
+            {!processing && mat.extractedText && (
+              <span className="badge badge-success" title="La IA puede usar este documento">Texto listo</span>
+            )}
+            {!processing && sinTexto && (
+              <span className={`badge ${textError ? 'badge-danger' : 'badge-neutral'}`}
+                title="Sin texto, la IA no puede hacer placas, podcast ni usarlo en IA Lab">
+                {textError ? 'No se pudo leer' : 'Sin texto'}
+              </span>
+            )}
+            {mat.isSharedWithStudents && (
+              <span className="badge badge-warning" title={`Lo ven tus estudiantes de ${destinoDe(mat)}`}>Compartido</span>
+            )}
+          </div>
+          {!processing && sinTexto && textError && (
+            <p className="mat-text-error" role="alert">{textError}</p>
+          )}
+          <div className="mat-tags">
+            {mat.tags.slice(0, 3).map(tag => (
+              <span key={tag} className="mat-tag">{tag}</span>
+            ))}
+          </div>
+          <div className="mat-actions">
+            {deck && (
+              <button
+                className="mat-action-btn"
+                title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
+                onClick={() => setPresentando({ deck, mat })}
+              >
+                <Play size={14} /> Presentar
+              </button>
+            )}
+            {mat.videoUrl && (
+              <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
+                <Youtube size={14} /> Ver video
+              </button>
+            )}
+            {mat.videoUrl && !mat.extractedText && (
+              <button
+                className="mat-action-btn"
+                title="Lee los subtítulos del video: la IA puede resumirlo, hacer placas y responder sobre él"
+                onClick={() => handleTranscribe(mat)}
+                disabled={transcribingId === mat.id}
+              >
+                {transcribingId === mat.id
+                  ? <><Loader2 size={14} className="spin" /> Transcribiendo...</>
+                  : <><Captions size={14} /> Transcribir</>}
+              </button>
+            )}
+            {(mat.storagePath || (soloTexto && !deck)) && (
+              <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
+                <Eye size={14} /> Ver
+              </button>
+            )}
+            {sinTexto && (
+              <button
+                className="mat-action-btn"
+                title="Lee el texto del archivo para que la IA pueda hacer placas, podcast y usarlo en IA Lab"
+                onClick={() => leerTexto(mat)}
+                disabled={processing}
+              >
+                {processing
+                  ? <><Loader2 size={14} className="spin" /> Leyendo...</>
+                  : <><ScanText size={14} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
+              </button>
+            )}
+            <button
+              className="mat-action-btn"
+              title="Resumen pedagógico con IA"
+              onClick={() => handleSummary(mat)}
+              disabled={processing}
+            >
+              <Sparkles size={14} /> Resumen IA
+            </button>
+            {mat.extractedText && (
+              <button
+                className="mat-action-btn"
+                title="Tarjetas visuales para que los chicos repasen en el celu"
+                onClick={() => handleStudyCards(mat)}
+                disabled={cardsGeneratingId === mat.id}
+              >
+                {cardsGeneratingId === mat.id
+                  ? <><Loader2 size={14} className="spin" /> Armando placas…</>
+                  : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
+              </button>
+            )}
+            {mat.extractedText && (
+              <button
+                className="mat-action-btn"
+                title="Resumen en audio de 2-3 min para que repasen con auriculares"
+                onClick={() => handlePodcast(mat)}
+                disabled={podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'}
+              >
+                {podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'
+                  ? <><Loader2 size={14} className="spin" /> Grabando...</>
+                  : <><Headphones size={14} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
+              </button>
+            )}
+            {mat.extractedText && (
+              <button
+                className="mat-action-btn"
+                title="Usar como contexto en el Laboratorio IA"
+                onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
+              >
+                <FlaskConical size={14} /> Usar en IA Lab
+              </button>
+            )}
+            {mat.extractedText && !deck && (
+              <button
+                className="mat-action-btn"
+                title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
+                onClick={() => setAdaptando(mat)}
+              >
+                <Wand2 size={14} /> Adaptar
+              </button>
+            )}
+            {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
+              <button
+                className="mat-action-btn"
+                title="Trabajarlo en la clase en vivo: proyectarlo, mostrarlo en los celulares y sacar preguntas"
+                onClick={() => navigate(`/clase-en-vivo?material=${mat.id}`)}
+              >
+                <Radio size={14} /> En vivo
+              </button>
+            )}
+            <button
+              className={`mat-action-btn ${mat.isSharedWithStudents ? 'active' : ''}`}
+              title={mat.isSharedWithStudents ? 'Dejar de compartir' : `Compartir con tus estudiantes de ${destinoDe(mat)}`}
+              onClick={() => handleToggleShare(mat)}
+            >
+              <Share2 size={14} /> {mat.isSharedWithStudents ? 'Compartido' : 'Compartir'}
+            </button>
+            <button className="mat-action-btn" title="Cambiar nombre o descripción" onClick={() => openEdit(mat)}>
+              <PencilLine size={14} />
+            </button>
+            <button className="mat-action-btn danger" title="Eliminar" onClick={() => handleDelete(mat)}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="biblioteca-container">
       {/* Left: Filters */}
@@ -478,20 +704,22 @@ export default function Biblioteca() {
         </div>
 
         <div className="biblioteca-filters">
-          <p className="filter-label">Materias</p>
+          <p className="filter-label">Materia y curso</p>
           <button
-            className={`filter-chip ${!activeSubject ? 'active' : ''}`}
-            onClick={() => setActiveSubject(null)}
+            className={`filter-chip ${!asignacionFiltro ? 'active' : ''}`}
+            aria-pressed={!asignacionFiltro}
+            onClick={() => setFiltro(null)}
           >
-            Todas
+            Todo, por curso
           </button>
-          {mySubjects.map(s => (
+          {asignaciones.map(a => (
             <button
-              key={s.id}
-              className={`filter-chip ${activeSubject === s.id ? 'active' : ''}`}
-              onClick={() => setActiveSubject(s.id)}
+              key={a.clave}
+              className={`filter-chip ${asignacionFiltro?.clave === a.clave ? 'active' : ''}`}
+              aria-pressed={asignacionFiltro?.clave === a.clave}
+              onClick={() => setFiltro(a.clave)}
             >
-              {s.name}
+              {a.etiqueta}
             </button>
           ))}
         </div>
@@ -527,10 +755,36 @@ export default function Biblioteca() {
               onChange={e => setQuery(e.target.value)}
             />
           </div>
+          {/* En el celular la columna de la izquierda no está: filtros y botones acá */}
+          <div className="bib-acciones-celu">
+            <button className="btn btn-primary btn-sm" onClick={openUpload}><Upload size={15} /> Subir</button>
+            <button className="btn btn-secondary btn-sm" onClick={openVideo}><Youtube size={15} /> Video</button>
+          </div>
         </div>
+        {asignaciones.length > 0 && (
+          <div className="bib-filtros-celu" role="group" aria-label="Materia y curso">
+            <button className={`filter-chip ${!asignacionFiltro ? 'active' : ''}`} aria-pressed={!asignacionFiltro} onClick={() => setFiltro(null)}>
+              Todo
+            </button>
+            {asignaciones.map(a => (
+              <button
+                key={a.clave}
+                className={`filter-chip ${asignacionFiltro?.clave === a.clave ? 'active' : ''}`}
+                aria-pressed={asignacionFiltro?.clave === a.clave}
+                onClick={() => setFiltro(a.clave)}
+              >
+                {a.etiqueta}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <div className="biblioteca-count">
-          <span className="text-secondary text-sm">{filtered.length} material{filtered.length !== 1 ? 'es' : ''}</span>
+        {/* Por secciones, cada una dice cuántos tiene */}
+        <div className="biblioteca-count" hidden={!asignacionFiltro && !searchResults && allMaterials.length > 0}>
+          <span className="text-secondary text-sm">
+            {filtered.length} material{filtered.length !== 1 ? 'es' : ''}
+            {asignacionFiltro && <> de {asignacionFiltro.etiqueta} (con los de todos tus cursos de {asignacionFiltro.subjectName})</>}
+          </span>
         </div>
 
         {!cargado && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando tus materiales…" />}
@@ -550,15 +804,15 @@ export default function Biblioteca() {
               icono={Search}
               titulo="Ningún material coincide"
               texto={`Nada coincide con "${query.trim()}". Probá con otra palabra o buscá en todas las materias.`}
-              accion={{ etiqueta: 'Ver todos los materiales', alTocar: () => { setQuery(''); setActiveSubject(null); } }}
+              accion={{ etiqueta: 'Ver todos los materiales', alTocar: () => { setQuery(''); setFiltro(null); } }}
             />
-          ) : activeSubject ? (
+          ) : asignacionFiltro ? (
             <EstadoVacio
               icono={BookOpen}
-              titulo="Todavía no hay materiales de esta materia"
+              titulo={`Todavía no hay materiales de ${asignacionFiltro.etiqueta}`}
               texto="Subí un apunte, una guía o un video para tenerlo a mano y usarlo con la IA."
               accion={{ etiqueta: 'Subir material', alTocar: openUpload, icono: Upload }}
-              accionSecundaria={{ etiqueta: 'Ver todas las materias', alTocar: () => setActiveSubject(null) }}
+              accionSecundaria={{ etiqueta: 'Ver todos los cursos', alTocar: () => setFiltro(null) }}
             />
           ) : (
             <EstadoVacio
@@ -571,192 +825,35 @@ export default function Biblioteca() {
           )
         )}
 
-        <div className="biblioteca-grid">
-          {filtered.map(mat => {
-            const deck = decks.get(mat.id) ?? null;
-            const Icon = deck ? Presentation : fileIcons[mat.fileType] || FileText;
-            // Material que es solo texto (armado con IA, adaptado): se lee acá adentro
-            const soloTexto = !mat.storagePath && !mat.videoUrl && !!mat.extractedText && mat.fileType !== 'link';
-            const processing = processingIds.has(mat.id);
-            // Word o PDF subido que quedó sin texto: se puede volver a leer
-            const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc');
-            const textError = textErrors[mat.id];
-            return (
-              <div key={mat.id} className="card biblioteca-card">
-                {mat.videoUrl && parseYouTubeId(mat.videoUrl) ? (
-                  <button
-                    className="mat-video-thumb"
-                    title="Ver el video"
-                    onClick={() => setPlaying(mat)}
-                  >
-                    <img src={youTubeThumbnail(parseYouTubeId(mat.videoUrl)!)} alt="" loading="lazy" />
-                    <span className="mat-video-play">▶</span>
-                  </button>
-                ) : (
-                  <div className="mat-icon-wrap">
-                    <Icon size={24} />
-                  </div>
-                )}
-                <div className="mat-info">
-                  <h4 className="mat-title" aria-level={3}>{mat.title}</h4>
-                  {mat.description && <p className="mat-desc">{mat.description}</p>}
-                  <div className="mat-meta">
-                    {deck && (
-                      <span className="badge badge-ia" title={`${deck.slides.length} diapositivas, listas para presentar`}>
-                        <Presentation size={11} aria-hidden="true" /> Diapositivas
-                      </span>
-                    )}
-                    <span className="badge badge-cyan">{mat.subjectName}</span>
-                    {mat.unitName && <span className="badge badge-neutral">{mat.unitName}</span>}
-                    <span className="mat-size">{mat.fileSize}</span>
-                    {processing && (
-                      <span className="badge badge-ia" title="No cierres ni cambies de pantalla hasta que termine">
-                        <Loader2 size={11} className="spin" /> Leyendo texto...
-                      </span>
-                    )}
-                    {!processing && mat.extractedText && (
-                      <span className="badge badge-success" title="La IA puede usar este documento">Texto listo</span>
-                    )}
-                    {!processing && sinTexto && (
-                      <span className={`badge ${textError ? 'badge-danger' : 'badge-neutral'}`}
-                        title="Sin texto, la IA no puede hacer placas, podcast ni usarlo en IA Lab">
-                        {textError ? 'No se pudo leer' : 'Sin texto'}
-                      </span>
-                    )}
-                    {mat.isSharedWithStudents && (
-                      <span className="badge badge-warning" title="Visible para estudiantes de la materia">Compartido</span>
-                    )}
-                  </div>
-                  {!processing && sinTexto && textError && (
-                    <p className="mat-text-error" role="alert">{textError}</p>
+        {(asignacionFiltro || searchResults) ? (
+          <div className="biblioteca-grid">
+            {filtered.map(tarjeta)}
+          </div>
+        ) : cargado && allMaterials.length > 0 && (
+          <div className="biblioteca-grid">
+            {grupos.map(g => (
+              <section key={g.clave} className="bib-grupo" aria-labelledby={`bib-grupo-${g.clave}`}>
+                <header className="bib-grupo-header">
+                  <h3 id={`bib-grupo-${g.clave}`} className="bib-grupo-titulo">{g.titulo}</h3>
+                  <span className="bib-grupo-cuenta">{g.items.length} material{g.items.length !== 1 ? 'es' : ''}</span>
+                  {g.destino && !g.destino.endsWith('|*') && g.items.length > 0 && (
+                    <button className="btn btn-outline btn-sm" onClick={() => setFiltro(g.destino!)}>
+                      Ver solo este curso
+                    </button>
                   )}
-                  <div className="mat-tags">
-                    {mat.tags.slice(0, 3).map(tag => (
-                      <span key={tag} className="mat-tag">{tag}</span>
-                    ))}
-                  </div>
-                  <div className="mat-actions">
-                    {deck && (
-                      <button
-                        className="mat-action-btn"
-                        title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
-                        onClick={() => setPresentando({ deck, mat })}
-                      >
-                        <Play size={14} /> Presentar
-                      </button>
-                    )}
-                    {mat.videoUrl && (
-                      <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
-                        <Youtube size={14} /> Ver video
-                      </button>
-                    )}
-                    {mat.videoUrl && !mat.extractedText && (
-                      <button
-                        className="mat-action-btn"
-                        title="Lee los subtítulos del video: la IA puede resumirlo, hacer placas y responder sobre él"
-                        onClick={() => handleTranscribe(mat)}
-                        disabled={transcribingId === mat.id}
-                      >
-                        {transcribingId === mat.id
-                          ? <><Loader2 size={14} className="spin" /> Transcribiendo...</>
-                          : <><Captions size={14} /> Transcribir</>}
-                      </button>
-                    )}
-                    {(mat.storagePath || (soloTexto && !deck)) && (
-                      <button className="mat-action-btn" title="Verlo acá, sin descargar" onClick={() => setViendo(mat)}>
-                        <Eye size={14} /> Ver
-                      </button>
-                    )}
-                    {sinTexto && (
-                      <button
-                        className="mat-action-btn"
-                        title="Lee el texto del archivo para que la IA pueda hacer placas, podcast y usarlo en IA Lab"
-                        onClick={() => leerTexto(mat)}
-                        disabled={processing}
-                      >
-                        {processing
-                          ? <><Loader2 size={14} className="spin" /> Leyendo...</>
-                          : <><ScanText size={14} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
-                      </button>
-                    )}
-                    <button
-                      className="mat-action-btn"
-                      title="Resumen pedagógico con IA"
-                      onClick={() => handleSummary(mat)}
-                      disabled={processing}
-                    >
-                      <Sparkles size={14} /> Resumen IA
+                </header>
+                {g.items.length > 0 ? g.items.map(tarjeta) : (
+                  <p className="bib-grupo-vacio">
+                    Todavía no subiste nada para este curso.{' '}
+                    <button className="btn btn-outline btn-sm" onClick={() => { openUpload(); setUplDestino(g.destino ?? ''); }}>
+                      <Upload size={14} /> Subir material
                     </button>
-                    {mat.extractedText && (
-                      <button
-                        className="mat-action-btn"
-                        title="Tarjetas visuales para que los chicos repasen en el celu"
-                        onClick={() => handleStudyCards(mat)}
-                        disabled={cardsGeneratingId === mat.id}
-                      >
-                        {cardsGeneratingId === mat.id
-                          ? <><Loader2 size={14} className="spin" /> Armando placas…</>
-                          : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
-                      </button>
-                    )}
-                    {mat.extractedText && (
-                      <button
-                        className="mat-action-btn"
-                        title="Resumen en audio de 2-3 min para que repasen con auriculares"
-                        onClick={() => handlePodcast(mat)}
-                        disabled={podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'}
-                      >
-                        {podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'
-                          ? <><Loader2 size={14} className="spin" /> Grabando...</>
-                          : <><Headphones size={14} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
-                      </button>
-                    )}
-                    {mat.extractedText && (
-                      <button
-                        className="mat-action-btn"
-                        title="Usar como contexto en el Laboratorio IA"
-                        onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
-                      >
-                        <FlaskConical size={14} /> Usar en IA Lab
-                      </button>
-                    )}
-                    {mat.extractedText && !deck && (
-                      <button
-                        className="mat-action-btn"
-                        title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
-                        onClick={() => setAdaptando(mat)}
-                      >
-                        <Wand2 size={14} /> Adaptar
-                      </button>
-                    )}
-                    {(mat.storagePath || mat.extractedText || mat.videoUrl) && (
-                      <button
-                        className="mat-action-btn"
-                        title="Trabajarlo en la clase en vivo: proyectarlo, mostrarlo en los celulares y sacar preguntas"
-                        onClick={() => navigate(`/clase-en-vivo?material=${mat.id}`)}
-                      >
-                        <Radio size={14} /> En vivo
-                      </button>
-                    )}
-                    <button
-                      className={`mat-action-btn ${mat.isSharedWithStudents ? 'active' : ''}`}
-                      title={mat.isSharedWithStudents ? 'Dejar de compartir' : 'Compartir con estudiantes de la materia'}
-                      onClick={() => handleToggleShare(mat)}
-                    >
-                      <Share2 size={14} /> {mat.isSharedWithStudents ? 'Compartido' : 'Compartir'}
-                    </button>
-                    <button className="mat-action-btn" title="Cambiar nombre o descripción" onClick={() => openEdit(mat)}>
-                      <PencilLine size={14} />
-                    </button>
-                    <button className="mat-action-btn danger" title="Eliminar" onClick={() => handleDelete(mat)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </p>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* ── Modal: ver el material acá adentro ── */}
@@ -847,9 +944,9 @@ export default function Biblioteca() {
               />
             </div>
             <div className="em-field">
-              <label>Materia</label>
-              <select className="form-select" value={videoSubjectId} onChange={e => setVideoSubjectId(e.target.value)}>
-                {mySubjects.map(sj => <option key={sj.id} value={sj.id}>{sj.name}</option>)}
+              <label htmlFor="bib-video-destino">Materia y curso</label>
+              <select id="bib-video-destino" className="form-select" value={videoDestino} onChange={e => setVideoDestino(e.target.value)}>
+                {destinos.map(d => <option key={d.clave} value={d.clave}>{d.etiqueta}</option>)}
               </select>
             </div>
             <p className="text-xs text-subtle">
@@ -894,6 +991,19 @@ export default function Biblioteca() {
                 onChange={e => setEditDesc(e.target.value)}
               />
             </div>
+            {editFor && destinos.filter(d => d.subjectId === editFor.subjectId).length > 1 && (
+              <div className="em-field">
+                <label htmlFor="bib-editar-destino">Curso</label>
+                <select id="bib-editar-destino" className="form-select" value={editDestino} onChange={e => setEditDestino(e.target.value)}>
+                  {destinos.filter(d => d.subjectId === editFor.subjectId).map(d => (
+                    <option key={d.clave} value={d.clave}>{d.etiqueta}</option>
+                  ))}
+                </select>
+                {editFor.isSharedWithStudents && (
+                  <p className="text-xs text-subtle mt-1">Está compartido: lo van a ver los estudiantes del curso que elijas.</p>
+                )}
+              </div>
+            )}
           </div>
           <div className="em-modal-footer">
             <button className="btn btn-outline btn-sm" onClick={() => setEditFor(null)}>Cancelar</button>
@@ -937,9 +1047,9 @@ export default function Biblioteca() {
             </div>
             <div className="em-row">
               <div className="em-field">
-                <label>Materia</label>
-                <select className="form-select" value={uplSubjectId} onChange={e => setUplSubjectId(e.target.value)}>
-                  {mySubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                <label htmlFor="bib-subir-destino">Materia y curso</label>
+                <select id="bib-subir-destino" className="form-select" value={uplDestino} onChange={e => setUplDestino(e.target.value)}>
+                  {destinos.map(d => <option key={d.clave} value={d.clave}>{d.etiqueta}</option>)}
                 </select>
               </div>
               <div className="em-field">
@@ -949,7 +1059,7 @@ export default function Biblioteca() {
             </div>
             <label className="em-checkbox-row">
               <input type="checkbox" checked={uplShare} onChange={e => setUplShare(e.target.checked)} />
-              Compartir con los estudiantes de la materia
+              Compartir con los estudiantes de {buscarDestino(uplDestino)?.etiqueta ?? 'ese curso'}
             </label>
           </div>
           <div className="em-modal-footer">

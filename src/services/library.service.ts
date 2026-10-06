@@ -48,6 +48,8 @@ export async function createMaterial(material: {
   fileSize: string;
   subjectId: string;
   subjectName: string;
+  /** null o sin dar = todos los cursos donde el docente da la materia. */
+  courseId?: string | null;
   unitName?: string;
   teacherId: string;
   schoolId: string;
@@ -71,6 +73,7 @@ export async function createMaterial(material: {
         file_size: material.fileSize,
         subject_id: material.subjectId,
         subject_name: material.subjectName,
+        course_id: material.courseId ?? null,
         unit_name: material.unitName ?? null,
         teacher_id: material.teacherId,
         school_id: material.schoolId,
@@ -85,10 +88,10 @@ export async function createMaterial(material: {
   return mapMaterial(row);
 }
 
-export async function renameMaterial(id: string, title: string, description: string): Promise<void> {
+export async function renameMaterial(id: string, title: string, description: string, courseId?: string | null): Promise<void> {
   const { error } = await supabase
     .from('library_materials')
-    .update({ title, description })
+    .update(courseId === undefined ? { title, description } : { title, description, course_id: courseId })
     .eq('id', id);
   if (error) throw error;
 }
@@ -120,6 +123,7 @@ function mapMaterial(row: any): LibraryMaterial {
     fileSize: row.file_size ?? '',
     subjectId: row.subject_id,
     subjectName: row.subject_name,
+    courseId: row.course_id ?? null,
     unitName: row.unit_name ?? undefined,
     teacherId: row.teacher_id,
     schoolId: row.school_id,

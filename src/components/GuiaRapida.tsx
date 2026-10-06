@@ -36,7 +36,7 @@ const DESTINOS: Record<string, Destino[]> = {
     { emoji: '✅', title: 'Corregir entregas', desc: 'Lo pendiente, ordenado y con ayuda para devolver', to: '/corregir' },
     { emoji: '📓', title: 'Cargar la libreta', desc: 'Notas por trimestre, conducta e informes en PDF', to: '/libreta' },
     { emoji: '💙', title: 'Ver cómo están tus estudiantes', desc: 'Señales, logros y alertas de cada uno', to: '/students' },
-    { emoji: '👨‍👩‍👧', title: 'Avisar a una familia', desc: 'Comunicados y citaciones sin cadena de WhatsApp', to: '/familias' },
+    { emoji: '👨‍👩‍👧', title: 'Citar a una familia', desc: 'Citaciones por tu materia, con confirmación de asistencia', to: '/familias' },
   ],
   director: [
     { emoji: '📡', title: 'Qué está pasando ahora', desc: 'Clases en vivo, clima escolar y alertas', to: '/panel' },

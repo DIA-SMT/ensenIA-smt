@@ -52,7 +52,8 @@ export default function ElegirMaterial({
       .then(([u, m]) => {
         if (cancelado) return;
         setUnits(u);
-        setMateriales(m.filter(x => x.subjectId === subjectId));
+        // Los de este curso y los de "todos mis cursos" de la materia (052)
+        setMateriales(m.filter(x => x.subjectId === subjectId && (!x.courseId || x.courseId === courseId)));
       })
       .catch(err => { if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudo cargar el material.'); });
     return () => { cancelado = true; };

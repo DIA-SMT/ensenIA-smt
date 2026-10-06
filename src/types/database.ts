@@ -1105,6 +1105,7 @@ export type Database = {
           meeting_place: string | null
           school_id: string
           student_id: string | null
+          subject_id: string | null
           title: string
           type: string
         }
@@ -1117,6 +1118,7 @@ export type Database = {
           meeting_place?: string | null
           school_id: string
           student_id?: string | null
+          subject_id?: string | null
           title: string
           type: string
         }
@@ -1129,10 +1131,18 @@ export type Database = {
           meeting_place?: string | null
           school_id?: string
           student_id?: string | null
+          subject_id?: string | null
           title?: string
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "guardian_notices_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guardian_notices_from_user_id_fkey"
             columns: ["from_user_id"]
@@ -1195,6 +1205,7 @@ export type Database = {
         Row: {
           ai_summary: string | null
           class_id: string | null
+          course_id: string | null
           description: string | null
           extracted_text: string | null
           file_name: string | null
@@ -1222,6 +1233,7 @@ export type Database = {
         Insert: {
           ai_summary?: string | null
           class_id?: string | null
+          course_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1249,6 +1261,7 @@ export type Database = {
         Update: {
           ai_summary?: string | null
           class_id?: string | null
+          course_id?: string | null
           description?: string | null
           extracted_text?: string | null
           file_name?: string | null
@@ -1274,6 +1287,13 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "library_materials_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "library_materials_class_id_fkey"
             columns: ["class_id"]

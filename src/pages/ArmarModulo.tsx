@@ -264,6 +264,7 @@ export default function ArmarModulo() {
                 fileSize: '—',
                 subjectId: assignment.subjectId,
                 subjectName,
+                courseId: assignment.courseId,
                 teacherId: user.id,
                 schoolId: user.schoolId,
                 tags: ['módulo', topic.trim().slice(0, 24)],
