@@ -21,6 +21,7 @@ import ImportProgramModal from '../components/ImportProgramModal';
 import PublishActivityModal from '../components/PublishActivityModal';
 import PresentationViewer from '../components/PresentationViewer';
 import { parsePresentation, TAG_PRESENTACION, type ParsedPresentation } from '../lib/presentation';
+import { disenoEnTexto, marcarDiseno, type DisenoId } from '../lib/disenos';
 import ToolBriefForm from '../components/ToolBriefForm';
 import RefineResultModal from '../components/RefineResultModal';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -169,12 +170,17 @@ export default function IALab() {
     const [guardandoDeckId, setGuardandoDeckId] = useState<string | null>(null);
     const decks = useMemo(() => {
         const map = new Map<string, ParsedPresentation>();
+        // El diseño lo eligió el docente en el pedido ("Diseño visual elegido: …")
+        let disenoPedido: DisenoId | null = null;
         for (const m of messages) {
+            if (m.role === 'user') { disenoPedido = disenoEnTexto(m.content); continue; }
             if (m.role !== 'assistant' || m.content.startsWith('⚠️')) continue;
             const parsed = parsePresentation(m.content);
             // Fuera de la herramienta de diapositivas se pide un poco más, para
             // que un mensaje que nombra "la diapositiva 3" no se ofrezca como mazo
-            if (parsed && (m.toolUsed === 'pres' || parsed.slides.length >= 3)) map.set(m.id, parsed);
+            if (parsed && (m.toolUsed === 'pres' || parsed.slides.length >= 3)) {
+                map.set(m.id, parsed.diseno || !disenoPedido ? parsed : { ...parsed, diseno: disenoPedido });
+            }
         }
         return map;
     }, [messages]);
@@ -650,7 +656,9 @@ export default function IALab() {
     // ── Diapositivas guardadas: un material de la biblioteca, no un mensaje suelto ──
     const deckGuardado = (content: string) => {
         const limpio = content.trim();
-        return materials.find(m => m.tags.includes(TAG_PRESENTACION) && m.extractedText?.trim() === limpio) ?? null;
+        // El texto guardado puede llevar la marca del diseño adelante
+        const sinMarca = (t: string) => t.replace(/<!--[\s\S]*?-->/g, '').trim();
+        return materials.find(m => m.tags.includes(TAG_PRESENTACION) && sinMarca(m.extractedText ?? '') === sinMarca(limpio)) ?? null;
     };
 
     const tituloDeck = (deck: ParsedPresentation) => `Diapositivas: ${deck.title}`.slice(0, 120);
@@ -691,7 +699,7 @@ export default function IALab() {
         }
         setGuardandoDeckId(msg.id);
         try {
-            await crearMaterialDeck(msg.content, tituloDeck(deck));
+            await crearMaterialDeck(deck.diseno ? marcarDiseno(msg.content, deck.diseno) : msg.content, tituloDeck(deck));
             avisar.exito(
                 'Diapositivas guardadas en Mis materiales',
                 'Desde ahí las presentás, las compartís con el curso o las proyectás en la clase en vivo.',
@@ -1087,6 +1095,12 @@ export default function IALab() {
                                     tool={briefTool}
                                     classTitle={selectedClass?.title}
                                     hasAttachedDoc={!!attachedDoc}
+                                    materiales={materials.filter(m => m.extractedText && !m.tags.includes(TAG_PRESENTACION))}
+                                    materialId={attachedDoc?.id ?? null}
+                                    alElegirMaterial={id => {
+                                        const doc = materials.find(m => m.id === id);
+                                        setAttachedDoc(doc?.extractedText ? doc : null);
+                                    }}
                                     onGenerate={prompt => {
                                         setBriefTool(null);
                                         sendMessage(briefTool === 'pres' ? `${prompt}\n\n${FORMATO_DIAPOSITIVAS}` : prompt);

@@ -17,6 +17,7 @@
  */
 
 import type { LibraryMaterial } from '../types';
+import { disenoEnTexto, type DisenoId } from './disenos';
 
 export interface SlideData {
   title: string;
@@ -30,6 +31,8 @@ export interface ParsedPresentation {
   title: string;
   subtitle?: string;
   slides: SlideData[];
+  /** Diseño visual elegido por el docente (marca "<!-- diseño: x -->" en el texto). */
+  diseno?: DisenoId;
 }
 
 /** Etiqueta con la que se guardan las diapositivas en la biblioteca. */
@@ -80,7 +83,9 @@ interface Analisis {
   preambulo: number;
 }
 
-function analizar(md: string): Analisis {
+function analizar(mdOriginal: string): Analisis {
+  // Los comentarios HTML (la marca del diseño) no son contenido
+  const md = mdOriginal.replace(/<!--[\s\S]*?-->/g, '');
   const lines = md.replace(/\r\n?/g, '\n').split('\n');
   const slides: SlideData[] = [];
   let current: SlideData | null = null;
@@ -175,7 +180,10 @@ function analizar(md: string): Analisis {
 
 export function parsePresentation(md: string): ParsedPresentation | null {
   if (!md) return null;
-  return analizar(md).pres;
+  const pres = analizar(md).pres;
+  if (!pres) return null;
+  const diseno = disenoEnTexto(md);
+  return diseno ? { ...pres, diseno } : pres;
 }
 
 /**
@@ -212,7 +220,9 @@ export function deckDe(material: MaterialConTexto | null | undefined): ParsedPre
   if (!/(?:diapositiva|slide|l[aá]mina)\s*(?:n[°º.]?\s*)?\d/i.test(texto)) return null;
   const { pres, preambulo } = analizar(texto);
   if (!pres) return null;
-  if ((material.tags ?? []).includes(TAG_PRESENTACION)) return pres;
+  const diseno = disenoEnTexto(texto);
+  const conDiseno = diseno ? { ...pres, diseno } : pres;
+  if ((material.tags ?? []).includes(TAG_PRESENTACION)) return conDiseno;
   // Sin etiqueta: poco texto antes de la primera diapositiva y al menos tres
-  return preambulo <= 3 && pres.slides.length >= 3 ? pres : null;
+  return preambulo <= 3 && pres.slides.length >= 3 ? conDiseno : null;
 }
