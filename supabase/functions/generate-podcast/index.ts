@@ -5,10 +5,15 @@
  *
  * Convierte un material de la biblioteca en un mini podcast (~2-3 min):
  *  1. Claude (vía OpenRouter) escribe un guion cálido, como una profe tucumana.
- *  2. ElevenLabs lo convierte a voz (eleven_multilingual_v2) con una voz argentina.
+ *  2. Azure lo convierte a voz con una voz argentina (es-AR-ElenaNeural).
+ *     Gratis hasta 500.000 caracteres por mes (unos 200 podcasts). Si Azure
+ *     no está configurado o falla, y hay clave de ElevenLabs, se usa
+ *     ElevenLabs de respaldo (ese sí cobra).
  *  3. El MP3 queda en Storage (bucket "library") y el material se marca "ready".
  *
- * Secrets: OPENROUTER_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_PODCAST_VOICE_ID (opcional).
+ * Secrets: OPENROUTER_API_KEY; para la voz AZURE_SPEECH_KEY + AZURE_SPEECH_REGION
+ * (AZURE_SPEECH_VOICE opcional) y/o ELEVENLABS_API_KEY
+ * (ELEVENLABS_PODCAST_VOICE_ID opcional).
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -22,6 +27,10 @@ const ELEVEN_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 // sonaba a español neutro aunque el guion fuera rioplatense; el secret viejo
 // ELEVENLABS_VOICE_ID ya no se lee para que no la pise sin querer.
 const DEFAULT_VOICE = 'LZj1dIzYRl9rc9TIXnMt';
+const AZURE_DEFAULT_VOICE = 'es-AR-ElenaNeural';
+// Mono a 48 kbps: para la voz alcanza y pesa la mitad que antes (los chicos
+// lo bajan con datos del celular): ~1 MB por podcast en vez de ~2,4.
+const AZURE_FORMAT = 'audio-24khz-48kbitrate-mono-mp3';
 const BUCKET = 'library';
 const MAX_SOURCE_CHARS = 25_000;
 
@@ -82,13 +91,70 @@ function costoDe(usage: unknown): number | null {
   return typeof c === 'number' && Number.isFinite(c) ? c : null;
 }
 
+interface Voz { audio: Uint8Array; modelo: string }
+
+/** Escapa el guion para meterlo en SSML (XML). */
+const xml = (s: string) => s
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+
+/** Azure: voz argentina, gratis hasta el cupo mensual del plan F0. */
+async function vozAzure(texto: string, key: string, region: string): Promise<Voz> {
+  const voz = Deno.env.get('AZURE_SPEECH_VOICE') || AZURE_DEFAULT_VOICE;
+  // Un poco más pausada que lo normal: se entiende mejor
+  const ssml = `<speak version="1.0" xml:lang="es-AR"><voice name="${voz}"><prosody rate="-6%">${xml(texto)}</prosody></voice></speak>`;
+  const pedir = () => fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': AZURE_FORMAT,
+      'User-Agent': 'smt-estudia',
+    },
+    body: ssml,
+  });
+  let res = await pedir();
+  // 429: demasiados a la vez. Un reintento corto antes de rendirse.
+  if (res.status === 429) {
+    await new Promise(r => setTimeout(r, 3000));
+    res = await pedir();
+  }
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`Azure ${res.status}: ${t.slice(0, 150)}`);
+  }
+  return { audio: new Uint8Array(await res.arrayBuffer()), modelo: `azure:${voz}` };
+}
+
+/** ElevenLabs: respaldo pago. */
+async function vozEleven(texto: string, key: string): Promise<Voz> {
+  const voiceId = Deno.env.get('ELEVENLABS_PODCAST_VOICE_ID') || DEFAULT_VOICE;
+  const res = await fetch(`${ELEVEN_URL}/${voiceId}?output_format=mp3_44100_128`, {
+    method: 'POST',
+    headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: texto,
+      model_id: 'eleven_multilingual_v2',
+      voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.25 },
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`ElevenLabs ${res.status}: ${t.slice(0, 150)}`);
+  }
+  return { audio: new Uint8Array(await res.arrayBuffer()), modelo: 'eleven_multilingual_v2' };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
   const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-  if (!OPENROUTER_API_KEY || !ELEVENLABS_API_KEY) {
+  const AZURE_SPEECH_KEY = Deno.env.get('AZURE_SPEECH_KEY');
+  const AZURE_SPEECH_REGION = Deno.env.get('AZURE_SPEECH_REGION');
+  const hayAzure = Boolean(AZURE_SPEECH_KEY && AZURE_SPEECH_REGION);
+  if (!OPENROUTER_API_KEY || (!hayAzure && !ELEVENLABS_API_KEY)) {
     return json({ error: 'Faltan claves de IA o de voz en el servidor.' }, 500);
   }
 
@@ -165,27 +231,28 @@ Deno.serve(async (req: Request) => {
     });
 
     // ── 2. Voz ──
-    const voiceId = Deno.env.get('ELEVENLABS_PODCAST_VOICE_ID') || DEFAULT_VOICE;
-    const ttsRes = await fetch(`${ELEVEN_URL}/${voiceId}?output_format=mp3_44100_128`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: script,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0.25 },
-      }),
-    });
-    if (!ttsRes.ok) {
-      const t = await ttsRes.text().catch(() => '');
-      throw new Error(`ElevenLabs ${ttsRes.status}: ${t.slice(0, 150)}`);
+    // Azure primero (gratis hasta el cupo); ElevenLabs solo de respaldo
+    let voz: Voz | null = null;
+    let errorAzure = '';
+    if (hayAzure) {
+      try {
+        voz = await vozAzure(script, AZURE_SPEECH_KEY!, AZURE_SPEECH_REGION!);
+      } catch (e) {
+        errorAzure = e instanceof Error ? e.message : String(e);
+        console.error('Azure TTS:', errorAzure);
+      }
     }
-    const audio = new Uint8Array(await ttsRes.arrayBuffer());
-    // ElevenLabs cobra por caracter: se anota aunque el audio salga mal
+    if (!voz && ELEVENLABS_API_KEY) voz = await vozEleven(script, ELEVENLABS_API_KEY);
+    if (!voz) {
+      // Sin respaldo: decirlo en criollo (429 = muchos a la vez; 401/403 = clave o cupo del mes)
+      throw new Error(errorAzure.startsWith('Azure 429')
+        ? 'Hay muchos podcasts generándose ahora. Probá de nuevo en un minuto.'
+        : 'No se pudo generar la voz (puede que se haya terminado el cupo gratis del mes). Los podcasts ya hechos siguen andando.');
+    }
+    const { audio, modelo } = voz;
+    // La voz se cobra (o descuenta del cupo) por caracter: se anota aunque el audio salga mal
     await registrarConsumo(db, {
-      ...quien, feature: 'podcast', detail: 'voz', model: 'eleven_multilingual_v2', tts_chars: script.length,
+      ...quien, feature: 'podcast', detail: 'voz', model: modelo, tts_chars: script.length,
     });
     if (audio.byteLength < 10_000) throw new Error('El audio salió vacío.');
 
