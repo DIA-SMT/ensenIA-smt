@@ -7,6 +7,7 @@
  */
 
 import { supabase } from './_helpers';
+import { normalizarMazo, type Mazo } from '../lib/diapositivas';
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
 import { usoIAGastado } from '../lib/usoIA';
 
@@ -354,4 +355,36 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── Diapositivas estructuradas (lib/diapositivas) ──
+
+/**
+ * Arma el mazo de una clase.
+ *
+ * A diferencia del camino viejo —pedirle al chat Markdown y reconstruir la
+ * estructura con regex— acá la IA responde contra un JSON Schema y las
+ * diapositivas llegan ya armadas. El normalizador solo valida y acomoda lo
+ * que el modelo haya decidido mal (un "dos-columnas" con una sola columna,
+ * una "pregunta" sin opciones).
+ */
+export async function generateSlides(
+  text: string,
+  title: string,
+  context?: string,
+): Promise<Mazo> {
+  const { deck, truncated } = await callProcessDocument<{ deck: unknown; truncated?: boolean }>({
+    mode: 'slides',
+    text,
+    title,
+    context,
+  });
+
+  const mazo = normalizarMazo(deck);
+  if (!mazo || mazo.diapositivas.length < 3) {
+    throw new Error(truncated
+      ? 'Las diapositivas salieron cortadas. Probá de nuevo; si el material es muy largo, acotá el tema.'
+      : 'La IA no pudo armar las diapositivas con este material. Probá de nuevo.');
+  }
+  return mazo;
 }

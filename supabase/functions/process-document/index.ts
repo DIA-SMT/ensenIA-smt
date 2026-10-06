@@ -25,7 +25,7 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide' | 'class_report';
+  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -247,6 +247,78 @@ const PRACTICE_QUIZ_SCHEMA = {
   },
 };
 
+/**
+ * Mazo de diapositivas.
+ *
+ * El modo viejo le pedía al chat que escribiera Markdown con un formato y
+ * después el navegador trataba de reconstruir la estructura con regex. Acá
+ * la estructura viene dada.
+ *
+ * Como el structured output es estricto, TODOS los campos van en required:
+ * los que no aplican a un tipo de lámina se mandan vacíos ('' / [] / -1),
+ * igual que en el schema de las placas. El normalizador del front descarta
+ * lo que sobra según el tipo.
+ */
+const COLUMNA_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titulo', 'puntos'],
+  properties: {
+    titulo: { type: 'string', description: 'Encabezado de la columna. Vacío si no es dos-columnas.' },
+    puntos: { type: 'array', items: { type: 'string' }, description: '2 a 4 puntos. Vacío si no aplica.' },
+  },
+};
+
+const SLIDES_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titulo', 'subtitulo', 'diapositivas'],
+  properties: {
+    titulo: { type: 'string', description: 'Título del mazo: el tema de la clase.' },
+    subtitulo: { type: 'string', description: 'Materia y curso, o una bajada corta. Puede ir vacío.' },
+    diapositivas: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['tipo', 'titulo', 'puntos', 'destacado', 'izquierda', 'derecha', 'opciones', 'correcta', 'nota'],
+        properties: {
+          tipo: {
+            type: 'string',
+            enum: ['portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'cierre'],
+            description: 'Qué forma tiene la lámina. Alterná: un mazo entero de "puntos" se ve monótono proyectado.',
+          },
+          titulo: { type: 'string', description: 'Título corto, de 3 a 8 palabras.' },
+          puntos: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'puntos/cierre: 3 a 5 viñetas de una línea. portada: la bajada. Vacío en destacado, dos-columnas y pregunta.',
+          },
+          destacado: {
+            type: 'string',
+            description: 'Solo en "destacado": la idea, definición o cita que ocupa toda la lámina. Una o dos oraciones. Vacío en el resto.',
+          },
+          izquierda: COLUMNA_SCHEMA,
+          derecha: COLUMNA_SCHEMA,
+          opciones: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Solo en "pregunta": 3 o 4 opciones, sin la letra adelante. Vacío en el resto.',
+          },
+          correcta: {
+            type: 'integer',
+            description: 'Solo en "pregunta": índice 0-based de la correcta. -1 si es de opinión o en el resto de los tipos.',
+          },
+          nota: {
+            type: 'string',
+            description: 'Nota para el docente: cómo presentar esta lámina, qué preguntar, dónde suelen trabarse. 1 o 2 frases.',
+          },
+        },
+      },
+    },
+  },
+};
+
 const QUESTIONS_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -306,6 +378,33 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
   - objectives: 1 a 3 objetivos, derivados de los objetivos/contenidos del programa, empezando con verbo en infinitivo.
 - Mantené el idioma y la terminología del documento.
 - Si el documento NO es un programa educativo, devolvé units como array vacío.`,
+
+  slides: `Sos EstudIA, asistente pedagógico de docentes de secundaria argentina. Armá las diapositivas de una clase, para proyectar en el aula.
+
+Las diapositivas acompañan al docente: no lo reemplazan ni son un apunte. Nadie lee un párrafo proyectado.
+
+REGLAS DE CONTENIDO
+- Entre 8 y 12 láminas, incluida la portada.
+- Frases cortas, de una línea. Si una viñeta ocupa dos renglones, está de más.
+- Sin "Introducción", "Desarrollo", "Conclusión": títulos que digan algo.
+- Nada que no esté en el material. No inventes datos, fechas ni autores.
+- Ejemplos de Tucumán o del día a día cuando el tema lo permita.
+- Español rioplatense, de vos.
+
+CÓMO ALTERNAR LAS LÁMINAS
+Un mazo donde todo es título + viñetas se ve monótono proyectado. Elegí el tipo según lo que tenga que mostrar esa lámina:
+- portada: la primera. Título del tema; en puntos, la bajada (materia, curso).
+- puntos: para enumerar. 3 a 5 viñetas. Es la base, pero no la única.
+- destacado: una definición, una idea fuerte o una cita que merece la lámina entera. Usá al menos una.
+- dos-columnas: cuando hay dos cosas que se comparan o se oponen (antes/después, causa/efecto, dos posturas, dos métodos).
+- pregunta: 1 o 2 en el mazo, repartidas, para que el curso participe. 3 o 4 opciones.
+- cierre: la última. Qué se llevan de la clase.
+
+NOTAS PARA EL DOCENTE
+Cada lámina lleva una nota con algo que le sirva de verdad: qué preguntar para abrir, dónde suelen trabarse los chicos, con qué conectarlo. No repitas lo que ya dice la lámina.
+
+CAMPOS QUE NO APLICAN
+Mandalos vacíos: '' para texto, [] para listas, -1 para correcta. No los llenes "por las dudas".`,
 
   study_cards: `Sos EstudIA, asistente pedagógico. Convertí el material de estudio en PLACAS INTERACTIVAS: tarjetas que estudiantes de secundaria recorren desde el celular para repasar de verdad, no solo leer.
 
@@ -613,7 +712,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Build OpenRouter request ──
-  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz';
+  const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz' || mode === 'slides';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   // Los modos estructurados devuelven JSON: si el techo de tokens corta la
   // respuesta, el JSON queda partido al medio y JSON.parse revienta — el
@@ -624,6 +723,8 @@ Deno.serve(async (req: Request) => {
     extract_text: 10000,
     import_program: 12000,
     study_cards: 12000,
+    // Un mazo son 8 a 12 láminas con sus notas del orador: pesa como las placas.
+    slides: 12000,
     extract_questions: 8000,
     student_summary: 3000,
     class_report: 2000,
@@ -661,6 +762,7 @@ Deno.serve(async (req: Request) => {
         : mode === 'class_report' ? 'Escribí el informe de la clase.'
         : mode === 'import_program' ? 'Extraé la planificación del programa.'
         : mode === 'student_summary' ? 'Escribí la síntesis del estudiante.'
+        : mode === 'slides' ? 'Armá las diapositivas de la clase.'
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
         : mode === 'practice_quiz' ? 'Generá el quiz de práctica.'
         : mode === 'study_guide' ? 'Escribí la guía de estudio.'
@@ -687,6 +789,7 @@ Deno.serve(async (req: Request) => {
       import_program: { name: 'programa', schema: PROGRAM_SCHEMA },
       extract_questions: { name: 'preguntas', schema: QUESTIONS_SCHEMA },
       study_cards: { name: 'placas', schema: STUDY_CARDS_SCHEMA },
+      slides: { name: 'diapositivas', schema: SLIDES_SCHEMA },
       practice_quiz: { name: 'quiz_practica', schema: PRACTICE_QUIZ_SCHEMA },
     };
     orBody.response_format = {
@@ -783,6 +886,7 @@ Deno.serve(async (req: Request) => {
   try {
     const parsed = JSON.parse(outputText);
     if (mode === 'import_program') return json({ program: parsed, truncated });
+    if (mode === 'slides') return json({ deck: parsed, truncated });
     if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
 
     // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──
