@@ -14,7 +14,7 @@ import {
   createAccount, createCourse, listCourses, addGuardianLink, getStudentIdByUser,
 } from '../../services/admin.service';
 import {
-  leerCsv, interpretar, validar, plantillaCsv, credencialesCsv,
+  leerCsv, textoDeCsv, interpretar, validar, plantillaCsv, credencialesCsv,
   type FilaPlanilla, type EstadoFila,
 } from '../../lib/planilla';
 import { DialogoForm } from './ui';
@@ -85,10 +85,12 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
     try {
       let grilla: unknown[][];
       if (/\.xlsx$/i.test(file.name)) {
-        const { default: readXlsxFile } = await import('read-excel-file');
-        grilla = await readXlsxFile(file);
+        // La primera hoja. La versión 5 se caía con celdas vacías "inline"
+        // (las que escriben LibreOffice, Google Sheets o los sistemas que exportan listas)
+        const { readSheet } = await import('read-excel-file/browser');
+        grilla = await readSheet(file);
       } else if (/\.(csv|txt)$/i.test(file.name)) {
-        grilla = leerCsv(await file.text());
+        grilla = leerCsv(textoDeCsv(await file.arrayBuffer()));
       } else {
         setError('Usá un archivo de Excel (.xlsx) o CSV. Si es un .xls viejo, guardalo como .xlsx.');
         return;
