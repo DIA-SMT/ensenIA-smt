@@ -154,3 +154,13 @@ export async function getMaterialByClass(classId: string): Promise<LibraryMateri
 
 /** Etiqueta de las versiones adaptadas que se leen con letra grande e interlineado. */
 export const TAG_LETRA_GRANDE = 'letra-grande';
+
+/**
+ * Guarda el diseño elegido en unas diapositivas de la biblioteca. Solo cambia
+ * la marca "<!-- diseño: x -->" del texto: el contenido es el mismo, así que
+ * NO se invalidan el quiz ni la guía de estudio cacheados (updateMaterial sí).
+ */
+export async function guardarTextoDeck(materialId: string, texto: string): Promise<void> {
+  const { error } = await supabase.from('library_materials').update({ extracted_text: texto }).eq('id', materialId);
+  if (error) throw error;
+}

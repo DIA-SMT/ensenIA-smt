@@ -58,3 +58,7 @@
   line-height: 1.2;
 }
 .brief-diseno.selected .brief-diseno-nombre { color: #3730A3; }
+
+/* El brief de presentaciones tiene más opciones: más alto, para no
+   recorrerlo por una ranura (el chat queda abajo y se ve al generar) */
+.brief-wrapper:has(.brief-disenos) { max-height: min(72vh, 760px); }
