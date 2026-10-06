@@ -5,16 +5,18 @@
  */
 
 import { useMemo, useState } from 'react';
-import { UserPlus, KeyRound, Search, GraduationCap, AlertCircle, Printer, Check } from 'lucide-react';
+import { UserPlus, KeyRound, Search, GraduationCap, AlertCircle, Printer, Check, FileSpreadsheet } from 'lucide-react';
 import { createAccount, resetPassword, moveStudent, type AdminStudent } from '../../services/admin.service';
 import { Barra, Campo, DialogoForm, Iniciales, Vacio } from './ui';
 import { printCredenciales, type Credencial } from './credenciales';
 import { avisar, confirmar } from '../../components/ui/avisar';
 import type { TabProps } from './GestionEscuela';
+import ImportarPlanilla from './ImportarPlanilla';
 
 export default function EstudiantesTab(props: TabProps) {
   const { data, run, showCredentials, irA } = props;
   const [alta, setAlta] = useState(false);
+  const [importar, setImportar] = useState(false);
   const [filterCourse, setFilterCourse] = useState('');
   const [query, setQuery] = useState('');
   const sinCursos = data.courses.length === 0;
@@ -59,6 +61,10 @@ export default function EstudiantesTab(props: TabProps) {
     <div className="adm-seccion">
       <Barra
         detalle={`${data.students.length} en total${pendientes ? ` · ${pendientes} todavía no entraron` : ''}`}>
+        <button type="button" className="btn btn-secondary" onClick={() => setImportar(true)}
+          title="Todos los cursos de una vez, desde Excel o CSV">
+          <FileSpreadsheet size={16} aria-hidden="true" /> Desde planilla
+        </button>
         <button type="button" className="btn btn-primary" onClick={() => setAlta(true)} disabled={sinCursos}>
           <UserPlus size={16} aria-hidden="true" /> Cargar estudiantes
         </button>
@@ -66,7 +72,7 @@ export default function EstudiantesTab(props: TabProps) {
 
       {sinCursos && (
         <p className="adm-aviso">
-          <AlertCircle size={14} aria-hidden="true" /> Cada estudiante va en un curso: primero creá los cursos.{' '}
+          <AlertCircle size={14} aria-hidden="true" /> Cada estudiante va en un curso: creá los cursos, o cargá una planilla con la columna Curso y se crean solos.{' '}
           <button type="button" className="adm-link" onClick={() => irA('cursos')}>Ir a Cursos y materias</button>
         </p>
       )}
@@ -121,6 +127,7 @@ export default function EstudiantesTab(props: TabProps) {
       </section>
 
       <AltaEstudiantes abierto={alta} alCerrar={() => setAlta(false)} cursoInicial={filterCourse} {...props} />
+      <ImportarPlanilla abierto={importar} alCerrar={() => setImportar(false)} {...props} />
     </div>
   );
 }

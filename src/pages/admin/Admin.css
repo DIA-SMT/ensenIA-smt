@@ -600,3 +600,34 @@
 }
 
 .adm-paso-ahora { font-size: 0.875rem; font-weight: 650; color: var(--acento-hover); }
+
+/* ── Carga desde planilla ── */
+.imp { gap: var(--space-3); }
+.imp-archivo {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-1);
+  padding: var(--space-6) var(--space-4); border: 2px dashed var(--border-color); border-radius: var(--radius-lg);
+  text-align: center; cursor: pointer; color: var(--text-secondary);
+}
+.imp-archivo:hover, .imp-archivo:focus-within { border-color: var(--acento); color: var(--acento); }
+.imp-archivo strong { color: var(--text-primary); }
+.imp-archivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.imp-ayuda { font-size: .875rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.imp-ayuda ul { padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.imp-resumen { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.imp-chip { padding: 4px 10px; border-radius: 999px; background: var(--bg-elevated); font-size: .8125rem; font-weight: 600; }
+.imp-chip.ok { background: var(--success-light, #d1fae5); color: var(--success-ink, #065f46); }
+.imp-chip.err { background: var(--danger-light); color: var(--danger-ink); }
+.imp-check { display: flex; align-items: flex-start; gap: var(--space-2); font-size: .875rem; }
+.imp-check input { margin-top: 3px; }
+.imp-tabla-wrap { max-height: 300px; overflow: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.imp-tabla { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.imp-tabla th { position: sticky; top: 0; background: var(--bg-panel); text-align: left; padding: 6px 8px; font-size: .75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.imp-tabla td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+.imp-tabla tr.err td { color: var(--danger-ink); background: var(--danger-light); }
+.imp-tabla tr.ya td { color: var(--text-subtle); }
+.imp-barra { height: 8px; border-radius: 99px; background: var(--bg-elevated); overflow: hidden; }
+.imp-barra i { display: block; height: 100%; background: var(--acento); transition: width .2s; }
+.imp-final { display: flex; align-items: center; gap: var(--space-2); font-weight: 650; color: var(--success-ink, #065f46); }
+
+/* Horario de la escuela: por curso o por docente */
+.hor-vista { display: flex; gap: 2px; }
