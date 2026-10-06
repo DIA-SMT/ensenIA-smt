@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 047 — Biblioteca de referencia (normativa, NAP, ESI y técnicas)
+-- 050 — Biblioteca de referencia (normativa, NAP, ESI y técnicas)
 --
 -- La normativa de cada escuela ya existía (school_policies, 028/029).
 -- Faltaba lo COMÚN a todas: leyes y resoluciones nacionales, provinciales
