@@ -236,6 +236,10 @@ export default function Agenda() {
                                 ))}
                             </div>
                             <div className="days-grid-content" style={{ minHeight: `${horas.length * 60}px` }}>
+                                {/* Una columna por día, con su separador: que se vea a qué día es cada clase */}
+                                {DIAS.map((dia, idx) => (
+                                    <div key={dia} className={`dia-columna ${idx === hoyIdx ? 'today' : ''}`} style={{ gridColumn: idx + 1 }} />
+                                ))}
                                 <div className="grid-lines">
                                     {horas.map(h => <div key={h} className="grid-row"></div>)}
                                 </div>
@@ -245,7 +249,9 @@ export default function Agenda() {
                                         type="button"
                                         className={`schedule-block ${CLASE_COLOR[b.colorClass] || 'block-blue'}`}
                                         style={{
-                                            gridColumn: b.dayIndex + 1,
+                                            // "/ span 1": un bloque con posición absoluta y solo la
+                                            // columna de inicio se estira hasta el borde derecho
+                                            gridColumn: `${b.dayIndex + 1} / span 1`,
                                             top: `${(b.startHour - desde) * 60}px`,
                                             height: `${b.duration * 60}px`,
                                         }}
@@ -254,7 +260,7 @@ export default function Agenda() {
                                     >
                                         <span className="block-title">{b.subjectName}</span>
                                         <span className="block-details">
-                                            {b.courseName} · {horaATexto(b.startHour)}{b.room ? ` · ${b.room}` : ''}
+                                            {b.courseName} · {horaATexto(b.startHour)} a {horaATexto(b.startHour + b.duration)}{b.room ? ` · ${b.room}` : ''}
                                         </span>
                                     </button>
                                 ))}
