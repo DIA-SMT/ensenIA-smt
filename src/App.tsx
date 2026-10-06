@@ -121,6 +121,7 @@ function App() {
                 {ruta('/admin', ['superadmin'])}
                 {ruta('/admin/escuelas/:id', ['superadmin'])}
                 {ruta('/admin/consumo-ia', ['superadmin'])}
+                {ruta('/admin/referencias', ['superadmin'])}
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />
