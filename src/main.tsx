@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { cuandoNoHayaSinGuardar } from './lib/sinGuardar'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -38,7 +39,9 @@ if ('serviceWorker' in navigator && !location.pathname.startsWith('/vivo/')) {
       // ahí sería un parpadeo gratis.
       if (!habiaViejo || recargado) return
       recargado = true
-      location.reload()
+      // Si hay algo sin guardar en pantalla (la lista a medio pasar), se
+      // espera a que se guarde: recargar ahí lo borraba.
+      cuandoNoHayaSinGuardar(() => location.reload())
     })
   })
 }

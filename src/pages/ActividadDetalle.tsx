@@ -11,7 +11,8 @@ import {
   getActivityById, getSubmissionsByActivity, getEventsByActivity,
   getEnrolledStudents, gradeSubmission, setSubmissionReaction, updateActivity,
 } from '../services/activities.service';
-import { getCheckinsByActivity, addObservation, getObservationsByStudent } from '../services/wellbeing.service';
+import { getCheckinsByActivity, getObservationsByStudent } from '../services/wellbeing.service';
+import { guardarObservacionResiliente } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import SugerirDevolucion from '../components/SugerirDevolucion';
 import BotonCopiarActividad from '../components/CopiarActividad';
@@ -228,12 +229,14 @@ export default function ActividadDetalle() {
     setObsSaving(true);
     setObsError('');
     try {
-      await addObservation({
+      // Sin señal queda guardada en el equipo y se envía sola
+      const resultado = await guardarObservacionResiliente({
         studentId: selected.id,
         teacherId: user.id,
         subjectId: activity.subjectId,
         category: obsCategory,
         note: obsNote,
+        descripcion: `Observación sobre ${selected.firstName} ${selected.lastName}`,
       });
       // La huella aparece al instante en la lista de abajo
       setObsHistory(prev => [{
@@ -245,13 +248,15 @@ export default function ActividadDetalle() {
         note: obsNote.trim(),
         createdAt: new Date().toISOString(),
         teacherName: `${user.firstName} ${user.lastName}`,
+        pendiente: resultado === 'pendiente',
       }, ...prev]);
       setObsNote('');
       setObsSaved(true);
       setTimeout(() => setObsSaved(false), 2500);
     } catch (err) {
+      // Con o sin señal, lo que llega acá es que el servidor no la aceptó
       console.error('Error guardando observación:', err);
-      setObsError('No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+      setObsError('El servidor no aceptó la observación. Probá de nuevo; el texto sigue acá.');
     } finally {
       setObsSaving(false);
     }
@@ -627,7 +632,7 @@ export default function ActividadDetalle() {
                     <p className="text-xs text-danger">{obsError}</p>
                   )}
                   <p className="text-xs text-subtle">
-                    Queda en la ficha del estudiante (sección Estudiantes) y alimenta sus señales.
+                    Queda en la ficha del estudiante (sección Estudiantes). Sin señal se guarda en este equipo y se envía sola.
                   </p>
                 </div>
                 {obsHistory.length > 0 && (
@@ -642,6 +647,7 @@ export default function ActividadDetalle() {
                         </p>
                         <span className="acts-obs-meta">
                           {o.teacherName ?? 'Docente'} · {new Date(o.createdAt).toLocaleDateString('es-AR')}
+                          {o.pendiente && <span className="text-warning"> · sin enviar (se manda sola con señal)</span>}
                         </span>
                       </div>
                     ))}

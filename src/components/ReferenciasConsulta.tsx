@@ -1,5 +1,5 @@
 /**
- * Consulta de la biblioteca de referencia (047): normativa nacional,
+ * Consulta de la biblioteca de referencia (050): normativa nacional,
  * provincial y municipal, NAP, ESI, diseño curricular y técnicas.
  *
  * La carga la Dirección de Innovación; el equipo solo la lee. Sin

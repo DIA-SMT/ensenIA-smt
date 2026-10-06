@@ -98,6 +98,11 @@ const yaAnticipadas = new Set<RutaPantalla>();
  * navegador está libre, para que después se abran al instante y funcionen
  * sin conexión. No hace nada con las que ya se bajaron.
  */
+/** Baja ya esas pantallas (no cuando haya tiempo): para "Preparar para el aula". */
+export async function bajarYa(rutas: RutaPantalla[]): Promise<void> {
+  await Promise.allSettled(rutas.map(r => cargadores[r]().then(() => { yaAnticipadas.add(r); })));
+}
+
 export function anticipar(rutas: RutaPantalla[]): void {
   const pendientes = rutas.filter(r => !yaAnticipadas.has(r));
   const cuandoHayaTiempo: (fn: () => void) => void =

@@ -1,6 +1,6 @@
 /**
  * SMT EstudIA — Biblioteca de referencia para el equipo y NAP de la
- * planificación (047)
+ * planificación (050)
  *
  * La biblioteca (leyes, resoluciones, NAP, ESI, diseño curricular y
  * técnicas) la carga la Dirección de Innovación; acá solo se LEE lo
@@ -14,7 +14,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './_helpers';
 
-// Las tablas de la 047 todavía no están en los tipos generados: este
+// Las tablas de la 050 todavía no están en los tipos generados: este
 // cliente sin esquema evita pelear con ellos (y sigue andando cuando se
 // regeneren).
 const db = supabase as unknown as SupabaseClient;
@@ -50,7 +50,7 @@ export const FILTROS_TIPO: { id: string; etiqueta: string; tipos: TipoReferencia
   { id: 'tecnicas', etiqueta: 'Técnicas pedagógicas', tipos: ['tecnica'] },
 ];
 
-// ── Comparar áreas como normalizar_area() de la 047 ──
+// ── Comparar áreas como normalizar_area() de la 050 ──
 
 const SIN_ACENTO: Record<string, string> = {
   á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u', ñ: 'n',

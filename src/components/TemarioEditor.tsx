@@ -9,6 +9,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Save, Eye, EyeOff, CheckCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import { haySenial } from '../lib/conexion';
 import {
   getUnitsForTeacher, setUnitTerm, getCriteria, saveCriteria,
 } from '../services/syllabus.service';
@@ -77,7 +78,9 @@ export default function TemarioEditor({
     cargar().catch(err => {
       console.error(err);
       if (claveActual.current !== clave) return;
-      setError('No se pudo cargar el temario.');
+      setError(haySenial()
+        ? 'No se pudo cargar el temario. Probá de nuevo en un rato.'
+        : 'Sin conexión, y este temario no está guardado en este equipo. Con señal, tocá «Preparar para el aula» en Mi día.');
       setUnits([]);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,7 +165,7 @@ export default function TemarioEditor({
       </div>
 
       <div style={{ padding: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        {units.length === 0 && (
+        {units.length === 0 && !error && (
           <EstadoVacio
             compacto
             icono={BookOpen}

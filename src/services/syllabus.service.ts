@@ -20,7 +20,8 @@ function mapClass(row: any): PlanningClass {
     order: row.sort_order,
     objectives: row.objectives ?? [],
     content: row.content ?? undefined,
-    isComplete: row.is_complete,
+    // El temario del alumno no la trae (047)
+    isComplete: row.is_complete ?? false,
   };
 }
 
@@ -148,12 +149,14 @@ export async function saveCriteria(params: {
  * Temario de un trimestre para quien cursa: unidades publicadas de cada
  * materia con sus clases, y los criterios de evaluación publicados.
  * La RLS (012) hace el filtrado real — acá solo se agrupa por materia.
+ * De cada clase llegan solo título y objetivos (temario_clases, 047): el
+ * contenido es material del docente y puede tener respuestas.
  */
 export async function getSyllabusForTerm(termId: string): Promise<SyllabusSubject[]> {
   const [unitRows, critRows] = await Promise.all([
     supabase
       .from('planning_units')
-      .select('*, planning_classes(*), subjects(name)')
+      .select('*, subjects(name)')
       .eq('term_id', termId)
       .order('sort_order'),
     supabase
@@ -164,6 +167,18 @@ export async function getSyllabusForTerm(termId: string): Promise<SyllabusSubjec
   ]);
   if (unitRows.error) throw unitRows.error;
   if (critRows.error) throw critRows.error;
+
+  const unidadIds = (unitRows.data ?? []).map(u => u.id);
+  const clasesPorUnidad = new Map<string, unknown[]>();
+  if (unidadIds.length > 0) {
+    const { data: clases, error } = await supabase.rpc('temario_clases', { p_unidades: unidadIds });
+    if (error) throw error;
+    for (const c of clases ?? []) {
+      const arr = clasesPorUnidad.get(c.unit_id) ?? [];
+      arr.push(c);
+      clasesPorUnidad.set(c.unit_id, arr);
+    }
+  }
 
   const bySubject = new Map<string, SyllabusSubject>();
   const entrada = (subjectId: string, courseId: string, nombre?: string): SyllabusSubject => {
@@ -180,7 +195,7 @@ export async function getSyllabusForTerm(termId: string): Promise<SyllabusSubjec
 
   for (const row of unitRows.data ?? []) {
     entrada(row.subject_id, row.course_id, (row as any).subjects?.name)
-      .units.push(mapUnit(row));
+      .units.push(mapUnit({ ...row, planning_classes: clasesPorUnidad.get(row.id) ?? [] }));
   }
 
   // Los criterios entran por derecho propio: una materia puede tener los

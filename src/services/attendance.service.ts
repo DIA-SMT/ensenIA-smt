@@ -94,48 +94,26 @@ export async function getLiveParticipants(courseId: string, date: string): Promi
   return ((data as { student_id: string }[]) ?? []).map(r => r.student_id);
 }
 
-/** Crea o actualiza la toma completa (upsert de la sesión + todos los registros). */
+/**
+ * Crea o actualiza la toma completa: la toma y todos los alumnos de una
+ * vez (guardar_asistencia, migración 047). Antes eran dos pasos y un corte
+ * en el medio dejaba la toma vacía. Se puede reintentar.
+ */
 export async function saveAttendance(input: {
-  teacherId: string;
-  schoolId: string;
   subjectId: string;
   courseId: string;
   takenOn: string;
   note?: string;
   entries: AttendanceEntry[];
-}): Promise<AttendanceSession> {
-  const { data: ses, error } = await supabase
-    .from('attendance_sessions')
-    .upsert(
-      {
-        teacher_id: input.teacherId,
-        school_id: input.schoolId,
-        subject_id: input.subjectId,
-        course_id: input.courseId,
-        taken_on: input.takenOn,
-        note: input.note?.trim() || null,
-      },
-      { onConflict: 'teacher_id,course_id,subject_id,taken_on' },
-    )
-    .select('*')
-    .single();
-  if (error || !ses) throw error ?? new Error('No se pudo guardar la asistencia.');
-
-  if (input.entries.length > 0) {
-    const { error: recErr } = await supabase
-      .from('attendance_records')
-      .upsert(
-        input.entries.map(e => ({
-          session_id: ses.id,
-          student_id: e.studentId,
-          status: e.status,
-        })),
-        { onConflict: 'session_id,student_id' },
-      );
-    if (recErr) throw recErr;
-  }
-
-  return mapSession(ses);
+}): Promise<void> {
+  const { error } = await supabase.rpc('guardar_asistencia', {
+    p_course: input.courseId,
+    p_subject: input.subjectId,
+    p_fecha: input.takenOn,
+    p_registros: input.entries.map(e => ({ student_id: e.studentId, status: e.status })),
+    p_nota: input.note?.trim() || null,
+  });
+  if (error) throw error;
 }
 
 /** Historial reciente de tomas del docente (para saber si ya pasó lista hoy). */

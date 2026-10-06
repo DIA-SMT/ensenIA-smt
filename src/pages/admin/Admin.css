@@ -631,3 +631,19 @@
 
 /* Horario de la escuela: por curso o por docente */
 .hor-vista { display: flex; gap: 2px; }
+
+/* ── Alumnos de muestra (superadmin) ── */
+.adm-muestra { list-style: none; display: flex; flex-direction: column; }
+.adm-muestra li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.adm-muestra li:last-child { border-bottom: 0; padding-bottom: 0; }
+.adm-muestra-curso { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adm-muestra-curso strong { font-size: 0.9375rem; }
+.adm-muestra .spin { animation: adm-girar 0.9s linear infinite; }
+@keyframes adm-girar { to { transform: rotate(360deg); } }

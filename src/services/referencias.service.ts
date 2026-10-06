@@ -1,5 +1,5 @@
 /**
- * SMT EstudIA — Biblioteca de referencia: carga y edición (047)
+ * SMT EstudIA — Biblioteca de referencia: carga y edición (050)
  *
  * Leyes, resoluciones, NAP, ESI, diseño curricular y técnicas que la IA
  * del Laboratorio, Crear y Migue consulta y cita. Es común a todas las
@@ -18,7 +18,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './_helpers';
 
-// Las tablas de la 047 todavía no están en los tipos generados: este
+// Las tablas de la 050 todavía no están en los tipos generados: este
 // cliente sin esquema evita pelear con ellos (y sigue andando cuando se
 // regeneren).
 const db = supabase as unknown as SupabaseClient;
@@ -262,7 +262,7 @@ function aColumnas(d: Partial<ReferenciaDatos>): Record<string, unknown> {
 function errorLegible(error: { message: string; code?: string }, accion: string): Error {
   const m = error.message ?? '';
   if (error.code === '42P01' || /relation .*referencia/i.test(m)) {
-    return new Error('Falta correr la migración 047_biblioteca_referencia.sql en Supabase.');
+    return new Error('Falta correr la migración 050_biblioteca_referencia.sql en Supabase.');
   }
   if (/fuente_url/.test(m)) return new Error('El enlace oficial tiene que empezar con http:// o https://.');
   if (/titulo/.test(m) && /check/i.test(m)) return new Error('El título tiene que tener entre 3 y 300 caracteres.');

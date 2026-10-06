@@ -1,5 +1,5 @@
 /**
- * Cobertura de NAP del año (047): de los NAP cargados para esta materia y
+ * Cobertura de NAP del año (050): de los NAP cargados para esta materia y
  * este año, cuáles ya están vinculados a algún tema de la planificación
  * del docente en este curso. Si no hay NAP cargados, no se muestra.
  */

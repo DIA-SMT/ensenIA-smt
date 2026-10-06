@@ -12,9 +12,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
-    History, ClipboardList, Wand2, CalendarDays, Target,
+    History, ClipboardList, Wand2, CalendarDays, Target, WifiOff,
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import PrepararAula from '../components/PrepararAula';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
 import { getScheduleByTeacher } from '../services/schedule.service';
@@ -26,6 +27,7 @@ import { getRecentAttendance, todayISO } from '../services/attendance.service';
 import { getMyLiveSession, type LiveSession } from '../services/live.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
+import { pendientesDe } from '../services/offline-queue.service';
 import type { ScheduleBlock, Alert as AlertType, TeacherStats } from '../types';
 import './Hoy.css';
 
@@ -76,6 +78,10 @@ export default function Hoy() {
     // Todo el horario: para saber si está cargado y qué viene el lunes
     const [semana, setSemana] = useState<ScheduleBlock[]>([]);
     const [stats, setStats] = useState<TeacherStats>({ totalStudents: 0, classesToday: 0, pendingEvaluations: 0, entregasParaCorregir: 0, avgAttendance: 0 });
+    // Sin señal y sin copia guardada no hay datos: mostrar "0" o "Cargá tu
+    // horario" confundía (parecía que no había nada).
+    const [statsFallo, setStatsFallo] = useState(false);
+    const [horarioFallo, setHorarioFallo] = useState(false);
     const [alerts, setAlerts] = useState<AlertType[]>([]);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
@@ -94,23 +100,28 @@ export default function Hoy() {
         const today = todayISO();
 
         Promise.all([
-            getScheduleByTeacher(user.id).catch(() => [] as ScheduleBlock[]),
-            getTeacherStats(user.id, dayIndex).catch(() => stats),
+            getScheduleByTeacher(user.id).catch(() => null),
+            getTeacherStats(user.id, dayIndex).catch(() => null),
             getAlertsByTeacher(user.id).catch(() => [] as AlertType[]),
             getRecentAttendance(user.id, 20).catch(() => []),
             getMyLiveSession(user.id).catch(() => null),
             getActivitiesByTeacher(user.id).catch(() => []),
             getMaterialsByTeacher(user.id).catch(() => []),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
-        ]).then(([horario, st, al, attendance, live, activities, materials, trail]) => {
+        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail]) => {
+            const horario = horarioLeido ?? [];
+            setHorarioFallo(horarioLeido === null);
             setSemana(horario);
             setTodayClasses(horario.filter(b => b.dayIndex === dayIndex).sort((a, b) => a.startHour - b.startHour));
-            setStats(st);
+            setStatsFallo(st === null);
+            if (st) setStats(st);
             setAlerts(al.filter(a => !a.isRead).slice(0, 3));
             setLiveSession(live);
-            setAttendanceDone(new Set(
-                attendance.filter(a => a.takenOn === today).map(a => `${a.courseId}|${a.subjectId}`),
-            ));
+            // Tomada hoy: la que llegó al servidor y la que espera señal en este equipo
+            setAttendanceDone(new Set([
+                ...attendance.filter(a => a.takenOn === today).map(a => `${a.courseId}|${a.subjectId}`),
+                ...pendientesDe('asistencia').filter(op => op.fecha === today).map(op => `${op.courseId}|${op.subjectId}`),
+            ]));
             // Primera vez: sin material y sin actividades
             setIsNew(materials.length === 0 && activities.length === 0);
             setTimeline(trail);
@@ -226,7 +237,14 @@ export default function Hoy() {
                 {loading && <Esqueleto filas={2} etiqueta="Cargando tus clases de hoy…" />}
 
                 {!loading && todayClasses.length === 0 && (
-                    semana.length === 0 ? (
+                    horarioFallo ? (
+                        <EstadoVacio
+                            compacto
+                            icono={WifiOff}
+                            titulo="Sin conexión"
+                            texto="Tu horario no está guardado en este equipo. Con señal, tocá «Preparar para el aula» y queda para usar sin conexión."
+                        />
+                    ) : semana.length === 0 ? (
                         <EstadoVacio
                             compacto
                             icono={CalendarDays}
@@ -349,18 +367,21 @@ export default function Hoy() {
                 </section>
             )}
 
+            {/* Para el aula sin señal: bajar todo con conexión */}
+            <PrepararAula />
+
             {/* Contexto (métricas, en segundo plano). Sin "asistencia
                 promedio": ese número sale de un campo que solo llena el seed
                 de demo, ninguna función lo calcula. */}
             <section className="hoy-stats">
                 <Link to="/students" className="hoy-stat hoy-stat-action">
                     <Users size={15} className="text-cyan" aria-hidden="true" />
-                    <span className="hoy-stat-val">{stats.totalStudents}</span>
+                    <span className="hoy-stat-val">{statsFallo ? '—' : stats.totalStudents}</span>
                     <span className="hoy-stat-label">{stats.totalStudents === 1 ? 'estudiante' : 'estudiantes'}</span>
                 </Link>
                 <Link to="/mis-clases" className="hoy-stat hoy-stat-action">
                     <Clock size={15} className="text-warning" aria-hidden="true" />
-                    <span className="hoy-stat-val">{stats.classesToday}</span>
+                    <span className="hoy-stat-val">{statsFallo ? '—' : stats.classesToday}</span>
                     <span className="hoy-stat-label">{stats.classesToday === 1 ? 'clase hoy' : 'clases hoy'}</span>
                 </Link>
                 <Link
@@ -369,7 +390,7 @@ export default function Hoy() {
                     title="Ver y corregir todas las entregas pendientes"
                 >
                     <ClipboardCheck size={15} className="text-ia-accent" aria-hidden="true" />
-                    <span className="hoy-stat-val">{stats.pendingEvaluations}</span>
+                    <span className="hoy-stat-val">{statsFallo ? '—' : stats.pendingEvaluations}</span>
                     <span className="hoy-stat-label">por corregir</span>
                 </Link>
             </section>
