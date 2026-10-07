@@ -28,6 +28,7 @@ import {
     type Alert as AlertType, type Communication, type DirectorInsights, type DailyBrief,
 } from '../types';
 import './Dashboard.css';
+import EscuelaEnNumeros from '../components/EscuelaEnNumeros';
 
 /**
  * Por debajo de esta cantidad de respuestas, un porcentaje engaña: un solo
@@ -359,6 +360,9 @@ function DirectorDashboardContent() {
                         ))}
                 </KpiCard>
             </div>
+
+            {/* Asistencia, notas y evolución, calculados en la base (057) */}
+            <EscuelaEnNumeros />
 
             <div className="director-main-grid">
                 {/* Left: Mapa institucional curso × materia */}

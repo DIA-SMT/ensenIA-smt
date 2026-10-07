@@ -110,9 +110,9 @@ export default function CourseDetail() {
   );
   const coverage = insights.curriculumCoverage.bySubjectCourse.filter(c => c.courseId === course.id);
   const wellbeing = insights.wellbeingPulse.byCourse.find(c => c.courseId === course.id);
-  const pending = insights.feedbackLatency.pendingReview.filter(p => p.courseId === course.id);
+  const pending = insights.feedbackLatency.pendingAll.filter(p => p.courseId === course.id);
   const assignments = insights.courseAssignments[course.id] ?? [];
-  const openAlerts = alerts.filter(a => !a.isRead && (a.studentIds ?? []).some(sid => rosterIds.has(sid)));
+  const openAlerts = alerts.filter(a => a.status !== 'cerrada' && (a.studentIds ?? []).some(sid => rosterIds.has(sid)));
   const atRiskInCourse = [...signalsByStudent.values()].filter(n => n >= 2).length;
 
   // Notas publicadas del trimestre en curso, solo de este curso.
@@ -122,8 +122,9 @@ export default function CourseDetail() {
 
   return (
     <div className="dashboard-container">
-      <button className="btn btn-ghost text-sm mb-4" onClick={() => navigate('/dashboard')}>
-        <ArrowLeft size={14} /> Volver al tablero
+      {/* Vuelve a donde estaba (Tablero, Qué está pasando, el buscador…) */}
+      <button className="btn btn-ghost text-sm mb-4" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/dashboard'))}>
+        <ArrowLeft size={14} /> Volver
       </button>
 
       <header className="course-detail-header">

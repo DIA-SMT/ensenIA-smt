@@ -484,7 +484,7 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
   );
   const medianHours = median(hoursList);
 
-  const pendingReview: PendingFeedbackRow[] = submissions
+  const pendingAll: PendingFeedbackRow[] = submissions
     .filter(s => s.status === 'submitted' && s.submittedAt)
     .map(s => {
       const act = activitiesById.get(s.activityId);
@@ -498,13 +498,14 @@ export async function getDirectorInsights(schoolId: string): Promise<DirectorIns
         hoursWaiting: round1((Date.now() - new Date(s.submittedAt!).getTime()) / 3_600_000),
       };
     })
-    .sort((a, b) => b.hoursWaiting - a.hoursWaiting)
-    .slice(0, 8);
+    .sort((a, b) => b.hoursWaiting - a.hoursWaiting);
+  const pendingReview = pendingAll.slice(0, 8);
 
   const feedbackLatency: FeedbackLatencyKpi = {
     medianHours: medianHours !== null ? round1(medianHours) : null,
     sampleSize: gradedRecentSubs.length,
     pendingReview,
+    pendingAll,
   };
 
   // ── Docentes a cargo por curso (ficha de curso) ──

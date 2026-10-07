@@ -1,0 +1,56 @@
+/* La escuela en números (EscuelaEnNumeros.tsx), en el tablero de dirección */
+.een { display: flex; flex-direction: column; gap: var(--space-4); }
+.een-titulo { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
+.een-sub { display: flex; align-items: center; gap: 8px; margin: 0 0 var(--space-3); font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+
+.een-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
+.een-cifra { display: flex; flex-direction: column; gap: 4px; padding: var(--space-4); }
+.een-cifra-icono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--acento-suave);
+  color: var(--acento);
+}
+.een-cifra-valor { font-size: 1.9rem; font-weight: 800; line-height: 1.1; color: var(--text-primary); }
+.een-cifra-texto { font-size: 13px; color: var(--text-secondary); }
+
+.een-rangos { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.een-rangos li { display: grid; grid-template-columns: 52px 1fr 28px; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.een-rango-barra { height: 8px; border-radius: 99px; background: var(--bg-elevated); overflow: hidden; }
+.een-rango-barra > span { display: block; height: 100%; border-radius: 99px; background: var(--acento); }
+.een-rango-n { text-align: right; font-weight: 600; color: var(--text-primary); }
+
+.een-evolucion { padding: var(--space-4); }
+.een-evo-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.een-evo { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.een-evo-cabeza { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.een-evo-titulo { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.een-evo-valor { display: flex; flex-direction: column; align-items: flex-end; font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.een-evo-valor small { font-size: 11px; font-weight: 500; color: var(--text-subtle); }
+.een-evo-svg { width: 100%; height: 64px; overflow: visible; touch-action: pan-y; }
+.een-evo-base { stroke: var(--border-color); stroke-width: 1; }
+.een-evo-linea { fill: none; stroke: var(--acento); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.een-evo-punto { fill: var(--acento); stroke: var(--bg-panel, #fff); stroke-width: 2; }
+.een-evo-punto.activo { fill: var(--text-primary); }
+.een-evo-vacio { margin: 0; padding: 16px 0; font-size: 12.5px; color: var(--text-subtle); }
+
+.een-tabla-semanas { margin-top: var(--space-3); font-size: 13px; }
+.een-tabla-semanas summary { cursor: pointer; color: var(--acento); font-weight: 600; }
+.een-tabla-semanas table { margin-top: 8px; border-collapse: collapse; width: 100%; }
+.een-tabla-semanas th, .een-tabla-semanas td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
+
+.een-cursos { padding: var(--space-4); }
+.een-tabla-scroll { overflow-x: auto; }
+.een-tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px; }
+.een-tabla th, .een-tabla td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.een-tabla thead th { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.een-fila { cursor: pointer; }
+.een-fila:hover { background: var(--bg-elevated); }
+.een-curso-link { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--acento); cursor: pointer; }
+.een-curso-link:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.een-bajo { color: var(--danger, #B91C1C); font-weight: 700; }
+.een-gris { color: var(--text-subtle); font-size: 13px; }
+.een-nota { margin: var(--space-3) 0 0; font-size: 12px; color: var(--text-subtle); }

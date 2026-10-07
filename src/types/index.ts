@@ -767,7 +767,10 @@ export interface PendingFeedbackRow {
 export interface FeedbackLatencyKpi {
   medianHours: number | null;
   sampleSize: number;
-  pendingReview: PendingFeedbackRow[]; // más tiempo esperando primero
+  pendingReview: PendingFeedbackRow[]; // más tiempo esperando primero (las 8 primeras)
+  /** Todas las que esperan corrección: la ficha de curso filtra de acá (antes
+   * filtraba de las 8 de toda la escuela y el número del curso salía mal). */
+  pendingAll: PendingFeedbackRow[];
 }
 
 export interface CourseAssignmentInfo {
