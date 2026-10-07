@@ -11,8 +11,10 @@
  *     ElevenLabs de respaldo (ese sí cobra).
  *  3. El MP3 queda en Storage (bucket "library") y el material se marca "ready".
  *
- * Secrets: OPENROUTER_API_KEY; para la voz AZURE_SPEECH_KEY + AZURE_SPEECH_REGION
- * (AZURE_SPEECH_VOICE opcional) y/o ELEVENLABS_API_KEY
+ * Secrets: OPENROUTER_API_KEY; para la voz AZURE_SPEECH_REGION y la clave de
+ * Azure como AZURE_SPEECH_KEY o AZURE_SPEECH_KEY_1 / AZURE_SPEECH_KEY_2 (las dos
+ * del recurso: si Azure rechaza una, se prueba la otra, así se pueden rotar sin
+ * cortar), AZURE_SPEECH_VOICE opcional; y/o ELEVENLABS_API_KEY
  * (ELEVENLABS_PODCAST_VOICE_ID opcional).
  */
 
@@ -151,9 +153,12 @@ Deno.serve(async (req: Request) => {
 
   const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
   const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
-  const AZURE_SPEECH_KEY = Deno.env.get('AZURE_SPEECH_KEY');
-  const AZURE_SPEECH_REGION = Deno.env.get('AZURE_SPEECH_REGION');
-  const hayAzure = Boolean(AZURE_SPEECH_KEY && AZURE_SPEECH_REGION);
+  // Azure da dos claves por recurso: se aceptan las dos (y el nombre sin número)
+  const clavesAzure = [...new Set(['AZURE_SPEECH_KEY', 'AZURE_SPEECH_KEY_1', 'AZURE_SPEECH_KEY_2']
+    .map(n => Deno.env.get(n)?.trim())
+    .filter((k): k is string => Boolean(k)))];
+  const AZURE_SPEECH_REGION = Deno.env.get('AZURE_SPEECH_REGION')?.trim().toLowerCase();
+  const hayAzure = clavesAzure.length > 0 && Boolean(AZURE_SPEECH_REGION);
   if (!OPENROUTER_API_KEY || (!hayAzure && !ELEVENLABS_API_KEY)) {
     return json({ error: 'Faltan claves de IA o de voz en el servidor.' }, 500);
   }
@@ -235,11 +240,16 @@ Deno.serve(async (req: Request) => {
     let voz: Voz | null = null;
     let errorAzure = '';
     if (hayAzure) {
-      try {
-        voz = await vozAzure(script, AZURE_SPEECH_KEY!, AZURE_SPEECH_REGION!);
-      } catch (e) {
-        errorAzure = e instanceof Error ? e.message : String(e);
-        console.error('Azure TTS:', errorAzure);
+      for (const clave of clavesAzure) {
+        try {
+          voz = await vozAzure(script, clave, AZURE_SPEECH_REGION!);
+          break;
+        } catch (e) {
+          errorAzure = e instanceof Error ? e.message : String(e);
+          console.error('Azure TTS:', errorAzure);
+          // Clave rechazada (regenerada o vencida): probar la otra. Otro error, no insistir.
+          if (!/^Azure 40[13]/.test(errorAzure)) break;
+        }
       }
     }
     if (!voz && ELEVENLABS_API_KEY) voz = await vozEleven(script, ELEVENLABS_API_KEY);
