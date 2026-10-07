@@ -33,8 +33,18 @@ export function archivosDe(materiales: LibraryMaterial[], opciones: { conPdf?: b
   return [...rutas];
 }
 
+/**
+ * ¿Este navegador guarda copias para usar sin conexión? Hace falta el
+ * service worker activo (no lo hay en desarrollo ni en algunos navegadores
+ * viejos): sin él, "guardar" no guardaría nada.
+ */
+export function puedeGuardarSinConexion(): boolean {
+  return typeof window !== 'undefined' && 'caches' in window
+    && 'serviceWorker' in navigator && Boolean(navigator.serviceWorker.controller);
+}
+
 /** ¿Ya está guardado en este equipo? Así no se vuelve a pedir la firma. */
-async function yaGuardado(ruta: string): Promise<boolean> {
+export async function yaGuardado(ruta: string): Promise<boolean> {
   if (!('caches' in window)) return false;
   try {
     return Boolean(await caches.match(urlSinFirma(ruta), { ignoreSearch: true }));
@@ -45,11 +55,12 @@ async function yaGuardado(ruta: string): Promise<boolean> {
 
 /**
  * Baja los archivos que falten, de a dos (el wifi de la escuela es poco).
- * Devuelve cuántos no se pudieron bajar. Sin señal no hace nada.
+ * Devuelve cuántos no se pudieron bajar (todos, si no hay señal o el
+ * navegador no puede guardar).
  */
 export async function guardarArchivos(rutas: string[], alAvanzar?: (hechos: number, total: number) => void): Promise<{ fallaron: number }> {
-  if (!haySenial() || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
-    return { fallaron: 0 };
+  if (!haySenial() || !puedeGuardarSinConexion()) {
+    return { fallaron: rutas.length };
   }
   let hechos = 0;
   let fallaron = 0;

@@ -5,14 +5,20 @@
  *
  * Solo muestra las partes que el estudiante puede abrir: si el docente borró
  * o dejó de compartir un material, no aparece.
+ *
+ * Cada clase dice si ya está guardada para abrirla sin señal, y si no, la
+ * deja guardar a mano (por ejemplo antes de salir de casa).
  */
 
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Presentation, Puzzle, Network, FileText, ClipboardList, Sparkles, ChevronRight } from 'lucide-react';
+import { Presentation, Puzzle, Network, FileText, ClipboardList, Sparkles, ChevronRight, CloudDownload, CheckCircle2, Loader2 } from 'lucide-react';
 import { esJuego } from '../lib/juegos';
 import { esDiagrama } from '../lib/diagramas';
 import { TAG_PRESENTACION } from '../lib/presentation';
-import type { ClaseEnviada } from '../services/clases.service';
+import { claseGuardada, guardarClase, type ClaseEnviada } from '../services/clases.service';
+import { puedeGuardarSinConexion } from '../lib/archivosOffline';
+import { avisar } from './ui/avisar';
 import type { LibraryMaterial } from '../types';
 import './ClasesEnviadas.css';
 
@@ -35,12 +41,44 @@ function cuandoFue(fecha: string): string {
   return `el ${d.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' })}`;
 }
 
-export default function ClasesEnviadas({ clases, materiales, alAbrir }: {
+type EstadoGuardado = 'no' | 'guardando' | 'si';
+
+/** Lo que se está guardando no lo pisa la revisión de fondo. */
+const pickGuardando = (e: Record<string, EstadoGuardado>) =>
+  Object.fromEntries(Object.entries(e).filter(([, v]) => v === 'guardando'));
+
+export default function ClasesEnviadas({ clases, materiales, userId, alAbrir }: {
   clases: ClaseEnviada[];
   /** Los materiales compartidos que el estudiante ya tiene cargados */
   materiales: LibraryMaterial[];
+  userId: string;
   alAbrir: (m: LibraryMaterial) => void;
 }) {
+  const [guardado, setGuardado] = useState<Record<string, EstadoGuardado>>({});
+  // Sin service worker (navegador viejo) no hay copia posible: ni se ofrece
+  const sePuede = puedeGuardarSinConexion();
+
+  useEffect(() => {
+    if (!sePuede) return;
+    let vivo = true;
+    Promise.all(clases.map(async c => [c.id, (await claseGuardada(c, materiales, userId)) ? 'si' : 'no'] as const))
+      .then(pares => { if (vivo) setGuardado(prev => ({ ...Object.fromEntries(pares), ...pickGuardando(prev) })); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [clases, materiales, userId, sePuede]);
+
+  const guardar = async (c: ClaseEnviada) => {
+    setGuardado(prev => ({ ...prev, [c.id]: 'guardando' }));
+    try {
+      await guardarClase(c, materiales, userId);
+      setGuardado(prev => ({ ...prev, [c.id]: 'si' }));
+      avisar.exito('Clase guardada', 'La podés abrir aunque no tengas señal.');
+    } catch (e) {
+      setGuardado(prev => ({ ...prev, [c.id]: 'no' }));
+      avisar.error('No se pudo guardar la clase', e instanceof Error ? e.message : 'Probá de nuevo.');
+    }
+  };
+
   const porId = new Map(materiales.map(m => [m.id, m]));
   const visibles = clases
     .map(c => ({
@@ -80,6 +118,21 @@ export default function ClasesEnviadas({ clases, materiales, alAbrir }: {
                 </Link>
               )}
             </div>
+            {sePuede && (
+              <div className="ce-offline">
+                {guardado[clase.id] === 'si' ? (
+                  <span className="ce-offline-si" title="Guardada en este celular: se abre aunque no haya internet">
+                    <CheckCircle2 size={15} aria-hidden="true" /> Disponible sin conexión
+                  </span>
+                ) : (
+                  <button className="ce-offline-guardar" onClick={() => guardar(clase)} disabled={guardado[clase.id] === 'guardando'}>
+                    {guardado[clase.id] === 'guardando'
+                      ? <><Loader2 size={15} className="girando" aria-hidden="true" /> Guardando…</>
+                      : <><CloudDownload size={15} aria-hidden="true" /> Guardar para usar sin señal</>}
+                  </button>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>

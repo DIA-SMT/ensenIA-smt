@@ -62,3 +62,15 @@
 @media (max-width: 480px) {
   .ce-parte { flex: 1 1 calc(50% - 4px); justify-content: center; }
 }
+
+/* Sin conexión: si ya está guardada en el celular, o el botón para guardarla */
+.ce-offline { display: flex; justify-content: flex-end; margin-top: 2px; }
+.ce-offline-si { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--success); }
+.ce-offline-guardar {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 10px;
+  border: 0; border-radius: var(--radius-md); background: transparent;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--acento); cursor: pointer;
+}
+.ce-offline-guardar:hover { background: var(--acento-suave); }
+.ce-offline-guardar:disabled { color: var(--text-subtle); cursor: progress; }
+.ce-offline-guardar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }

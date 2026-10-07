@@ -816,7 +816,7 @@ export default function ArmarModulo() {
                             return (
                                 <div key={p.key} className={`mod-prog-row ${st}`}>
                                     <span className="mod-prog-icon">
-                                        {st === 'working' ? <Loader2 size={16} className="spin" />
+                                        {st === 'working' ? <Loader2 size={16} className="girando" />
                                             : st === 'done' ? <Check size={16} />
                                                 : st === 'error' ? <AlertCircle size={16} />
                                                     : <p.icon size={16} />}
@@ -947,7 +947,7 @@ export default function ArmarModulo() {
                                         </button>
                                     ) : (
                                         <button className="mod-result" onClick={lanzarVivo} disabled={lanzando}>
-                                            {lanzando ? <Loader2 size={16} className="spin" /> : <Radio size={16} />}
+                                            {lanzando ? <Loader2 size={16} className="girando" /> : <Radio size={16} />}
                                             Lanzar la pregunta en la clase en vivo: “{preguntaVivo.prompt.slice(0, 70)}{preguntaVivo.prompt.length > 70 ? '…' : ''}”
                                         </button>
                                     )}
@@ -992,7 +992,7 @@ export default function ArmarModulo() {
                                                 onClick={handleEnviar}
                                                 disabled={enviando || nadaParaEnviar || algunaTrabajando}
                                             >
-                                                {enviando ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
+                                                {enviando ? <Loader2 size={16} className="girando" /> : <Send size={16} />}
                                                 {enviando ? 'Enviando…' : 'Enviar al curso'}
                                             </button>
                                         </div>

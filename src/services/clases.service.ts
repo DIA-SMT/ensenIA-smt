@@ -8,12 +8,12 @@
 
 import { supabase, unwrap } from './_helpers';
 import { updateMaterial } from './documents.service';
-import { createActivity } from './activities.service';
+import { createActivity, getActivityForStudent, getMySubmissions, getStudentByUserId } from './activities.service';
 import { getSharedMaterialsForStudent } from './library.service';
 import { haySenial } from '../lib/conexion';
-import { archivosDe, guardarArchivos } from '../lib/archivosOffline';
+import { archivosDe, guardarArchivos, puedeGuardarSinConexion, yaGuardado } from '../lib/archivosOffline';
 import { bajarYa } from '../lib/pantallas';
-import type { ActivityQuestion } from '../types';
+import type { ActivityQuestion, LibraryMaterial } from '../types';
 
 export interface ClaseEnviada {
   id: string;
@@ -142,24 +142,88 @@ function mapClase(row: {
   };
 }
 
+// ── Sin señal, en el celular del estudiante ──
+//
+// Lo que se guarda vive dentro de la app (cachés del service worker), no
+// como archivo del celular. Se borra al cerrar sesión o si entra otra
+// persona en el equipo (AuthContext).
+
+const GUARDADAS_KEY = 'estudia_clases_guardadas';
+
+function leerGuardadas(userId: string): string[] {
+  try {
+    const g = JSON.parse(localStorage.getItem(GUARDADAS_KEY) ?? 'null') as { userId: string; ids: string[] } | null;
+    return g?.userId === userId ? g.ids : [];
+  } catch {
+    return [];
+  }
+}
+
+function marcarGuardada(userId: string, claseId: string): void {
+  try {
+    const ids = [claseId, ...leerGuardadas(userId).filter(id => id !== claseId)].slice(0, 30);
+    localStorage.setItem(GUARDADAS_KEY, JSON.stringify({ userId, ids }));
+  } catch { /* sin storage: la copia quedó igual, solo no se muestra la marca */ }
+}
+
+function rutasDeClase(clase: ClaseEnviada, materiales: LibraryMaterial[], conPdf: boolean): string[] {
+  const ids = new Set(clase.materialIds);
+  return archivosDe(materiales.filter(m => ids.has(m.id)), { conPdf });
+}
+
 /**
- * Para el celular del estudiante: con señal, deja guardadas las últimas
- * clases que le mandaron, para abrirlas aunque después no haya conexión.
- *
- * Pide lo mismo que Mis materiales al abrirse (el service worker guarda la
- * respuesta por la dirección exacta) y baja los archivos de las dos últimas
- * clases. Poco y solo si hace falta: son datos del celular de un chico.
+ * ¿Esta clase se puede abrir sin señal en este equipo? Se guardó entera
+ * alguna vez (marca local) y sus archivos siguen en la copia.
  */
-export async function guardarClasesParaSinSenial(): Promise<void> {
-  const conexion = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  if (!haySenial() || conexion?.saveData) return;
-  const [clases, materiales] = await Promise.all([
+export async function claseGuardada(clase: ClaseEnviada, materiales: LibraryMaterial[], userId: string): Promise<boolean> {
+  if (!puedeGuardarSinConexion() || !leerGuardadas(userId).includes(clase.id)) return false;
+  const guardados = await Promise.all(rutasDeClase(clase, materiales, true).map(yaGuardado));
+  return guardados.every(Boolean);
+}
+
+/**
+ * Deja la clase lista para abrirla sin señal: lo que piden Mis materiales y
+ * la tarea al abrirse (el service worker guarda cada respuesta por su
+ * dirección exacta) y los archivos de cada parte. Tira Error con mensaje.
+ */
+export async function guardarClase(
+  clase: ClaseEnviada,
+  materiales: LibraryMaterial[],
+  userId: string,
+  opciones: { conPdf?: boolean } = {},
+): Promise<void> {
+  if (!puedeGuardarSinConexion()) throw new Error('Este navegador no puede guardar cosas para usar sin conexión.');
+  if (!haySenial()) throw new Error('Necesitás señal para guardarla. Probá cuando tengas wifi o datos.');
+
+  await Promise.all([
+    bajarYa(['/mi-biblioteca', '/mis-actividades/:id']),
     getClasesEnviadas(10),
     getSharedMaterialsForStudent(),
+    // La tarea: lo mismo que pide RealizarActividad al abrirse
+    clase.activityId
+      ? getStudentByUserId(userId).then(st => Promise.all([
+        getActivityForStudent(clase.activityId!),
+        st ? getMySubmissions(st.id) : null,
+      ]))
+      : null,
   ]);
-  if (clases.length === 0) return;
-  bajarYa(['/mi-biblioteca']).catch(() => {});
-  const ids = new Set(clases.slice(0, 2).flatMap(c => c.materialIds));
-  const rutas = archivosDe(materiales.filter(m => ids.has(m.id))).slice(0, 10);
-  await guardarArchivos(rutas);
+
+  const { fallaron } = await guardarArchivos(rutasDeClase(clase, materiales, opciones.conPdf ?? true));
+  if (fallaron > 0) throw new Error(`No se pudo${fallaron > 1 ? 'ieron' : ''} guardar ${fallaron} archivo${fallaron > 1 ? 's' : ''}. Probá de nuevo con mejor señal.`);
+  marcarGuardada(userId, clase.id);
+}
+
+/**
+ * Automático, al abrir la app con señal: guarda las dos últimas clases que le
+ * mandaron. Poco y solo si hace falta: son datos del celular de un chico
+ * (sin PDF y nada si el celular tiene el ahorro de datos activado).
+ */
+export async function guardarClasesParaSinSenial(userId: string): Promise<void> {
+  const conexion = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (!haySenial() || conexion?.saveData || !puedeGuardarSinConexion()) return;
+  const [clases, materiales] = await Promise.all([getClasesEnviadas(10), getSharedMaterialsForStudent()]);
+  for (const clase of clases.slice(0, 2)) {
+    if (await claseGuardada(clase, materiales, userId)) continue;
+    await guardarClase(clase, materiales, userId, { conPdf: false }).catch(console.error);
+  }
 }

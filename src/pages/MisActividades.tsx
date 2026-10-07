@@ -147,7 +147,7 @@ export default function MisActividades() {
             if (c && Date.now() - new Date(c.enviadaAt).getTime() < 7 * 86400000) {
               setClaseNueva(c);
               // Con señal, que la clase quede en el celular para cuando no haya
-              window.setTimeout(() => { guardarClasesParaSinSenial().catch(console.error); }, 4000);
+              window.setTimeout(() => { guardarClasesParaSinSenial(user.id).catch(console.error); }, 4000);
             }
           }).catch(console.error);
           getAchievementsByStudent(st.id).then(setAchievements).catch(console.error);

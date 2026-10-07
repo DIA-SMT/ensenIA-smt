@@ -131,7 +131,7 @@ export default function MiBiblioteca() {
   return (
     <div className="sp-container animate-in">
       {/* Lo último que mandaron los docentes, cada clase con sus partes juntas */}
-      {!loading && <ClasesEnviadas clases={clases} materiales={materials} alAbrir={setViendo} />}
+      {!loading && <ClasesEnviadas clases={clases} materiales={materials} userId={user.id} alAbrir={setViendo} />}
 
       <h3 className="sp-section-title" aria-level={2}><BookOpen size={17} aria-hidden="true" /> Material de mis materias</h3>
       <p className="text-secondary text-sm" style={{ marginTop: -8 }}>

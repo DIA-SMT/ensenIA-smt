@@ -106,6 +106,8 @@ function borrarDatosOffline() {
     caches.delete('supabase-storage').catch(() => {});
     caches.delete('supabase-podcasts').catch(() => {});
   }
+  // La marca de "disponible sin conexión" de las clases (clases.service)
+  try { localStorage.removeItem('estudia_clases_guardadas'); } catch { /* sin storage */ }
   olvidarBusquedas();
 }
 
