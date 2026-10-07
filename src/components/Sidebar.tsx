@@ -51,6 +51,7 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
   const schoolId = user?.schoolId;
   const isDocente = user?.role === 'docente';
   const isDirector = user?.role === 'director';
+  const isEstudiante = user?.role === 'estudiante';
   const [alertCount, setAlertCount] = useState(0);
   const [comunicadosSinLeer, setComunicadosSinLeer] = useState(0);
   const [paraDireccion, setParaDireccion] = useState(0);
@@ -60,10 +61,15 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
   // pide hablar, un docente que avisa a dirección o un comunicado nuevo
   // tienen que verse sin cerrar sesión (051).
   useEffect(() => {
-    if (!userId || !schoolId || (!isDocente && !isDirector)) return;
+    if (!userId || !schoolId || (!isDocente && !isDirector && !isEstudiante)) return;
     let alive = true;
     const contar = () => {
-      if (isDocente) {
+      if (isEstudiante) {
+        // Los avisos de la escuela (059)
+        getCommunicationsBySchool(schoolId)
+          .then(c => { if (alive) setComunicadosSinLeer(sinLeer(c, userId).length); })
+          .catch(() => {});
+      } else if (isDocente) {
         getUnreadAlertCount(userId).then(n => { if (alive) setAlertCount(n); }).catch(() => {});
         getCommunicationsBySchool(schoolId)
           .then(c => { if (alive) setComunicadosSinLeer(sinLeer(c, userId).length); })
@@ -76,7 +82,7 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
     const id = window.setInterval(contar, 120_000);
     window.addEventListener(EVENTO_COMUNICADO_LEIDO, contar);
     return () => { alive = false; window.clearInterval(id); window.removeEventListener(EVENTO_COMUNICADO_LEIDO, contar); };
-  }, [userId, schoolId, isDocente, isDirector]);
+  }, [userId, schoolId, isDocente, isDirector, isEstudiante]);
 
   // Una sesión abierta y olvidada bloquea al curso (hay un único índice de
   // "una clase viva por curso"), así que el punto rojo no es adorno: es cómo
@@ -113,6 +119,9 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
       )}
       {isDocente && ruta === '/comunicados' && comunicadosSinLeer > 0 && (
         <span className="nav-alert-badge" title={`${comunicadosSinLeer} comunicados sin leer`}>{comunicadosSinLeer}</span>
+      )}
+      {isEstudiante && ruta === '/avisos' && comunicadosSinLeer > 0 && (
+        <span className="nav-alert-badge" title={`${comunicadosSinLeer} avisos sin leer`}>{comunicadosSinLeer}</span>
       )}
       {isDirector && ruta === '/alerts' && paraDireccion > 0 && (
         <span className="nav-alert-badge" title={`${paraDireccion} avisos para dirección sin cerrar`}>{paraDireccion}</span>

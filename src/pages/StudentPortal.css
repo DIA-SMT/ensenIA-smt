@@ -49,6 +49,13 @@
 .sp-filtro-chip.activo { background: var(--acento); border-color: var(--acento); color: #fff; }
 .sp-filtro-chip:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
 
+/* Avisos de la escuela sin leer (Mi escuela) */
+.sp-avisos { display: flex; align-items: center; gap: 14px; padding: var(--space-4) var(--space-5); text-decoration: none; border-left: 4px solid var(--warning, #B45309); }
+.sp-avisos-icono { font-size: 24px; line-height: 1; }
+.sp-avisos-texto { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sp-avisos-texto strong { color: var(--text-primary); font-size: 15px; }
+.sp-avisos-texto span { color: var(--text-secondary); font-size: 13px; }
+
 /* Mis materias (Mi escuela): cada una abre /materia/:id */
 .sp-materias-buscar { margin-bottom: 10px; max-width: 420px; }
 .sp-materias { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }

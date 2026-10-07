@@ -43,6 +43,8 @@ function mapNotice(row: any): GuardianNotice {
     id: row.id,
     schoolId: row.school_id,
     studentId: row.student_id,
+    courseId: row.course_id ?? null,
+    courseName: row.courses?.name ?? undefined,
     fromUserId: row.from_user_id,
     fromName: row.profiles ? `${row.profiles.first_name} ${row.profiles.last_name}` : undefined,
     type: row.type,
@@ -61,7 +63,7 @@ export async function getNoticesForGuardian(guardianUserId: string): Promise<Gua
   const data = unwrap(
     await supabase
       .from('guardian_notices')
-      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name)')
+      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name), courses(name)')
       .order('created_at', { ascending: false })
   );
   const notices = data.map(mapNotice);
@@ -107,6 +109,8 @@ export async function respondToNotice(
 export async function createNotice(n: {
   schoolId: string;
   studentId?: string | null;
+  /** A las familias de un curso (059); sin curso ni alumno, a todas */
+  courseId?: string | null;
   fromUserId: string;
   type: NoticeType;
   /** Obligatoria para el docente: la citación es de una materia suya. */
@@ -119,6 +123,7 @@ export async function createNotice(n: {
   const { error } = await supabase.from('guardian_notices').insert({
     school_id: n.schoolId,
     student_id: n.studentId ?? null,
+    course_id: n.studentId ? null : n.courseId ?? null,
     from_user_id: n.fromUserId,
     type: n.type,
     subject_id: n.subjectId ?? null,
@@ -134,7 +139,7 @@ export async function getNoticesForStaff(): Promise<(GuardianNotice & { receipts
   const data = unwrap(
     await supabase
       .from('guardian_notices')
-      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name)')
+      .select('*, profiles!guardian_notices_from_user_id_fkey(first_name, last_name), students(first_name, last_name), subjects(name), courses(name)')
       .order('created_at', { ascending: false })
   );
   const notices = data.map(mapNotice);

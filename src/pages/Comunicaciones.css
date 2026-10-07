@@ -199,3 +199,29 @@
   border: 0;
   background: transparent;
 }
+
+/* Nuevo comunicado: a quién (059) */
+.comms-campo { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.comms-campo legend { padding: 0; margin-bottom: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.comms-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.comms-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.comms-chip:hover { border-color: var(--acento); color: var(--text-primary); }
+.comms-chip.on { background: var(--acento-suave); border-color: var(--acento); color: var(--text-primary); }
+.comms-chip:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.comms-resumen { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.comms-ayuda { margin: 0; font-size: 0.78rem; color: var(--text-subtle); }
+.comms-ayuda a { color: var(--acento); }

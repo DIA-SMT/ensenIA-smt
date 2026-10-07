@@ -8,6 +8,7 @@ export async function getCommunicationsBySchool(schoolId: string): Promise<Commu
       .select(`
         *,
         from_profile:profiles!communications_from_user_id_fkey(first_name, last_name),
+        course:courses(name),
         communication_recipients(user_id, profiles(first_name, last_name)),
         communication_reads(user_id)
       `)
@@ -24,7 +25,12 @@ export async function sendCommunication(data: {
   body: string;
   priority: 'high' | 'medium' | 'low';
   schoolId: string;
+  /** 'all' = a todos los de esa audiencia (de la escuela o del curso) */
   toUserIds: string[] | 'all';
+  /** Al equipo docente (como siempre) o a los estudiantes (059) */
+  audiencia?: 'docentes' | 'estudiantes';
+  /** Solo a un curso */
+  courseId?: string | null;
 }): Promise<void> {
   const isBroadcast = data.toUserIds === 'all';
 
@@ -38,6 +44,8 @@ export async function sendCommunication(data: {
         priority: data.priority,
         school_id: data.schoolId,
         is_broadcast: isBroadcast,
+        audiencia: data.audiencia ?? 'docentes',
+        course_id: isBroadcast ? data.courseId ?? null : null,
       })
       .select()
       .single()
@@ -80,8 +88,12 @@ function mapCommunication(row: any): Communication {
   const recipients = row.communication_recipients ?? [];
   const reads = row.communication_reads ?? [];
 
+  const audiencia: 'docentes' | 'estudiantes' = row.audiencia === 'estudiantes' ? 'estudiantes' : 'docentes';
+  const courseName: string | null = row.course?.name ?? null;
   const toNames: string[] = row.is_broadcast
-    ? ['Todos los docentes']
+    ? [audiencia === 'estudiantes'
+        ? (courseName ? `Estudiantes de ${courseName}` : 'Todos los estudiantes')
+        : (courseName ? `Docentes de ${courseName}` : 'Todos los docentes')]
     : recipients.map((r: any) => {
         const p = r.profiles;
         return p ? `${p.first_name} ${p.last_name}` : '';
@@ -94,6 +106,9 @@ function mapCommunication(row: any): Communication {
   return {
     id: row.id,
     fromUserId: row.from_user_id,
+    audiencia,
+    courseId: row.course_id ?? null,
+    courseName,
     fromName: fromProfile
       ? `${fromProfile.first_name} ${fromProfile.last_name}`
       : '',

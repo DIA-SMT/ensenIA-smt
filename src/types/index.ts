@@ -246,6 +246,9 @@ export interface GuardianNotice {
   id: string;
   schoolId: string;
   studentId?: string | null;
+  /** A las familias de un curso (059) */
+  courseId?: string | null;
+  courseName?: string;
   fromUserId: string;
   fromName?: string;
   type: NoticeType;
@@ -862,6 +865,11 @@ export interface Communication {
   id: string;
   fromUserId: string;
   fromName: string;
+  /** A quién va dirigido (059): el equipo docente o los estudiantes */
+  audiencia: 'docentes' | 'estudiantes';
+  /** Solo a un curso (si no, a toda la escuela) */
+  courseId: string | null;
+  courseName: string | null;
   toUserIds: string[] | 'all';
   toNames: string[];
   subject: string;

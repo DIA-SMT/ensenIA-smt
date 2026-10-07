@@ -248,7 +248,7 @@ export default function Familias() {
                     </span>
                     {n.subjectName && <span className="badge badge-cyan" style={{ marginLeft: 6 }}>{n.subjectName}</span>}
                     <span className="badge badge-neutral" style={{ marginLeft: 6 }}>
-                      {n.studentName ? `Familia de ${n.studentName}` : 'Toda la escuela'}
+                      {n.studentName ? `Familia de ${n.studentName}` : n.courseName ? `Familias de ${n.courseName}` : 'Toda la escuela'}
                     </span>
                   </div>
                   {n.fromUserId === user.id && (

@@ -910,6 +910,8 @@ export type Database = {
       communications: {
         Row: {
           body: string
+          audiencia: string
+          course_id: string | null
           from_user_id: string
           id: string
           is_broadcast: boolean
@@ -920,6 +922,8 @@ export type Database = {
         }
         Insert: {
           body: string
+          audiencia?: string
+          course_id?: string | null
           from_user_id: string
           id?: string
           is_broadcast?: boolean
@@ -930,6 +934,8 @@ export type Database = {
         }
         Update: {
           body?: string
+          audiencia?: string
+          course_id?: string | null
           from_user_id?: string
           id?: string
           is_broadcast?: boolean
@@ -1159,6 +1165,7 @@ export type Database = {
       guardian_notices: {
         Row: {
           body: string
+          course_id: string | null
           created_at: string | null
           from_user_id: string
           id: string
@@ -1172,6 +1179,7 @@ export type Database = {
         }
         Insert: {
           body: string
+          course_id?: string | null
           created_at?: string | null
           from_user_id: string
           id?: string
@@ -1185,6 +1193,7 @@ export type Database = {
         }
         Update: {
           body?: string
+          course_id?: string | null
           created_at?: string | null
           from_user_id?: string
           id?: string

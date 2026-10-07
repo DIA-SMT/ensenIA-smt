@@ -84,6 +84,7 @@ const ESTUDIANTE: ItemNav[] = [
   { ruta: '/mis-actividades', etiqueta: 'Mi escuela', titulo: 'Mi escuela', icono: ClipboardList, grupo: 'Escuela', enBarra: true, claves: 'tareas entregas notas temario' },
   { ruta: '/estudiar', etiqueta: 'Estudiar', icono: Rocket, grupo: 'Escuela', ia: true, enBarra: true, claves: 'practicar quiz repaso racha' },
   { ruta: '/mi-biblioteca', etiqueta: 'Mis materiales', icono: BookOpen, grupo: 'Escuela', enBarra: true, claves: 'biblioteca material apuntes documentos' },
+  { ruta: '/avisos', etiqueta: 'Avisos', titulo: 'Avisos de la escuela', icono: Megaphone, grupo: 'Escuela', claves: 'comunicados avisos escuela dirección mensajes' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Escuela', ia: true, enBarra: true, claves: 'asistente ayuda hablar' },
   { ruta: '/vocacional', etiqueta: 'Vocacional', titulo: 'Orientación vocacional', icono: Compass, grupo: 'Mi futuro', claves: 'carrera orientación intereses' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },

@@ -13,6 +13,7 @@ import { getAchievementsByStudent, totalPoints } from '../services/gamification.
 import { getLiveSessionForCourse, type LiveSession } from '../services/live.service';
 import { getClasesEnviadas, guardarClasesParaSinSenial, type ClaseEnviada } from '../services/clases.service';
 import { AvisoClaseNueva } from '../components/ClasesEnviadas';
+import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
 import { coincideBusqueda } from '../services/busqueda.service';
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
@@ -112,6 +113,8 @@ export default function MisActividades() {
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
   // La última clase que mandó un docente esta semana
   const [claseNueva, setClaseNueva] = useState<ClaseEnviada | null>(null);
+  // Avisos de la escuela sin leer (059): en el celular el menú queda en "Más"
+  const [avisosSinLeer, setAvisosSinLeer] = useState(0);
   const [buscarMateria, setBuscarMateria] = useState('');
 
   // Gamificación + check-in del día
@@ -146,6 +149,7 @@ export default function MisActividades() {
 
           // No bloquean la carga principal
           getLiveSessionForCourse(st.courseId).then(setLiveSession).catch(console.error);
+          getCommunicationsBySchool(user.schoolId).then(c => setAvisosSinLeer(sinLeer(c, user.id).length)).catch(console.error);
           getClasesEnviadas(1).then(([c]) => {
             if (c && Date.now() - new Date(c.enviadaAt).getTime() < 7 * 86400000) {
               setClaseNueva(c);
@@ -313,6 +317,18 @@ export default function MisActividades() {
             <h4><Radio size={15} aria-hidden="true" /> ¡{liveSession.title} está en vivo!</h4>
             <p className="text-sm text-secondary">Entrá para participar desde tu celular.</p>
           </div>
+          <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
+        </Link>
+      )}
+
+      {/* ── Avisos de la escuela sin leer ── */}
+      {avisosSinLeer > 0 && (
+        <Link to="/avisos" className="card card-interactive sp-avisos">
+          <span className="sp-avisos-icono" aria-hidden="true">📣</span>
+          <span className="sp-avisos-texto">
+            <strong>{avisosSinLeer === 1 ? 'Tenés un aviso de la escuela' : `Tenés ${avisosSinLeer} avisos de la escuela`}</strong>
+            <span>Tocá para leerlos</span>
+          </span>
           <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
         </Link>
       )}

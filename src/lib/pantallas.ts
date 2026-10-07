@@ -62,6 +62,8 @@ export const cargadores = {
   '/mis-actividades/:id': () => import('../pages/RealizarActividad'),
   '/estudiar':            () => import('../pages/Estudiar'),
   '/mi-biblioteca':       () => import('../pages/MiBiblioteca'),
+  // La misma pantalla con la que el equipo lee los comunicados (059)
+  '/avisos':              () => import('../pages/ComunicadosDireccion'),
   '/materia/:id':         () => import('../pages/MiMateria'),
   '/vocacional':          () => import('../pages/Vocacional'),
   '/docentes':            () => import('../pages/Docentes'),

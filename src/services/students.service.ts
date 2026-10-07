@@ -105,5 +105,7 @@ function mapStudent(row: any): Student {
     attendance: Number(row.attendance),
     average: Number(row.average),
     schoolId: row.school_id,
+    // La cuenta del chico (si tiene): para escribirle un comunicado a él
+    userId: row.user_id ?? null,
   };
 }

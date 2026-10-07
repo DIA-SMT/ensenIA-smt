@@ -1,7 +1,8 @@
 /**
- * Comunicados de dirección (docente). Lo que dirección manda desde
- * Comunicaciones —a todo el equipo o a un docente— llega acá. Abrir uno lo
- * marca como leído: dirección ve quién lo leyó.
+ * Comunicados de dirección (docente) y avisos de la escuela (estudiante,
+ * /avisos, 059). Lo que dirección manda desde Comunicaciones —a todos, a un
+ * curso o a una persona— llega acá. Abrir uno lo marca como leído: dirección
+ * ve quién lo leyó.
  *
  * Antes de esta pantalla dirección los mandaba y nadie los veía: no había
  * dónde leerlos y siempre decía "Leído por 0".
@@ -33,6 +34,12 @@ export default function ComunicadosDireccion() {
   }, [user]);
 
   if (!user) return null;
+  const esEstudiante = user.role === 'estudiante';
+  const paraQuien = (c: Communication) => {
+    if (c.toUserIds !== 'all') return 'Para vos';
+    if (c.audiencia === 'estudiantes') return c.courseName ? `Para ${c.courseName}` : 'Para toda la escuela';
+    return c.courseName ? `Para los docentes de ${c.courseName}` : 'Para todo el equipo';
+  };
 
   const abrir = (c: Communication) => {
     const ya = abierto === c.id;
@@ -50,7 +57,7 @@ export default function ComunicadosDireccion() {
   return (
     <div className="cd-container animate-in">
       <p className="text-secondary">
-        Lo que te manda dirección. {sinLeer > 0 ? `Tenés ${sinLeer} sin leer.` : 'Estás al día.'} Al abrir uno, dirección ve que lo leíste.
+        {esEstudiante ? 'Lo que te manda la escuela.' : 'Lo que te manda dirección.'} {sinLeer > 0 ? `Tenés ${sinLeer} sin leer.` : 'Estás al día.'} Al abrir uno, {esEstudiante ? 'la escuela' : 'dirección'} ve que lo leíste.
       </p>
 
       {lista === null && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando comunicados…" />}
@@ -60,7 +67,7 @@ export default function ComunicadosDireccion() {
         <EstadoVacio
           icono={Megaphone}
           titulo="Todavía no hay comunicados"
-          texto="Cuando dirección te mande algo a vos o a todo el equipo, aparece acá."
+          texto={esEstudiante ? 'Cuando la escuela te mande un aviso a vos, a tu curso o a todos, aparece acá.' : 'Cuando dirección te mande algo a vos o a todo el equipo, aparece acá.'}
         />
       )}
 
@@ -75,7 +82,7 @@ export default function ComunicadosDireccion() {
                   {!leido && <span className="cd-punto" aria-label="sin leer" />}
                   <span className="cd-texto">
                     <strong>{c.subject}</strong>
-                    <small>{c.fromName || 'Dirección'} · {fecha(c.sentAt)} · {c.toUserIds === 'all' ? 'Para todo el equipo' : 'Para vos'}</small>
+                    <small>{c.fromName || 'Dirección'} · {fecha(c.sentAt)} · {paraQuien(c)}</small>
                   </span>
                   {c.priority === 'high' && <span className="badge badge-danger"><AlertTriangle size={11} aria-hidden="true" /> Importante</span>}
                   <ChevronDown size={16} aria-hidden="true" className="cd-flecha" />
