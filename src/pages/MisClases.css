@@ -59,3 +59,7 @@
   .mc-tab { flex: 1; justify-content: center; padding: 8px 10px; }
   .mc-tab span { font-size: 12.5px; }
 }
+
+/* Mi devolución (FichaDocente con voz propia) */
+.mc-devolucion { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+.mc-devolucion-intro { margin: 0; font-size: 13.5px; color: var(--text-secondary); }

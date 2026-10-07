@@ -27,6 +27,7 @@ import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, AWARD_META, type Student, type CheckinFeeling, type StudentAward } from '../types';
 import { avisar } from '../components/ui/avisar';
 import { Esqueleto } from '../components/ui/Esqueleto';
+import PedirDevolucion from '../components/PedirDevolucion';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -66,6 +67,9 @@ export default function ClaseEnVivoAlumno() {
     const [material, setMaterial] = useState<MaterialDeClase | null>(null);
     const [viendoMaterial, setViendoMaterial] = useState(false);
 
+    // La clase que acaba de terminar: para preguntarle si le sirvió
+    const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
+
     useEffect(() => {
         if (!user) return;
         getStudentByUserId(user.id).then(setStudent).catch(() => setStudent(null));
@@ -81,6 +85,7 @@ export default function ClaseEnVivoAlumno() {
             }
             const state = await getSessionState(session.id, { asStudent: true });
             if (!state || state.session.status !== 'live') {
+                if (state?.session.status === 'ended') setTerminada({ id: session.id, titulo: session.title });
                 setSession(null);
                 setActivity(null);
                 setResults(null);
@@ -168,6 +173,9 @@ export default function ClaseEnVivoAlumno() {
             <div className="cv-container cv-start animate-in">
                 <div className="card cv-start-card">
                     <div className="cv-start-icon cv-idle-icon"><Radio size={26} /></div>
+                    {terminada && (
+                        <PedirDevolucion origen="clase_en_vivo" refId={terminada.id} pregunta={`Terminó la clase: ¿te sirvió?`} />
+                    )}
                     <h2>No hay clase en vivo ahora</h2>
                     <p className="text-secondary">
                         Cuando tu docente inicie una, vas a ver el aviso acá y en tu pantalla principal.

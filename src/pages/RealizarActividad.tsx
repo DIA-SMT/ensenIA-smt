@@ -23,6 +23,7 @@ import {
 } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
+import PedirDevolucion from '../components/PedirDevolucion';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar, confirmar } from '../components/ui/avisar';
@@ -418,6 +419,11 @@ export default function RealizarActividad() {
                 onPick={(f, c) => handleCheckin('fin', f, c)}
                 onSkip={() => handleCheckin('fin')}
               />
+            )}
+            {/* Después del check-in, la devolución anónima. Con la entrega todavía
+                sin subir (sin señal) no se puede: la base valida que entregó. */}
+            {endCheckinDone && !pendingSync && (
+              <PedirDevolucion origen="actividad" refId={activity.id} pregunta="¿Te sirvió esta tarea?" />
             )}
             {(submission?.feedbackReaction || submission?.feedback) && (
               <div className="sp-feedback">

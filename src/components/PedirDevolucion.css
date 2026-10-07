@@ -1,0 +1,42 @@
+/* "¿Te sirvió?" (PedirDevolucion.tsx) */
+.pd { display: flex; flex-direction: column; gap: 10px; padding: var(--space-4); }
+.pd-pregunta { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.pd-caras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pd-cara {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 6px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pd-cara:hover:not(:disabled) { border-color: var(--acento); color: var(--text-primary); }
+.pd-cara.elegida { border-color: var(--acento); background: var(--acento-suave); color: var(--text-primary); }
+.pd-cara:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.pd-emoji { font-size: 26px; line-height: 1; }
+.pd-comentario { display: flex; flex-direction: column; gap: 6px; }
+.pd-comentario label { font-size: 13px; color: var(--text-secondary); }
+.pd-comentario textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-input, var(--bg-panel));
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.pd-acciones { display: flex; justify-content: flex-end; }
+.pd-error { margin: 0; font-size: 13px; color: var(--danger, #B91C1C); }
+.pd-anonimo { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--text-subtle); }
+.pd-gracias { margin: 0; font-size: 14px; color: var(--text-secondary); }
+.pd-riesgo p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-primary); }

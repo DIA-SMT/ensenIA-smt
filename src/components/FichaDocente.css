@@ -1,0 +1,55 @@
+/* La ficha de un docente (FichaDocente.tsx) */
+.fd { display: flex; flex-direction: column; gap: var(--space-5); }
+.fd-bloque { display: flex; flex-direction: column; gap: 10px; }
+.fd-titulo { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.fd-titulo small { font-size: 12px; font-weight: 500; color: var(--text-subtle); }
+
+.fd-datos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.fd-dato {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icono valor" "texto texto";
+  align-items: center;
+  gap: 2px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+.fd-dato svg { grid-area: icono; color: var(--acento); }
+.fd-dato-valor { grid-area: valor; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
+.fd-dato-texto { grid-area: texto; font-size: 12px; line-height: 1.35; color: var(--text-secondary); }
+.fd-dato.alerta { border-color: var(--warning, #B45309); }
+.fd-dato.alerta svg { color: var(--warning, #B45309); }
+
+.fd-pocos { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 12px; border-radius: var(--radius-md); background: var(--bg-elevated); font-size: 13.5px; color: var(--text-secondary); }
+.fd-pocos svg { flex-shrink: 0; margin-top: 2px; }
+
+.fd-valores { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fd-valores li { display: grid; grid-template-columns: 150px 1fr 76px; align-items: center; gap: 10px; font-size: 13.5px; }
+.fd-valor-nombre { color: var(--text-primary); }
+.fd-barra { height: 10px; border-radius: 99px; background: var(--bg-elevated); overflow: hidden; }
+.fd-barra > span { display: block; height: 100%; border-radius: 99px; background: var(--acento); }
+.fd-valor-n { text-align: right; font-weight: 700; color: var(--text-primary); }
+.fd-valor-n small { font-weight: 500; color: var(--text-subtle); }
+.fd-total { margin: 0; font-size: 12px; color: var(--text-subtle); }
+
+.fd-grupos { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fd-grupos th, .fd-grupos td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
+.fd-grupos thead th { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+
+.fd-comentarios h5, .fd-senales h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.fd-comentarios ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.fd-comentarios li { padding: 8px 10px; border-left: 3px solid var(--acento); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--bg-elevated); font-size: 13.5px; font-style: italic; color: var(--text-primary); }
+
+.fd-senales { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+.fd-senales p { margin: 0; font-size: 13.5px; color: var(--text-primary); }
+.fd-reacciones { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.fd-reacciones small { color: var(--text-subtle); }
+.fd-reaccion-alerta { font-weight: 700; }
+.fd-pista { margin-top: 6px !important; font-size: 12.5px !important; color: var(--text-secondary) !important; }
+
+@media (max-width: 520px) {
+  .fd-valores li { grid-template-columns: 1fr 64px; }
+  .fd-valores .fd-barra { grid-column: 1 / -1; grid-row: 2; }
+}

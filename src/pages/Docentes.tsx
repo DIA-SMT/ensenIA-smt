@@ -8,6 +8,9 @@ import { getAllStudents } from '../services/students.service';
 import { getSchoolActivitiesLight, type SchoolActivityLight } from '../services/activities.service';
 import { getTeacherAwards, giveTeacherAward } from '../services/awards.service';
 import { logAccess } from '../services/audit.service';
+import { getUsoDocentes, type UsoDeUnDocente } from '../services/devolucion.service';
+import { coincideBusqueda } from '../services/busqueda.service';
+import FichaDocente from '../components/FichaDocente';
 import { formatRelative, daysSince } from '../lib/format';
 import AwardPickerModal from '../components/AwardPickerModal';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -19,9 +22,9 @@ import './Students.css';
 import './Actividades.css';
 import './Docentes.css';
 
-/** Chip honesto: cuándo fue la última actividad publicada por el docente. */
-function LastActivityBadge({ lastAt }: { lastAt: string | undefined }) {
-  if (!lastAt) return <span className="badge badge-neutral">Sin actividades</span>;
+/** Chip honesto: cuándo hizo algo en la app (publicar, enviar, tomar lista, corregir…). */
+function LastActivityBadge({ lastAt }: { lastAt: string | null | undefined }) {
+  if (!lastAt) return <span className="badge badge-neutral">Sin uso todavía</span>;
   const days = daysSince(lastAt);
   const cls = days <= 7 ? 'badge-success' : days <= 21 ? 'badge-warning' : 'badge-neutral';
   return <span className={`badge ${cls}`}>{formatRelative(lastAt)}</span>;
@@ -40,7 +43,12 @@ export default function Docentes() {
   const [teacherAwards, setTeacherAwards] = useState<TeacherAward[]>([]);
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [cargando, setCargando] = useState(true);
-  const todayIndex = new Date().getDay() === 0 ? 4 : new Date().getDay() - 1;
+  // Uso de la app de cada docente (058): una sola definición para toda la app
+  const [uso, setUso] = useState<Record<string, UsoDeUnDocente>>({});
+  // Lunes = 0 … viernes = 4. Sábado y domingo no hay clases (antes el
+  // domingo mostraba las del viernes).
+  const diaSemana = new Date().getDay();
+  const todayIndex = diaSemana >= 1 && diaSemana <= 5 ? diaSemana - 1 : -1;
 
   useEffect(() => {
     if (!user) return;
@@ -56,7 +64,7 @@ export default function Docentes() {
       setSchoolActivities(acts);
 
       // Load today's classes for each teacher
-      Promise.all(t.map(teacher =>
+      if (todayIndex >= 0) Promise.all(t.map(teacher =>
         getTodaySchedule(teacher.id, todayIndex).then(classes => ({ id: teacher.id, classes }))
       )).then(results => {
         const map: Record<string, ScheduleBlock[]> = {};
@@ -73,6 +81,10 @@ export default function Docentes() {
         setTeacherWeeklyClasses(map);
       });
     }).catch(console.error).finally(() => setCargando(false));
+
+    getUsoDocentes(30)
+      .then(lista => setUso(Object.fromEntries(lista.map(u => [u.teacherId, u]))))
+      .catch(console.error);
   }, [user]);
 
   // Bitácora: queda registrado cada acceso al perfil de un docente.
@@ -123,12 +135,9 @@ export default function Docentes() {
 
   const todayClassesForTeacher = (teacherId: string) => teacherTodayClasses[teacherId] ?? [];
 
+  // Sin tildes y en cualquier orden, como el resto de los buscadores
   const filteredTeachers = search.trim()
-    ? teachers.filter(t =>
-        `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-        t.email.toLowerCase().includes(search.toLowerCase()) ||
-        getTeacherSubjectNames(t).toLowerCase().includes(search.toLowerCase())
-      )
+    ? teachers.filter(t => coincideBusqueda(`${t.firstName} ${t.lastName} ${t.email} ${getTeacherSubjectNames(t)}`, search))
     : teachers;
 
   if (!user) return null;
@@ -170,6 +179,9 @@ export default function Docentes() {
                   <th>Materias</th>
                   <th>Clases hoy</th>
                   <th>Alumnos</th>
+                  <th title="Actividades y clases armadas enviadas, últimos 30 días">Publicó (30 d)</th>
+                  <th>Sin corregir</th>
+                  <th title="Lo que responden los estudiantes, anónimo (con 5 respuestas o más)">Devolución</th>
                   <th>Última actividad</th>
                 </tr>
               </thead>
@@ -196,7 +208,14 @@ export default function Docentes() {
                         <span className="badge badge-cyan">{todayClasses.length}</span>
                       </td>
                       <td>{studentCount}</td>
-                      <td><LastActivityBadge lastAt={lastActivityByTeacher[t.id]} /></td>
+                      <td>{uso[t.id] ? uso[t.id].actividades + uso[t.id].clasesEnviadas : '—'}</td>
+                      <td>{uso[t.id] ? <span className={uso[t.id].sinCorregir > 10 ? 'text-warning font-semibold' : ''}>{uso[t.id].sinCorregir}</span> : '—'}</td>
+                      <td>
+                        {uso[t.id]?.devolucion.promedio != null
+                          ? <span title={`${uso[t.id].devolucion.total} respuestas, de 1 a 3`}>{uso[t.id].devolucion.promedio! >= 2.5 ? '😃' : uso[t.id].devolucion.promedio! >= 1.8 ? '🙂' : '😕'} {uso[t.id].devolucion.promedio!.toLocaleString('es-AR', { maximumFractionDigits: 1 })}</span>
+                          : <span className="text-subtle text-xs">{uso[t.id]?.devolucion.total ? `${uso[t.id].devolucion.total} resp.` : '—'}</span>}
+                      </td>
+                      <td><LastActivityBadge lastAt={uso[t.id]?.ultimaActividad ?? lastActivityByTeacher[t.id]} /></td>
                     </tr>
                   );
                 })}
@@ -276,6 +295,14 @@ export default function Docentes() {
                   Publicó «{a.title}» · {formatRelative(a.createdAt)}
                 </p>
               ))}
+            </div>
+
+            {/* ── Uso de la app y devolución de los estudiantes (el docente ve lo mismo) ── */}
+            <div className="profile-section">
+              <FichaDocente key={selectedTeacher.id} teacherId={selectedTeacher.id} voz="direccion" />
+              <p className="text-subtle text-xs" style={{ marginTop: 8 }}>
+                {selectedTeacher.firstName} ve esta misma ficha en Mis clases. La devolución de los estudiantes es anónima.
+              </p>
             </div>
 
             {/* ── Reconocimientos de la dirección ── */}
