@@ -9,6 +9,10 @@
 import { supabase, unwrap } from './_helpers';
 import { updateMaterial } from './documents.service';
 import { createActivity } from './activities.service';
+import { getSharedMaterialsForStudent } from './library.service';
+import { haySenial } from '../lib/conexion';
+import { archivosDe, guardarArchivos } from '../lib/archivosOffline';
+import { bajarYa } from '../lib/pantallas';
 import type { ActivityQuestion } from '../types';
 
 export interface ClaseEnviada {
@@ -136,4 +140,26 @@ function mapClase(row: {
     activityId: row.activity_id,
     enviadaAt: row.enviada_at,
   };
+}
+
+/**
+ * Para el celular del estudiante: con señal, deja guardadas las últimas
+ * clases que le mandaron, para abrirlas aunque después no haya conexión.
+ *
+ * Pide lo mismo que Mis materiales al abrirse (el service worker guarda la
+ * respuesta por la dirección exacta) y baja los archivos de las dos últimas
+ * clases. Poco y solo si hace falta: son datos del celular de un chico.
+ */
+export async function guardarClasesParaSinSenial(): Promise<void> {
+  const conexion = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (!haySenial() || conexion?.saveData) return;
+  const [clases, materiales] = await Promise.all([
+    getClasesEnviadas(10),
+    getSharedMaterialsForStudent(),
+  ]);
+  if (clases.length === 0) return;
+  bajarYa(['/mi-biblioteca']).catch(() => {});
+  const ids = new Set(clases.slice(0, 2).flatMap(c => c.materialIds));
+  const rutas = archivosDe(materiales.filter(m => ids.has(m.id))).slice(0, 10);
+  await guardarArchivos(rutas);
 }

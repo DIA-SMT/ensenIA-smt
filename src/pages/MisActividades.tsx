@@ -11,7 +11,7 @@ import {
 import { saveCheckin, getCheckinsByStudent } from '../services/wellbeing.service';
 import { getAchievementsByStudent, totalPoints } from '../services/gamification.service';
 import { getLiveSessionForCourse, type LiveSession } from '../services/live.service';
-import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
+import { getClasesEnviadas, guardarClasesParaSinSenial, type ClaseEnviada } from '../services/clases.service';
 import { AvisoClaseNueva } from '../components/ClasesEnviadas';
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
@@ -144,7 +144,11 @@ export default function MisActividades() {
           // No bloquean la carga principal
           getLiveSessionForCourse(st.courseId).then(setLiveSession).catch(console.error);
           getClasesEnviadas(1).then(([c]) => {
-            if (c && Date.now() - new Date(c.enviadaAt).getTime() < 7 * 86400000) setClaseNueva(c);
+            if (c && Date.now() - new Date(c.enviadaAt).getTime() < 7 * 86400000) {
+              setClaseNueva(c);
+              // Con señal, que la clase quede en el celular para cuando no haya
+              window.setTimeout(() => { guardarClasesParaSinSenial().catch(console.error); }, 4000);
+            }
           }).catch(console.error);
           getAchievementsByStudent(st.id).then(setAchievements).catch(console.error);
           getCheckinsByStudent(st.id, 60).then(chks => {

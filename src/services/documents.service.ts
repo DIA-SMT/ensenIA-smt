@@ -10,6 +10,7 @@ import { supabase } from './_helpers';
 import { normalizarMazo, desdeLegado, aTextoPlano, type Mazo, type MazoLegado } from '../lib/diapositivas';
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
 import { usoIAGastado } from '../lib/usoIA';
+import { esErrorDeRed } from '../lib/conexion';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -32,11 +33,30 @@ export async function uploadFile(teacherId: string, file: File): Promise<UploadR
   return { storagePath, fileSizeBytes: file.size };
 }
 
+/**
+ * La dirección de un archivo sin la firma. Sin señal no se puede pedir la
+ * firma, pero el service worker busca sus copias ignorando el token
+ * (vite.config.ts, caché supabase-storage): con esta dirección devuelve el
+ * archivo si ya se bajó alguna vez en este equipo.
+ */
+export function urlSinFirma(storagePath: string): string {
+  const ruta = storagePath.split('/').map(encodeURIComponent).join('/');
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${ruta}`;
+}
+
 /** Link temporal al archivo. Con `descargarComo`, el navegador lo baja con ese nombre en vez de abrirlo. */
 export async function getSignedUrl(storagePath: string, descargarComo?: string): Promise<string> {
+  // Sin señal, la copia guardada: así se ven las láminas, los diagramas y
+  // los PDF que ya se abrieron (o se bajaron con "Preparar para el aula").
+  // Se intenta firmar aunque un pedido anterior haya fallado (haySenial):
+  // con señal, un link sin firma no anda. Solo sin red del todo, directo.
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return urlSinFirma(storagePath);
   const { data, error } = await supabase.storage.from(BUCKET)
     .createSignedUrl(storagePath, 3600, descargarComo ? { download: descargarComo } : undefined);
-  if (error || !data) throw new Error('No se pudo generar el enlace de descarga.');
+  if (error || !data) {
+    if (esErrorDeRed(error)) return urlSinFirma(storagePath);
+    throw new Error('No se pudo generar el enlace de descarga.');
+  }
   return data.signedUrl;
 }
 

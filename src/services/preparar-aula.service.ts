@@ -31,6 +31,7 @@ import { getGuardiansOfStudent } from './guardians.service';
 import { getAchievementsByStudent } from './gamification.service';
 import { getStudentAwards } from './awards.service';
 import { getStudentProgress } from './practice.service';
+import { archivosDe, guardarArchivos } from '../lib/archivosOffline';
 
 const PREPARADO_KEY = 'estudia_preparado_aula';
 
@@ -86,7 +87,7 @@ export async function prepararParaElAula(user: User, alAvanzar: (a: Avance) => v
 
   // 1. Las pantallas del docente (el código), para que abran sin señal
   alAvanzar({ hechos: 0, total: 1, etapa: 'Pantallas' });
-  await bajarYa(['/hoy', '/asistencia', '/libreta', '/students', '/biblioteca', '/ia-lab', '/mis-clases', '/corregir', '/actividades']);
+  await bajarYa(['/hoy', '/asistencia', '/libreta', '/students', '/biblioteca', '/ia-lab', '/mis-clases', '/corregir', '/actividades', '/modulo']);
 
   // 2. Lo de todos los días: Mi día, Biblioteca, Laboratorio, materias
   const terms = await getTerms(user.schoolId, anio).catch(() => []);
@@ -138,6 +139,19 @@ export async function prepararParaElAula(user: User, alAvanzar: (a: Avance) => v
   ]);
   total += fichas.length;
   await deAPocas(fichas, 4, contar('Fichas de los alumnos'));
+
+  // 5. Los archivos de los materiales: imágenes de las diapositivas,
+  //    diagramas y PDF. Sin esto, las láminas se proyectaban sin sus
+  //    imágenes. Los más recientes primero, con un tope para no llenar el equipo.
+  const materiales = await getMaterialsByTeacher(user.id).catch(() => []);
+  const rutas = archivosDe(materiales, { conPdf: true }).slice(0, 120);
+  if (rutas.length) {
+    const base = hechos;
+    total += rutas.length;
+    const r = await guardarArchivos(rutas, n => alAvanzar({ hechos: base + n, total, etapa: 'Imágenes y archivos de tus clases' }));
+    hechos = base + rutas.length;
+    fallaron += r.fallaron;
+  }
 
   try {
     localStorage.setItem(PREPARADO_KEY, JSON.stringify({ userId: user.id, cuando: new Date().toISOString() }));

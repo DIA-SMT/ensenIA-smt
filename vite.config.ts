@@ -90,13 +90,34 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          // Archivos de la biblioteca. Se piden con un link firmado que trae un
+          // token distinto cada vez: se buscan IGNORANDO el token
+          // (ignoreSearch), si no la copia guardada no coincidía nunca y sin
+          // señal no se veía ninguna imagen. Sin señal, la app pide la
+          // dirección sin token (documents.service → urlSinFirma).
           {
-            // Archivos de la biblioteca: caché primero (no cambian)
+            // El podcast se puede rehacer con la misma ruta: red primero,
+            // la copia solo sin conexión.
+            urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co') && url.pathname.startsWith('/storage/v1/') && url.pathname.includes('/podcasts/'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-podcasts',
+              networkTimeoutSeconds: 6,
+              matchOptions: { ignoreSearch: true },
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // El resto (imágenes de láminas, diagramas, PDF) lleva un nombre
+            // al azar y no cambia: caché primero.
             urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co') && url.pathname.startsWith('/storage/v1/'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'supabase-storage',
-              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              matchOptions: { ignoreSearch: true },
+              // "Preparar para el aula" baja las imágenes de todos los mazos
+              expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

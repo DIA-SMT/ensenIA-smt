@@ -104,6 +104,7 @@ function borrarDatosOffline() {
   if ('caches' in window) {
     caches.delete('supabase-rest').catch(() => {});
     caches.delete('supabase-storage').catch(() => {});
+    caches.delete('supabase-podcasts').catch(() => {});
   }
   olvidarBusquedas();
 }
