@@ -3,7 +3,7 @@
  *
  * Dos diferencias con lib/pptx.ts, que exporta el formato viejo:
  *
- * 1. Dibuja las seis láminas. El exportador anterior solo sabía hacer
+ * 1. Dibuja las ocho láminas. El exportador anterior solo sabía hacer
  *    título + viñetas, así que un mazo entero salía con la misma forma
  *    doce veces. Acá un "destacado" ocupa la lámina, "dos-columnas" se ve
  *    como dos columnas y la pregunta se lee como pregunta.
@@ -106,21 +106,72 @@ function viñetas(s: PptxGenJS.Slide, puntos: string[], d: Diseno, y = 1.8, x = 
 
 type DiapositivaConImagen = Diapositiva & { imagenData?: string };
 
+/**
+ * El crédito de la foto, chiquito, en la lámina. Las licencias Creative
+ * Commons piden nombrar al autor y la licencia donde se usa la obra.
+ */
+function credito(s: PptxGenJS.Slide, dia: DiapositivaConImagen, pos: { x: number; y: number; w: number }) {
+  const c = dia.imagen?.credito;
+  if (!c || !dia.imagenData) return;
+  const texto = [c.autor && `Foto: ${c.autor}`, c.licencia].filter(Boolean).join(' · ');
+  s.addText(texto, {
+    ...pos, h: 0.3, fontSize: 9, color: 'FFFFFF', align: 'right', valign: 'middle',
+    fill: { color: '000000', transparency: 40 },
+    ...(c.fuente ? { hyperlink: { url: c.fuente } } : {}),
+  });
+}
+
 function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContraste: boolean) {
   const cuerpoBase = esContraste ? 24 : 20;
 
   switch (dia.tipo) {
     case 'portada': {
       const s = pptx.addSlide({ masterName: MAESTRA.portada });
+      // Con foto: de fondo, recortada a la lámina, con un velo oscuro para que
+      // el título se lea blanco (igual que en pantalla)
+      const conFoto = Boolean(dia.imagenData);
+      if (dia.imagenData) {
+        s.addImage({ data: dia.imagenData, x: 0, y: 0, w: ANCHO, h: ALTO, sizing: { type: 'cover', w: ANCHO, h: ALTO } });
+        s.addShape('rect', { x: 0, y: 0, w: ANCHO, h: ALTO, fill: { color: '000000', transparency: 45 } });
+        s.addShape('rect', { x: 0, y: ALTO - 0.6, w: ANCHO, h: 0.6, fill: { color: d.acento } });
+      }
+      const color = conFoto ? 'FFFFFF' : d.portadaTexto;
       s.addText(dia.titulo, {
         x: 0.8, y: 2.2, w: 11.7, h: 2.2,
-        fontSize: 40, bold: true, color: d.portadaTexto, align: 'center', valign: 'middle',
+        fontSize: 40, bold: true, color, align: 'center', valign: 'middle',
       });
       if (dia.puntos.length) {
         s.addText(dia.puntos.join(' · '), {
-          x: 0.8, y: 4.4, w: 11.7, h: 0.8, fontSize: 18, color: d.portadaTexto, align: 'center',
+          x: 0.8, y: 4.4, w: 11.7, h: 0.8, fontSize: 18, color, align: 'center',
         });
       }
+      credito(s, dia, { x: 7.3, y: ALTO - 1.0, w: 5.8 });
+      return s;
+    }
+
+    case 'juego': {
+      // Adiviná la palabra: la pista y una casilla por letra. Las respuestas
+      // van a las notas del orador (las ve el docente, no el proyector).
+      const s = pptx.addSlide({ masterName: MAESTRA.contenido });
+      titulo(s, dia.titulo, d.titulo);
+      const items = dia.adivinanzas ?? [];
+      const alto = Math.min(1.0, 4.9 / Math.max(items.length, 1));
+      items.forEach((a, i) => {
+        const y = 1.8 + i * alto;
+        s.addText(String(i + 1), {
+          x: 0.9, y: y + 0.05, w: 0.5, h: 0.5, fontSize: 16, bold: true,
+          color: d.fondo, fill: { color: d.acento }, align: 'center', valign: 'middle', shape: 'ellipse',
+        });
+        s.addText(a.pista, { x: 1.6, y, w: 11, h: alto * 0.5, fontSize: esContraste ? 20 : 17, color: d.cuerpo, valign: 'middle' });
+        const letras = [...a.respuesta];
+        const lado = Math.min(0.38, 10.5 / Math.max(letras.length, 1));
+        letras.forEach((_, k) => {
+          s.addShape('rect', {
+            x: 1.6 + k * (lado + 0.06), y: y + alto * 0.5, w: lado, h: lado,
+            line: { color: d.acento, width: 1.5 }, fill: { color: d.fondo },
+          });
+        });
+      });
       return s;
     }
 
@@ -190,6 +241,7 @@ function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContra
                 x: 0.9, y: 1.7, w: 11.6, h: dia.puntos.length ? 4.5 : 5.1,
                 sizing: { type: 'contain', w: 11.6, h: dia.puntos.length ? 4.5 : 5.1 },
             });
+            credito(s, dia, { x: 6.7, y: dia.puntos.length ? 5.9 : 6.5, w: 5.8 });
         }
         if (dia.puntos.length) {
             s.addText(dia.puntos.join(' '), {
@@ -210,6 +262,7 @@ function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContra
           x: 7.8, y: 1.9, w: 4.7, h: 4.2,
           sizing: { type: 'contain', w: 4.7, h: 4.2 },
         });
+        credito(s, dia, { x: 7.8, y: 6.15, w: 4.7 });
       } else {
         viñetas(s, dia.puntos, d, 1.9, 0.9, 11.6, 4.6, cuerpoBase + 2);
       }
@@ -229,6 +282,7 @@ function dibujar(pptx: PptxGenJS, dia: DiapositivaConImagen, d: Diseno, esContra
           x: 7.8, y: 1.8, w: 4.7, h: 4.3,
           sizing: { type: 'contain', w: 4.7, h: 4.3 },
         });
+        credito(s, dia, { x: 7.8, y: 6.15, w: 4.7 });
       } else {
         viñetas(s, dia.puntos, d, 1.8, 0.9, 11.6, 4.9, cuerpoBase);
       }
@@ -287,7 +341,11 @@ export async function exportarMazoPptx(mazo: Mazo, opts: OpcionesExport = {}): P
     const s = dibujar(pptx, dia, d, esContraste);
     // La nota del docente va a las notas del orador: PowerPoint las muestra
     // en su pantalla y no en el proyector.
-    if (dia.nota) s.addNotes(dia.nota);
+    const respuestas = dia.tipo === 'juego' && dia.adivinanzas?.length
+      ? `Respuestas: ${dia.adivinanzas.map((a, i) => `${i + 1}) ${a.respuesta}`).join('  ')}`
+      : '';
+    const notas = [dia.nota, respuestas].filter(Boolean).join('\n\n');
+    if (notas) s.addNotes(notas);
   }
 
   const nombre = mazo.titulo.replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 60) || 'presentacion';

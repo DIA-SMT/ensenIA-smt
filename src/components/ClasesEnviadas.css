@@ -74,3 +74,4 @@
 .ce-offline-guardar:hover { background: var(--acento-suave); }
 .ce-offline-guardar:disabled { color: var(--text-subtle); cursor: progress; }
 .ce-offline-guardar:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.ce-aviso-icono { font-size: 22px; line-height: 1; }

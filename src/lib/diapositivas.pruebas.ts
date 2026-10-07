@@ -135,5 +135,29 @@ for (const palabra of ['Números racionales', 'Matemática · 3° A', 'fracción
 // El texto lo usan las herramientas de los chicos: la nota del docente no va
 comprobar('la nota del docente no queda en el texto', !plano.includes('Arrancar preguntando'));
 
+console.log('\n── Juego y crédito de la foto (fase B) ──');
+const conJuego = normalizarMazo({
+  titulo: 'Cartas',
+  diapositivas: [
+    { tipo: 'juego', titulo: '¿Qué palabra es?', adivinanzas: [
+      { pista: 'Quien recibe la carta', respuesta: 'Destinatario' },
+      { pista: '', respuesta: 'SinPista' },
+      { pista: 'Sin respuesta', respuesta: '' },
+    ] },
+    { tipo: 'juego', titulo: 'Vacío', puntos: ['algo'], adivinanzas: [] },
+    { tipo: 'imagen', titulo: 'Volcán', imagen: { ruta: 'u/img/a.jpg', alt: 'Un volcán', credito: { autor: 'Ana', licencia: 'CC BY 4.0', fuente: 'https://commons.wikimedia.org/x' } } },
+    { tipo: 'imagen', titulo: 'Otra', imagen: { ruta: 'u/img/b.jpg', alt: 'b', credito: { autor: 'Beto', licencia: 'CC0', fuente: 'javascript:alert(1)' } } },
+  ],
+});
+comprobar('el juego conserva solo las palabras con pista y respuesta',
+  conJuego?.diapositivas[0].tipo === 'juego' && conJuego.diapositivas[0].adivinanzas?.length === 1, conJuego?.diapositivas[0]);
+comprobar('un juego sin palabras pasa a puntos', conJuego?.diapositivas[1].tipo === 'puntos');
+comprobar('el crédito de la foto se conserva',
+  conJuego?.diapositivas[2].imagen?.credito?.autor === 'Ana' && conJuego.diapositivas[2].imagen.credito.fuente.startsWith('https://'));
+comprobar('un link que no es https no queda en el crédito', conJuego?.diapositivas[3].imagen?.credito?.fuente === '');
+const planoJuego = conJuego ? aTextoPlano(conJuego) : '';
+comprobar('del juego van las pistas al texto', planoJuego.includes('Quien recibe la carta'));
+comprobar('las respuestas del juego no van al texto', !planoJuego.includes('Destinatario'));
+
 console.log(`\n${fallo === 0 ? '✅' : '❌'}  ${ok} bien, ${fallo} mal\n`);
 process.exit(fallo === 0 ? 0 : 1);

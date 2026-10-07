@@ -19,6 +19,8 @@ import { TAG_PRESENTACION } from '../lib/presentation';
 import { claseGuardada, guardarClase, type ClaseEnviada } from '../services/clases.service';
 import { puedeGuardarSinConexion } from '../lib/archivosOffline';
 import { avisar } from './ui/avisar';
+import EmojiMateria from './ui/EmojiMateria';
+import { emojiDeMateria } from '../lib/materias';
 import type { LibraryMaterial } from '../types';
 import './ClasesEnviadas.css';
 
@@ -103,7 +105,7 @@ export default function ClasesEnviadas({ clases, materiales, userId, alAbrir, ti
         {visibles.map(({ clase, partes }) => (
           <li key={clase.id} className="card ce-clase">
             <div className="ce-cabeza">
-              <span className="badge badge-cyan">{clase.subjectName}</span>
+              <span className="badge badge-cyan"><EmojiMateria nombre={clase.subjectName} /> {clase.subjectName}</span>
               <span className="ce-cuando">{cuandoFue(clase.enviadaAt)}</span>
             </div>
             <h4 className="ce-titulo" aria-level={3}>{clase.titulo}</h4>
@@ -145,7 +147,7 @@ export default function ClasesEnviadas({ clases, materiales, userId, alAbrir, ti
 export function AvisoClaseNueva({ clase }: { clase: ClaseEnviada }) {
   return (
     <Link to={`/materia/${clase.subjectId}`} className="card card-interactive ce-aviso">
-      <span className="ce-aviso-icono" aria-hidden="true"><Presentation size={20} /></span>
+      <span className="ce-aviso-icono" aria-hidden="true">{emojiDeMateria(clase.subjectName)}</span>
       <span className="ce-aviso-texto">
         <strong>Clase nueva de {clase.subjectName}</strong>
         <span>{clase.titulo} · {cuandoFue(clase.enviadaAt)}</span>

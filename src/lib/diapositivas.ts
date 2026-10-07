@@ -34,10 +34,11 @@ export type TipoLamina =
   | 'dos-columnas'
   | 'pregunta'
   | 'imagen'
+  | 'juego'
   | 'cierre';
 
 export const TIPOS_LAMINA: TipoLamina[] = [
-  'portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'imagen', 'cierre',
+  'portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'imagen', 'juego', 'cierre',
 ];
 
 export interface Columna {
@@ -51,6 +52,25 @@ export interface Imagen {
   ruta: string;
   /** Texto alternativo. Sin esto la lamina no sirve con lector de pantalla. */
   alt: string;
+  /**
+   * De quién es, si es una foto con licencia libre (buscada en Openverse).
+   * Las licencias CC piden nombrar al autor: se muestra sobre la imagen.
+   */
+  credito?: Credito;
+}
+
+export interface Credito {
+  autor: string;
+  /** "CC BY-SA 4.0", "Dominio público"… */
+  licencia: string;
+  /** La página de la obra (Wikimedia, Flickr…), para quien quiera ir a verla */
+  fuente: string;
+}
+
+/** Lámina de juego: adiviná la palabra a partir de la pista. */
+export interface Adivinanza {
+  pista: string;
+  respuesta: string;
 }
 
 export interface Diapositiva {
@@ -69,6 +89,8 @@ export interface Diapositiva {
   correcta?: number | null;
   /** Imagen de la lámina. La sube el docente. */
   imagen?: Imagen;
+  /** juego: las palabras a adivinar, cada una con su pista. */
+  adivinanzas?: Adivinanza[];
   /** Notas del orador. Nunca se le muestran al curso. */
   nota?: string;
 }
@@ -117,9 +139,18 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
   const nota = texto(o.nota, 600) || undefined;
 
   const img = o.imagen as Record<string, unknown> | undefined;
+  const credito = img && typeof img === 'object' ? normalizarCredito(img.credito) : undefined;
   const imagen = img && typeof img === 'object' && texto(img.ruta, 400)
-    ? { ruta: texto(img.ruta, 400), alt: texto(img.alt, 200) }
+    ? { ruta: texto(img.ruta, 400), alt: texto(img.alt, 200), ...(credito ? { credito } : {}) }
     : undefined;
+
+  const adivinanzas = Array.isArray(o.adivinanzas)
+    ? o.adivinanzas
+      .map(a => (a && typeof a === 'object' ? a as Record<string, unknown> : {}))
+      .map(a => ({ pista: texto(a.pista, 200), respuesta: texto(a.respuesta, 24) }))
+      .filter(a => a.pista && a.respuesta)
+      .slice(0, 6)
+    : [];
 
   let tipo: TipoLamina = TIPOS_LAMINA.includes(o.tipo as TipoLamina)
     ? (o.tipo as TipoLamina)
@@ -131,9 +162,11 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
   if (tipo === 'pregunta' && opciones.length < 2) tipo = 'puntos';
   // Una lámina de imagen sin imagen es una lámina en blanco.
   if (tipo === 'imagen' && !imagen) tipo = 'puntos';
+  // Un juego sin palabras no tiene nada que adivinar.
+  if (tipo === 'juego' && adivinanzas.length === 0) tipo = 'puntos';
 
   // Una lámina sin nada que mostrar no va.
-  const tieneCuerpo = puntos.length || destacado || izquierda || opciones.length || imagen;
+  const tieneCuerpo = puntos.length || destacado || izquierda || opciones.length || imagen || adivinanzas.length;
   if (!titulo && !tieneCuerpo) return null;
 
   const correctaCruda = typeof o.correcta === 'number' ? o.correcta : null;
@@ -150,8 +183,22 @@ export function normalizarDiapositiva(v: unknown): Diapositiva | null {
     ...(tipo === 'dos-columnas' ? { izquierda, derecha } : {}),
     ...(tipo === 'pregunta' ? { opciones, correcta } : {}),
     ...(imagen ? { imagen } : {}),
+    ...(tipo === 'juego' ? { adivinanzas } : {}),
     ...(nota ? { nota } : {}),
   };
+}
+
+function normalizarCredito(v: unknown): Credito | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const o = v as Record<string, unknown>;
+  const fuente = texto(o.fuente, 400);
+  const c = {
+    autor: texto(o.autor, 120),
+    licencia: texto(o.licencia, 60),
+    // Solo un link de verdad: esto se muestra como enlace
+    fuente: /^https:\/\//.test(fuente) ? fuente : '',
+  };
+  return c.autor || c.licencia ? c : undefined;
 }
 
 export function normalizarMazo(v: unknown): Mazo | null {
@@ -258,6 +305,8 @@ export function aTextoPlano(mazo: Mazo): string {
       col.puntos.forEach(p => partes.push(`- ${p}`));
     }
     d.opciones?.forEach((o, j) => partes.push(`${String.fromCharCode(65 + j)}) ${o}`));
+    // Del juego van las pistas, no las respuestas
+    d.adivinanzas?.forEach(a => partes.push(`- ${a.pista}`));
     if (d.imagen?.alt) partes.push(d.imagen.alt);
     // Las notas del docente NO van: este texto lo usan las herramientas de
     // los estudiantes (quiz, guía, "Explicámelo fácil") y la clase en vivo.

@@ -28,6 +28,7 @@ import MaterialViewer from '../components/MaterialViewer';
 import GradesPanel from '../components/GradesPanel';
 import SyllabusPanel from '../components/SyllabusPanel';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import type { Activity, ActivitySubmission, AcademicTerm, AlertThresholds, Enrollment, LibraryMaterial, Student } from '../types';
 import './Actividades.css';
@@ -164,7 +165,7 @@ export default function MiMateria() {
       <Link to="/mis-actividades" className="mm-volver"><ArrowLeft size={16} /> Mi escuela</Link>
 
       <header className="card mm-cabeza">
-        <h2>{nombre}</h2>
+        <h2><EmojiMateria nombre={nombre} /> {nombre}</h2>
         <p>{inscripcion.courseName}</p>
         <div className="mm-resumen">
           <span><ClipboardList size={15} aria-hidden="true" /> {porHacer.length === 0 ? 'Nada por entregar' : `${porHacer.length} tarea${porHacer.length > 1 ? 's' : ''} por hacer`}</span>

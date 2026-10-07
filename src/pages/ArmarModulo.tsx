@@ -27,7 +27,7 @@ import { streamChat } from '../services/ia-chat.service';
 import { createMaterial, getMaterialsByTeacher } from '../services/library.service';
 import { getPlanningByTeacher } from '../services/planning.service';
 import {
-    updateMaterial, generateStudyCards, generatePodcast, extractQuestions, generateSlides, guardarMazo,
+    updateMaterial, generateStudyCards, generatePodcast, extractQuestions, generateSlides, guardarMazo, uploadFile,
 } from '../services/documents.service';
 import { generarDiagrama, generarDatosJuego, guardarDiagrama, guardarJuego } from '../services/visuales.service';
 import { enviarClase, type TareaDeClase } from '../services/clases.service';
@@ -117,6 +117,13 @@ export default function ArmarModulo() {
     const [juegoMat, setJuegoMat] = useState<LibraryMaterial | null>(null);
     const [diagramaMat, setDiagramaMat] = useState<LibraryMaterial | null>(null);
     const [tarea, setTarea] = useState<TareaDeClase | null>(null);
+    // Lo que el diagrama y el juego le aportan al mazo. Se generan en paralelo,
+    // así que se juntan al final (ref y no estado: lo leen las piezas al terminar).
+    const paraElMazo = useRef<{
+        material?: LibraryMaterial; mazo?: Mazo;
+        palabras?: { respuesta: string; pista: string }[];
+        diagrama?: { png: Blob; titulo: string; descripcion: string };
+    }>({});
     const [preguntaVivo, setPreguntaVivo] = useState<ActivityQuestion | null>(null);
     const [liveReady, setLiveReady] = useState(false);
     const [lanzando, setLanzando] = useState(false);
@@ -333,10 +340,13 @@ export default function ArmarModulo() {
                         slides: limpio,
                     });
                     setMazoMat(m);
+                    paraElMazo.current.material = m;
+                    paraElMazo.current.mazo = limpio;
                 });
             case 'juego':
                 return pieza(key, async () => {
                     const datos = await generarDatosJuego(content, moduleName, contexto);
+                    paraElMazo.current.palabras = datos.palabras;
                     // Si las palabras no se cruzan, la frase clave igual sirve de criptograma
                     let juego;
                     try {
@@ -350,6 +360,7 @@ export default function ArmarModulo() {
                 return pieza(key, async () => {
                     const d = await generarDiagrama(content, moduleName, variante, contexto);
                     const png = await svgAPng(await dibujarDiagrama(d));
+                    paraElMazo.current.diagrama = { png, titulo: d.titulo, descripcion: d.descripcion };
                     setDiagramaMat(await guardarDiagrama(d, png, destinoVisual));
                 });
             case 'placas':
@@ -410,12 +421,50 @@ export default function ArmarModulo() {
         }
     };
 
+    /**
+     * Con diapositivas y juego o diagrama en la misma clase, el mazo los
+     * incluye: el diagrama como segunda lámina (el tema de un vistazo) y el
+     * juego antes del cierre. Así se proyecta todo junto, sin cambiar de
+     * pantalla en el aula. Si algo falla, el mazo queda como salió.
+     */
+    const sumarAlMazo = async () => {
+        const { material, mazo, palabras, diagrama } = paraElMazo.current;
+        if (!material || !mazo || (!palabras?.length && !diagrama)) return;
+        try {
+            const ds = [...mazo.diapositivas];
+            if (palabras?.length) {
+                const cierre = ds.length && ds[ds.length - 1].tipo === 'cierre' ? ds.length - 1 : ds.length;
+                ds.splice(cierre, 0, {
+                    tipo: 'juego',
+                    titulo: '¿Qué palabra es?',
+                    puntos: [],
+                    adivinanzas: palabras.slice(0, 5).map(p => ({ pista: p.pista, respuesta: p.respuesta })),
+                    nota: 'Leé la pista, que el curso diga la palabra y tocá "Ver" para mostrarla.',
+                });
+            }
+            if (diagrama) {
+                // Copia propia: si el docente borra el material del diagrama, la lámina sigue andando
+                const { storagePath } = await uploadFile(user.id, new File([diagrama.png], 'diagrama.png', { type: 'image/png' }));
+                ds.splice(ds[0]?.tipo === 'portada' ? 1 : 0, 0, {
+                    tipo: 'imagen', titulo: diagrama.titulo, puntos: [],
+                    imagen: { ruta: storagePath, alt: diagrama.descripcion },
+                });
+            }
+            const nuevo: Mazo = { ...mazo, diapositivas: ds };
+            await guardarMazo(material.id, nuevo);
+            setMazoMat({ ...material, slides: nuevo, extractedText: aTextoPlano(nuevo) });
+        } catch (err) {
+            console.error('sumar al mazo:', err);
+        }
+    };
+
     // ── Paso 2 → 3: generar lo elegido (sin compartir nada todavía) ──
     const handleBuild = async () => {
         if (!assignment || building || chosen.size === 0 || !content.trim()) return;
         setBuilding(true);
         setError('');
         setStep(3);
+        paraElMazo.current = {};
 
         try {
             // El apunte: con material, o con un tema que ya tiene su material, se
@@ -447,6 +496,7 @@ export default function ArmarModulo() {
                 piezas.push(generarPreguntas(chosen.has('actividad'), chosen.has('vivo')));
             }
             await Promise.all(piezas);
+            await sumarAlMazo();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'No se pudo generar el material.');
         } finally {

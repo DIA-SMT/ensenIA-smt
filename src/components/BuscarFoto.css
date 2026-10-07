@@ -1,0 +1,71 @@
+/* Buscar una foto (BuscarFoto.tsx) */
+.bf-dialogo { align-items: center; justify-content: center; padding: var(--space-4); }
+.bf-dialogo .dialogo-cuerpo { width: min(880px, 100%); max-height: min(820px, 94dvh); border-radius: var(--radius-xl); }
+
+.bf { display: flex; flex-direction: column; gap: 12px; padding: var(--space-5); overflow-y: auto; max-height: inherit; }
+.bf-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bf-cabeza h3 { margin: 0; font-size: 1.1rem; }
+
+.bf-form { display: flex; gap: 8px; align-items: center; }
+.bf-buscar { flex: 1; }
+.bf-ayuda { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+.bf-error { margin: 0; font-size: 13px; color: var(--danger, #B91C1C); }
+.bf-vacio { display: flex; align-items: center; gap: 10px; padding: 18px; border-radius: var(--radius-md); background: var(--bg-elevated); color: var(--text-secondary); font-size: 14px; }
+
+.bf-grilla {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.bf-foto {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+}
+.bf-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bf-foto:hover:not(:disabled), .bf-foto:focus-visible { border-color: var(--acento); outline: none; }
+.bf-foto:disabled:not(.guardando) { opacity: 0.55; cursor: default; }
+.bf-autor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bf-guardando {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bf-mas { align-self: center; }
+
+@media (max-width: 640px) {
+  .bf-dialogo { padding: 0; align-items: flex-end; }
+  .bf-dialogo .dialogo-cuerpo { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  .bf { padding: var(--space-4); }
+  .bf-grilla { grid-template-columns: repeat(2, 1fr); }
+}

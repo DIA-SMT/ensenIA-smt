@@ -18,6 +18,7 @@ import EstadoVacio from '../components/ui/EstadoVacio';
 import PrepararAula from '../components/PrepararAula';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { getScheduleByTeacher } from '../services/schedule.service';
 import { horaATexto } from '../lib/horas';
 import { useResumenRepaso } from '../services/comprension.service';
@@ -284,7 +285,7 @@ export default function Hoy() {
                                 {isNext && <span className="hoy-next-pill">Ahora</span>}
                             </div>
                             <div className="hoy-class-body">
-                                <h3>{cls.subjectName}</h3>
+                                <h3><EmojiMateria nombre={cls.subjectName} /> {cls.subjectName}</h3>
                                 <p className="hoy-class-meta">
                                     {[cls.courseName, cls.room, `${cls.studentCount} estudiante${cls.studentCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
                                     {done && <span className="hoy-done-chip"><Check size={11} /> Asistencia tomada</span>}

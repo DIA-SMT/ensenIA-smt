@@ -1,7 +1,7 @@
 /**
  * SMT EstudIA — Visor del mazo estructurado
  *
- * Dibuja las seis formas de lámina. El visor anterior solo sabía hacer
+ * Dibuja las ocho formas de lámina. El visor anterior solo sabía hacer
  * título + viñetas, así que una presentación entera salía con la misma
  * forma doce veces: por eso se veía básica, más allá del tema de color.
  *
@@ -17,10 +17,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight, StickyNote, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, StickyNote, Plus, X, Eye, EyeOff } from 'lucide-react';
 import { disenoDe, varsDiseno, DISENO_PREDETERMINADO } from '../lib/disenos';
 import { getSignedUrl } from '../services/documents.service';
-import type { Mazo, Diapositiva, Columna } from '../lib/diapositivas';
+import type { Mazo, Diapositiva, Columna, Credito, Adivinanza } from '../lib/diapositivas';
 import './MazoVisor.css';
 
 /** No navegar con las flechas mientras alguien escribe. */
@@ -36,7 +36,7 @@ type AlCambiar = ((d: Diapositiva) => void) | undefined;
  * firmada. Se guarda la ruta y no la URL a propósito: una URL firmada
  * caduca en una hora, y un mazo guardado en marzo se abre en agosto.
  */
-function ImagenDeLamina({ ruta, alt }: { ruta: string; alt: string }) {
+function ImagenDeLamina({ ruta, alt, credito, fondo = false }: { ruta: string; alt: string; credito?: Credito; fondo?: boolean }) {
   // El estado guarda de qué ruta es: así cambiar de imagen no necesita
   // limpiarlo a mano antes de pedir la nueva (eso encadena renders), se
   // deduce comparando.
@@ -53,7 +53,99 @@ function ImagenDeLamina({ ruta, alt }: { ruta: string; alt: string }) {
   const actual = estado?.ruta === ruta ? estado : null;
   if (!actual) return <span className="mv-img-cargando" aria-hidden="true" />;
   if (!actual.url) return <span className="mv-img-falla">No se pudo cargar la imagen.</span>;
-  return <img src={actual.url} alt={alt} className="mv-img" />;
+  // La foto de portada va de fondo: es decorativa, el título dice de qué es
+  if (fondo) return <img src={actual.url} alt="" className="mv-img-fondo" />;
+  return (
+    <span className="mv-img-marco">
+      <img src={actual.url} alt={alt} className="mv-img" />
+      <CreditoImagen credito={credito} />
+    </span>
+  );
+}
+
+/**
+ * De quién es la foto. Las licencias Creative Commons piden nombrar al autor
+ * y la licencia donde se usa la obra: va sobre la imagen, chiquito.
+ */
+function CreditoImagen({ credito }: { credito?: Credito }) {
+  if (!credito) return null;
+  const texto = [credito.autor && `Foto: ${credito.autor}`, credito.licencia].filter(Boolean).join(' · ');
+  return credito.fuente
+    ? <a className="mv-credito" href={credito.fuente} target="_blank" rel="noopener noreferrer">{texto}</a>
+    : <span className="mv-credito">{texto}</span>;
+}
+
+/**
+ * Lámina de juego: cada palabra con su pista y una casilla por letra.
+ * "Ver" la destapa: el curso adivina en voz alta y el docente la muestra
+ * (o el chico se autocorrige en el celular).
+ */
+function JuegoLamina({ dia, alCambiar }: { dia: Diapositiva; alCambiar?: AlCambiar }) {
+  const items = dia.adivinanzas ?? [];
+  // Lo destapado es de esta lámina: al pasar a otra, arranca tapado
+  const [estado, setEstado] = useState<{ de: Adivinanza[] | undefined; vistas: number[] }>({ de: dia.adivinanzas, vistas: [] });
+  const vistas = estado.de === dia.adivinanzas ? estado.vistas : [];
+  const alternar = (i: number) => setEstado({
+    de: dia.adivinanzas,
+    vistas: vistas.includes(i) ? vistas.filter(x => x !== i) : [...vistas, i],
+  });
+  const ed = !!alCambiar;
+  const cambiar = (i: number, parche: Partial<Adivinanza>) =>
+    alCambiar?.({ ...dia, adivinanzas: items.map((a, j) => j === i ? { ...a, ...parche } : a) });
+
+  return (
+    <ol className="mv-juego-lista">
+      {items.map((a, i) => {
+        const visible = ed || vistas.includes(i);
+        const letras = [...a.respuesta.toLocaleUpperCase('es')];
+        return (
+          <li key={i} className="mv-juego-item">
+            <span className="mv-juego-n" aria-hidden="true">{i + 1}</span>
+            <div className="mv-juego-cuerpo">
+              <p className="mv-juego-pista">
+                <Campo valor={a.pista} alEscribir={ed ? v => cambiar(i, { pista: v }) : undefined} placeholder="La pista" />
+              </p>
+              {ed ? (
+                <input
+                  className="mv-juego-respuesta"
+                  value={a.respuesta}
+                  placeholder="La palabra"
+                  maxLength={24}
+                  onChange={e => cambiar(i, { respuesta: e.target.value.replace(/\s+/g, '') })}
+                  aria-label={`Respuesta ${i + 1}`}
+                />
+              ) : (
+                <span className="mv-casillas" aria-label={visible ? a.respuesta : `${letras.length} letras`}>
+                  {letras.map((l, k) => (
+                    <span key={k} className="mv-casilla" aria-hidden="true">{visible ? l : ''}</span>
+                  ))}
+                </span>
+              )}
+            </div>
+            {ed ? (
+              items.length > 1 && (
+                <button className="mv-quitar" onClick={() => alCambiar?.({ ...dia, adivinanzas: items.filter((_, j) => j !== i) })} aria-label="Quitar" title="Quitar">
+                  <X size={13} />
+                </button>
+              )
+            ) : (
+              <button className="mv-juego-ver" onClick={() => alternar(i)} aria-pressed={visible}>
+                {visible ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+                {visible ? 'Tapar' : 'Ver'}
+              </button>
+            )}
+          </li>
+        );
+      })}
+      {ed && items.length < 6 && (
+        <li className="mv-agregar-li">
+          <button className="mv-agregar" onClick={() => alCambiar?.({ ...dia, adivinanzas: [...items, { pista: '', respuesta: '' }] })}>
+            <Plus size={13} /> Agregar palabra
+          </button>
+        </li>
+      )}
+    </ol>
+  );
 }
 
 /**
@@ -159,9 +251,18 @@ export function Lamina({ dia, pie, alCambiar }: {
   };
 
   return (
-    <div className={`mv-lamina mv-${dia.tipo} ${ed ? 'mv-editando' : ''}`}>
+    <div className={`mv-lamina mv-${dia.tipo} ${ed ? 'mv-editando' : ''} ${dia.tipo === 'portada' && dia.imagen ? 'mv-con-foto' : ''}`}>
       {dia.tipo === 'portada' ? (
         <>
+          {/* Foto de portada: de fondo, con un velo para que el título se lea */}
+          {dia.imagen && (
+            <>
+              <span className="mv-portada-foto" aria-hidden="true">
+                <ImagenDeLamina ruta={dia.imagen.ruta} alt="" fondo />
+              </span>
+              <CreditoImagen credito={dia.imagen.credito} />
+            </>
+          )}
           <h1 className="mv-portada-titulo">
             <Campo valor={dia.titulo} alEscribir={ed ? v => set({ titulo: v }) : undefined} placeholder="Tema de la clase" />
           </h1>
@@ -255,7 +356,7 @@ export function Lamina({ dia, pie, alCambiar }: {
 
           {dia.tipo === 'imagen' && dia.imagen && (
             <figure className="mv-figura">
-              <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} />
+              <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} credito={dia.imagen.credito} />
               {(dia.puntos.length > 0 || ed) && (
                 <figcaption>
                   <Campo
@@ -267,6 +368,8 @@ export function Lamina({ dia, pie, alCambiar }: {
               )}
             </figure>
           )}
+
+          {dia.tipo === 'juego' && <JuegoLamina dia={dia} alCambiar={alCambiar} />}
 
           {/* Puntos con imagen al costado: la diapositiva más común de una
               clase. La imagen no reemplaza al contenido, lo acompaña. */}
@@ -283,7 +386,7 @@ export function Lamina({ dia, pie, alCambiar }: {
             return (
               <div className="mv-con-imagen">
                 {lista}
-                <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} />
+                <ImagenDeLamina ruta={dia.imagen.ruta} alt={dia.imagen.alt} credito={dia.imagen.credito} />
               </div>
             );
           })()}

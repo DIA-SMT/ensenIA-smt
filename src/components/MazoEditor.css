@@ -257,3 +257,6 @@
 }
 
 .lab-mazo-head h3 { margin: 0; font-size: 1rem; }
+
+/* El crédito de la foto elegida (Buscar foto) */
+.me-credito { margin: 0; font-size: 12px; color: var(--text-secondary); }

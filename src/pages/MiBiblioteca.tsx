@@ -18,6 +18,7 @@ import PodcastPlayer from '../components/PodcastPlayer';
 import VideoModal from '../components/VideoModal';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar } from '../components/ui/avisar';
 import type { LibraryMaterial, MaterialReactionType, PracticeQuestion, Student } from '../types';
@@ -172,7 +173,7 @@ export default function MiBiblioteca() {
               <button className={`sp-filtro-chip ${materia ? '' : 'activo'}`} aria-pressed={!materia} onClick={() => setMateria('')}>Todas</button>
               {materias.map(([id, nombre]) => (
                 <button key={id} className={`sp-filtro-chip ${materia === id ? 'activo' : ''}`} aria-pressed={materia === id} onClick={() => setMateria(id)}>
-                  {nombre}
+                  <EmojiMateria nombre={nombre} /> {nombre}
                 </button>
               ))}
             </div>
@@ -218,7 +219,7 @@ export default function MiBiblioteca() {
                 <h4 className="flex items-center gap-2" aria-level={3}><FileText size={16} className="text-cyan" aria-hidden="true" /> {mat.title}</h4>
                 {mat.description && <p className="text-sm text-secondary">{mat.description}</p>}
                 <div className="sp-activity-meta">
-                  <span className="badge badge-cyan">{mat.subjectName}</span>
+                  <span className="badge badge-cyan"><EmojiMateria nombre={mat.subjectName} /> {mat.subjectName}</span>
                   <span className="text-xs text-subtle">{mat.fileSize}</span>
                 </div>
               </div>

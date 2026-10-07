@@ -26,6 +26,7 @@ import {
   type EstudianteBuscable, type CursoBuscable, type MateriaBuscable,
 } from '../../services/busqueda.service';
 import Dialogo from './Dialogo';
+import { emojiDeMateria } from '../../lib/materias';
 
 interface Opcion {
   id: string;
@@ -150,7 +151,7 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
     const deMaterias: Opcion[] = (materias ?? []).map(m => ({
       id: `materia-${m.subjectId}`,
       grupo: 'Mis materias',
-      etiqueta: m.nombre,
+      etiqueta: `${emojiDeMateria(m.nombre)} ${m.nombre}`,
       detalle: 'Tareas, clases, material y notas',
       icono: BookOpen,
       ejecutar: cerrarE(() => navigate(`/materia/${m.subjectId}`)),

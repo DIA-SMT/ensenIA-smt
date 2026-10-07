@@ -21,6 +21,7 @@ import HablarConDocente from '../components/HablarConDocente';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar } from '../components/ui/avisar';
 import {
@@ -353,8 +354,9 @@ export default function MisActividades() {
               return (
                 <li key={e.id}>
                   <Link to={`/materia/${e.subjectId}`} className="card card-interactive sp-materia">
+                    <span className="sp-materia-emoji"><EmojiMateria nombre={e.subjectName} /></span>
                     <strong>{e.subjectName}</strong>
-                    <span className={pendientes ? 'sp-materia-pend' : ''}>
+                    <span className={`sp-materia-estado ${pendientes ? 'sp-materia-pend' : ''}`}>
                       {pendientes ? `${pendientes} por hacer` : 'Al día'}
                     </span>
                     <ChevronRight size={16} className="text-subtle" aria-hidden="true" />

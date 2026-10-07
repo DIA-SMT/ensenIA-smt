@@ -54,8 +54,8 @@
 .sp-materias { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
 .sp-materia {
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas: "nombre flecha" "estado flecha";
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "emoji nombre flecha" "emoji estado flecha";
   align-items: center;
   gap: 2px 8px;
   padding: 12px 14px;
@@ -65,9 +65,10 @@
   border-left: 4px solid var(--acento);
 }
 .sp-materia strong { grid-area: nombre; font-size: 15px; color: var(--text-primary); }
-.sp-materia span { grid-area: estado; font-size: 13px; color: var(--success); font-weight: 600; }
-.sp-materia span.sp-materia-pend { color: var(--acento); }
+.sp-materia-estado { grid-area: estado; font-size: 13px; color: var(--success); font-weight: 600; }
+.sp-materia-estado.sp-materia-pend { color: var(--acento); }
 .sp-materia svg { grid-area: flecha; }
+.sp-materia-emoji { grid-area: emoji; font-size: 26px; line-height: 1; }
 
 .sp-enrollments {
   display: flex;

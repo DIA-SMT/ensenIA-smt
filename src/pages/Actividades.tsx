@@ -14,6 +14,7 @@ import QrModal from '../components/QrModal';
 import BotonCopiarActividad from '../components/CopiarActividad';
 import { avisar, confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import type { Activity, ActivitySubmission, Subject } from '../types';
 import './Actividades.css';
@@ -148,7 +149,7 @@ export default function Actividades() {
           <ChevronRight size={16} />
         </Link>
         <div className="acts-card-meta">
-          {!enSeccion && <span className="badge badge-cyan">{a.subjectName}</span>}
+          {!enSeccion && <span className="badge badge-cyan"><EmojiMateria nombre={a.subjectName} /> {a.subjectName}</span>}
           {!enSeccion && <span className="badge badge-neutral">{a.courseName}</span>}
           {a.sourceTool && <span className="badge badge-ia">IA</span>}
           {a.status === 'closed'
@@ -295,7 +296,7 @@ export default function Actividades() {
           return (
             <section key={g.clave} className="acts-grupo" aria-labelledby={`acts-grupo-${g.clave}`}>
               <header className="acts-grupo-header">
-                <h3 id={`acts-grupo-${g.clave}`} className="acts-grupo-titulo">{g.etiqueta}</h3>
+                <h3 id={`acts-grupo-${g.clave}`} className="acts-grupo-titulo"><EmojiMateria nombre={g.items[0]?.subjectName} /> {g.etiqueta}</h3>
                 <span className="acts-grupo-cuenta">
                   {g.items.length} actividad{g.items.length !== 1 ? 'es' : ''} · {abiertas} abierta{abiertas !== 1 ? 's' : ''}
                 </span>

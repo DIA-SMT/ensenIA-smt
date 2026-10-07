@@ -86,6 +86,10 @@ export function varsDiseno(d: Diseno, pregunta = false): CSSProperties {
     '--d-cuerpo': `#${d.cuerpo}`,
     '--d-acento': `#${pregunta ? d.preguntaAcento : d.acento}`,
     '--d-pie': `#${d.pie}`,
+    // La portada y el cierre van con el color fuerte del diseño, como en el
+    // PowerPoint (antes en pantalla salían con el fondo común)
+    '--d-portada-fondo': `#${d.portadaFondo}`,
+    '--d-portada-texto': `#${d.portadaTexto}`,
   } as CSSProperties;
 }
 

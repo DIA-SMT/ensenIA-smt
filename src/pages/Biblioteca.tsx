@@ -33,6 +33,7 @@ import { Network, Puzzle } from 'lucide-react';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar, confirmar } from '../components/ui/avisar';
 import { asignacionesDe, destinosDeMaterial, etiquetaDestino, claveAsignacion, cursosDeMateria, type DestinoMaterial } from '../lib/asignaciones';
@@ -195,7 +196,7 @@ export default function Biblioteca() {
   }
 
   // Sin filtro ni búsqueda: una sección por curso (y "todos tus cursos" si la materia se da en varios)
-  const grupos: { clave: string; titulo: string; items: LibraryMaterial[]; destino?: string }[] = [];
+  const grupos: { clave: string; titulo: string; materia?: string; items: LibraryMaterial[]; destino?: string }[] = [];
   if (!asignacionFiltro && !searchResults) {
     const ubicados = new Set<string>();
     for (const subjectId of [...new Set(asignaciones.map(a => a.subjectId))]) {
@@ -204,13 +205,13 @@ export default function Biblioteca() {
         const items = allMaterials.filter(m => m.subjectId === subjectId
           && (m.courseId === a.courseId || (!m.courseId && cursos.length === 1)));
         items.forEach(m => ubicados.add(m.id));
-        grupos.push({ clave: a.clave, titulo: a.etiqueta, items, destino: a.clave });
+        grupos.push({ clave: a.clave, titulo: a.etiqueta, materia: a.subjectName, items, destino: a.clave });
       }
       if (cursos.length > 1) {
         const items = allMaterials.filter(m => m.subjectId === subjectId && !m.courseId);
         items.forEach(m => ubicados.add(m.id));
         if (items.length) {
-          grupos.push({ clave: claveAsignacion(subjectId, null), titulo: `${cursos[0].subjectName} · todos tus cursos`, items, destino: claveAsignacion(subjectId, null) });
+          grupos.push({ clave: claveAsignacion(subjectId, null), titulo: `${cursos[0].subjectName} · todos tus cursos`, materia: cursos[0].subjectName, items, destino: claveAsignacion(subjectId, null) });
         }
       }
     }
@@ -765,7 +766,7 @@ export default function Biblioteca() {
               aria-pressed={asignacionFiltro?.clave === a.clave}
               onClick={() => setFiltro(a.clave)}
             >
-              {a.etiqueta}
+              <EmojiMateria nombre={a.subjectName} /> {a.etiqueta}
             </button>
           ))}
         </div>
@@ -819,7 +820,7 @@ export default function Biblioteca() {
                 aria-pressed={asignacionFiltro?.clave === a.clave}
                 onClick={() => setFiltro(a.clave)}
               >
-                {a.etiqueta}
+                <EmojiMateria nombre={a.subjectName} /> {a.etiqueta}
               </button>
             ))}
           </div>
@@ -880,7 +881,7 @@ export default function Biblioteca() {
             {grupos.map(g => (
               <section key={g.clave} className="bib-grupo" aria-labelledby={`bib-grupo-${g.clave}`}>
                 <header className="bib-grupo-header">
-                  <h3 id={`bib-grupo-${g.clave}`} className="bib-grupo-titulo">{g.titulo}</h3>
+                  <h3 id={`bib-grupo-${g.clave}`} className="bib-grupo-titulo">{g.materia && <EmojiMateria nombre={g.materia} />} {g.titulo}</h3>
                   <span className="bib-grupo-cuenta">{g.items.length} material{g.items.length !== 1 ? 'es' : ''}</span>
                   {g.destino && !g.destino.endsWith('|*') && g.items.length > 0 && (
                     <button className="btn btn-outline btn-sm" onClick={() => setFiltro(g.destino!)}>

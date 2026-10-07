@@ -35,28 +35,89 @@
   line-height: 1.2;
   color: var(--d-titulo);
 }
+/* Una rayita de acento bajo el título: ordena la lámina y le da identidad */
+.mv-titulo::after {
+  content: '';
+  display: block;
+  width: clamp(36px, 7%, 72px);
+  height: clamp(3px, 0.6vw, 6px);
+  margin-top: clamp(6px, 1.2%, 12px);
+  border-radius: 99px;
+  background: var(--d-acento);
+}
+.mv-editando .mv-titulo::after { display: none; }
+
+/* El cierre se despide con el color de la portada: abre y cierra igual */
+.mv-cierre {
+  background: var(--d-portada-fondo, var(--d-fondo));
+  color: var(--d-portada-texto, var(--d-cuerpo));
+}
+.mv-cierre .mv-titulo { color: var(--d-portada-texto, var(--d-titulo)); }
+.mv-cierre .mv-puntos li { font-weight: 500; }
 
 /* ── Portada ── */
 
+/* La portada va con el color fuerte del diseño (el mismo del PowerPoint) y
+   una banda de acento abajo: es lo primero que ve el curso. */
 .mv-portada {
   align-items: center;
   text-align: center;
   justify-content: center;
+  background: var(--d-portada-fondo, var(--d-fondo));
+  color: var(--d-portada-texto, var(--d-titulo));
+  border-left-width: 1px;
+  isolation: isolate;
+}
+.mv-portada::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7%;
+  background: var(--d-acento);
+  z-index: 1;
 }
 
 .mv-portada-titulo {
+  position: relative;
+  z-index: 2;
   margin: 0;
-  font-size: clamp(1.5rem, 4vw, 2.9rem);
-  line-height: 1.15;
-  color: var(--d-titulo);
+  max-width: 90%;
+  font-size: clamp(1.5rem, 4.4vw, 3.2rem);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--d-portada-texto, var(--d-titulo));
 }
 
 .mv-portada-bajada {
+  position: relative;
+  z-index: 2;
   margin: clamp(10px, 2%, 22px) 0 0;
   font-size: clamp(0.85rem, 1.6vw, 1.15rem);
-  color: var(--d-cuerpo);
-  opacity: 0.85;
+  color: var(--d-portada-texto, var(--d-cuerpo));
+  opacity: 0.9;
 }
+
+/* Portada con foto: la foto de fondo y un velo oscuro para que el título se
+   lea siempre blanco, sea cual sea la foto. */
+.mv-portada-foto {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.mv-portada-foto .mv-img-cargando { position: absolute; inset: 0; min-height: 0; border-radius: 0; }
+.mv-img-fondo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mv-con-foto::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0.75) 100%);
+}
+.mv-con-foto .mv-portada-titulo,
+.mv-con-foto .mv-portada-bajada { color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
+.mv-con-foto .mv-campo { color: #fff; }
 
 /* ── Viñetas ── */
 
@@ -384,3 +445,107 @@ li:hover > .mv-quitar, .mv-quitar:focus-visible { opacity: 1; }
 @media (max-width: 620px) {
   .mv-con-imagen { grid-template-columns: 1fr; }
 }
+
+.mv-cierre .mv-pie { color: var(--d-portada-texto, var(--d-pie)); opacity: 0.75; }
+.mv-cierre .mv-puntos li::marker { color: var(--d-portada-texto, var(--d-acento)); }
+
+/* ── Crédito de la foto (licencias Creative Commons) ── */
+.mv-img-marco {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+.mv-credito {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 3;
+  max-width: calc(100% - 12px);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: clamp(0.55rem, 0.9vw, 0.72rem);
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+a.mv-credito:hover { text-decoration: underline; }
+/* En la portada va en la esquina, arriba de la banda de acento */
+.mv-portada > .mv-credito { bottom: calc(7% + 6px); }
+
+/* ── Juego: adiviná la palabra ── */
+/* Ojo: la lámina ya lleva .mv-juego por su tipo; la lista necesita nombre propio */
+.mv-juego-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.8%, 18px);
+}
+.mv-juego-item {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.6%, 16px);
+}
+.mv-juego-n {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: clamp(26px, 3.2vw, 40px);
+  height: clamp(26px, 3.2vw, 40px);
+  border-radius: 50%;
+  background: var(--d-acento);
+  color: var(--d-fondo);
+  font-weight: 800;
+  font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+}
+.mv-juego-cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.mv-juego-pista { margin: 0; font-size: clamp(0.82rem, 1.6vw, 1.2rem); line-height: 1.35; }
+.mv-casillas { display: flex; flex-wrap: wrap; gap: 3px; }
+.mv-casilla {
+  display: grid;
+  place-items: center;
+  width: clamp(16px, 2.2vw, 30px);
+  height: clamp(18px, 2.5vw, 34px);
+  border: 2px solid var(--d-acento);
+  border-radius: 4px;
+  font-weight: 800;
+  font-size: clamp(0.7rem, 1.5vw, 1.15rem);
+  color: var(--d-titulo);
+}
+.mv-juego-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--d-acento);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--d-titulo);
+  font: inherit;
+  font-size: clamp(0.72rem, 1.2vw, 0.9rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+.mv-juego-ver[aria-pressed="true"] { background: var(--d-acento); color: var(--d-fondo); }
+.mv-juego-respuesta {
+  max-width: 260px;
+  padding: 4px 8px;
+  border: 1px dashed var(--d-acento);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--d-titulo);
+  font: inherit;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mv-grande .mv-juego-pista { font-size: clamp(1rem, 2vw, 1.6rem); }
