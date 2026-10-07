@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { enlaceMensaje } from '../services/mensajes.service';
 import { coincideBusqueda } from '../services/busqueda.service';
 import {
-    Search, AlertTriangle, X, HeartPulse, PencilLine,
+    Search, AlertTriangle, X, HeartPulse, PencilLine, MessagesSquare,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
     BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload, ArrowUpRight,
 } from 'lucide-react';
@@ -1019,10 +1020,19 @@ export default function Students() {
                             {guardians.length === 0
                                 ? <p className="text-sm text-secondary italic">Sin tutores vinculados.</p>
                                 : guardians.map(g => (
-                                    <p key={g.id} className="text-sm">
-                                        {g.guardianName} <span className="text-subtle">({g.relationship})</span>
+                                    <p key={g.id} className="text-sm stu-familiar">
+                                        <span>{g.guardianName} <span className="text-subtle">({g.relationship})</span></span>
+                                        <Link to={enlaceMensaje([g.guardianUserId], `Sobre ${selectedStudent.firstName}`)} className="stu-escribir">
+                                            <MessagesSquare size={13} aria-hidden="true" /> Escribir
+                                        </Link>
                                     </p>
                                 ))}
+                            {/* Mensajes (060): al chico, si tiene cuenta. La conversación la puede leer dirección. */}
+                            {selectedStudent.userId && (
+                                <Link to={enlaceMensaje([selectedStudent.userId])} className="btn btn-outline btn-sm mt-2 w-full">
+                                    <MessagesSquare size={14} /> Escribirle a {selectedStudent.firstName}
+                                </Link>
+                            )}
                             <button className="btn btn-outline btn-sm mt-2 w-full" onClick={openCite}>
                                 <CalendarPlus size={14} /> Citar a la familia
                             </button>

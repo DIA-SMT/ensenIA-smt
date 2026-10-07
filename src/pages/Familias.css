@@ -223,3 +223,6 @@
   .fam-resumen { grid-template-columns: 1fr 1fr; }
   .fam-resumen .fam-dato:first-child { grid-column: 1 / -1; }
 }
+
+/* Escribirle a quien mandó el aviso (Mensajes, 060) */
+.fam-escribir { align-self: flex-start; margin-top: 4px; }

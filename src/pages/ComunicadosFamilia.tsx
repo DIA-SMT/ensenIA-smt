@@ -5,9 +5,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Megaphone, CalendarClock, CheckCircle, XCircle, ChevronDown, ArrowRight, WifiOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Megaphone, CalendarClock, CheckCircle, XCircle, ChevronDown, ArrowRight, WifiOff, Reply } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getNoticesForGuardian, markNoticeRead, respondToNotice } from '../services/guardians.service';
+import { enlaceMensaje } from '../services/mensajes.service';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import type { GuardianNotice, NoticeResponse } from '../types';
@@ -145,6 +147,10 @@ export default function ComunicadosFamilia() {
                   </div>
                 )}
                 {n.fromName && <p className="text-xs text-subtle">Enviado por {n.fromName}</p>}
+                {/* Escribirle a quien lo mandó: abre una conversación en Mensajes (060) */}
+                <Link to={enlaceMensaje([n.fromUserId], `Re: ${n.title}`, n.type === 'citacion' ? 'citacion' : 'comunicado')} className="btn btn-outline btn-sm fam-escribir">
+                  <Reply size={14} aria-hidden="true" /> Escribirle{n.fromName ? ` a ${n.fromName}` : ''}
+                </Link>
 
                 {n.type === 'citacion' && (
                   <div className="fam-respond">

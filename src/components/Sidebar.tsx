@@ -14,6 +14,7 @@ import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo, inicioDe } from '../lib/navegaci
 import { getUnreadAlertCount, getEscaladasPendientes } from '../services/alerts.service';
 import { getCommunicationsBySchool, sinLeer, EVENTO_COMUNICADO_LEIDO } from '../services/communications.service';
 import { getMyLiveSession } from '../services/live.service';
+import { useMensajesSinLeer } from '../lib/useMensajesSinLeer';
 import './Sidebar.css';
 
 const CLAVE_COLAPSADA = 'estudia_barra_colapsada';
@@ -52,6 +53,7 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
   const isDocente = user?.role === 'docente';
   const isDirector = user?.role === 'director';
   const isEstudiante = user?.role === 'estudiante';
+  const mensajesSinLeer = useMensajesSinLeer(!!user && user.role !== 'superadmin');
   const [alertCount, setAlertCount] = useState(0);
   const [comunicadosSinLeer, setComunicadosSinLeer] = useState(0);
   const [paraDireccion, setParaDireccion] = useState(0);
@@ -119,6 +121,9 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
       )}
       {isDocente && ruta === '/comunicados' && comunicadosSinLeer > 0 && (
         <span className="nav-alert-badge" title={`${comunicadosSinLeer} comunicados sin leer`}>{comunicadosSinLeer}</span>
+      )}
+      {ruta === '/mensajes' && mensajesSinLeer > 0 && (
+        <span className="nav-alert-badge" title={`${mensajesSinLeer} conversaciones sin leer`}>{mensajesSinLeer}</span>
       )}
       {isEstudiante && ruta === '/avisos' && comunicadosSinLeer > 0 && (
         <span className="nav-alert-badge" title={`${comunicadosSinLeer} avisos sin leer`}>{comunicadosSinLeer}</span>

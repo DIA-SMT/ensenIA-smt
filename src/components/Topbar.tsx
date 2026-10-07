@@ -5,13 +5,14 @@
  */
 
 import { useState } from 'react';
-import { Search, Plus, Accessibility, HelpCircle } from 'lucide-react';
+import { Search, Plus, Accessibility, HelpCircle, MessagesSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { tituloDe, inicioDe } from '../lib/navegacion';
 import { avisar } from './ui/avisar';
 import NotificationDropdown from './NotificationDropdown';
 import { LogoMark } from './Sidebar';
+import { useMensajesSinLeer } from '../lib/useMensajesSinLeer';
 import './Topbar.css';
 
 interface TopbarProps {
@@ -34,6 +35,9 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
   const { pathname } = useLocation();
   const { user, isDocente, isSuperadmin, school, mySchools, switchSchool } = useAuth();
   const [cambiando, setCambiando] = useState(false);
+  // Mensajes (060): siempre a mano, también en el celular
+  const conMensajes = !!user && user.role !== 'superadmin';
+  const sinLeerMensajes = useMensajesSinLeer(conMensajes);
 
   // Quien trabaja en más de una escuela elige en cuál está ahora. El
   // superadmin no: pasarse a una de sus membresías lo dejaría sin el rol.
@@ -116,6 +120,15 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
         >
           <Accessibility size={19} aria-hidden="true" />
         </button>
+
+        {conMensajes && (
+          <Link to="/mensajes" className="btn-icon topbar-mensajes"
+            aria-label={sinLeerMensajes ? `Mensajes: ${sinLeerMensajes} conversaciones sin leer` : 'Mensajes'}
+            title="Mensajes">
+            <MessagesSquare size={19} aria-hidden="true" />
+            {sinLeerMensajes > 0 && <span className="topbar-mensajes-n" aria-hidden="true">{sinLeerMensajes > 9 ? '9+' : sinLeerMensajes}</span>}
+          </Link>
+        )}
 
         <NotificationDropdown />
 

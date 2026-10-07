@@ -670,3 +670,7 @@
 .stu-aviso { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .stu-aviso .form-select, .stu-aviso .form-textarea { width: 100%; }
 .stu-aviso-botones { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* Familia en la ficha: cada tutor con su "Escribir" (Mensajes, 060) */
+.stu-familiar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stu-escribir { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--acento); text-decoration: none; }

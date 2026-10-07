@@ -9,7 +9,9 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Megaphone, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Megaphone, ChevronDown, AlertTriangle, Reply } from 'lucide-react';
+import { enlaceMensaje } from '../services/mensajes.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getCommunicationsBySchool, markCommunicationRead, EVENTO_COMUNICADO_LEIDO } from '../services/communications.service';
 import type { Communication } from '../types';
@@ -87,7 +89,17 @@ export default function ComunicadosDireccion() {
                   {c.priority === 'high' && <span className="badge badge-danger"><AlertTriangle size={11} aria-hidden="true" /> Importante</span>}
                   <ChevronDown size={16} aria-hidden="true" className="cd-flecha" />
                 </button>
-                {esteAbierto && <div className="cd-cuerpo">{c.body}</div>}
+                {esteAbierto && (
+                  <div className="cd-cuerpo">
+                    {c.body}
+                    {/* Responder es abrir una conversación con quien lo mandó (060) */}
+                    <div className="cd-acciones">
+                      <Link to={enlaceMensaje([c.fromUserId], `Re: ${c.subject}`, 'comunicado')} className="btn btn-outline btn-sm">
+                        <Reply size={14} aria-hidden="true" /> Responder
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </li>
             );
           })}

@@ -64,6 +64,7 @@ export const cargadores = {
   '/mi-biblioteca':       () => import('../pages/MiBiblioteca'),
   // La misma pantalla con la que el equipo lee los comunicados (059)
   '/avisos':              () => import('../pages/ComunicadosDireccion'),
+  '/mensajes':            () => import('../pages/Mensajes'),
   '/materia/:id':         () => import('../pages/MiMateria'),
   '/vocacional':          () => import('../pages/Vocacional'),
   '/docentes':            () => import('../pages/Docentes'),

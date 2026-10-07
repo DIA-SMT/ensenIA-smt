@@ -37,3 +37,6 @@
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
+
+/* Responder (abre una conversación en Mensajes) */
+.cd-acciones { display: flex; justify-content: flex-end; margin-top: 10px; white-space: normal; }

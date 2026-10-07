@@ -69,6 +69,8 @@ function App() {
                 {ruta('/alerts', STAFF)}
                 {ruta('/familias', STAFF)}
                 {ruta('/comunicados', ['docente'])}
+                {/* Mensajería interna (060): todos menos el superadmin */}
+                {ruta('/mensajes', ['docente', 'director', 'estudiante', 'padre'])}
                 {/* Normativa: dirección la carga, el equipo docente la consulta. */}
                 {ruta('/normativa', STAFF)}
 

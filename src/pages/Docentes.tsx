@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Calendar, BookOpen, Users, Activity, Medal } from 'lucide-react';
+import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { enlaceMensaje } from '../services/mensajes.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherUsers } from '../services/profiles.service';
 import { getScheduleByTeacher, getTodaySchedule } from '../services/schedule.service';
@@ -243,6 +245,9 @@ export default function Docentes() {
               <div className="profile-avatar-large">{selectedTeacher.avatarInitials}</div>
               <p className="profile-name">{selectedTeacher.firstName} {selectedTeacher.lastName}</p>
               <p className="profile-course">{selectedTeacher.email}</p>
+              <Link to={enlaceMensaje([selectedTeacher.id])} className="btn btn-outline btn-sm" style={{ marginTop: 8 }}>
+                <MessagesSquare size={14} /> Escribirle
+              </Link>
             </div>
 
             <div className="profile-section">

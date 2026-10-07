@@ -11,6 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
+  MessagesSquare,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -52,6 +53,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
+  { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Escuela', claves: 'mensajes conversaciones escribir responder chat comunicados citaciones' },
   { ruta: '/familias', etiqueta: 'Citaciones', titulo: 'Citaciones a familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'familias padres citar citación tutores reunión' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento hablar avisar dirección' },
   { ruta: '/comunicados', etiqueta: 'Comunicados', titulo: 'Comunicados de dirección', icono: Megaphone, grupo: 'Escuela', claves: 'avisos dirección mensajes reunión' },
@@ -65,6 +67,7 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/docentes', etiqueta: 'Docentes', titulo: 'Equipo docente', icono: Users, grupo: 'Escuela', enBarra: true, claves: 'profesores equipo adopción' },
   { ruta: '/horario', etiqueta: 'Horario', titulo: 'Horario de la escuela', icono: CalendarClock, grupo: 'Escuela', claves: 'agenda clases semana cursos aulas' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', enBarra: true, claves: 'riesgo bienestar señales escaladas' },
+  { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Comunidad', claves: 'mensajes conversaciones escribir responder chat supervisión' },
   { ruta: '/comunicaciones', etiqueta: 'Comunicaciones', icono: MessageSquare, grupo: 'Comunidad', enBarra: true, claves: 'comunicados avisos mensajes' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
@@ -84,6 +87,7 @@ const ESTUDIANTE: ItemNav[] = [
   { ruta: '/mis-actividades', etiqueta: 'Mi escuela', titulo: 'Mi escuela', icono: ClipboardList, grupo: 'Escuela', enBarra: true, claves: 'tareas entregas notas temario' },
   { ruta: '/estudiar', etiqueta: 'Estudiar', icono: Rocket, grupo: 'Escuela', ia: true, enBarra: true, claves: 'practicar quiz repaso racha' },
   { ruta: '/mi-biblioteca', etiqueta: 'Mis materiales', icono: BookOpen, grupo: 'Escuela', enBarra: true, claves: 'biblioteca material apuntes documentos' },
+  { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Escuela', claves: 'mensajes conversaciones escribir responder chat comunicados citaciones' },
   { ruta: '/avisos', etiqueta: 'Avisos', titulo: 'Avisos de la escuela', icono: Megaphone, grupo: 'Escuela', claves: 'comunicados avisos escuela dirección mensajes' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Escuela', ia: true, enBarra: true, claves: 'asistente ayuda hablar' },
   { ruta: '/vocacional', etiqueta: 'Vocacional', titulo: 'Orientación vocacional', icono: Compass, grupo: 'Mi futuro', claves: 'carrera orientación intereses' },
@@ -91,7 +95,8 @@ const ESTUDIANTE: ItemNav[] = [
 ];
 
 const FAMILIA: ItemNav[] = [
-  { ruta: '/comunicados-familia', etiqueta: 'Comunicados', icono: Megaphone, grupo: 'Escuela', enBarra: true, claves: 'avisos citaciones mensajes' },
+  { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Escuela', enBarra: true, claves: 'mensajes conversaciones escribir responder chat comunicados citaciones' },
+  { ruta: '/comunicados-familia', etiqueta: 'Comunicados', icono: Megaphone, grupo: 'Escuela', claves: 'avisos citaciones mensajes' },
   { ruta: '/mis-hijos', etiqueta: 'Mis hijos', icono: GraduationCap, grupo: 'Escuela', enBarra: true, claves: 'notas temario hijo hija' },
   { ruta: '/migue', etiqueta: 'Migue', icono: Sparkles, grupo: 'Escuela', ia: true, enBarra: true, claves: 'asistente preguntar convivencia' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', enBarra: true, claves: 'configuración accesibilidad letra contraste datos' },

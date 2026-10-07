@@ -1,0 +1,102 @@
+/* Mensajes (Mensajes.tsx): bandeja a la izquierda, lo abierto a la derecha */
+.msj {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: var(--space-4);
+  height: calc(100dvh - var(--topbar-height, 64px) - var(--space-10, 40px));
+  min-height: 480px;
+}
+.msj-lista, .msj-detalle { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.msj-lista-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-color); }
+.msj-pestanias { display: flex; gap: 4px; flex-wrap: wrap; }
+.msj-pestanias button {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 4px 10px;
+  border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.msj-pestanias button.activa { background: var(--acento-suave); color: var(--acento); }
+.msj-buscar { margin: var(--space-3) var(--space-4) 0; }
+
+.msj-items { list-style: none; margin: 0; padding: var(--space-2) 0; overflow-y: auto; flex: 1; }
+.msj-item {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  padding: 10px var(--space-4); border: 0; border-bottom: 1px solid var(--border-color);
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.msj-item:hover { background: var(--bg-elevated); }
+.msj-item.activo { background: var(--acento-suave); }
+.msj-item-icono { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: var(--radius-md); background: var(--bg-elevated); color: var(--acento); }
+.msj-item-cuerpo { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.msj-item-fila { display: flex; justify-content: space-between; gap: 8px; }
+.msj-item-fila strong { font-size: 14px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msj-item-fila time { flex-shrink: 0; font-size: 11.5px; color: var(--text-subtle); }
+.msj-item-asunto { font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msj-item-previa { font-size: 12.5px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msj-item.sin-leer .msj-item-fila strong, .msj-item.sin-leer .msj-item-asunto { font-weight: 800; }
+.msj-tipo { margin-right: 6px; padding: 1px 6px; border-radius: 99px; background: var(--bg-elevated); font-style: normal; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.msj-punto { flex-shrink: 0; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--acento); }
+
+.msj-vista { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.msj-vista-cabeza { display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-color); }
+.msj-vista-titulo { min-width: 0; flex: 1; }
+.msj-vista-titulo h3 { margin: 0; font-size: 1rem; color: var(--text-primary); }
+.msj-vista-titulo p { margin: 2px 0 0; font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
+.msj-volver { display: none; }
+
+.msj-supervision { display: flex; align-items: flex-start; gap: 8px; margin: var(--space-3) var(--space-4) 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--acento-suave); font-size: 12.5px; color: var(--text-secondary); }
+.msj-supervision svg { flex-shrink: 0; margin-top: 1px; color: var(--acento); }
+
+.msj-mensajes { display: flex; flex-direction: column; gap: 8px; padding: var(--space-4); overflow-y: auto; flex: 1; }
+.msj-burbuja { align-self: flex-start; max-width: min(78%, 560px); padding: 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--bg-elevated); }
+.msj-burbuja.mia { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--acento-suave); }
+.msj-burbuja p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; color: var(--text-primary); }
+.msj-autor { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 700; color: var(--acento); }
+.msj-burbuja time { display: block; margin-top: 3px; font-size: 11px; color: var(--text-subtle); text-align: right; }
+
+.msj-escribir { display: flex; gap: 8px; align-items: flex-end; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-color); }
+.msj-escribir textarea {
+  flex: 1; min-height: 44px; max-height: 160px; padding: 10px 12px; resize: vertical;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md);
+  background: var(--bg-input, var(--bg-panel)); color: var(--text-primary); font: inherit; font-size: 14px;
+}
+.msj-escribir .btn { min-height: 44px; }
+
+.msj-comunicado { padding: var(--space-4); overflow-y: auto; flex: 1; font-size: 14.5px; line-height: 1.55; color: var(--text-primary); }
+.msj-comunicado p { margin: 0 0 8px; }
+.msj-cita { display: flex; align-items: center; gap: 8px; margin: var(--space-3) var(--space-4) 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--bg-elevated); font-weight: 600; font-size: 13.5px; }
+.msj-acciones { display: flex; flex-wrap: wrap; gap: 8px; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-color); }
+.msj-nada { margin: auto; }
+.msj-error { margin: 0; padding: 8px var(--space-4); font-size: 13px; color: var(--danger, #B91C1C); }
+.msj-vacio { padding: 10px; font-size: 13px; color: var(--text-subtle); }
+
+/* Nuevo mensaje */
+.msj-dialogo { align-items: center; justify-content: center; padding: var(--space-4); }
+.msj-dialogo .dialogo-cuerpo { width: min(620px, 100%); max-height: min(860px, 94dvh); border-radius: var(--radius-xl); }
+.msj-nuevo { display: flex; flex-direction: column; gap: 12px; padding: var(--space-5); overflow-y: auto; }
+.msj-nuevo-cabeza { display: flex; align-items: center; justify-content: space-between; }
+.msj-nuevo-cabeza h3 { margin: 0; font-size: 1.1rem; }
+.msj-campo { display: flex; flex-direction: column; gap: 6px; }
+.msj-campo > span:first-child { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.msj-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-input, var(--bg-panel)); color: var(--text-primary); font: inherit; font-size: 14px; }
+textarea.msj-input { resize: vertical; }
+.msj-elegidos { display: flex; flex-wrap: wrap; gap: 6px; }
+.msj-elegido { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 99px; background: var(--acento-suave); color: var(--text-primary); font-size: 13px; font-weight: 600; }
+.msj-elegido button { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.msj-contactos { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.msj-contactos button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--border-color); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.msj-contactos button:hover { background: var(--bg-elevated); }
+.msj-contactos strong { font-size: 14px; color: var(--text-primary); }
+.msj-contactos span { font-size: 12px; color: var(--text-secondary); }
+.msj-nuevo-pie { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Celular: o la bandeja o lo abierto */
+@media (max-width: 860px) {
+  .msj { grid-template-columns: 1fr; height: auto; min-height: 0; }
+  .msj .msj-detalle { display: none; }
+  .msj.con-abierto .msj-lista { display: none; }
+  .msj.con-abierto .msj-detalle { display: flex; min-height: calc(100dvh - 180px); }
+  .msj-volver { display: grid; }
+  .msj-dialogo { padding: 0; align-items: flex-end; }
+  .msj-dialogo .dialogo-cuerpo { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+}
