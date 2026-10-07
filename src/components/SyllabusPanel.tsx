@@ -33,9 +33,11 @@ interface SyllabusPanelProps {
   voice: 'propia' | 'familia';
   /** Una familia con hijos en cursos distintos no debe verlos mezclados. */
   courseId?: string;
+  /** Solo esta materia (la pantalla de una materia). */
+  subjectId?: string;
 }
 
-export default function SyllabusPanel({ terms, initialTermId, voice, courseId }: SyllabusPanelProps) {
+export default function SyllabusPanel({ terms, initialTermId, voice, courseId, subjectId }: SyllabusPanelProps) {
   const [termId, setTermId] = useState<string | null>(initialTermId);
   const [subjects, setSubjects] = useState<SyllabusSubject[] | null>(null);
   const [grabadas, setGrabadas] = useState<RecordedClass[]>([]);
@@ -66,7 +68,7 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
     getSyllabusForTerm(termId)
       .then(s => {
         if (cancelled) return;
-        setSubjects(courseId ? s.filter(x => x.courseId === courseId) : s);
+        setSubjects(s.filter(x => (!courseId || x.courseId === courseId) && (!subjectId || x.subjectId === subjectId)));
       })
       .catch(err => {
         // Un error no es "todavía no publicaron": decirlo así esconde
@@ -75,7 +77,7 @@ export default function SyllabusPanel({ terms, initialTermId, voice, courseId }:
         if (!cancelled) { setSubjects([]); setFallo(true); }
       });
     return () => { cancelled = true; };
-  }, [termId, courseId]);
+  }, [termId, courseId, subjectId]);
 
   const termName = terms?.find(t => t.id === termId)?.name;
 

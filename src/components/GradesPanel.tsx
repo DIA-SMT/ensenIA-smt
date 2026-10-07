@@ -30,6 +30,8 @@ interface GradesPanelProps {
   voice: 'propia' | 'familia';
   /** Para quien quiera resumir las mismas notas sin volver a pedirlas. */
   alCargar?: (notas: TermGrade[]) => void;
+  /** Solo esta materia (la pantalla de una materia), ya abierta con su detalle. */
+  subjectId?: string;
 }
 
 interface Materia {
@@ -43,11 +45,11 @@ interface Materia {
 
 const diaMes = (f: string) => `${Number(f.slice(8, 10))}/${Number(f.slice(5, 7))}`;
 
-export default function GradesPanel({ studentId, thresholds, voice, alCargar }: GradesPanelProps) {
+export default function GradesPanel({ studentId, thresholds, voice, alCargar, subjectId }: GradesPanelProps) {
   const [grades, setGrades] = useState<TermGrade[] | null>(null);
   const [notas, setNotas] = useState<NotaDelAlumno[]>([]);
   const [fallo, setFallo] = useState(false);
-  const [abierta, setAbierta] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<string | null>(subjectId ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,8 +82,10 @@ export default function GradesPanel({ studentId, thresholds, voice, alCargar }: 
     };
     for (const g of grades ?? []) if (g.termNumber) de(g.subjectId, g.subjectName).trimestres[g.termNumber] = g;
     for (const n of notas) de(n.subjectId, n.subjectName).notas.push(n);
-    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [grades, notas]);
+    return [...porId.values()]
+      .filter(m => !subjectId || m.subjectId === subjectId)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [grades, notas, subjectId]);
 
   if (grades === null) return <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando notas…" />;
 

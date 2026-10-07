@@ -314,6 +314,33 @@ export default function MisActividades() {
       {/* ── La clase que mandó un docente ── */}
       {claseNueva && <AvisoClaseNueva clase={claseNueva} />}
 
+      {/* ── Mis materias: cada una abre todo lo suyo junto ── */}
+      {enrollments.length > 0 && (
+        <section aria-labelledby="sp-materias">
+          <h3 id="sp-materias" className="sp-section-title"><BookOpen size={17} aria-hidden="true" /> Mis materias</h3>
+          <ul className="sp-materias">
+            {enrollments.map(e => {
+              const pendientes = activities.filter(a => {
+                if (a.subjectId !== e.subjectId || a.status === 'closed') return false;
+                const st = submissions.find(s => s.activityId === a.id)?.status;
+                return st !== 'submitted' && st !== 'graded';
+              }).length;
+              return (
+                <li key={e.id}>
+                  <Link to={`/materia/${e.subjectId}`} className="card card-interactive sp-materia">
+                    <strong>{e.subjectName}</strong>
+                    <span className={pendientes ? 'sp-materia-pend' : ''}>
+                      {pendientes ? `${pendientes} por hacer` : 'Al día'}
+                    </span>
+                    <ChevronRight size={16} className="text-subtle" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {/* ── Check-in del día: siempre podés decir cómo venís ── */}
       <div className="card sp-checkin-card">
         {checkinDone ? (
@@ -404,15 +431,6 @@ export default function MisActividades() {
         <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
       </Link>
 
-      {enrollments.length > 0 && (
-        <ul className="sp-enrollments" aria-label="Tus materias">
-          {enrollments.map(e => (
-            <li key={e.id} className="sp-enrollment-chip">
-              {e.subjectName} · {e.courseName}
-            </li>
-          ))}
-        </ul>
-      )}
 
       {/* ── Actividades ── */}
       <section aria-labelledby="sp-acts">

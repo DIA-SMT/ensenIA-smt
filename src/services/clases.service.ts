@@ -196,7 +196,7 @@ export async function guardarClase(
   if (!haySenial()) throw new Error('Necesitás señal para guardarla. Probá cuando tengas wifi o datos.');
 
   await Promise.all([
-    bajarYa(['/mi-biblioteca', '/mis-actividades/:id']),
+    bajarYa(['/mi-biblioteca', '/mis-actividades/:id', '/materia/:id']),
     getClasesEnviadas(10),
     getSharedMaterialsForStudent(),
     // La tarea: lo mismo que pide RealizarActividad al abrirse

@@ -62,6 +62,7 @@ export const cargadores = {
   '/mis-actividades/:id': () => import('../pages/RealizarActividad'),
   '/estudiar':            () => import('../pages/Estudiar'),
   '/mi-biblioteca':       () => import('../pages/MiBiblioteca'),
+  '/materia/:id':         () => import('../pages/MiMateria'),
   '/vocacional':          () => import('../pages/Vocacional'),
   '/docentes':            () => import('../pages/Docentes'),
   '/horario':             () => import('../pages/HorarioEscuela'),

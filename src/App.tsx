@@ -103,6 +103,7 @@ function App() {
                 {ruta('/mis-actividades/:id', ['estudiante'])}
                 {ruta('/estudiar', ['estudiante'])}
                 {ruta('/mi-biblioteca', ['estudiante'])}
+                {ruta('/materia/:id', ['estudiante'])}
                 {ruta('/mi-guia', ['estudiante'])}
                 {ruta('/clase', ['estudiante'])}
                 {ruta('/vocacional', ['estudiante'])}

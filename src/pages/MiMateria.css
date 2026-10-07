@@ -1,0 +1,63 @@
+/* Una materia, todo junto (MiMateria.tsx) */
+.mm { display: flex; flex-direction: column; gap: var(--space-5); }
+.mm section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.mm-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.mm-volver:hover { color: var(--acento); }
+
+.mm-cabeza {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-5);
+  border-left: 5px solid var(--acento);
+}
+.mm-cabeza h2 { margin: 0; font-size: 1.5rem; line-height: 1.2; color: var(--text-primary); }
+.mm-cabeza > p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+.mm-resumen { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.mm-resumen span { display: inline-flex; align-items: center; gap: 6px; }
+.mm-resumen svg { color: var(--acento); }
+
+.mm-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mm-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+.mm-boton { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.mm-fila-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.mm-fila-texto strong { font-size: 15px; color: var(--text-primary); }
+.mm-fila-texto span { font-size: 13px; color: var(--text-secondary); }
+.mm-fecha {
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  background: var(--acento-suave);
+  color: var(--acento);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.mm-evaluacion .mm-fecha { background: #FEF3C7; color: #92400E; }
+
+.mm-fila-texto .mm-ok { color: var(--success); font-weight: 600; }
+.mm-fila-texto .mm-alerta { color: var(--danger, #B91C1C); font-weight: 600; }
+.mm-fila-texto .mm-curso { color: var(--acento); font-weight: 600; }
+.mm-fila-texto .mm-gris { color: var(--text-subtle); }
+
+.mm-mas { align-self: flex-start; font-size: 14px; font-weight: 600; color: var(--acento); text-decoration: none; min-height: 40px; display: inline-flex; align-items: center; }
+

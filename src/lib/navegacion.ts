@@ -153,6 +153,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname === '/migue') return 'Migue';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
   if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
+  if (pathname.startsWith('/materia/')) return 'Mi materia';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
   if (pathname.startsWith('/admin/escuelas/')) return 'Gestión de la escuela';
   return 'SMT EstudIA';
@@ -167,7 +168,7 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   // Lo que se abre desde "Crear" se marca en "Crear"
   if (['/actividad-rapida', '/modulo', '/ia-lab'].includes(pathname)) return rol === 'docente' ? '/crear' : null;
   if (pathname === '/agenda') return '/mis-clases';
-  if (pathname.startsWith('/mis-actividades/')) return '/mis-actividades';
+  if (pathname.startsWith('/mis-actividades/') || pathname.startsWith('/materia/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';
   if (pathname.startsWith('/admin/escuelas/')) return '/admin';
   return null;

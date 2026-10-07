@@ -47,12 +47,13 @@ type EstadoGuardado = 'no' | 'guardando' | 'si';
 const pickGuardando = (e: Record<string, EstadoGuardado>) =>
   Object.fromEntries(Object.entries(e).filter(([, v]) => v === 'guardando'));
 
-export default function ClasesEnviadas({ clases, materiales, userId, alAbrir }: {
+export default function ClasesEnviadas({ clases, materiales, userId, alAbrir, titulo = 'Clases que te mandaron' }: {
   clases: ClaseEnviada[];
   /** Los materiales compartidos que el estudiante ya tiene cargados */
   materiales: LibraryMaterial[];
   userId: string;
   alAbrir: (m: LibraryMaterial) => void;
+  titulo?: string;
 }) {
   const [guardado, setGuardado] = useState<Record<string, EstadoGuardado>>({});
   // Sin service worker (navegador viejo) no hay copia posible: ni se ofrece
@@ -96,7 +97,7 @@ export default function ClasesEnviadas({ clases, materiales, userId, alAbrir }: 
   return (
     <section className="ce" aria-labelledby="ce-titulo">
       <h3 id="ce-titulo" className="sp-section-title" aria-level={2}>
-        <Sparkles size={17} aria-hidden="true" /> Clases que te mandaron
+        <Sparkles size={17} aria-hidden="true" /> {titulo}
       </h3>
       <ul className="ce-lista">
         {visibles.map(({ clase, partes }) => (
@@ -143,7 +144,7 @@ export default function ClasesEnviadas({ clases, materiales, userId, alAbrir }: 
 /** Aviso en la pantalla de inicio del estudiante: la última clase de esta semana. */
 export function AvisoClaseNueva({ clase }: { clase: ClaseEnviada }) {
   return (
-    <Link to="/mi-biblioteca" className="card card-interactive ce-aviso">
+    <Link to={`/materia/${clase.subjectId}`} className="card card-interactive ce-aviso">
       <span className="ce-aviso-icono" aria-hidden="true"><Presentation size={20} /></span>
       <span className="ce-aviso-texto">
         <strong>Clase nueva de {clase.subjectName}</strong>
