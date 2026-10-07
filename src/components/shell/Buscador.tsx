@@ -6,7 +6,8 @@
  *   - acciones rápidas ("nueva actividad");
  *   - ajustes de lectura y datos, que se aplican sin salir de donde estás;
  *   - estudiantes (docente: de sus cursos; dirección: de su escuela) y,
- *     para dirección, cursos.
+ *     para dirección, cursos;
+ *   - para el estudiante, sus materias (abren todo lo de esa materia).
  *
  * Patrón ARIA de combobox con listbox: las flechas mueven la opción activa
  * sin sacar el foco del campo, Enter la elige y Escape cierra.
@@ -15,14 +16,14 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, CornerDownLeft, Type, Contrast, Wifi, Wind, User as UserIcon, School, type LucideIcon,
+  Search, CornerDownLeft, Type, Contrast, Wifi, Wind, User as UserIcon, School, BookOpen, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreferencias } from '../../contexts/PreferencesContext';
 import { NAV_POR_ROL, ACCIONES_POR_ROL } from '../../lib/navegacion';
 import {
-  estudiantesBuscables, cursosBuscables, plegar,
-  type EstudianteBuscable, type CursoBuscable,
+  estudiantesBuscables, cursosBuscables, materiasBuscables, plegar, contienePalabra,
+  type EstudianteBuscable, type CursoBuscable, type MateriaBuscable,
 } from '../../services/busqueda.service';
 import Dialogo from './Dialogo';
 
@@ -40,7 +41,7 @@ interface Opcion {
 const MAX_POR_GRUPO = 6;
 
 function coincide(indice: string, palabras: string[]): boolean {
-  return palabras.every(p => indice.includes(p));
+  return palabras.every(p => contienePalabra(indice, p));
 }
 
 export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCerrar: () => void }) {
@@ -56,6 +57,7 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
   const [estudiantes, setEstudiantes] = useState<EstudianteBuscable[] | null>(null);
   const [cursos, setCursos] = useState<CursoBuscable[] | null>(null);
   const [errorPersonas, setErrorPersonas] = useState(false);
+  const [materias, setMaterias] = useState<MateriaBuscable[] | null>(null);
   const listaRef = useRef<HTMLUListElement>(null);
 
   const esStaff = user?.role === 'docente' || user?.role === 'director';
@@ -76,6 +78,15 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
       .catch(() => { if (vigente) setErrorPersonas(true); });
     return () => { vigente = false; };
   }, [abierto, quierePersonas, user, estudiantes]);
+
+  // Estudiante: sus materias, apenas abre el buscador (son pocas y livianas)
+  const esEstudiante = user?.role === 'estudiante';
+  useEffect(() => {
+    if (!abierto || !esEstudiante || !user || materias) return;
+    let vigente = true;
+    materiasBuscables(user).then(m => { if (vigente) setMaterias(m); }).catch(() => {});
+    return () => { vigente = false; };
+  }, [abierto, esEstudiante, user, materias]);
 
   const cerrarE = (fn: () => void) => () => { alCerrar(); fn(); };
 
@@ -135,12 +146,23 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
       },
     );
 
+    // Las materias del estudiante van primero: es lo que más busca
+    const deMaterias: Opcion[] = (materias ?? []).map(m => ({
+      id: `materia-${m.subjectId}`,
+      grupo: 'Mis materias',
+      etiqueta: m.nombre,
+      detalle: 'Tareas, clases, material y notas',
+      icono: BookOpen,
+      ejecutar: cerrarE(() => navigate(`/materia/${m.subjectId}`)),
+      indice: plegar(`${m.nombre} materia ${m.curso}`),
+    }));
+
     if (palabras.length === 0) {
       // Sin texto: pantallas y acciones, nada de personas.
-      return lista.filter(o => o.grupo !== 'Ajustes de lectura');
+      return [...deMaterias, ...lista.filter(o => o.grupo !== 'Ajustes de lectura')];
     }
 
-    const filtradas = lista.filter(o => coincide(o.indice, palabras));
+    const filtradas = [...deMaterias, ...lista].filter(o => coincide(o.indice, palabras));
 
     if (estudiantes) {
       const hallados = estudiantes
@@ -171,7 +193,7 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
     return filtradas;
     // cerrarE es estable en la práctica: depende de alCerrar y navigate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, texto, estudiantes, cursos, preferencias, navigate, cambiar]);
+  }, [user, texto, estudiantes, cursos, materias, preferencias, navigate, cambiar]);
 
   // La opción activa nunca queda fuera de rango al filtrar.
   useEffect(() => { setActiva(a => (opciones.length === 0 ? 0 : Math.min(a, opciones.length - 1))); }, [opciones.length]);
@@ -218,7 +240,7 @@ export default function Buscador({ abierto, alCerrar }: { abierto: boolean; alCe
           aria-autocomplete="list"
           aria-activedescendant={opciones.length ? idOpcion(activa) : undefined}
           aria-describedby={`${idBase}-ayuda`}
-          placeholder={esStaff ? 'Pantalla, estudiante, curso o ajuste…' : 'Pantalla o ajuste…'}
+          placeholder={esStaff ? 'Pantalla, estudiante, curso o ajuste…' : esEstudiante ? 'Materia, pantalla o ajuste…' : 'Pantalla o ajuste…'}
           value={texto}
           onChange={e => { setTexto(e.target.value); setActiva(0); }}
           onKeyDown={alTeclear}

@@ -11,6 +11,7 @@
  */
 
 import { supabase, unwrap } from './_helpers';
+import { getStudentByUserId, getEnrollmentsByStudent } from './activities.service';
 import type { User } from '../types';
 
 export interface EstudianteBuscable {
@@ -31,6 +32,26 @@ let cursos: { clave: string; lista: Promise<CursoBuscable[]> } | null = null;
 /** Minúsculas y sin tildes: "Martínez" y "martinez" son lo mismo. */
 export function plegar(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/** Las palabras de lo que se escribió, plegadas. */
+export function palabrasDe(consulta: string): string[] {
+  return plegar(consulta).split(/\s+/).filter(Boolean);
+}
+
+/**
+ * ¿Una palabra buscada está en el índice? Tolera la terminación: "fisica"
+ * encuentra "Físico-Química" y "matematicas" encuentra "Matemática". Así
+ * se busca: nadie escribe el nombre exacto.
+ */
+export function contienePalabra(indice: string, palabra: string): boolean {
+  return indice.includes(palabra) || (palabra.length >= 4 && indice.includes(palabra.slice(0, -1)));
+}
+
+/** ¿El texto tiene todas las palabras buscadas, en cualquier orden y sin tildes? */
+export function coincideBusqueda(texto: string, consulta: string): boolean {
+  const indice = plegar(texto);
+  return palabrasDe(consulta).every(p => contienePalabra(indice, p));
 }
 
 export function estudiantesBuscables(user: User): Promise<EstudianteBuscable[]> {
@@ -85,4 +106,29 @@ export function cursosBuscables(user: User): Promise<CursoBuscable[]> {
 export function olvidarBusquedas(): void {
   estudiantes = null;
   cursos = null;
+  materias = null;
+}
+
+export interface MateriaBuscable {
+  subjectId: string;
+  nombre: string;
+  curso: string;
+}
+
+let materias: { clave: string; lista: Promise<MateriaBuscable[]> } | null = null;
+
+/** Estudiante: sus materias, para ir directo a cada una (/materia/:id). */
+export function materiasBuscables(user: User): Promise<MateriaBuscable[]> {
+  if (user.role !== 'estudiante') return Promise.resolve([]);
+  const clave = user.id;
+  if (materias?.clave === clave) return materias.lista;
+  // Las mismas funciones que Mi escuela: con la copia sin conexión también anda
+  const lista = getStudentByUserId(user.id)
+    .then(st => (st ? getEnrollmentsByStudent(st.id) : []))
+    .then(enr => enr
+      .map(e => ({ subjectId: e.subjectId, nombre: e.subjectName ?? 'Materia', curso: e.courseName ?? '' }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)));
+  lista.catch(() => { if (materias?.clave === clave) materias = null; });
+  materias = { clave, lista };
+  return lista;
 }

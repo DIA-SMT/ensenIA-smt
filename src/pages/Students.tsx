@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { coincideBusqueda } from '../services/busqueda.service';
 import {
     Search, AlertTriangle, X, HeartPulse, PencilLine,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
@@ -293,12 +294,9 @@ export default function Students() {
     const filteredStudents = useMemo(() => {
         let list = allStudents;
         if (courseFilter !== 'all') list = list.filter(s => s.courseName === courseFilter);
+        // Sin tildes y en cualquier orden: "perez sofia" encuentra a "Sofía Pérez"
         if (search.trim()) {
-            const q = search.toLowerCase();
-            list = list.filter(s =>
-                `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
-                s.courseName.toLowerCase().includes(q)
-            );
+            list = list.filter(s => coincideBusqueda(`${s.firstName} ${s.lastName} ${s.courseName}`, search));
         }
         const dir = sortAsc ? 1 : -1;
         return [...list].sort((a, b) => {
@@ -550,13 +548,19 @@ export default function Students() {
                         <div className="search-bar">
                             <Search size={16} className="search-icon" />
                             <input
-                                type="text"
-                                placeholder="Buscar alumno..."
-                                aria-label="Buscar estudiante por nombre o curso"
+                                type="search"
+                                placeholder="Buscar por nombre o apellido…"
+                                aria-label="Buscar estudiante por nombre, apellido o curso"
                                 className="search-input"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Escape') setSearch(''); }}
                             />
+                            {search && (
+                                <button className="search-limpiar" aria-label="Borrar la búsqueda" onClick={() => setSearch('')}>
+                                    <X size={15} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

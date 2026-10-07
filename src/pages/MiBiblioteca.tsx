@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Eye, FileText, Sparkles, X, Layers, Play, GraduationCap, ThumbsUp, ThumbsDown, Wand2, Headphones, Youtube } from 'lucide-react';
+import { BookOpen, Eye, FileText, Sparkles, X, Layers, Play, GraduationCap, ThumbsUp, ThumbsDown, Wand2, Headphones, Youtube, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.service';
@@ -8,6 +8,7 @@ import { getStudentByUserId } from '../services/activities.service';
 import { getMyMaterialReactions, setMaterialReaction } from '../services/gamification.service';
 import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
 import ClasesEnviadas from '../components/ClasesEnviadas';
+import { coincideBusqueda } from '../services/busqueda.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
@@ -44,6 +45,9 @@ export default function MiBiblioteca() {
   const [genError, setGenError] = useState<string | null>(null);
   const [viendo, setViendo] = useState<LibraryMaterial | null>(null);
   const [clases, setClases] = useState<ClaseEnviada[]>([]);
+  // Filtros: texto libre y una materia ('' = todas)
+  const [buscar, setBuscar] = useState('');
+  const [materia, setMateria] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -128,10 +132,56 @@ export default function MiBiblioteca() {
     }
   };
 
+  // Las materias que tienen algo compartido, para los botones de filtro
+  const materias = [...new Map(materials.map(m => [m.subjectId, m.subjectName])).entries()]
+    .sort((a, b) => (a[1] ?? '').localeCompare(b[1] ?? ''));
+  // Sin tildes y en cualquier orden: "poesia publicidad" encuentra "Publicidad y Propaganda. Poesía"
+  const coincideTexto = (t: string) => coincideBusqueda(t, buscar);
+  const materialesVisibles = materials.filter(m =>
+    (!materia || m.subjectId === materia) && coincideTexto(`${m.title} ${m.description ?? ''} ${m.subjectName}`));
+  const idsVisibles = new Set(materialesVisibles.map(m => m.id));
+  const clasesVisibles = clases.filter(c =>
+    (!materia || c.subjectId === materia)
+    && (coincideTexto(`${c.titulo} ${c.subjectName}`) || c.materialIds.some(id => idsVisibles.has(id))));
+  const filtrando = Boolean(materia || buscar.trim());
+
   return (
     <div className="sp-container animate-in">
+      {/* ── Filtros: buscar y elegir materia ── */}
+      {!loading && materials.length > 0 && (
+        <div className="sp-filtros">
+          <div className="search-bar">
+            <Search size={16} className="search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="search-input"
+              placeholder="Buscar material o clase…"
+              aria-label="Buscar material o clase"
+              value={buscar}
+              onChange={e => setBuscar(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') setBuscar(''); }}
+            />
+            {buscar && (
+              <button className="search-limpiar" aria-label="Borrar la búsqueda" onClick={() => setBuscar('')}>
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          {materias.length > 1 && (
+            <div className="fila-desplazable sp-filtro-chips" role="group" aria-label="Filtrar por materia">
+              <button className={`sp-filtro-chip ${materia ? '' : 'activo'}`} aria-pressed={!materia} onClick={() => setMateria('')}>Todas</button>
+              {materias.map(([id, nombre]) => (
+                <button key={id} className={`sp-filtro-chip ${materia === id ? 'activo' : ''}`} aria-pressed={materia === id} onClick={() => setMateria(id)}>
+                  {nombre}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Lo último que mandaron los docentes, cada clase con sus partes juntas */}
-      {!loading && <ClasesEnviadas clases={clases} materiales={materials} userId={user.id} alAbrir={setViendo} />}
+      {!loading && <ClasesEnviadas clases={clasesVisibles} materiales={materials} userId={user.id} alAbrir={setViendo} />}
 
       <h3 className="sp-section-title" aria-level={2}><BookOpen size={17} aria-hidden="true" /> Material de mis materias</h3>
       <p className="text-secondary text-sm" style={{ marginTop: -8 }}>
@@ -149,8 +199,18 @@ export default function MiBiblioteca() {
         />
       )}
 
+      {!loading && filtrando && materialesVisibles.length === 0 && clasesVisibles.length === 0 && (
+        <EstadoVacio
+          compacto
+          icono={Search}
+          titulo="Nada coincide"
+          texto="Probá con otra palabra o mirá todas las materias."
+          accion={{ etiqueta: 'Ver todo', alTocar: () => { setBuscar(''); setMateria(''); } }}
+        />
+      )}
+
       <div className="sp-activity-list">
-        {materials.map(mat => {
+        {materialesVisibles.map(mat => {
           const hasSource = Boolean(mat.extractedText || mat.aiSummary || (mat.studyCards?.length ?? 0) > 0);
           return (
             <div key={mat.id} className="card sp-activity-card">

@@ -697,6 +697,23 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   width: 100%;
 }
 .search-input::placeholder { color: var(--text-subtle); }
+/* La X propia del navegador no: va la nuestra (.search-limpiar), igual en todos */
+.search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.search-limpiar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+.search-limpiar:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.search-limpiar:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
 
 .form-select,
 .form-textarea {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ClipboardList, Clock, CheckCircle, ChevronRight, GraduationCap, BookMarked, BookOpen,
-  ArrowRight, Rocket, WifiOff, Award, Sparkles, Radio,
+  ArrowRight, Rocket, WifiOff, Award, Sparkles, Radio, Search, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -13,6 +13,7 @@ import { getAchievementsByStudent, totalPoints } from '../services/gamification.
 import { getLiveSessionForCourse, type LiveSession } from '../services/live.service';
 import { getClasesEnviadas, guardarClasesParaSinSenial, type ClaseEnviada } from '../services/clases.service';
 import { AvisoClaseNueva } from '../components/ClasesEnviadas';
+import { coincideBusqueda } from '../services/busqueda.service';
 import { hasPendingSubmit } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
@@ -110,6 +111,7 @@ export default function MisActividades() {
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
   // La última clase que mandó un docente esta semana
   const [claseNueva, setClaseNueva] = useState<ClaseEnviada | null>(null);
+  const [buscarMateria, setBuscarMateria] = useState('');
 
   // Gamificación + check-in del día
   const [achievements, setAchievements] = useState<StudentAchievement[]>([]);
@@ -261,6 +263,9 @@ export default function MisActividades() {
   const siguiente = pendientes[0];
   const empezada = siguiente ? subFor(siguiente.id)?.status === 'in_progress' : false;
 
+  // "mate", "Fisica", "lengua": sin tildes ni mayúsculas
+  const materiasVisibles = enrollments.filter(e => coincideBusqueda(e.subjectName ?? '', buscarMateria));
+
   return (
     <div className="sp-container sp-v4">
       {/* ── Lo que sigue ── */}
@@ -318,8 +323,28 @@ export default function MisActividades() {
       {enrollments.length > 0 && (
         <section aria-labelledby="sp-materias">
           <h3 id="sp-materias" className="sp-section-title"><BookOpen size={17} aria-hidden="true" /> Mis materias</h3>
+          <div className="search-bar sp-materias-buscar">
+            <Search size={16} className="search-icon" aria-hidden="true" />
+            <input
+              type="search"
+              className="search-input"
+              placeholder="Buscar una materia…"
+              aria-label="Buscar una materia"
+              value={buscarMateria}
+              onChange={e => setBuscarMateria(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') setBuscarMateria(''); }}
+            />
+            {buscarMateria && (
+              <button className="search-limpiar" aria-label="Borrar la búsqueda" onClick={() => setBuscarMateria('')}>
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          {materiasVisibles.length === 0 && (
+            <p className="text-sm text-secondary">Ninguna materia se llama así. Probá con otra palabra.</p>
+          )}
           <ul className="sp-materias">
-            {enrollments.map(e => {
+            {materiasVisibles.map(e => {
               const pendientes = activities.filter(a => {
                 if (a.subjectId !== e.subjectId || a.status === 'closed') return false;
                 const st = submissions.find(s => s.activityId === a.id)?.status;
