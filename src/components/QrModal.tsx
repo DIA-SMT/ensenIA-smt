@@ -9,6 +9,7 @@ import { X, Download, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 import Dialogo from './shell/Dialogo';
 import { avisar } from './ui/avisar';
+import { enlacePublico } from '../lib/direccion';
 import './shell/shell.css';
 import './Modals.css';
 import './QrModal.css';
@@ -23,7 +24,7 @@ interface Props {
 export default function QrModal({ path, title, subtitle, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState('');
-  const url = `${window.location.origin}${path}`;
+  const url = enlacePublico(path);
 
   useEffect(() => {
     if (!canvasRef.current) return;

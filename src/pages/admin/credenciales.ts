@@ -4,6 +4,8 @@
  * componentes (si no, Vite pierde la recarga en caliente).
  */
 
+import { hostPublico } from '../../lib/direccion';
+
 export interface Credencial {
   name: string;
   login: string;
@@ -28,7 +30,7 @@ export function printCredenciales(items: Credencial[], schoolName: string) {
   <p><strong>${esc(c.name)}</strong></p>
   <p class="k">Usuario</p><p class="v">${esc(c.login)}</p>
   <p class="k">Clave inicial</p><p class="v">${esc(c.password ?? '')}</p>
-  <p class="pie">Entrá en <strong>${esc(window.location.host)}</strong>. La primera vez te va a pedir que elijas una clave propia.</p>
+  <p class="pie">Entrá en <strong>${esc(hostPublico())}</strong>. La primera vez te va a pedir que elijas una clave propia.</p>
 </div>`).join('');
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Acceso a SMT EstudIA</title>
 <style>

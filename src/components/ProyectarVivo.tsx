@@ -18,6 +18,7 @@ import { X, Users } from 'lucide-react';
 import QRCode from 'qrcode';
 import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults } from '../services/live.service';
 import { FEELING_META, type CheckinFeeling } from '../types';
+import { enlacePublico } from '../lib/direccion';
 import './ProyectarVivo.css';
 
 interface Props {
@@ -25,14 +26,16 @@ interface Props {
     activity: LiveActivity | null;
     results: LiveResults | null;
     connected: number;
+    /** Los emojis del último minuto (los mismos que ve el panel). */
+    reactions: { emoji: string; createdAt: string }[];
     onClose: () => void;
 }
 
-export default function ProyectarVivo({ session, activity, results, connected, onClose }: Props) {
+export default function ProyectarVivo({ session, activity, results, connected, reactions, onClose }: Props) {
     const [qr, setQr] = useState('');
     const shellRef = useRef<HTMLDivElement>(null);
 
-    const joinUrl = session.joinCode ? `${window.location.origin}/vivo/${session.joinCode}` : '';
+    const joinUrl = session.joinCode ? enlacePublico(`/vivo/${session.joinCode}`) : '';
 
     useEffect(() => {
         if (!joinUrl) return;
@@ -131,8 +134,60 @@ export default function ProyectarVivo({ session, activity, results, connected, o
                     </footer>
                 </main>
             )}
+
+            <Emojis reactions={reactions} />
         </div>,
         document.body,
+    );
+}
+
+/**
+ * Los emojis que manda la sala, subiendo por el costado derecho.
+ *
+ * El poll trae los del último minuto cada 2,5 s: si se dibujaran todos cada
+ * vez, los mismos emojis volverían a salir una y otra vez. Cada uno sale una
+ * sola vez, cuando aparece por primera vez, y se va solo a los 5 s.
+ */
+function Emojis({ reactions }: { reactions: { emoji: string; createdAt: string }[] }) {
+    const vistos = useRef<Set<string> | null>(null);
+    const timers = useRef<number[]>([]);
+    const [flotando, setFlotando] = useState<{ id: string; emoji: string; x: number }[]>([]);
+
+    useEffect(() => {
+        const claves = reactions.map((r, i) => `${r.createdAt}|${r.emoji}|${reactions.slice(0, i).filter(o => o.createdAt === r.createdAt && o.emoji === r.emoji).length}`);
+        // Al abrir la proyección, lo que ya estaba no se tira de golpe
+        if (vistos.current === null) { vistos.current = new Set(claves); return; }
+        const nuevos = reactions
+            .map((r, i) => ({ r, clave: claves[i] }))
+            .filter(({ clave }) => !vistos.current!.has(clave))
+            .slice(0, 12);
+        claves.forEach(c => vistos.current!.add(c));
+        if (!nuevos.length) return;
+        const agregados = nuevos.map(({ r, clave }, i) => ({ id: `${clave}-${Date.now()}-${i}`, emoji: r.emoji, x: Math.random() }));
+        const ids = new Set(agregados.map(a => a.id));
+        // Entran en el próximo cuadro y se van solos. Los timers no se cortan
+        // cuando llega el poll siguiente: solo al cerrar la proyección.
+        timers.current.push(window.setTimeout(() => setFlotando(prev => [...prev, ...agregados].slice(-30)), 0));
+        timers.current.push(window.setTimeout(() => setFlotando(prev => prev.filter(f => !ids.has(f.id))), 5500));
+    }, [reactions]);
+
+    useEffect(() => () => { timers.current.forEach(t => window.clearTimeout(t)); }, []);
+
+    // Contador del último minuto: se lee aunque no esté mirando justo cuando sube
+    const cuenta = reactions.reduce<Record<string, number>>((acc, r) => { acc[r.emoji] = (acc[r.emoji] ?? 0) + 1; return acc; }, {});
+    const orden = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    return (
+        <div className="pv-emojis" aria-hidden="true">
+            {flotando.map((f, i) => (
+                <span key={f.id} className="pv-emoji" style={{ right: `${2 + f.x * 20}vw`, animationDelay: `${(i % 6) * 0.22}s` }}>{f.emoji}</span>
+            ))}
+            {orden.length > 0 && (
+                <div className="pv-emojis-cuenta">
+                    {orden.map(([emoji, n]) => <span key={emoji}>{emoji} {n}</span>)}
+                </div>
+            )}
+        </div>
     );
 }
 

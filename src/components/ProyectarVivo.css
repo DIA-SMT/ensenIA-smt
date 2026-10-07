@@ -319,3 +319,49 @@
     letter-spacing: 0.14em;
     color: var(--text-secondary);
 }
+
+/* ── Emojis de la sala ──
+   Suben por el costado derecho, encima de todo pero sin tapar el código
+   (que está a la izquierda) ni capturar clics. */
+
+.pv-emojis {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pv-emoji {
+    position: absolute;
+    bottom: 4vh;
+    font-size: 4.6vw;
+    line-height: 1;
+    opacity: 0;
+    animation: pv-emoji-sube 4s ease-out forwards;
+}
+
+@keyframes pv-emoji-sube {
+    0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+    12%  { transform: translateY(-6vh) scale(1.1); opacity: 1; }
+    75%  { opacity: 1; }
+    100% { transform: translateY(-62vh) scale(1); opacity: 0; }
+}
+
+.pv-emojis-cuenta {
+    position: absolute;
+    right: 2.2vw;
+    top: 9vh;
+    display: flex;
+    gap: 1.2vw;
+    padding: 0.8vh 1.2vw;
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    font-size: 1.8vw;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pv-emoji { animation-duration: 0.01s; display: none; }
+}

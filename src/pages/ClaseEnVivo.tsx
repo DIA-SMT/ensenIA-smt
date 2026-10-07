@@ -38,6 +38,7 @@ import ElegirMaterial from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
+import { enlacePublico } from '../lib/direccion';
 import { avisar, confirmar } from '../components/ui/avisar';
 import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
 import { FEELING_META, AWARD_META, type Subject, type CheckinFeeling, type Student } from '../types';
@@ -207,7 +208,7 @@ export default function ClaseEnVivo() {
     const joinCode = session && session !== undefined ? session.joinCode : null;
     useEffect(() => {
         if (!joinCode) { setJoinQr(''); return; }
-        QRCode.toDataURL(`${window.location.origin}/vivo/${joinCode}`, {
+        QRCode.toDataURL(enlacePublico(`/vivo/${joinCode}`), {
             width: 600,
             margin: 1,
             errorCorrectionLevel: 'M',
@@ -809,6 +810,7 @@ export default function ClaseEnVivo() {
                     activity={activity}
                     results={results}
                     connected={connected}
+                    reactions={session.reactionsEnabled ? reactions : []}
                     onClose={() => setProjecting(false)}
                 />
             )}
