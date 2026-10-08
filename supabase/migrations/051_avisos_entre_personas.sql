@@ -14,9 +14,14 @@
 --  2. El alumno pide hablar con un docente (pedir_hablar_con_docente): a
 --     uno de sus docentes o a todos los del curso. Le llega a cada uno como
 --     alerta "Quiere hablar con vos". La casilla del check-in hace lo mismo.
---  3. Comunicados de dirección: los "para todos" los leen solo el equipo
---     (antes la regla también se los dejaba leer a alumnos y familias).
---     La bandeja del docente y el "leído" ya tenían su tabla y su regla.
+--  3. Comunicados de dirección: la bandeja del docente usa las tablas que
+--     ya existían. Quién ve cada comunicado lo decide la 059 (por audiencia:
+--     docentes, estudiantes, curso).
+--
+-- Se puede correr antes o después de la 059 y la 060 sin pisarlas: no toca
+-- la regla de comunicados (es de la 059) y no reemplaza la versión de
+-- pedir_hablar_con_docente de la 060 (que además abre la conversación en
+-- Mensajes y usa pedido_hablar, de acá).
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ── 1. Docente → dirección ──
@@ -208,12 +213,18 @@ END;
 $$;
 REVOKE EXECUTE ON FUNCTION pedido_hablar(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
--- Lo que llama el alumno desde la app
-CREATE OR REPLACE FUNCTION pedir_hablar_con_docente(p_teacher UUID, p_motivo TEXT)
+-- Lo que llama el alumno desde la app. Solo si todavía no existe: la 060
+-- (mensajería) la reemplaza por una que además abre la conversación, y
+-- correr esta migración después no tiene que volver a la versión de acá.
+DO $crear$
+BEGIN
+  IF to_regprocedure('public.pedir_hablar_con_docente(uuid,text)') IS NULL THEN
+    EXECUTE $f$
+CREATE FUNCTION pedir_hablar_con_docente(p_teacher UUID, p_motivo TEXT)
 RETURNS INT
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $cuerpo$
 DECLARE
   v_student UUID := auth_student_id();
   v_curso UUID;
@@ -229,7 +240,11 @@ BEGIN
   END IF;
   RETURN pedido_hablar(v_student, p_teacher, p_motivo);
 END;
-$$;
+$cuerpo$;
+    $f$;
+  END IF;
+END
+$crear$;
 REVOKE EXECUTE ON FUNCTION pedir_hablar_con_docente(UUID, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION pedir_hablar_con_docente(UUID, TEXT) TO authenticated;
 
@@ -272,19 +287,6 @@ DROP TRIGGER IF EXISTS trg_checkin_quiere_hablar ON student_checkins;
 CREATE TRIGGER trg_checkin_quiere_hablar
   AFTER INSERT ON student_checkins
   FOR EACH ROW EXECUTE FUNCTION checkin_quiere_hablar();
-
--- ── 3. Comunicados "para todos": solo el equipo ──
-DROP POLICY IF EXISTS "Users in school can see communications" ON communications;
-CREATE POLICY "Users in school can see communications"
-  ON communications FOR SELECT
-  USING (
-    school_id = auth_school_id()
-    AND (
-      (is_broadcast = true AND auth_role() IN ('docente', 'director'))
-      OR from_user_id = auth.uid()
-      OR id IN (SELECT communication_id FROM communication_recipients WHERE user_id = auth.uid())
-    )
-  );
 
 -- Comprobación: una fila, las tres en true
 SELECT
