@@ -116,8 +116,10 @@ export default defineConfig({
             options: {
               cacheName: 'supabase-storage',
               matchOptions: { ignoreSearch: true },
-              // "Preparar para el aula" baja las imágenes de todos los mazos
-              expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              // "Preparar para el aula" baja las imágenes de todos los mazos, y
+              // el estudiante, las de todas sus materias (sin-senial.service):
+              // con 250 se desalojaba lo que se acababa de bajar
+              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

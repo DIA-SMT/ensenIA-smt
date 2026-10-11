@@ -163,6 +163,8 @@ export interface ActivitySubmission {
   puntajes?: Record<string, number> | null;
   /** Lo que anotó el docente de fuera de la app: entregó en papel o no entregó (063) */
   registro?: RegistroEntrega | null;
+  /** Última vez que escribió el alumno (063: lo del docente no la mueve) */
+  updatedAt?: string | null;
 }
 
 export type RegistroEntrega = 'papel' | 'no_entrego';

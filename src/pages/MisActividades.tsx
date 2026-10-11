@@ -15,12 +15,14 @@ import { getClasesEnviadas, guardarClasesParaSinSenial, type ClaseEnviada } from
 import { AvisoClaseNueva } from '../components/ClasesEnviadas';
 import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
 import { coincideBusqueda } from '../services/busqueda.service';
-import { hasPendingSubmit } from '../services/offline-queue.service';
+import { hasPendingSubmit, hayEnColaDe } from '../services/offline-queue.service';
 import { getThresholds, DEFAULT_THRESHOLDS } from '../services/thresholds.service';
 import GradesPanel from '../components/GradesPanel';
 import HablarConDocente from '../components/HablarConDocente';
 import SyllabusPanel from '../components/SyllabusPanel';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
+import ListoSinSenial from '../components/ListoSinSenial';
+import { entregasConLoLocal } from '../lib/borradorEntrega';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -145,7 +147,8 @@ export default function MisActividades() {
           ]);
           setEnrollments(enr);
           setActivities(acts);
-          setSubmissions(subs);
+          // Más lo empezado o entregado sin señal en este equipo
+          setSubmissions(entregasConLoLocal(subs, acts.map(a => a.id), st.id, id => hayEnColaDe(id, st.id), hasPendingSubmit));
 
           // No bloquean la carga principal
           getLiveSessionForCourse(st.courseId).then(setLiveSession).catch(console.error);
@@ -308,6 +311,9 @@ export default function MisActividades() {
           </Link>
         )}
       </section>
+
+      {/* ── Para hacerlas sin datos (fase 3) ── */}
+      <ListoSinSenial />
 
       {/* ── Clase en vivo ahora ── */}
       {liveSession && (

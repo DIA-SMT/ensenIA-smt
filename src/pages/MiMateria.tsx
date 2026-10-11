@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId, getEnrollmentsByStudent, getActivitiesForStudent, getMySubmissions } from '../services/activities.service';
+import { hasPendingSubmit, hayEnColaDe } from '../services/offline-queue.service';
+import { entregasConLoLocal } from '../lib/borradorEntrega';
 import { getSharedMaterialsForStudent } from '../services/library.service';
 import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
 import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
@@ -50,6 +52,8 @@ function cuando(fecha: string): string {
 /** En qué anda cada tarea, para el estudiante. */
 function estadoTarea(a: Activity, sub: ActivitySubmission | undefined): { texto: string; clase: string; hecha: boolean } {
   if (sub?.status === 'graded') return { texto: sub.score != null ? `Corregida · ${sub.score}` : 'Corregida', clase: 'mm-ok', hecha: true };
+  // Entregada sin señal: está en el celular, todavía no llegó
+  if (sub?.status === 'submitted' && hasPendingSubmit(a.id)) return { texto: 'Se manda cuando haya señal', clase: 'mm-curso', hecha: true };
   if (sub?.status === 'submitted') return { texto: sub.autoScore != null ? `Entregada · ${sub.autoScore} (auto)` : 'Entregada', clase: 'mm-ok', hecha: true };
   if (a.status === 'closed') return { texto: 'Cerrada', clase: 'mm-gris', hecha: true };
   if (a.dueDate && new Date(a.dueDate) < new Date()) return { texto: 'Vencida', clase: 'mm-alerta', hecha: false };
@@ -94,7 +98,8 @@ export default function MiMateria() {
         const ins = enr.find(e => e.subjectId === subjectId) ?? null;
         setInscripcion(ins);
         setActividades(acts.filter(a => a.subjectId === subjectId));
-        setEntregas(subs);
+        // Más lo empezado o entregado sin señal en este equipo
+        setEntregas(entregasConLoLocal(subs, acts.map(a => a.id), st.id, id => hayEnColaDe(id, st.id), hasPendingSubmit));
         setMateriales(mats.filter(m => m.subjectId === subjectId));
 
         // Lo que sigue no frena la pantalla: si falla, esa parte no aparece

@@ -14,7 +14,7 @@ import { mazoDe } from './mazoDe';
 import type { LibraryMaterial } from '../types';
 
 /** Un PDF más grande que esto no se baja "por las dudas": ocupa el celular. */
-const PDF_MAXIMO = 8 * 1024 * 1024;
+export const PDF_MAXIMO = 8 * 1024 * 1024;
 
 /**
  * Las rutas de los archivos que hacen falta para mostrar estos materiales.

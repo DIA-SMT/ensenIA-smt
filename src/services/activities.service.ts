@@ -57,6 +57,7 @@ function mapSubmission(row: any): ActivitySubmission {
     gradedAt: row.graded_at,
     puntajes: row.puntajes ?? null,
     registro: row.registro ?? null,
+    updatedAt: row.updated_at ?? null,
   };
 }
 
@@ -548,6 +549,110 @@ export async function submitActivity(
     })
     .eq('id', submissionId);
   if (error) throw error;
+}
+
+// ── La entrega por actividad y alumno (fase 3: empezar sin señal) ──
+//
+// Una entrega que se empezó sin señal todavía no tiene id del servidor: se
+// identifica por (actividad, alumno), que es único en la base. Así la cola
+// manda "empezar", el avance y la entrega en orden, sin ids prestados.
+
+/**
+ * El error, con la marca de si conviene reintentar: el servidor con
+ * problemas (5xx), demasiados pedidos (429) o sin sesión (401) no dicen que
+ * lo que se quería guardar esté mal. La cola los reintenta más tarde.
+ */
+function falloDe(error: { message: string }, status: number): ServiceError {
+  const e = new ServiceError(error.message, error as never);
+  if (status === 0 || status === 401 || status === 429 || status >= 500) Object.assign(e, { reintentable: true });
+  return e;
+}
+
+/** La entrega de este alumno en esta actividad, si existe. */
+export async function getMySubmission(activityId: string, studentId: string): Promise<ActivitySubmission | null> {
+  const { data, error, status } = await supabase
+    .from('activity_submissions')
+    .select('*')
+    .eq('activity_id', activityId)
+    .eq('student_id', studentId)
+    .maybeSingle();
+  if (error) throw falloDe(error, status);
+  return data ? mapSubmission(data) : null;
+}
+
+/**
+ * Empezar: crea la entrega si no existe. Si ya hay una (empezada en otro
+ * equipo, o "no entregó" anotado por el docente), la deja como está y la
+ * pone en curso si estaba pendiente.
+ */
+export async function iniciarEntrega(activityId: string, studentId: string, startedAt: string): Promise<void> {
+  const { error, status } = await supabase
+    .from('activity_submissions')
+    .upsert(
+      { activity_id: activityId, student_id: studentId, status: 'in_progress', started_at: startedAt },
+      { onConflict: 'activity_id,student_id', ignoreDuplicates: true },
+    );
+  if (error) throw falloDe(error, status);
+  const { error: e2, status: s2 } = await supabase
+    .from('activity_submissions')
+    .update({ status: 'in_progress' })
+    .eq('activity_id', activityId)
+    .eq('student_id', studentId)
+    .eq('status', 'pending');
+  if (e2) throw falloDe(e2, s2);
+}
+
+/**
+ * Una escritura que no tocó ninguna fila: si la entrega existe y ya se
+ * entregó (desde otro equipo, o la corrigió el docente), está bien: la base
+ * ignora lo tardío a propósito. Si no existe, es un error que tiene que
+ * verse (si no, el trabajo se perdería en silencio).
+ */
+async function sinFilaEsError(activityId: string, studentId: string): Promise<void> {
+  const sub = await getMySubmission(activityId, studentId);
+  if (!sub) {
+    throw new ServiceError('No se encontró la entrega en el servidor: puede que la actividad ya no esté publicada.');
+  }
+}
+
+export async function guardarAvance(
+  activityId: string,
+  studentId: string,
+  updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number },
+): Promise<void> {
+  const db: Record<string, unknown> = {};
+  if (updates.answers !== undefined) db.answers = updates.answers;
+  if (updates.responseText !== undefined) db.response_text = updates.responseText;
+  if (updates.timeSpentSeconds !== undefined) db.time_spent_seconds = updates.timeSpentSeconds;
+  const { data, error, status } = await supabase
+    .from('activity_submissions')
+    .update(db as never)
+    .eq('activity_id', activityId)
+    .eq('student_id', studentId)
+    .select('id');
+  if (error) throw falloDe(error, status);
+  if (!data?.length) await sinFilaEsError(activityId, studentId);
+}
+
+export async function entregar(
+  activityId: string,
+  studentId: string,
+  payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number },
+): Promise<void> {
+  // auto_score, `correct` de cada respuesta y submitted_at los pone la base
+  const { data, error, status } = await supabase
+    .from('activity_submissions')
+    .update({
+      answers: payload.answers as never,
+      response_text: payload.responseText ?? null,
+      time_spent_seconds: payload.timeSpentSeconds,
+      status: 'submitted',
+    })
+    .eq('activity_id', activityId)
+    .eq('student_id', studentId)
+    .select('id');
+  if (error) throw falloDe(error, status);
+  if (!data?.length) await sinFilaEsError(activityId, studentId);
 }
 
 // ── Huella digital ──

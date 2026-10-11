@@ -214,6 +214,22 @@ export async function guardarClase(
 }
 
 /**
+ * Después de bajar todo (sin-senial.service): las clases enviadas cuyos
+ * archivos ya están en el equipo quedan marcadas como guardadas, para que
+ * no se ofrezca guardarlas de nuevo.
+ */
+export async function marcarClasesBajadas(userId: string, materiales: LibraryMaterial[]): Promise<void> {
+  if (!puedeGuardarSinConexion()) return;
+  const clases = await getClasesEnviadas(10);
+  const guardadas = leerGuardadas(userId);
+  for (const clase of clases) {
+    if (guardadas.includes(clase.id)) continue;
+    const listos = await Promise.all(rutasDeClase(clase, materiales, true).map(yaGuardado));
+    if (listos.every(Boolean)) marcarGuardada(userId, clase.id);
+  }
+}
+
+/**
  * Automático, al abrir la app con señal: guarda las dos últimas clases que le
  * mandaron. Poco y solo si hace falta: son datos del celular de un chico
  * (sin PDF y nada si el celular tiene el ahorro de datos activado).

@@ -9,8 +9,10 @@
  *   - sin señal (o falla de red) → se guarda en este equipo (localStorage)
  *     y se reintenta al volver la señal, al abrir la app y cada 30 s.
  *
- * Del estudiante: avance y entrega de actividades, huellas, check-ins y
- * prácticas. Del docente: asistencia, notas del trimestre en borrador,
+ * Del estudiante: empezar, avance y entrega de actividades (por actividad y
+ * alumno: una actividad se puede empezar sin señal, cuando todavía no tiene
+ * id en el servidor), huellas, check-ins y prácticas. Lo que va respondiendo
+ * queda además en lib/borradorEntrega. Del docente: asistencia, notas del trimestre en borrador,
  * notas de las evaluaciones, boletín y observaciones (publicar notas sí
  * necesita señal: les avisa a las familias).
  *
@@ -32,6 +34,7 @@
 
 import {
   saveSubmissionProgress, submitActivity, logActivityEvent,
+  iniciarEntrega, guardarAvance, entregar,
 } from './activities.service';
 import { saveCheckin, addObservation } from './wellbeing.service';
 import { recordPracticeAttempt } from './practice.service';
@@ -41,6 +44,8 @@ import { upsertGrade } from './libreta.service';
 import { guardarEvaluacion, type EvaluacionAGuardar } from './evaluaciones.service';
 import { pedirHablarConDocente } from './alerts.service';
 import { haySenial, esErrorDeRed, suscribirConexion } from '../lib/conexion';
+import { supabase } from './_helpers';
+import { borrarBorrador } from '../lib/borradorEntrega';
 import type {
   ActivityAnswer, ActivityEventType, CheckinFeeling, CheckinMoment, PracticeAttempt, ObservationCategory,
 } from '../types';
@@ -60,9 +65,17 @@ export interface FilaNotaPendiente {
 
 export type FilaBoletinPendiente = Parameters<typeof upsertGrade>[0];
 
+type Avance = { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number };
+type Entrega = { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number };
+
 type OpEstudiante =
-  | { kind: 'progress'; submissionId: string; updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number } }
-  | { kind: 'submit'; submissionId: string; activityId: string; payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number } }
+  // Por id de entrega: las que quedaron en la cola antes de la fase 3
+  | { kind: 'progress'; submissionId: string; updates: Avance }
+  | { kind: 'submit'; submissionId: string; activityId: string; payload: Entrega }
+  // Por actividad y alumno: sirven también para una entrega empezada sin señal
+  | { kind: 'iniciar'; activityId: string; studentId: string; startedAt: string }
+  | { kind: 'avance'; activityId: string; studentId: string; updates: Avance }
+  | { kind: 'entregar'; activityId: string; studentId: string; payload: Entrega }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown> }
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string }
   | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number }
@@ -143,6 +156,12 @@ async function run(op: QueuedOp): Promise<void> {
       return saveSubmissionProgress(op.submissionId, op.updates);
     case 'submit':
       return submitActivity(op.submissionId, op.payload);
+    case 'iniciar':
+      return iniciarEntrega(op.activityId, op.studentId, op.startedAt);
+    case 'avance':
+      return guardarAvance(op.activityId, op.studentId, op.updates);
+    case 'entregar':
+      return entregar(op.activityId, op.studentId, op.payload);
     case 'checkin':
       return saveCheckin({
         studentId: op.studentId,
@@ -189,6 +208,9 @@ async function run(op: QueuedOp): Promise<void> {
 const DESCRIPCION_ESTUDIANTE: Record<OpEstudiante['kind'], string> = {
   progress: 'Avance de una actividad',
   submit: 'Entrega de una actividad',
+  iniciar: 'Empezar una actividad',
+  avance: 'Avance de una actividad',
+  entregar: 'Entrega de una actividad',
   event: 'Registro de actividad',
   checkin: 'Cómo te sentiste',
   practice: 'Una práctica',
@@ -211,18 +233,53 @@ function motivoDe(err: unknown): string {
   return msg;
 }
 
-/** Compacta la cola: solo importa el ÚLTIMO progress por submission. */
+/**
+ * Compacta la cola: un solo avance por entrega, en el lugar del último y
+ * con lo de todos. Los avances son parciales (el latido de tiempo manda
+ * solo los segundos, el autoguardado las respuestas): antes quedaba solo el
+ * último y, sin señal, el latido se comía las respuestas.
+ */
 function compact() {
-  const lastProgressIdx = new Map<string, number>();
+  const claveDe = (op: QueuedOp) => op.kind === 'progress' ? `p|${op.submissionId}`
+    : op.kind === 'avance' ? `a|${op.activityId}|${op.studentId}` : null;
+  const ultimo = new Map<string, number>();
+  const juntos = new Map<string, Avance>();
   queue.forEach((op, i) => {
-    if (op.kind === 'progress') lastProgressIdx.set(op.submissionId, i);
+    const k = claveDe(op);
+    if (!k || (op.kind !== 'progress' && op.kind !== 'avance')) return;
+    ultimo.set(k, i);
+    juntos.set(k, { ...(juntos.get(k) ?? {}), ...op.updates });
   });
-  queue = queue.filter((op, i) => op.kind !== 'progress' || lastProgressIdx.get(op.submissionId) === i);
+  queue = queue
+    .filter((op, i) => { const k = claveDe(op); return !k || ultimo.get(k) === i; })
+    .map(op => {
+      const k = claveDe(op);
+      return k && (op.kind === 'progress' || op.kind === 'avance') ? { ...op, updates: juntos.get(k)! } : op;
+    });
 }
 
 /** Guardar de nuevo lo mismo reemplaza a lo que estaba esperando. */
 function sacarMismaClave(clave: string) {
   queue = queue.filter(op => !(esMia(op) && 'clave' in op && op.clave === clave));
+}
+
+/** Las de una misma entrega (por actividad y alumno) van juntas: se mandan, se rechazan y se reintentan en orden. */
+function claveActividad(op: Op): string | null {
+  return op.kind === 'iniciar' || op.kind === 'avance' || op.kind === 'entregar' ? `${op.studentId}_${op.activityId}` : null;
+}
+
+/**
+ * ¿Vale la pena reintentar más tarde? Sin red, sí; y también si la sesión
+ * estaba vencida (el pedido salió sin la del alumno y la base lo rechazó
+ * como si no tuviera permiso) o si el servidor tuvo un problema (5xx, 429):
+ * nada de eso dice que lo que se quería guardar esté mal.
+ */
+function esPasajero(err: unknown): boolean {
+  if (esErrorDeRed(err)) return true;
+  const e = err as { reintentable?: boolean; code?: string; message?: string; pgError?: { code?: string } } | null;
+  if (e?.reintentable) return true;
+  const code = e?.pgError?.code ?? e?.code ?? '';
+  return code.startsWith('PGRST3') || /\bjwt\b|token (is )?expired/i.test(e?.message ?? '');
 }
 
 export function enqueue(op: Op) {
@@ -237,6 +294,16 @@ export async function flush(): Promise<void> {
   if (flushing || misPendientes() === 0) return;
   if (!haySenial()) return;
   flushing = true;
+  // Solo con la sesión de quien es dueño de lo pendiente: sin sesión (o
+  // vencida y sin poder renovarse) el pedido saldría como anónimo y la base
+  // lo rechazaría como si fuera un problema de permisos.
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session || data.session.user.id !== duenio) { flushing = false; return; }
+  } catch {
+    flushing = false;
+    return;
+  }
   notify(true);
   try {
     // En orden, solo las de quien tiene la sesión: las de otra persona se
@@ -248,17 +315,25 @@ export async function flush(): Promise<void> {
       try {
         await run(actual);
         sacar();
+        // La entrega llegó: el borrador del equipo ya no hace falta
+        if (actual.kind === 'entregar') borrarBorrador(actual.studentId, actual.activityId);
         persist();
         notify(true);
       } catch (err) {
-        if (esErrorDeRed(err)) {
-          // seguimos sin red: reintento más tarde
+        if (esPasajero(err)) {
+          // sin red, sin sesión o el servidor con problemas: más tarde
           break;
         }
-        // El servidor no lo aceptó: sale de la cola y queda a la vista
+        // El servidor no lo aceptó: sale de la cola y queda a la vista. Lo
+        // que sigue de la misma entrega sale con ella (si no, el avance y la
+        // entrega irían a una entrega que no existe), para reintentarse junto.
         console.error('No se pudo guardar lo pendiente:', err);
-        sacar();
-        rechazadas.push({ op: actual, motivo: motivoDe(err) });
+        const motivo = motivoDe(err);
+        const clave = claveActividad(actual);
+        const hermanas = clave ? queue.filter(x => x !== actual && esMia(x) && claveActividad(x) === clave) : [];
+        queue = queue.filter(x => x !== actual && !hermanas.includes(x));
+        rechazadas.push({ op: actual, motivo });
+        for (const op of hermanas) rechazadas.push({ op, motivo: 'No se mandó porque falló lo anterior de esta actividad.' });
         persist();
         notify(true);
       }
@@ -281,51 +356,110 @@ export function descartarNoGuardada(ts: number): void {
   notify();
 }
 
-/** Vuelve a la cola (por si era un problema que ya se resolvió, como un permiso). */
+/**
+ * Vuelve a la cola (por si era un problema que ya se resolvió, como un
+ * permiso). Las de una misma entrega vuelven todas, en el orden original.
+ */
 export function reintentarNoGuardada(ts: number): void {
   const r = rechazadas.find(x => esMia(x.op) && x.op.ts === ts);
   if (!r) return;
-  rechazadas = rechazadas.filter(x => x !== r);
-  queue.push(r.op);
+  const clave = claveActividad(r.op);
+  const juntas = clave
+    ? rechazadas.filter(x => esMia(x.op) && claveActividad(x.op) === clave).sort((a, b) => a.op.ts - b.op.ts)
+    : [r];
+  rechazadas = rechazadas.filter(x => !juntas.includes(x));
+  queue.push(...juntas.map(x => x.op));
   persist();
   notify();
   void flush();
 }
 
+/** El motivo, si algo de esta actividad no se pudo guardar (para mostrarlo en la actividad). */
+export function rechazoDe(activityId: string): string | null {
+  const r = rechazadas.find(x => esMia(x.op) && claveActividad(x.op) !== null && 'activityId' in x.op && x.op.activityId === activityId);
+  return r ? r.motivo : null;
+}
+
+/** Reintenta todo lo de esta actividad que no se pudo guardar. */
+export function reintentarActividad(activityId: string): void {
+  const r = rechazadas.find(x => esMia(x.op) && claveActividad(x.op) !== null && 'activityId' in x.op && x.op.activityId === activityId);
+  if (r) reintentarNoGuardada(r.op.ts);
+}
+
+/**
+ * Las entregas (`${studentId}_${activityId}`) que tienen algo esperando o
+ * rechazado: su borrador no se borra al cerrar sesión (es trabajo que
+ * todavía no llegó al servidor).
+ */
+export function borradoresEnCola(): Set<string> {
+  const claves = new Set<string>();
+  for (const op of [...queue, ...rechazadas.map(r => r.op)]) {
+    const c = claveActividad(op);
+    if (c) claves.add(c);
+  }
+  return claves;
+}
+
 // ── Escrituras resilientes del estudiante: directo si hay red, a la cola si no ──
 
-export async function saveProgressResilient(
-  submissionId: string,
-  updates: { answers?: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds?: number },
-): Promise<void> {
-  if (!haySenial()) {
-    enqueue({ kind: 'progress', submissionId, updates });
-    return;
-  }
+/**
+ * Empezar una actividad: con señal va directo; sin señal queda en la cola y
+ * la actividad se puede hacer igual (las respuestas se guardan en el equipo).
+ */
+export async function iniciarResiliente(activityId: string, studentId: string): Promise<ResultadoGuardado> {
+  const op = { kind: 'iniciar' as const, activityId, studentId, startedAt: new Date().toISOString() };
+  if (!haySenial()) { enqueue(op); return 'pendiente'; }
   try {
-    await saveSubmissionProgress(submissionId, updates);
+    await iniciarEntrega(activityId, studentId, op.startedAt);
+    return 'enviado';
   } catch (err) {
-    if (esErrorDeRed(err)) enqueue({ kind: 'progress', submissionId, updates });
-    else throw err;
+    if (esPasajero(err)) { enqueue(op); return 'pendiente'; }
+    throw err;
   }
 }
 
-/** @returns true si quedó encolada para sincronizar después */
-export async function submitResilient(
-  submissionId: string,
-  activityId: string,
-  payload: { answers: Record<string, ActivityAnswer>; responseText?: string; timeSpentSeconds: number },
-): Promise<boolean> {
-  if (!haySenial()) {
-    enqueue({ kind: 'submit', submissionId, activityId, payload });
+/**
+ * Avance por actividad y alumno. Si hay algo de esta actividad esperando
+ * (por ejemplo, empezó sin señal), va a la cola detrás: el orden importa.
+ */
+export async function guardarAvanceResiliente(activityId: string, studentId: string, updates: Avance): Promise<void> {
+  if (!haySenial() || hayEnColaDe(activityId, studentId)) {
+    enqueue({ kind: 'avance', activityId, studentId, updates });
+    void flush();
+    return;
+  }
+  // Cada avance manda todo lo de su tipo (todas las respuestas, o el tiempo):
+  // si este se cuelga y vence después de que salió uno más nuevo, encolarlo
+  // pisaría lo nuevo con lo viejo.
+  const tipo = updates.answers !== undefined || updates.responseText !== undefined ? 'respuestas' : 'tiempo';
+  const k = `${activityId}|${studentId}|${tipo}`;
+  const este = ++numeroDeAvance;
+  ultimoAvance.set(k, este);
+  try {
+    await guardarAvance(activityId, studentId, updates);
+  } catch (err) {
+    if (!esPasajero(err)) throw err;
+    if ((ultimoAvance.get(k) ?? 0) > este) return;
+    enqueue({ kind: 'avance', activityId, studentId, updates });
+  }
+}
+
+let numeroDeAvance = 0;
+const ultimoAvance = new Map<string, number>();
+
+/** @returns true si quedó en la cola para mandarse después */
+export async function entregarResiliente(activityId: string, studentId: string, payload: Entrega): Promise<boolean> {
+  if (!haySenial() || hayEnColaDe(activityId, studentId)) {
+    enqueue({ kind: 'entregar', activityId, studentId, payload });
+    void flush();
     return true;
   }
   try {
-    await submitActivity(submissionId, payload);
+    await entregar(activityId, studentId, payload);
     return false;
   } catch (err) {
-    if (esErrorDeRed(err)) {
-      enqueue({ kind: 'submit', submissionId, activityId, payload });
+    if (esPasajero(err)) {
+      enqueue({ kind: 'entregar', activityId, studentId, payload });
       return true;
     }
     throw err;
@@ -497,7 +631,14 @@ export function pendientesDe<K extends KindDocente>(kind: K): Extract<QueuedOp, 
 
 /** ¿Hay una entrega esperando sincronizarse para esta actividad? */
 export function hasPendingSubmit(activityId: string): boolean {
-  return queue.some(op => esMia(op) && op.kind === 'submit' && op.activityId === activityId);
+  return queue.some(op => esMia(op) && (op.kind === 'submit' || op.kind === 'entregar') && op.activityId === activityId);
+}
+
+/** ¿Hay algo de esta actividad esperando en la cola? (empezar, avance o entrega) */
+export function hayEnColaDe(activityId: string, studentId: string): boolean {
+  return queue.some(op => esMia(op)
+    && (op.kind === 'iniciar' || op.kind === 'avance' || op.kind === 'entregar')
+    && op.activityId === activityId && op.studentId === studentId);
 }
 
 export function pendingCount(): number {

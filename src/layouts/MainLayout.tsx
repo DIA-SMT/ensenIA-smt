@@ -31,6 +31,7 @@ import { usePreferencias } from '../contexts/PreferencesContext';
 import { NAV_POR_ROL, tituloDe } from '../lib/navegacion';
 import { anticipar, type RutaPantalla } from '../lib/pantallas';
 import { startOfflineSync } from '../services/offline-queue.service';
+import { haySenial, suscribirConexion } from '../lib/conexion';
 import { asegurarPantallasOffline } from '../lib/guardarOffline';
 import '../components/shell/shell.css';
 import './MainLayout.css';
@@ -120,6 +121,21 @@ export default function MainLayout() {
     }
     const rutas = [...NAV_POR_ROL[user.role].map(i => i.ruta), ...(DETALLES_POR_ROL[user.role] ?? [])];
     anticipar(rutas);
+  }, [user, ahorroActivo]);
+
+  // Estudiante: todo lo de sus materias queda listo para usar sin señal
+  // (fase 3). Al entrar y cada vez que vuelve la señal; el servicio no lo
+  // repite antes de media hora. Se baja aparte: los otros roles no lo cargan.
+  useEffect(() => {
+    if (!user || user.role !== 'estudiante') return;
+    const correr = () => {
+      void import('../services/sin-senial.service')
+        .then(m => m.prepararSinSenialSolo(user, ahorroActivo))
+        .catch(() => undefined);
+    };
+    const espera = window.setTimeout(correr, 6000);
+    const dejar = suscribirConexion(() => { if (haySenial()) correr(); });
+    return () => { window.clearTimeout(espera); dejar(); };
   }, [user, ahorroActivo]);
 
   const abrirPreferencias = useCallback(() => setPrefsAbiertas(true), []);

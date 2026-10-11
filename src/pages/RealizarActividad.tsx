@@ -15,12 +15,15 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle, SearchX } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getActivityForStudent, getStudentByUserId, getOrCreateSubmission, getMySubmissions, getSubmissionById,
+  getActivityForStudent, getStudentByUserId, getOrCreateSubmission, getMySubmissions, getMySubmission,
 } from '../services/activities.service';
 import {
-  saveProgressResilient, submitResilient, logEventResilient, saveCheckinResilient,
-  subscribe, hasPendingSubmit,
+  iniciarResiliente, guardarAvanceResiliente, entregarResiliente, logEventResilient, saveCheckinResilient,
+  subscribe, hasPendingSubmit, hayEnColaDe, rechazoDe, reintentarActividad,
 } from '../services/offline-queue.service';
+import { haySenial, esErrorDeRed } from '../lib/conexion';
+import { useSenial } from '../lib/useSenial';
+import { leerBorrador, guardarBorrador, borrarBorrador, conBorrador } from '../lib/borradorEntrega';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
 import PedirDevolucion from '../components/PedirDevolucion';
@@ -49,6 +52,11 @@ export default function RealizarActividad() {
   const [submitting, setSubmitting] = useState(false);
   const [pendingSync, setPendingSync] = useState(false);
   const [error, setError] = useState('');
+  // Algo de esta actividad no se pudo mandar (el motivo); lo hecho sigue en el equipo
+  const [noSeMando, setNoSeMando] = useState<string | null>(null);
+  // "Comenzar" en curso: con la red colgada, un segundo toque borraba lo respondido
+  const [empezando, setEmpezando] = useState(false);
+  const senial = useSenial();
   // check-ins emocionales (persistimos "ya respondió" por dispositivo)
   const [startCheckinDone, setStartCheckinDone] = useState(true);
   const [endCheckinDone, setEndCheckinDone] = useState(true);
@@ -75,6 +83,10 @@ export default function RealizarActividad() {
   const baseSecondsRef = useRef(0);
   const submissionRef = useRef<ActivitySubmission | null>(null);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Al salir de la pantalla no queda un autoguardado colgado (después de cerrar
+  // sesión se mandaría con la sesión de otra persona). Lo escrito ya está en
+  // el borrador del equipo.
+  useEffect(() => () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); }, []);
 
   submissionRef.current = submission;
 
@@ -92,8 +104,21 @@ export default function RealizarActividad() {
         }
         if (act && st) {
           // ¿ya tiene una entrega en curso o hecha? (sin crearla)
-          const subs = await getMySubmissions(st.id);
-          const mine = subs.find(s => s.activityId === act.id) ?? null;
+          // Si no hay ni copia del servidor, igual vale lo que está en el equipo
+          const subs = await getMySubmissions(st.id).catch(() => null);
+          const delServidor = subs?.find(s => s.activityId === act.id) ?? null;
+          // Lo respondido en este equipo manda sobre la copia vieja del
+          // servidor (sin señal, es la de la última vez que hubo conexión)
+          let mine = conBorrador(delServidor, leerBorrador(st.id, act.id), act.id, st.id, hayEnColaDe(act.id, st.id));
+          if (delServidor && (delServidor.status === 'submitted' || delServidor.status === 'graded')) {
+            borrarBorrador(st.id, act.id);
+          } else if (mine && hasPendingSubmit(act.id)) {
+            // La entregó sin señal y todavía no salió: se ve entregada, no de nuevo para hacer
+            mine = { ...mine, status: 'submitted', submittedAt: mine.submittedAt ?? new Date().toISOString() };
+            setPendingSync(true);
+          }
+          const motivo = rechazoDe(act.id);
+          if (motivo) setNoSeMando(motivo);
           if (mine) {
             setSubmission(mine);
             setAnswers(mine.answers);
@@ -112,22 +137,35 @@ export default function RealizarActividad() {
 
   // Entregada sin conexión: la corrección la hace la base, así que cuando
   // la cola termina de mandarla traemos la entrega ya corregida.
-  const submissionId = submission?.id;
+  // Por actividad y alumno: una entrega empezada sin señal no tenía id.
+  const activityId = activity?.id;
+  const studentId = student?.id;
   useEffect(() => {
-    if (!pendingSync || !activity || !submissionId) return;
+    if (!pendingSync || !activityId || !studentId) return;
     const refresh = () => {
-      if (hasPendingSubmit(activity.id)) return;
-      getSubmissionById(submissionId)
+      // Algo de esta actividad no se pudo mandar: se dice, con el motivo, en vez
+      // de seguir diciendo "se envía sola". Lo respondido sigue en el equipo.
+      const motivo = rechazoDe(activityId);
+      if (motivo && !hasPendingSubmit(activityId)) {
+        setNoSeMando(motivo);
+        setPendingSync(false);
+        const b = leerBorrador(studentId, activityId);
+        setSubmission(prev => (prev ? { ...prev, status: 'in_progress', submittedAt: null, ...(b ? { answers: b.answers, responseText: b.responseText } : {}) } : prev));
+        return;
+      }
+      if (hasPendingSubmit(activityId) || !haySenial()) return;
+      getMySubmission(activityId, studentId)
         .then(s => {
-          if (s && s.status !== 'in_progress') {
+          if (s && (s.status === 'submitted' || s.status === 'graded')) {
             setSubmission(s);
             setPendingSync(false);
+            borrarBorrador(studentId, activityId);
           }
         })
         .catch(() => {});
     };
     return subscribe(refresh); // subscribe ya lo llama una vez al suscribir
-  }, [pendingSync, activity, submissionId]);
+  }, [pendingSync, activityId, studentId]);
 
   const isActive = submission?.status === 'in_progress';
   const isDone = submission?.status === 'submitted' || submission?.status === 'graded';
@@ -142,10 +180,11 @@ export default function RealizarActividad() {
       if (document.visibilityState === 'visible') {
         secondsRef.current += 15;
         const sub = submissionRef.current;
-        if (sub) {
-          saveProgressResilient(sub.id, {
-            timeSpentSeconds: baseSecondsRef.current + secondsRef.current,
-          }).catch(() => {});
+        if (sub && sub.status === 'in_progress') {
+          const total = baseSecondsRef.current + secondsRef.current;
+          const b = leerBorrador(student.id, activity.id);
+          if (b) guardarBorrador(student.id, activity.id, { ...b, timeSpentSeconds: total }, { mantenerFecha: true });
+          guardarAvanceResiliente(activity.id, student.id, { timeSpentSeconds: total }).catch(() => {});
         }
       }
     }, 15000);
@@ -163,11 +202,19 @@ export default function RealizarActividad() {
 
   // ── Autosave de respuestas (debounced) ──
   const scheduleSave = useCallback((nextAnswers: Record<string, ActivityAnswer>, nextText: string) => {
+    const sub = submissionRef.current;
+    if (!sub || sub.status !== 'in_progress') return;
+    // En el equipo, al instante: si se cierra la app sin señal, no se pierde
+    guardarBorrador(sub.studentId, sub.activityId, {
+      answers: nextAnswers,
+      responseText: nextText,
+      timeSpentSeconds: baseSecondsRef.current + secondsRef.current,
+    });
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      const sub = submissionRef.current;
-      if (sub && sub.status === 'in_progress') {
-        saveProgressResilient(sub.id, { answers: nextAnswers, responseText: nextText }).catch(() => {});
+      const s = submissionRef.current;
+      if (s && s.status === 'in_progress') {
+        guardarAvanceResiliente(s.activityId, s.studentId, { answers: nextAnswers, responseText: nextText }).catch(() => {});
       }
     }, 800);
   }, []);
@@ -196,19 +243,61 @@ export default function RealizarActividad() {
 
   // ── Handlers ──
 
+  /** Muestra una entrega en curso, con lo que haya en el equipo encima (nunca lo pisa). */
+  const mostrarEnCurso = (sub: ActivitySubmission | null) => {
+    const conLoDelEquipo = conBorrador(sub, leerBorrador(student.id, activity.id), activity.id, student.id, true) ?? sub;
+    if (!conLoDelEquipo) return;
+    setSubmission(conLoDelEquipo);
+    setAnswers(conLoDelEquipo.answers);
+    setResponseText(conLoDelEquipo.responseText ?? '');
+    baseSecondsRef.current = conLoDelEquipo.timeSpentSeconds;
+  };
+
   const handleStart = async () => {
+    if (empezando) return;
+    setEmpezando(true);
+    setError('');
     try {
-      const sub = await getOrCreateSubmission(activity.id, student.id);
-      setSubmission(sub);
-      setAnswers(sub.answers);
-      setResponseText(sub.responseText ?? '');
-      baseSecondsRef.current = sub.timeSpentSeconds;
+      if (haySenial()) {
+        try {
+          mostrarEnCurso(await getOrCreateSubmission(activity.id, student.id));
+          logEventResilient(activity.id, student.id, 'started');
+          return;
+        } catch (err) {
+          if (!esErrorDeRed(err)) {
+            setError('No se pudo comenzar la actividad. Probá de nuevo.');
+            console.error(err);
+            return;
+          }
+          // Se cortó la señal en el medio: se empieza igual, como sin señal
+        }
+      }
+      // Sin señal se empieza igual: lo que responda queda en este celular y
+      // la cola avisa al servidor (empezar, avance, entrega) cuando vuelva.
+      try {
+        await iniciarResiliente(activity.id, student.id);
+      } catch (err) {
+        setError('No se pudo comenzar la actividad. Probá de nuevo.');
+        console.error(err);
+        return;
+      }
+      // Si ya había algo respondido en el equipo, se sigue desde ahí
+      if (!leerBorrador(student.id, activity.id)) {
+        guardarBorrador(student.id, activity.id, { answers: {}, responseText: '', timeSpentSeconds: submission?.timeSpentSeconds ?? 0 });
+      }
+      mostrarEnCurso(submission);
       logEventResilient(activity.id, student.id, 'started');
-    } catch (err) {
-      setError(navigator.onLine
-        ? 'No se pudo comenzar la actividad. Probá de nuevo.'
-        : 'Necesitás conexión para comenzar una actividad por primera vez. Una vez comenzada, podés trabajar sin internet y se sincroniza sola.');
-      console.error(err);
+    } finally {
+      setEmpezando(false);
+    }
+  };
+
+  const reintentarEnvio = () => {
+    reintentarActividad(activity.id);
+    setNoSeMando(null);
+    if (hasPendingSubmit(activity.id)) {
+      setSubmission(prev => (prev ? { ...prev, status: 'submitted', submittedAt: prev.submittedAt ?? new Date().toISOString() } : prev));
+      setPendingSync(true);
     }
   };
 
@@ -250,7 +339,8 @@ export default function RealizarActividad() {
       // La corrección la hace la base al entregar (migración 018): acá no
       // hay respuestas correctas para comparar, a propósito (019).
       const totalTime = baseSecondsRef.current + secondsRef.current;
-      const queued = await submitResilient(submission.id, activity.id, {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+      const queued = await entregarResiliente(activity.id, student.id, {
         answers,
         responseText: responseText.trim() || undefined,
         timeSpentSeconds: totalTime,
@@ -264,8 +354,13 @@ export default function RealizarActividad() {
         timeSpentSeconds: totalTime,
         submittedAt: new Date().toISOString(),
       };
-      // Con conexión, mostramos la entrega ya corregida por la base
-      const corrected = queued ? null : await getSubmissionById(submission.id).catch(() => null);
+      // Con conexión, mostramos la entrega ya corregida por la base. Sin
+      // señal, el borrador queda hasta que la entrega salga (por si algo falla).
+      const delServidor = queued ? null : await getMySubmission(activity.id, student.id).catch(() => null);
+      // Si la red tarda, la respuesta puede ser la copia vieja "en curso": esa no
+      const corrected = delServidor && (delServidor.status === 'submitted' || delServidor.status === 'graded') ? delServidor : null;
+      if (!queued) borrarBorrador(student.id, activity.id);
+      setNoSeMando(null);
       setSubmission(corrected ?? local);
     } catch (err) {
       setError('No se pudo entregar. Intentá de nuevo.');
@@ -317,13 +412,20 @@ export default function RealizarActividad() {
         </div>
 
         {error && <div className="em-error"><AlertCircle size={15} /> {error}</div>}
+        {noSeMando && (
+          <div className="em-error" role="alert">
+            <AlertCircle size={15} />
+            <span>No se pudo mandar lo que hiciste: {noSeMando} Tus respuestas siguen en este celular.</span>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={reintentarEnvio}>Reintentar</button>
+          </div>
+        )}
 
         {/* Estado: sin comenzar (o el docente anotó que no la entregó: igual puede hacerla) */}
         {(!submission || submission.status === 'pending') && !isDone && (
           isClosed ? (
             <div className="sp-notice">Esta actividad está cerrada y ya no acepta entregas.</div>
           ) : (
-            <button className="btn btn-primary sp-start-btn" onClick={handleStart}>
+            <button className="btn btn-primary sp-start-btn" onClick={handleStart} disabled={empezando}>
               <Play size={16} /> Comenzar actividad
             </button>
           )
@@ -390,9 +492,10 @@ export default function RealizarActividad() {
 
             <div className="sp-submit-row">
               <span className="text-sm text-secondary">
-                {activity.questions.length > 0
-                  ? `${answeredCount}/${activity.questions.length} respondidas · se guarda automáticamente`
-                  : 'Se guarda automáticamente'}
+                {activity.questions.length > 0 ? `${answeredCount}/${activity.questions.length} respondidas · ` : ''}
+                {senial
+                  ? 'se guarda automáticamente'
+                  : 'sin señal: se guarda en este celular y se manda sola cuando vuelva'}
               </span>
               <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
                 {submitting ? 'Entregando...' : <><Send size={15} /> Entregar</>}

@@ -8,6 +8,7 @@ import { getStudentByUserId } from '../services/activities.service';
 import { getMyMaterialReactions, setMaterialReaction } from '../services/gamification.service';
 import { getClasesEnviadas, type ClaseEnviada } from '../services/clases.service';
 import ClasesEnviadas from '../components/ClasesEnviadas';
+import ListoSinSenial from '../components/ListoSinSenial';
 import { coincideBusqueda } from '../services/busqueda.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
@@ -148,6 +149,9 @@ export default function MiBiblioteca() {
 
   return (
     <div className="sp-container animate-in">
+      {/* Para leer y practicar sin datos (fase 3) */}
+      <ListoSinSenial />
+
       {/* ── Filtros: buscar y elegir materia ── */}
       {!loading && materials.length > 0 && (
         <div className="sp-filtros">

@@ -7,7 +7,9 @@ import { esEquipoPersonal, marcarEquipoPersonal } from '../lib/equipoPersonal';
 import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
 import { toLoginEmail } from '../lib/dni';
 import { olvidarBusquedas } from '../services/busqueda.service';
-import { setDuenioCola } from '../services/offline-queue.service';
+import { setDuenioCola, borradoresEnCola } from '../services/offline-queue.service';
+import { olvidarSinSenial } from '../lib/sinSenialEstado';
+import { borrarBorradoresSalvo } from '../lib/borradorEntrega';
 
 /**
  * Reglas de este contexto (aprendidas a fuerza de bugs):
@@ -108,6 +110,13 @@ function borrarDatosOffline() {
   }
   // La marca de "disponible sin conexión" de las clases (clases.service)
   try { localStorage.removeItem('estudia_clases_guardadas'); } catch { /* sin storage */ }
+  // "Listo para usar sin señal" ya no es cierto (se borraron los cachés), y
+  // una descarga en curso no escribe más a nombre de quien se fue
+  olvidarSinSenial();
+  // Las respuestas a medio hacer: se quedan solo las que todavía esperan
+  // en la cola para mandarse (son de quien las escribió y se mandan cuando
+  // vuelva a entrar); las demás no quedan en un equipo compartido
+  borrarBorradoresSalvo(borradoresEnCola());
   olvidarBusquedas();
 }
 

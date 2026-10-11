@@ -802,3 +802,7 @@ html[data-contraste="alto"] .sp-hoy::before { display: none; }
   border: 1px solid var(--border-color);
   white-space: nowrap;
 }
+
+/* Lo que no se pudo mandar, con su botón (fase 3) */
+.sp-container .em-error { flex-wrap: wrap; }
+.sp-container .em-error > span { flex: 1 1 200px; }

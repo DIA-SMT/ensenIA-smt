@@ -32,6 +32,7 @@ import { getAchievementsByStudent } from './gamification.service';
 import { getStudentAwards } from './awards.service';
 import { getStudentProgress } from './practice.service';
 import { archivosDe, guardarArchivos } from '../lib/archivosOffline';
+import { deAPocas } from '../lib/deAPocas';
 
 const PREPARADO_KEY = 'estudia_preparado_aula';
 
@@ -55,20 +56,6 @@ export function preparadoEl(userId: string): Date | null {
   } catch {
     return null;
   }
-}
-
-/** Corre las tareas de a pocas: con muchas juntas el wifi de la casa también sufre. */
-async function deAPocas(tareas: (() => Promise<unknown>)[], enParalelo: number, alTerminarUna: (ok: boolean) => void) {
-  let siguiente = 0;
-  const trabajador = async () => {
-    while (siguiente < tareas.length) {
-      const tarea = tareas[siguiente++];
-      let ok = true;
-      try { await tarea(); } catch { ok = false; }
-      alTerminarUna(ok);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(enParalelo, tareas.length) }, trabajador));
 }
 
 export async function prepararParaElAula(user: User, alAvanzar: (a: Avance) => void): Promise<ResultadoPreparar> {
