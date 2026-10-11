@@ -22,6 +22,7 @@ El precio es el mismo.
 | **Memoria de estudio** (consolidación) | La charla terminada, con nombres y contactos tapados. Lo que vuelve se filtra antes de guardar: sin nombres, contacto, familia, ánimo ni salud. |
 | **Migue** (estudiantes, familias, equipo) | El mensaje y el historial, con los nombres del padrón y los contactos tapados; a estudiantes y familias el prompt ya no los nombra ni dice la escuela. Las marcas `[N1]` vuelven a ser nombres en la respuesta. |
 | Laboratorio IA, resúmenes, podcast (docentes) | Material docente. También van con retención cero en `ia-chat`; `process-document` y `generate-podcast` todavía no (ver 3.B). |
+| **Memoria del docente** (062, consolidación) | Las charlas terminadas del docente con la IA, con los nombres del padrón y los contactos tapados. Lo que vuelve se filtra antes de guardar: nada de un estudiante en particular (ni nombres ni "un alumno que…"), ni salud, familia o contacto. La ve, la borra y la apaga solo el docente (Ajustes). |
 
 ## 2. Lo que ya está en el código (migración 061 y funciones `ia-chat` y `migue`)
 

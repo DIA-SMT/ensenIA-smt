@@ -10,7 +10,7 @@
 import { Link } from 'react-router-dom';
 import {
     Zap, Boxes, Radio, ListChecks, FileInput, Presentation, Mic, MessagesSquare,
-    ArrowRight, type LucideIcon,
+    ArrowRight, CalendarRange, type LucideIcon,
 } from 'lucide-react';
 import UsosIA from '../components/ui/UsosIA';
 import './Crear.css';
@@ -24,13 +24,16 @@ interface Opcion {
     nota: string;
 }
 
+// Lo más común primero: preparar desde un tema de la planificación (062).
+// La clase en vivo baja a "Otras herramientas": es lo último del recorrido
+// (necesita dispositivos en el aula).
 const PRINCIPALES: Opcion[] = [
     {
-        a: '/actividad-rapida',
-        icono: Zap,
-        titulo: 'Actividad rápida',
-        texto: 'Escribís el tema y te arma la consigna para publicársela a tu curso.',
-        nota: 'Lista en un minuto',
+        a: '/planificacion',
+        icono: CalendarRange,
+        titulo: 'Desde mi planificación',
+        texto: 'Elegís el tema y preparás su presentación, trabajo práctico o evaluación, con el contexto del tema ya cargado.',
+        nota: 'Todo queda ordenado por tema',
     },
     {
         a: '/modulo',
@@ -40,11 +43,11 @@ const PRINCIPALES: Opcion[] = [
         nota: 'Todo de una, con un solo envío',
     },
     {
-        a: '/clase-en-vivo',
-        icono: Radio,
-        titulo: 'Clase en vivo',
-        texto: 'Das tu clase y lanzás preguntas que tus estudiantes responden desde el celular.',
-        nota: 'Ves las respuestas al instante',
+        a: '/actividad-rapida',
+        icono: Zap,
+        titulo: 'Actividad rápida',
+        texto: 'Escribís el tema y te arma la consigna para publicársela a tu curso.',
+        nota: 'Lista en un minuto',
     },
 ];
 
@@ -53,7 +56,8 @@ const HERRAMIENTAS: Opcion[] = [
     { a: '/ia-lab?herramienta=pres', icono: Presentation, titulo: 'Diapositivas para proyectar', texto: 'Una presentación con notas para vos.', nota: '' },
     { a: '/ia-lab?herramienta=sum', icono: FileInput, titulo: 'Resumen', texto: 'Pegás un texto largo y lo sintetiza.', nota: '' },
     { a: '/ia-lab?herramienta=oral', icono: Mic, titulo: 'Exposiciones orales', texto: 'Rúbricas para orales y debates.', nota: '' },
-    { a: '/ia-lab', icono: MessagesSquare, titulo: 'Charlar con la IA', texto: 'Para lo que no está en la lista.', nota: '' },
+    { a: '/ia-lab', icono: MessagesSquare, titulo: 'Preguntale a la IA', texto: 'Para lo que no está en la lista.', nota: '' },
+    { a: '/clase-en-vivo', icono: Radio, titulo: 'Clase en vivo', texto: 'Preguntas que tus estudiantes responden desde el celular.', nota: '' },
 ];
 
 export default function Crear() {

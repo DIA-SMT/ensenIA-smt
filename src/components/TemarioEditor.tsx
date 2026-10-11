@@ -170,8 +170,8 @@ export default function TemarioEditor({
             compacto
             icono={BookOpen}
             titulo="Esta materia todavía no tiene planificación"
-            texto="Creala desde el Laboratorio IA o importá el programa anual."
-            accion={{ etiqueta: 'Ir al Laboratorio IA', a: '/ia-lab' }}
+            texto="Armala en Mi planificación: subí el programa y sale con las fechas de tu horario."
+            accion={{ etiqueta: 'Ir a Mi planificación', a: '/planificacion' }}
           />
         )}
 

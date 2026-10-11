@@ -88,6 +88,8 @@ export interface PromptContext {
   referencias?: RefHit[];
   /** Memoria de estudio (061), ya armada; solo con la autorización de familia y estudiante. */
   memoriaEstudio?: string;
+  /** Memoria del docente (062): cómo trabaja, ya armada. */
+  memoriaDocente?: string;
 }
 
 const DOCUMENT_CONTEXT_LIMIT = 30000; // chars
@@ -168,6 +170,9 @@ ${text}
   if (ctx.tool && ctx.tool !== 'free') {
     parts.push(getToolInstructions(ctx.tool));
   }
+
+  // Cómo trabaja este docente (062): al final, después de las instrucciones
+  if (ctx.memoriaDocente) parts.push(ctx.memoriaDocente);
 
   return parts.join('\n');
 }

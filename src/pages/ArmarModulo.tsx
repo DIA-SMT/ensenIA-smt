@@ -90,7 +90,7 @@ export default function ArmarModulo() {
     // la IA imagine sobre el título.
     const [origen, setOrigen] = useState<'material' | 'tema' | 'nuevo'>('nuevo');
     const [materials, setMaterials] = useState<LibraryMaterial[]>([]);
-    const [temas, setTemas] = useState<(PlanningClass & { unitTitle: string })[]>([]);
+    const [temas, setTemas] = useState<(PlanningClass & { unitTitle: string; subjectId: string; courseId: string })[]>([]);
     const [baseMaterialId, setBaseMaterialId] = useState('');
     const [temaId, setTemaId] = useState('');
 
@@ -152,18 +152,24 @@ export default function ArmarModulo() {
             .then(list => setMaterials(list.filter(m => m.extractedText)))
             .catch(console.error);
         getPlanningByTeacher(user.id)
-            .then(units => setTemas(units.flatMap(u => u.classes.map(c => ({ ...c, unitTitle: u.title })))))
+            .then(units => setTemas(units.flatMap(u => u.classes.map(c => ({
+                ...c, unitTitle: u.title, subjectId: u.subjectId, courseId: u.courseId,
+            })))))
             .catch(console.error);
     }, [user]);
 
-    // Llegado desde la planificación con ?tema=<id>
+    // Llegado desde la planificación con ?tema=<id>: también la materia y el
+    // curso de ese tema (si no, se armaba y se mandaba al primer curso)
     useEffect(() => {
         const t = searchParams.get('tema');
-        if (t && temas.some(x => x.id === t)) {
-            setTemaId(t);
+        const tema = t ? temas.find(x => x.id === t) : undefined;
+        if (tema) {
+            const idx = (user?.subjects ?? []).findIndex(a => a.subjectId === tema.subjectId && a.courseId === tema.courseId);
+            if (idx >= 0) setAssignmentIdx(idx);
+            setTemaId(tema.id);
             setOrigen('tema');
         }
-    }, [searchParams, temas]);
+    }, [searchParams, temas, user]);
 
     useEffect(() => {
         getSubjects().then(list => {

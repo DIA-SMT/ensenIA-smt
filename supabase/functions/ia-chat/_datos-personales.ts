@@ -106,6 +106,22 @@ export function tieneDatoPersonal(texto: string): boolean {
   return taparContacto(texto) !== texto;
 }
 
+/**
+ * Red de seguridad para lo que se guarda en una memoria (de estudio o del
+ * docente), sobre el texto plegado: familia, ánimo, salud. Falla hacia no
+ * guardar: perder una nota no le hace daño a nadie.
+ */
+export const SENSIBLE = new RegExp([
+  // Familia y vida en casa
+  '\\b(?:mi|su|sus|mis) (?:mamas?|papas?|viejos?|viejas?|madres?|padres?|hermanos?|hermanas?|abuel[oa]s?|tios?|tias?|familia|casa|novios?|novias?)\\b',
+  '\\b(?:se separaron|divorci\\w*|se le murio|murio (?:su|mi)|fallecio|cuida a sus)\\b',
+  // Ánimo
+  '\\b(?:triste|tristeza|angustia|angustiad\\w*|ansiedad|ansios\\w*|deprimid\\w*|depresion|llora\\w*|lloro|miedo|panico|soledad|estresad\\w*)\\b',
+  '\\b(?:me siento|se siente|suicid\\w*|autolesi\\w*|matarme|me corto|lastimarme|me pega\\w*|le pegan|abus\\w*|acos\\w*|bullying|drogas?|embaraz\\w*)\\b',
+  // Salud y discapacidad
+  '\\b(?:psicolog\\w*|psiquiatr\\w*|terapia|terapeut\\w*|diagnostic\\w*|tdah|tda|tea|autism\\w*|dislexi\\w*|discalculi\\w*|discapacid\\w*|cud|integrador\\w*|medicacion|medicamentos?)\\b',
+].join('|'));
+
 // ── Padrón de la escuela ──
 
 const CACHE_MS = 10 * 60 * 1000;

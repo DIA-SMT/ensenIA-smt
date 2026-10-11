@@ -258,7 +258,7 @@ export default function ActividadRapida() {
           ))}
         </ol>
         <p className="ar-hero-bajada">
-          ¿Necesitás más control? <Link to="/ia-lab" className="ar-advanced-link">Abrí el modo avanzado (Laboratorio IA)</Link>.
+          ¿Necesitás más control? <Link to="/ia-lab" className="ar-advanced-link">Abrí el modo avanzado (preparar con la IA)</Link>.
         </p>
       </section>
 

@@ -20,7 +20,7 @@
  */
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Seudonimos, nombraAlguien, plegar, proveedorPrivado, tieneDatoPersonal } from './_datos-personales.ts';
+import { SENSIBLE, Seudonimos, nombraAlguien, plegar, proveedorPrivado, tieneDatoPersonal } from './_datos-personales.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 export const MODEL_CLASIF = 'anthropic/claude-haiku-4.5';
@@ -261,20 +261,8 @@ Formato:
 
 const TIPOS = new Set(['trabajo', 'cuesta', 'maneja', 'sirve', 'prefiere']);
 
-/**
- * Red de seguridad por si el modelo anota algo personal igual. Falla hacia
- * no guardar: perder una nota de estudio no le hace daño a nadie.
- */
-const SENSIBLE = new RegExp([
-  // Familia y vida en casa
-  '\\b(?:mi|su|sus|mis) (?:mamas?|papas?|viejos?|viejas?|madres?|padres?|hermanos?|hermanas?|abuel[oa]s?|tios?|tias?|familia|casa|novios?|novias?)\\b',
-  '\\b(?:se separaron|divorci\\w*|se le murio|murio (?:su|mi)|fallecio|cuida a sus)\\b',
-  // Ánimo
-  '\\b(?:triste|tristeza|angustia|angustiad\\w*|ansiedad|ansios\\w*|deprimid\\w*|depresion|llora\\w*|lloro|miedo|panico|soledad|estresad\\w*)\\b',
-  '\\b(?:me siento|se siente|suicid\\w*|autolesi\\w*|matarme|me corto|lastimarme|me pega\\w*|le pegan|abus\\w*|acos\\w*|bullying|drogas?|embaraz\\w*)\\b',
-  // Salud y discapacidad
-  '\\b(?:psicolog\\w*|psiquiatr\\w*|terapia|terapeut\\w*|diagnostic\\w*|tdah|tda|tea|autism\\w*|dislexi\\w*|discalculi\\w*|discapacid\\w*|cud|integrador\\w*|medicacion|medicamentos?)\\b',
-].join('|'));
+// SENSIBLE (familia, ánimo, salud) vive en _datos-personales.ts: la usa
+// también la memoria del docente.
 
 /**
  * Pedidos disfrazados de preferencia ("prefiere que le den las respuestas"):
@@ -334,6 +322,11 @@ interface ParamsMemoria {
  * enseguida. Nunca tira: un error acá no puede cortar la respuesta.
  */
 export async function consolidarPendiente(p: ParamsMemoria): Promise<void> {
+  // Sin padrón no hay cómo filtrar nombres: mejor no anotar nada esta vez
+  if (p.nombres.size === 0) {
+    console.error('memoria de estudio: sin padrón, no se consolida');
+    return;
+  }
   try {
     // Nunca antes de la autorización, ni de hace más de 90 días, ni del ciclo
     // lectivo anterior (lo mismo que borra limpiar_memoria_estudio). Los

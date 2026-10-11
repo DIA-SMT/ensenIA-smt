@@ -81,6 +81,7 @@ function App() {
 
                 {/* Docente */}
                 {ruta('/hoy', ['docente'])}
+                {ruta('/planificacion', ['docente'])}
                 {ruta('/mis-clases', ['docente'])}
                 {ruta('/libreta', ['docente'])}
                 {ruta('/asistencia', ['docente'])}

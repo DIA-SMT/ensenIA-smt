@@ -30,6 +30,7 @@ import {
   CHARLA_TERMINADA_MS, clasificarRiesgo, consolidarPendiente, leerMaterial, memoriaActivaDesde,
   memoriaParaPrompt, type Anotar,
 } from './_estudiante.ts';
+import { consolidarDocente, memoriaDocenteDesde, memoriaDocenteParaPrompt } from './_memoria-docente.ts';
 
 // ── Config ──
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -336,6 +337,48 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── 5b'. Docente: lo que la IA ya sabe de cómo trabaja (062) ──
+  // Entra lo que ya está anotado. La última charla terminada se consolida
+  // DESPUÉS de responder (en segundo plano): esperar a Haiku antes del
+  // primer token demoraba segundos el primer mensaje de cada charla. Un
+  // error acá no corta nada.
+  let memoriaDocente = '';
+  let consolidarDespues: (() => Promise<void>) | null = null;
+  if (profile?.role === 'docente') {
+    try {
+      const desde = await memoriaDocenteDesde(supabase, user.id);
+      if (desde) {
+        memoriaDocente = await memoriaDocenteParaPrompt(supabase, user.id, context.subjectName, context.courseName);
+        consolidarDespues = async () => {
+          const { data: asignaciones } = await supabase
+            .from('teacher_assignments')
+            .select('subjects(name), courses(name, school_id)')
+            .eq('teacher_id', user.id);
+          const filas = (asignaciones ?? []) as unknown as {
+            subjects: { name?: string } | null; courses: { name?: string; school_id?: string } | null;
+          }[];
+          const materias = [...new Set(filas.map((a) => a.subjects?.name).filter((n): n is string => Boolean(n)))];
+          const cursos = [...new Set(filas.map((a) => a.courses?.name).filter((n): n is string => Boolean(n)))];
+          // El padrón de TODAS sus escuelas: un chico de la otra también se tapa
+          const escuelas = [...new Set([profile.school_id, ...filas.map((a) => a.courses?.school_id)].filter((s): s is string => Boolean(s)))];
+          const nombres = new Set<string>();
+          for (const s of escuelas) (await padronDeEscuela(supabase, s)).forEach((n) => nombres.add(n));
+          const consumos: Parameters<typeof registrarConsumo>[1][] = [];
+          await consolidarDocente({
+            admin: supabase, apiKey: OPENROUTER_API_KEY, teacherId: user.id, desde, materias, cursos, nombres,
+            anotar: (modelo, u) => consumos.push({
+              user_id: user.id, school_id: profile.school_id, role: 'docente', feature: 'memoria_docente', model: modelo,
+              tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+            }),
+          });
+          for (const c of consumos) await registrarConsumo(supabase, c);
+        };
+      }
+    } catch (e) {
+      console.error('memoria docente:', String(e).slice(0, 200));
+    }
+  }
+
   // ── 5c. Estudiante: riesgo, memoria e historial ──
   let derivada: 'seguimiento' | 'urgente' | null = null;
   let memoriaEstudio = '';
@@ -480,6 +523,7 @@ Deno.serve(async (req: Request) => {
     documentText,
     referencias,
     memoriaEstudio,
+    memoriaDocente,
   };
   const avisoDerivacion = derivada
     ? `\n\n## Importante para esta respuesta
@@ -720,6 +764,14 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
       }
     },
   });
+
+  // Lo que se hace después de responder: la memoria del docente. En Supabase
+  // EdgeRuntime.waitUntil mantiene viva la función hasta que termine.
+  if (consolidarDespues) {
+    const tarea = consolidarDespues().catch((e) => console.error('memoria docente (después):', String(e).slice(0, 200)));
+    const runtime = (globalThis as unknown as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime;
+    runtime?.waitUntil(tarea);
+  }
 
   return new Response(stream, {
     headers: {

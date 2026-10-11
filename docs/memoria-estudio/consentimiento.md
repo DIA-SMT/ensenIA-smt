@@ -22,8 +22,10 @@ las familias y los estudiantes no ven nada nuevo.
 > un signo menos delante de un paréntesis" o "Le sirven los ejemplos con plata". También se
 > usan los resultados de las prácticas que hace en la app.
 >
-> **Qué NO se guarda.** Nombres de personas, datos de contacto, nada de su vida personal,
-> familiar, de salud ni de cómo se siente. Tampoco se guarda lo que haya charlado con Migue.
+> **Qué NO se guarda.** La memoria está hecha para no guardar nombres de personas, datos de
+> contacto ni nada de su vida personal, familiar, de salud o de cómo se siente: la app filtra
+> lo que lo parezca antes de guardar, y si alguna vez aparece algo así, se puede borrar.
+> Tampoco se guarda lo que haya charlado con Migue.
 > Si en una charla cuenta algo que preocupa sobre su bienestar, eso no va a la memoria:
 > sigue el mismo camino que hoy, que es avisar al equipo de la escuela.
 >
@@ -59,7 +61,8 @@ las familias y los estudiantes no ven nada nuevo.
 > Si aceptás, EstudIA va a recordar cómo estudiás: qué temas trabajaste, qué te costó, qué
 > ya te sale y qué ejemplos te sirven. Así no arranca de cero cada vez.
 >
-> - No guarda nombres ni nada de tu vida personal, tu familia o cómo te sentís.
+> - Está hecha para no guardar nombres ni nada de tu vida personal, tu familia o cómo te
+>   sentís. Si alguna vez ves algo así, borralo.
 > - Lo que recuerda lo ves vos, entero, y lo podés borrar cuando quieras.
 > - Tus docentes no lo ven. La dirección lo puede revisar para controlar que se use bien,
 >   y vos ves cuándo lo hizo.

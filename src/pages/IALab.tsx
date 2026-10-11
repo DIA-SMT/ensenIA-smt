@@ -272,11 +272,36 @@ export default function IALab() {
         setSearchParams(searchParams, { replace: true });
     }, [materials, searchParams, setSearchParams]);
 
+    // ── ?clase=<id>: llega desde "Preparar" en Mi planificación, con el tema
+    // ya elegido (materia, curso y contexto del tema incluidos) ──
+    useEffect(() => {
+        const claseId = searchParams.get('clase');
+        if (!claseId || !modulosCargados) return;
+        const unidad = allUnits.find(u => u.classes.some(c => c.id === claseId));
+        const cls = unidad?.classes.find(c => c.id === claseId);
+        if (unidad && cls) {
+            const idx = assignments.findIndex(a => a.subjectId === unidad.subjectId && a.courseId === unidad.courseId);
+            if (idx >= 0) setSelectedAssignmentIdx(idx);
+            // La materia y el curso del tema (el selector se actualiza recién en el próximo render)
+            void handleSelectClass(cls, unidad.id, { subjectId: unidad.subjectId, courseId: unidad.courseId })
+                // Se llega a pedir algo: queda el chat (con el pedido guiado, si vino una herramienta)
+                .then(() => setCenterMode('chat'));
+        }
+        searchParams.delete('clase');
+        setSearchParams(searchParams, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allUnits, modulosCargados, searchParams, setSearchParams]);
+
     // ── ?herramienta=<id>: llega desde "Crear" con la herramienta ya elegida ──
     useEffect(() => {
         const herramienta = searchParams.get('herramienta');
         if (!herramienta) return;
-        if (tools.some(t => t.id === herramienta)) setBriefTool(herramienta as IAToolType);
+        // La herramienta queda activa (si no, el pedido salía como chat libre,
+        // sin las instrucciones de evaluación o actividad) y con su pedido guiado
+        if (tools.some(t => t.id === herramienta)) {
+            setActiveTool(herramienta as IAToolType);
+            setBriefTool(herramienta as IAToolType);
+        }
         searchParams.delete('herramienta');
         setSearchParams(searchParams, { replace: true });
     }, [searchParams, setSearchParams]);
@@ -448,7 +473,9 @@ export default function IALab() {
     };
 
     // ── Select class → load/create session ──
-    const handleSelectClass = async (cls: PlanningClass, unitId: string) => {
+    const handleSelectClass = async (
+        cls: PlanningClass, unitId: string, materiaCurso?: { subjectId: string; courseId: string },
+    ) => {
         setSelectedClass(cls);
         setSelectedUnitId(unitId);
         setCenterMode('editor');
@@ -457,8 +484,8 @@ export default function IALab() {
 
         try {
             const session = await getOrCreateSession(user.id, cls.id, {
-                subjectId: currentAssignment?.subjectId,
-                courseId: currentAssignment?.courseId,
+                subjectId: materiaCurso?.subjectId ?? currentAssignment?.subjectId,
+                courseId: materiaCurso?.courseId ?? currentAssignment?.courseId,
                 title: cls.title,
             });
             setCurrentSession(session);
@@ -751,8 +778,8 @@ export default function IALab() {
         const mat = await createMaterial({
             title,
             description: selectedClass
-                ? `Diapositivas del tema "${selectedClass.title}" · Laboratorio IA`
-                : 'Diapositivas armadas con el Laboratorio IA',
+                ? `Diapositivas del tema "${selectedClass.title}" · preparadas con la IA`
+                : 'Diapositivas preparadas con la IA',
             fileType: 'doc',
             fileName: '',
             fileSize: '—',
@@ -865,7 +892,7 @@ export default function IALab() {
         }
         await createMaterial({
             title,
-            description: 'Generado con el Laboratorio IA',
+            description: 'Preparado con la IA',
             fileType: 'doc',
             fileName: '',
             fileSize: '—',

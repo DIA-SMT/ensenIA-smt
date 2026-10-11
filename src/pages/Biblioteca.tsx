@@ -679,7 +679,7 @@ export default function Biblioteca() {
             {mat.extractedText && !juegoMat && (
               <button
                 className="mat-action-btn"
-                title="Usar como contexto en el Laboratorio IA"
+                title="Usar como contexto al preparar con la IA"
                 onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
               >
                 <FlaskConical size={14} /> Usar en IA Lab

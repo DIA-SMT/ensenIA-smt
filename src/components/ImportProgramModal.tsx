@@ -1,19 +1,20 @@
 /**
- * Importar programa anual → planificación automática.
+ * Importar programa anual → planificación con fechas.
  *
- * El docente sube el PDF (o DOCX) de su programa; la IA lo analiza y
- * propone unidades + clases con objetivos, que se crean en la planificación
- * con un clic.
+ * El docente sube el PDF (o DOCX) de su programa; la IA lo lee una vez y
+ * propone unidades + temas con objetivos. Al confirmar, la base los crea de
+ * una vez (todo o nada, sin duplicar unidades) y los reparte en los días de
+ * su horario fijo (062). El reparto es por reglas, sin IA.
  */
 
 import { useRef, useState } from 'react';
-import { X, FileUp, Sparkles, Folder, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, FileUp, Sparkles, Folder, FileText, AlertCircle, CheckCircle, CalendarDays } from 'lucide-react';
 import {
   fileToBase64, extractDocxText, importProgram, uploadFile, formatFileSize,
 } from '../services/documents.service';
 import { createMaterial } from '../services/library.service';
 import { updateMaterial } from '../services/documents.service';
-import { createUnit, createClass } from '../services/planning.service';
+import { importarPrograma, fechaCorta, type ResultadoImportar } from '../services/planificacion.service';
 import type { ImportedProgram } from '../types';
 import './Modals.css';
 
@@ -25,6 +26,10 @@ interface Props {
   subjectName: string;
   courseName: string;
   existingUnitsCount: number;
+  /** Año lectivo en el que se reparten las fechas (por defecto, el actual). */
+  anio?: number;
+  /** Desde qué día se reparten (por defecto, hoy). */
+  desde?: string;
   onClose: () => void;
   onImported: () => void;
 }
@@ -40,7 +45,7 @@ export default function ImportProgramModal(props: Props) {
   const [selectedUnits, setSelectedUnits] = useState<Set<number>>(new Set());
   const [saveToLibrary, setSaveToLibrary] = useState(true);
   const [error, setError] = useState('');
-  const [createdCount, setCreatedCount] = useState({ units: 0, classes: 0 });
+  const [resultado, setResultado] = useState<ResultadoImportar | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File | null) => {
@@ -103,31 +108,16 @@ export default function ImportProgramModal(props: Props) {
     setStep('creating');
     setError('');
     try {
-      let unitOrder = props.existingUnitsCount + 1;
-      let unitsCreated = 0;
-      let classesCreated = 0;
-      for (let i = 0; i < program.units.length; i++) {
-        if (!selectedUnits.has(i)) continue;
-        const u = program.units[i];
-        const unit = await createUnit({
-          title: u.title,
-          subjectId: props.subjectId,
-          courseId: props.courseId,
-          teacherId: props.teacherId,
-          order: unitOrder++,
-        });
-        unitsCreated++;
-        for (let j = 0; j < u.classes.length; j++) {
-          const c = u.classes[j];
-          await createClass({
-            unitId: unit.id,
-            title: c.title,
-            order: j + 1,
-            objectives: c.objectives,
-          });
-          classesCreated++;
-        }
-      }
+      // De una vez: si falla, no queda una planificación a medias
+      const res = await importarPrograma({
+        subjectId: props.subjectId,
+        courseId: props.courseId,
+        programa: program,
+        unidadesElegidas: [...selectedUnits].sort((a, b) => a - b),
+        anio: props.anio ?? new Date().getFullYear(),
+        desde: props.desde,
+      });
+      const unitsCreated = res.unidades;
 
       // Guardar el programa en la biblioteca (con archivo real)
       if (saveToLibrary) {
@@ -152,7 +142,7 @@ export default function ImportProgramModal(props: Props) {
         }
       }
 
-      setCreatedCount({ units: unitsCreated, classes: classesCreated });
+      setResultado(res);
       setStep('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creando la planificación.');
@@ -160,16 +150,22 @@ export default function ImportProgramModal(props: Props) {
     }
   };
 
+  // Ya importado, cerrar de cualquier forma refresca la planificación
+  const cerrar = () => {
+    if (step === 'done') props.onImported();
+    props.onClose();
+  };
+
   const selectedClassCount = program
     ? program.units.reduce((acc, u, i) => acc + (selectedUnits.has(i) ? u.classes.length : 0), 0)
     : 0;
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && step !== 'processing' && step !== 'creating') props.onClose(); }}>
+    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && step !== 'processing' && step !== 'creating') cerrar(); }}>
       <div className="em-modal em-modal-lg">
         <div className="em-modal-header">
           <h3><Sparkles size={18} className="text-ia-accent" /> Importar programa anual</h3>
-          <button className="btn-icon" onClick={props.onClose} disabled={step === 'processing' || step === 'creating'}>
+          <button className="btn-icon" onClick={cerrar} disabled={step === 'processing' || step === 'creating'} aria-label="Cerrar">
             <X size={18} />
           </button>
         </div>
@@ -181,8 +177,8 @@ export default function ImportProgramModal(props: Props) {
             <>
               <p className="em-hint">
                 Subí el programa de <strong>{props.subjectName} — {props.courseName}</strong> (PDF o Word).
-                La IA va a leerlo (funciona incluso con escaneos) y va a proponer las unidades y clases
-                para tu planificación. Después podés editar todo.
+                La IA va a leerlo (funciona incluso con escaneos) y va a proponer las unidades y temas.
+                Después se reparten en los días de tu horario y podés mover cualquier fecha.
               </p>
               <div
                 className="em-dropzone"
@@ -260,13 +256,28 @@ export default function ImportProgramModal(props: Props) {
             </div>
           )}
 
-          {step === 'done' && (
+          {step === 'done' && resultado && (
             <div className="em-processing">
               <CheckCircle size={40} className="text-success" />
-              <p><strong>¡Planificación creada!</strong></p>
+              <p><strong>Planificación creada</strong></p>
               <p className="text-sm text-secondary">
-                {createdCount.units} unidades y {createdCount.classes} clases listas para trabajar con la IA.
+                {resultado.unidades} {resultado.unidades === 1 ? 'unidad' : 'unidades'} y {resultado.clases} {resultado.clases === 1 ? 'tema' : 'temas'}.
+                {resultado.repetidas > 0 && ` ${resultado.repetidas} ya estaban y no se duplicaron.`}
               </p>
+              {resultado.fechas.pendiente ? (
+                <p className="text-sm text-secondary" role="status">
+                  <CalendarDays size={14} aria-hidden="true" /> Las fechas que ya tenías no se tocaron: los temas nuevos quedan sin fecha hasta que toques "Reacomodar fechas".
+                </p>
+              ) : resultado.fechas.error ? (
+                <p className="text-sm text-warning" role="status">
+                  <CalendarDays size={14} aria-hidden="true" /> Quedó sin fechas: {resultado.fechas.error}
+                </p>
+              ) : resultado.fechas.desde && resultado.fechas.hasta ? (
+                <p className="text-sm text-secondary">
+                  <CalendarDays size={14} aria-hidden="true" /> Repartidos en {resultado.fechas.encuentros} encuentros, del {fechaCorta(resultado.fechas.desde)} al {fechaCorta(resultado.fechas.hasta)}.
+                  {resultado.fechas.masClasesQueEncuentros && ' Hay más temas que encuentros: algunos comparten día.'}
+                </p>
+              ) : null}
             </div>
           )}
         </div>

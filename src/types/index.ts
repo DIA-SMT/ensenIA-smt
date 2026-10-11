@@ -655,6 +655,8 @@ export interface PlanningUnit {
   order: number;
   /** Trimestre al que pertenece. Null = borrador: solo la ve su docente. */
   termId?: string | null;
+  /** Ciclo lectivo (062). Null = de antes: cuenta como del año en curso. */
+  anio?: number | null;
   classes: PlanningClass[];
 }
 
@@ -666,6 +668,8 @@ export interface PlanningClass {
   objectives?: string[];
   content?: string;
   isComplete: boolean;
+  /** Día en que arranca este tema (062); null si todavía no tiene fecha. */
+  fecha?: string | null;
 }
 
 // ── Insights directivos (tablero de gestión) ──

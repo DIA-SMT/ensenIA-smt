@@ -2,6 +2,7 @@ import { User as UserIcon, Mail, School, Shield, LogOut, Accessibility, ShieldCh
 import { useAuth } from '../contexts/AuthContext';
 import { ETIQUETA_ROL } from '../lib/navegacion';
 import PanelPreferencias from '../components/shell/PanelPreferencias';
+import MemoriaDocente from '../components/MemoriaDocente';
 import './Settings.css';
 
 /**
@@ -65,6 +66,9 @@ export default function Settings() {
                     </div>
                 </section>
             )}
+
+            {/* Memoria del docente (062) */}
+            {user.role === 'docente' && <MemoriaDocente />}
 
             <section className="card settings-section" aria-labelledby="ajustes-lectura">
                 <div>

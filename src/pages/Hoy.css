@@ -187,6 +187,14 @@
   margin: 3px 0 10px;
 }
 
+/* El tema de la planificación que toca hoy (062) */
+.hoy-tema {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: -4px 0 10px;
+}
+.hoy-tema strong { color: var(--text-primary); }
+
 .hoy-done-chip {
   display: inline-flex;
   align-items: center;

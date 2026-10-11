@@ -30,7 +30,9 @@ import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import { pendientesDe } from '../services/offline-queue.service';
 import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
-import type { ScheduleBlock, Alert as AlertType, TeacherStats, Communication } from '../types';
+import { getTemasConFecha } from '../services/planning.service';
+import { hoyISO, getDiasSinClase, type DiaSinClase } from '../services/planificacion.service';
+import type { ScheduleBlock, Alert as AlertType, TeacherStats, Communication, PlanningUnit, PlanningClass } from '../types';
 import './Hoy.css';
 
 const TIMELINE_META: Record<TimelineKind, { icon: typeof Boxes; label: string }> = {
@@ -93,6 +95,30 @@ export default function Hoy() {
     // Temas donde el curso viene flojo (de actividades y clases en vivo)
     const { temas: temasRepaso } = useResumenRepaso(user?.id);
     const [loading, setLoading] = useState(true);
+    // La planificación con fechas (062): para decir qué tema toca hoy
+    const [planificacion, setPlanificacion] = useState<PlanningUnit[]>([]);
+    // Si dirección cargó hoy como feriado, receso o jornada
+    const [sinClaseHoy, setSinClaseHoy] = useState<DiaSinClase | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+        const hoy = hoyISO();
+        getTemasConFecha(user.id).then(setPlanificacion).catch(() => setPlanificacion([]));
+        getDiasSinClase(user.schoolId, Number(hoy.slice(0, 4)))
+            .then(dias => setSinClaseHoy(dias.find(d => d.desde <= hoy && hoy <= d.hasta) ?? null))
+            .catch(() => setSinClaseHoy(null));
+    }, [user]);
+
+    /** El último tema de este año que ya arrancó en esa materia y curso */
+    const temaDeHoy = (b: ScheduleBlock): PlanningClass | null => {
+        if (sinClaseHoy) return null;
+        const hoy = hoyISO();
+        return planificacion
+            .filter(u => u.subjectId === b.subjectId && u.courseId === b.courseId)
+            .flatMap(u => u.classes)
+            .filter(c => c.fecha && c.fecha <= hoy && c.fecha.slice(0, 4) === hoy.slice(0, 4))
+            .reduce<PlanningClass | null>((a, c) => (!a || (c.fecha ?? '') >= (a.fecha ?? '') ? c : a), null);
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -273,10 +299,17 @@ export default function Hoy() {
                     )
                 )}
 
+                {sinClaseHoy && todayClasses.length > 0 && (
+                    <p className="hoy-tema" role="note">
+                        Según el calendario de la escuela, hoy no hay clases: <strong>{sinClaseHoy.motivo}</strong>.
+                    </p>
+                )}
+
                 {todayClasses.map((cls, i) => {
                     const done = attendanceDone.has(`${cls.courseId}|${cls.subjectId}`);
                     const isNext = i === nextIdx;
                     const isPast = cls.startHour + cls.duration <= nowHour;
+                    const tema = temaDeHoy(cls);
                     return (
                         <div key={cls.id} className={`card hoy-class ${isNext ? 'next' : ''} ${isPast ? 'past' : ''}`}>
                             <div className="hoy-class-time">
@@ -290,11 +323,16 @@ export default function Hoy() {
                                     {[cls.courseName, cls.room, `${cls.studentCount} estudiante${cls.studentCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
                                     {done && <span className="hoy-done-chip"><Check size={11} /> Asistencia tomada</span>}
                                 </p>
+                                {tema && (
+                                    <p className="hoy-tema">
+                                        Hoy toca: <strong>{tema.title}</strong>{tema.isComplete && ' (ya la marcaste como dada)'}
+                                    </p>
+                                )}
                                 <div className="hoy-class-actions">
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate('/crear')}
-                                        title="Armar una actividad, un módulo o una evaluación"
+                                        onClick={() => navigate(`/planificacion?materia=${cls.subjectId}&curso=${cls.courseId}${tema ? `&clase=${tema.id}` : ''}`)}
+                                        title={tema ? 'Presentación, trabajo práctico o evaluación del tema de hoy' : 'Armar la planificación de este curso'}
                                     >
                                         <Sparkles size={15} /> Preparar
                                     </button>

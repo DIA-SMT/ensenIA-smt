@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare, Brain,
+  MessagesSquare, Brain, CalendarRange,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -41,18 +41,21 @@ export interface AccionRapida {
   claves?: string;
 }
 
-// Lo del día a día arriba; crear es UNA entrada que pregunta qué armar
-// (antes eran cuatro: Armar módulo, Laboratorio IA, Actividad rápida y el
-// botón de la barra). Agenda vive en "Mis clases".
+// En el orden en que trabaja el docente (pedido del usuario, oct 2026):
+// planificar el año, preparar cada clase, dejar actividades y seguir a los
+// chicos. La clase en vivo es lo último (necesita dispositivos en el aula)
+// y sale de la barra. El Laboratorio IA no está en el menú: se llega desde
+// cada tema de la planificación ("Preparar") o desde Crear.
 const DOCENTE: ItemNav[] = [
   { ruta: '/hoy', etiqueta: 'Hoy', titulo: 'Mi día', icono: Sun, grupo: 'Mi día', enBarra: true, claves: 'inicio panel resumen hoy clases' },
-  { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Mi día', enBarra: true, claves: 'qr proyectar sala preguntas presencia' },
+  { ruta: '/planificacion', etiqueta: 'Planificación', titulo: 'Mi planificación', icono: CalendarRange, grupo: 'Mi día', enBarra: true, claves: 'planificar programa anual unidades temas fechas año importar subir programa calendario' },
   { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula repasar entendieron temas difíciles comprensión' },
-  { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo placas diapositivas evaluación resumen laboratorio ia generar' },
+  { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo placas diapositivas evaluación resumen ia generar' },
   { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', enBarra: true, claves: 'tareas entregas consignas resultados corregir' },
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
+  { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Aula', claves: 'qr proyectar sala preguntas presencia' },
   { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Escuela', claves: 'mensajes conversaciones escribir responder chat comunicados citaciones' },
   { ruta: '/familias', etiqueta: 'Citaciones', titulo: 'Citaciones a familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'familias padres citar citación tutores reunión' },
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento hablar avisar dirección' },
@@ -116,7 +119,7 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
     { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase armada material planificar armar placas diapositivas juego crucigrama diagrama tarea enviar' },
-    { ruta: '/ia-lab', etiqueta: 'Laboratorio IA', icono: FlaskConical, claves: 'generar evaluación planificación resumen presentación chat' },
+    { ruta: '/ia-lab', etiqueta: 'Preguntale a la IA', icono: FlaskConical, claves: 'laboratorio ia chat generar evaluación resumen presentación oral ideas' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
   ],
   director: [],
@@ -155,7 +158,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (item) return item.titulo ?? item.etiqueta;
   if (pathname === '/actividad-rapida') return 'Actividad rápida';
   if (pathname === '/modulo') return 'Armar la clase';
-  if (pathname === '/ia-lab') return 'Laboratorio IA';
+  if (pathname === '/ia-lab') return 'Preparar con la IA';
   if (pathname === '/agenda') return 'Mi horario';
   if (pathname === '/migue') return 'Migue';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
@@ -172,8 +175,10 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   const exacto = items.find(i => i.ruta === pathname);
   if (exacto) return exacto.ruta;
   if (pathname.startsWith('/actividades/')) return '/actividades';
-  // Lo que se abre desde "Crear" se marca en "Crear"
-  if (['/actividad-rapida', '/modulo', '/ia-lab'].includes(pathname)) return rol === 'docente' ? '/crear' : null;
+  // Preparar un tema (la clase completa o con la IA) cuelga de la
+  // planificación; la actividad rápida, de "Crear"
+  if (['/modulo', '/ia-lab'].includes(pathname)) return rol === 'docente' ? '/planificacion' : null;
+  if (pathname === '/actividad-rapida') return rol === 'docente' ? '/crear' : null;
   if (pathname === '/agenda') return '/mis-clases';
   if (pathname.startsWith('/mis-actividades/') || pathname.startsWith('/materia/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';

@@ -13,6 +13,21 @@ export async function getPlanningByTeacher(teacherId: string): Promise<PlanningU
   return data.map(mapUnit);
 }
 
+/**
+ * Solo títulos, fechas y estado (sin el contenido de cada tema): para saber
+ * qué toca hoy sin bajar toda la planificación con datos prepagos.
+ */
+export async function getTemasConFecha(teacherId: string): Promise<PlanningUnit[]> {
+  const data = unwrap(
+    await supabase
+      .from('planning_units')
+      .select('id, title, subject_id, course_id, teacher_id, sort_order, term_id, anio, planning_classes(id, unit_id, title, sort_order, is_complete, fecha)' as '*')
+      .eq('teacher_id', teacherId)
+      .order('sort_order')
+  );
+  return data.map(mapUnit);
+}
+
 export async function getPlanningBySubjectAndCourse(
   subjectId: string,
   courseId: string,
@@ -37,6 +52,8 @@ export async function createUnit(unit: {
   courseId: string;
   teacherId: string;
   order: number;
+  /** Ciclo lectivo (062). Sin él, la base la toma como del año en curso. */
+  anio?: number;
 }): Promise<PlanningUnit> {
   const row = unwrap(
     await supabase
@@ -47,7 +64,8 @@ export async function createUnit(unit: {
         course_id: unit.courseId,
         teacher_id: unit.teacherId,
         sort_order: unit.order,
-      })
+        ...(unit.anio ? { anio: unit.anio } : {}),
+      } as never)
       .select('*, planning_classes(*)')
       .single()
   );
@@ -84,12 +102,14 @@ export async function updateClass(id: string, updates: Partial<{
   objectives: string[];
   content: string;
   isComplete: boolean;
+  fecha: string | null;
 }>): Promise<void> {
   const dbUpdates: Record<string, any> = {};
   if (updates.title !== undefined) dbUpdates.title = updates.title;
   if (updates.objectives !== undefined) dbUpdates.objectives = updates.objectives;
   if (updates.content !== undefined) dbUpdates.content = updates.content;
   if (updates.isComplete !== undefined) dbUpdates.is_complete = updates.isComplete;
+  if (updates.fecha !== undefined) dbUpdates.fecha = updates.fecha;
 
   const { error } = await supabase.from('planning_classes').update(dbUpdates).eq('id', id);
   if (error) throw error;
@@ -113,8 +133,17 @@ function mapUnit(row: any): PlanningUnit {
     teacherId: row.teacher_id,
     order: row.sort_order,
     termId: row.term_id ?? null,
+    anio: row.anio ?? null,
     classes,
   };
+}
+
+/**
+ * ¿La unidad es de este ciclo lectivo? Las de antes de la 062 no tienen año
+ * y cuentan como del año en curso (igual que en la base, anio_de_unidad).
+ */
+export function esDelAnio(u: PlanningUnit, anio: number): boolean {
+  return (u.anio ?? new Date().getFullYear()) === anio;
 }
 
 function mapClass(row: any): PlanningClass {
@@ -126,6 +155,7 @@ function mapClass(row: any): PlanningClass {
     objectives: row.objectives ?? [],
     content: row.content ?? undefined,
     isComplete: row.is_complete,
+    fecha: row.fecha ?? null,
   };
 }
 
