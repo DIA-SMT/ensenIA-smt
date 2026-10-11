@@ -119,6 +119,7 @@ function App() {
                 {ruta('/horario', ['director'])}
                 {ruta('/cursos/:id', ['director'])}
                 {ruta('/comunicaciones', ['director'])}
+                {ruta('/memoria-estudio', ['director'])}
                 {ruta('/mi-escuela', ['director'])}
 
                 {/* Superadmin: escuelas y cuentas. Quién puede qué lo decide

@@ -933,6 +933,8 @@ export interface IAChatContext {
   educationLevel?: string;
   documentTitle?: string;
   documentText?: string;
+  /** Estudiante: el material elegido; el servidor lee su texto con la sesión del chico. */
+  materialId?: string;
 }
 
 // ── Quick Note / Reminder ──

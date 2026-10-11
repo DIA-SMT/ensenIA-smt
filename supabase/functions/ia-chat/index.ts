@@ -10,10 +10,26 @@
  * Modelos:
  *   - Sonnet (anthropic/claude-sonnet-5): chat, actividad, evaluación, presentación, oral
  *   - Haiku (anthropic/claude-haiku-4.5): "resumir documento"
+ *
+ * Cuando del otro lado hay un estudiante, el navegador no decide nada (ver
+ * _estudiante.ts): el historial sale de la base, el material se lee con su
+ * sesión, cada mensaje pasa por el clasificador de riesgo, y su memoria de
+ * estudio (061) entra solo con la autorización de la familia y la suya.
+ *
+ * Lo que se manda al proveedor: sin el nombre del estudiante ni de la
+ * escuela y sin datos de contacto, y solo a endpoints sin retención. Los
+ * nombres del padrón se tapan en el clasificador y en la memoria; en el chat
+ * de estudio no, porque romperían contenidos (próceres, autores, lugares con
+ * apellidos de la escuela).
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildSystemPrompt, type PromptContext, type RefHit } from './_system-prompt.ts';
+import { padronDeEscuela, proveedorPrivado, Seudonimos, taparContacto } from './_datos-personales.ts';
+import {
+  CHARLA_TERMINADA_MS, clasificarRiesgo, consolidarPendiente, leerMaterial, memoriaActivaDesde,
+  memoriaParaPrompt, type Anotar,
+} from './_estudiante.ts';
 
 // ── Config ──
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -24,6 +40,13 @@ const DAILY_QUOTA = 50;
 // margen para razonamiento + respuesta larga (streaming, sin timeout).
 const MAX_TOKENS = 12000;
 const SUMMARY_INPUT_LIMIT = 8000; // chars
+// Estudiante: el historial es la charla en curso (más el final de la
+// anterior), con un tope; y cuánto puede medir un mensaje
+const HISTORY_LIMIT = 40;
+const HISTORIAL_PREVIO = 4;
+const MAX_MSG_ESTUDIANTE = 4000;
+const REASON_SIN_CLASIFICAR =
+  'EstudIA no pudo evaluar un mensaje (falló el clasificador). Conviene mirarlo a mano.';
 
 // ── Types ──
 interface IAChatRequest {
@@ -41,6 +64,8 @@ interface IAChatRequest {
     educationLevel?: string;
     documentTitle?: string;
     documentText?: string;
+    /** Estudiante: el material que eligió. Su texto lo lee el servidor. */
+    materialId?: string;
   };
 }
 
@@ -165,6 +190,8 @@ Deno.serve(async (req: Request) => {
   // completo del docente y pedirle la tarea resuelta.
   let effectiveTool = tool;
   let studentSubjects: string[] = [];
+  let studentId: string | null = null;
+  let studentSchoolId: string | null = null;
 
   if (isStudent) {
     if (tool !== 'guide' && tool !== 'simplify') {
@@ -174,9 +201,13 @@ Deno.serve(async (req: Request) => {
     // De qué puede preguntar: sus materias reales, según su inscripción.
     const { data: studentRow } = await supabase
       .from('students')
-      .select('id')
+      .select('id, school_id')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    studentId = studentRow?.id ?? null;
+    studentSchoolId = studentRow?.school_id ?? null;
+    if (!studentRow) console.error('ia-chat: estudiante sin fila en students', user.id);
 
     if (studentRow) {
       const { data: enrolled } = await supabase
@@ -242,17 +273,54 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Cliente con el JWT del usuario: lo que lee pasa por su RLS
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const asUser = anonKey
+    ? createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } } })
+    : null;
+
+  // ── 5a. Estudiante: lo que manda el navegador no decide nada ──
+  const ultimo = messages[messages.length - 1];
+  if (isStudent) {
+    if (!ultimo || ultimo.role !== 'user' || typeof ultimo.content !== 'string') {
+      return new Response('Last message must be from user', { status: 400, headers: corsHeaders() });
+    }
+    if (ultimo.content.length > MAX_MSG_ESTUDIANTE) {
+      return new Response(
+        sseEvent('error', {
+          code: 'INPUT_TOO_LONG',
+          message: `El mensaje es muy largo (máximo ${MAX_MSG_ESTUDIANTE} caracteres). Probá con una parte.`,
+        }),
+        { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
+      );
+    }
+  }
+
+  // Material: el del estudiante se lee de la base con su sesión (si no lo
+  // puede ver, no entra); el texto que mande el navegador no cuenta.
+  let documentTitle = context.documentTitle;
+  let documentText = context.documentText;
+  if (isStudent) {
+    documentTitle = undefined;
+    documentText = undefined;
+    // Por id; la versión anterior de la app manda el título (y su texto, que
+    // no se usa: se busca el material con ese título que el chico puede ver)
+    if ((context.materialId || context.documentTitle) && asUser) {
+      const material = await leerMaterial(asUser, { id: context.materialId, titulo: context.documentTitle });
+      if (material) {
+        documentTitle = material.titulo;
+        documentText = material.texto;
+      }
+    }
+  }
+
   // ── 5b. Biblioteca de referencia municipal (047) ──
   // Solo para el docente. Corre con el JWT del usuario: la RLS decide qué
   // entra (publicado y vigente). Si falla, se sigue sin referencias: la
   // regla del prompt pasa a ser "no citar normativa de memoria".
   let referencias: RefHit[] = [];
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  if (!isStudent && anonKey) {
+  if (!isStudent && asUser) {
     try {
-      const asUser = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      });
       const ultimoPedido = messages[messages.length - 1]?.content ?? '';
       const consulta = [context.classTitle, context.unitTitle, ultimoPedido.slice(0, 1500)]
         .filter(Boolean).join('\n');
@@ -265,6 +333,132 @@ Deno.serve(async (req: Request) => {
     } catch (e) {
       console.error('buscar_referencias:', String(e).slice(0, 200));
       referencias = [];
+    }
+  }
+
+  // ── 5c. Estudiante: riesgo, memoria e historial ──
+  let derivada: 'seguimiento' | 'urgente' | null = null;
+  let memoriaEstudio = '';
+  let historial: { role: 'user' | 'assistant'; content: string }[] = [];
+
+  if (isStudent && studentId && studentSchoolId) {
+    const consumos: Parameters<typeof registrarConsumo>[1][] = [];
+    const anotarCon = (feature: string): Anotar => (modelo, u) => {
+      consumos.push({
+        user_id: user.id, school_id: studentSchoolId, role: 'estudiante', feature, model: modelo,
+        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+      });
+    };
+
+    const [nombres, activaDesde] = await Promise.all([
+      padronDeEscuela(supabase, studentSchoolId),
+      memoriaActivaDesde(supabase, studentId),
+    ]);
+    // El clasificador no necesita nombres: van tapados y vuelven en la cita
+    const seudo = new Seudonimos(nombres);
+
+    // La alerta se decide ANTES de responder, para avisarle al chico en la
+    // misma respuesta. En paralelo, si la memoria está activa, entra la
+    // última charla terminada.
+    const [clasif] = await Promise.all([
+      clasificarRiesgo(OPENROUTER_API_KEY, seudo.tapar(ultimo.content), anotarCon('estudia_riesgo')),
+      activaDesde
+        ? consolidarPendiente({
+          admin: supabase, apiKey: OPENROUTER_API_KEY, userId: user.id, studentId,
+          schoolId: studentSchoolId, activaDesde, materias: studentSubjects, nombres,
+          anotar: anotarCon('memoria_estudio'),
+        })
+        : Promise.resolve(),
+    ]);
+
+    if (clasif === 'error') {
+      // No es "no pasa nada": una señal por día para que alguien lo mire,
+      // con lo que escribió (el equipo no puede leer sus charlas). Si falla
+      // de nuevo el mismo día, se suma a la misma señal: así no se inunda el
+      // tablero durante una caída y ningún mensaje queda sin rastro.
+      const fragmento = taparContacto(ultimo.content).slice(0, 600);
+      const hoyIso = new Date().toISOString().split('T')[0];
+      const { data: yaHay } = await supabase
+        .from('wellbeing_signals')
+        .select('id, excerpt')
+        .eq('student_id', studentId)
+        .eq('reason', REASON_SIN_CLASIFICAR)
+        .gte('created_at', `${hoyIso}T00:00:00Z`)
+        .limit(1);
+      if (!yaHay || yaHay.length === 0) {
+        const { error } = await supabase.from('wellbeing_signals').insert({
+          student_id: studentId, school_id: studentSchoolId, level: 'seguimiento',
+          reason: REASON_SIN_CLASIFICAR, excerpt: fragmento,
+        });
+        if (error) console.error('wellbeing_signals (sin clasificar):', JSON.stringify(error));
+      } else {
+        const anterior = (yaHay[0] as { excerpt: string | null }).excerpt ?? '';
+        const { error } = await supabase.from('wellbeing_signals')
+          .update({ excerpt: `${anterior}${anterior ? '\n— ' : ''}${fragmento}`.slice(-4000) })
+          .eq('id', (yaHay[0] as { id: string }).id);
+        if (error) console.error('wellbeing_signals (sin clasificar, sumar):', JSON.stringify(error));
+      }
+    } else if (clasif.nivel !== 'ninguno') {
+      const { error } = await supabase.from('wellbeing_signals').insert({
+        student_id: studentId,
+        school_id: studentSchoolId,
+        level: clasif.nivel,
+        reason: `En EstudIA (tutor de estudio): ${seudo.destapar(clasif.motivo)}`,
+        excerpt: clasif.frase ? seudo.destapar(clasif.frase) : null,
+      });
+      // Si no se guardó, no se le puede decir que la escuela ya sabe
+      if (error) console.error('wellbeing_signals insert:', JSON.stringify(error));
+      else derivada = clasif.nivel;
+    }
+    for (const c of consumos) await registrarConsumo(supabase, c);
+
+    if (activaDesde) memoriaEstudio = await memoriaParaPrompt(supabase, studentId, activaDesde);
+  }
+
+  if (isStudent) {
+    // El historial sale de la base, no del navegador: nadie puede fabricar
+    // turnos de la IA que no existieron.
+    const { data: guardados } = await supabase
+      .from('chat_messages')
+      .select('role, content, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_LIMIT + HISTORIAL_PREVIO + 1);
+    let previos = ((guardados ?? []) as { role: string; content: string; created_at: string }[]).reverse();
+    // Una versión vieja de la app todavía guarda desde el navegador el
+    // mensaje que se está respondiendo: no se duplica.
+    const ult = previos[previos.length - 1];
+    const yaGuardado = !!ult && ult.role === 'user' && ult.content === ultimo.content
+      && Date.now() - Date.parse(ult.created_at) < 120_000;
+    if (yaGuardado) previos = previos.slice(0, -1);
+
+    // La charla en curso: desde el último corte de 20 minutos, más los
+    // últimos mensajes de la anterior. Así el historial solo crece mientras
+    // dura la charla (el prefijo no cambia y el caché de prompts sirve), y lo
+    // de días anteriores llega por la memoria, no releyendo todo.
+    let inicioCharla = previos.length;
+    let siguiente = Date.now();
+    for (let i = previos.length - 1; i >= 0; i--) {
+      const t = Date.parse(previos[i].created_at);
+      if (siguiente - t >= CHARLA_TERMINADA_MS) break;
+      inicioCharla = i;
+      siguiente = t;
+    }
+    const desde = Math.max(inicioCharla - HISTORIAL_PREVIO, previos.length - HISTORY_LIMIT, 0);
+    historial = previos
+      .slice(desde)
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: taparContacto(m.content) }));
+    // La conversación tiene que empezar por el chico (un "Detener" o un
+    // error dejan preguntas sin respuesta y el corte puede caer en la IA)
+    while (historial[0]?.role === 'assistant') historial.shift();
+
+    // Se guarda ya: si el chico toca "Detener", su mensaje no se pierde
+    if (!yaGuardado) {
+      const { error: errUser } = await supabase.from('chat_messages').insert({
+        session_id: sessionId, role: 'user', content: ultimo.content, tool_used: effectiveTool,
+      });
+      if (errUser) console.error('chat_messages (estudiante):', errUser.message);
     }
   }
 
@@ -282,11 +476,29 @@ Deno.serve(async (req: Request) => {
     difficulty: context.difficulty,
     educationLevel: context.educationLevel,
     tool: effectiveTool ?? undefined,
-    documentTitle: context.documentTitle,
-    documentText: context.documentText,
+    documentTitle,
+    documentText,
     referencias,
+    memoriaEstudio,
   };
-  const systemPrompt = buildSystemPrompt(promptCtx);
+  const avisoDerivacion = derivada
+    ? `\n\n## Importante para esta respuesta
+Lo que escribió requiere acompañamiento y YA quedó avisada la escuela.
+Decíselo en tu respuesta, con naturalidad y sin asustarlo: que le pasaste esto al equipo
+de la escuela para que puedan darle una mano, y que no está solo. No le pidas permiso
+—ya está hecho— ni se lo presentes como un castigo.${
+      derivada === 'urgente'
+        ? '\nAdemás, pedile que hable HOY con un adulto de confianza de la escuela o de su casa.'
+        : ''
+    }`
+    : '';
+  const basePrompt = buildSystemPrompt(promptCtx);
+  const systemPrompt = basePrompt + avisoDerivacion;
+
+  // Al proveedor: el estudiante sin datos de contacto; el docente, como siempre
+  const mensajesModelo = isStudent
+    ? [...historial, { role: 'user' as const, content: taparContacto(ultimo.content) }]
+    : messages.map((m) => ({ role: m.role, content: m.content }));
 
   // ── 7. Determine model ──
   // Resúmenes y simplificación de lenguaje van al modelo rápido.
@@ -295,6 +507,30 @@ Deno.serve(async (req: Request) => {
   const modelLabel = useFastModel ? 'haiku' : 'sonnet';
 
   // ── 8. Call OpenRouter (Claude) with streaming ──
+  // Estudiante: caché de prompts en dos puntos (el prompt de sistema, que no
+  // cambia en toda la charla, y el último mensaje, porque el historial solo
+  // crece): lo que se repite de un turno a otro se cobra al 10%. El aviso de
+  // derivación va aparte, después del primer punto. Al docente no: su prompt
+  // cambia en cada pedido (referencias, material) y escribir un caché que
+  // nunca se lee cuesta 25% más.
+  const cache = { type: 'ephemeral' as const };
+  const mensajesConCache = isStudent
+    ? [
+      {
+        role: 'system',
+        content: [
+          { type: 'text', text: basePrompt, cache_control: cache },
+          ...(avisoDerivacion ? [{ type: 'text', text: avisoDerivacion }] : []),
+        ],
+      },
+      ...mensajesModelo.slice(0, -1),
+      {
+        role: 'user',
+        content: [{ type: 'text', text: mensajesModelo[mensajesModelo.length - 1].content, cache_control: cache }],
+      },
+    ]
+    : [{ role: 'system', content: systemPrompt }, ...mensajesModelo];
+
   const orBody = {
     model: modelId,
     max_tokens: MAX_TOKENS,
@@ -302,10 +538,12 @@ Deno.serve(async (req: Request) => {
     stream_options: { include_usage: true },
     // Que el último chunk traiga también el costo (Consumo de IA)
     usage: { include: true },
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-    ],
+    // Solo endpoints sin retención de datos (Bedrock / Vertex)
+    provider: proveedorPrivado(),
+    // El tutor del estudiante responde 80 a 200 palabras: no necesita el
+    // razonamiento largo que Sonnet 5 trae por defecto (se cobra como salida)
+    ...(isStudent && !useFastModel ? { reasoning: { effort: 'low' } } : {}),
+    messages: mensajesConCache,
   };
 
   let orResponse: Response;
@@ -321,8 +559,9 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(orBody),
     });
   } catch (_err) {
+    // Si la escuela ya fue avisada, el error tiene que llevarlo igual
     return new Response(
-      sseEvent('error', { code: 'API_ERROR', message: 'No se pudo conectar con el servicio de IA.' }),
+      sseEvent('error', { code: 'API_ERROR', message: 'No se pudo conectar con el servicio de IA.', derivada }),
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
@@ -336,7 +575,7 @@ Deno.serve(async (req: Request) => {
         ? 'La cuenta de IA se quedó sin crédito. Avisale al administrador.'
         : 'Error del servicio de IA. Intentá de nuevo.';
     return new Response(
-      sseEvent('error', { code: 'API_ERROR', message: friendly }),
+      sseEvent('error', { code: 'API_ERROR', message: friendly, derivada }),
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );
   }
@@ -372,6 +611,10 @@ Deno.serve(async (req: Request) => {
     async start(controller) {
       const encoder = new TextEncoder();
       let buffer = '';
+
+      // Primero que nada: si la escuela ya fue avisada, el chico se entera
+      // aunque toque "Detener" antes de que termine la respuesta
+      if (derivada) controller.enqueue(encoder.encode(sseEvent('derivada', { derivada })));
 
       try {
         while (true) {
@@ -460,6 +703,8 @@ Deno.serve(async (req: Request) => {
               model: modelLabel,
               tokensIn,
               tokensOut,
+              // El cliente lo muestra en la interfaz, no solo dentro del texto
+              derivada,
             }),
           ),
         );
@@ -467,7 +712,7 @@ Deno.serve(async (req: Request) => {
         console.error('Stream processing error:', err);
         controller.enqueue(
           encoder.encode(
-            sseEvent('error', { code: 'STREAM_ERROR', message: 'Error durante la generación.' }),
+            sseEvent('error', { code: 'STREAM_ERROR', message: 'Error durante la generación.', derivada }),
           ),
         );
       } finally {

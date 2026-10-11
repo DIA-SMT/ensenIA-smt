@@ -82,6 +82,8 @@ export const cargadores = {
   '/mi-guia':             () => import('../pages/MiGuia'),
   '/clase':               () => import('../pages/ClaseEnVivoAlumno'),
   '/panel':               () => import('../pages/PanelDireccion'),
+  // Memoria de estudio de EstudIA (061): autorizaciones y auditoría
+  '/memoria-estudio':     () => import('../pages/MemoriaEstudio'),
   // Gestión de escuelas: superadmin (todas) y dirección (la suya)
   '/admin':               () => import('../pages/admin/AdminEscuelas'),
   '/admin/escuelas/:id':   () => import('../pages/admin/GestionEscuela'),

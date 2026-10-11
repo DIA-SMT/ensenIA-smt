@@ -86,6 +86,8 @@ export interface PromptContext {
   documentText?: string;
   /** Fragmentos de la Biblioteca de referencia (solo para el docente). */
   referencias?: RefHit[];
+  /** Memoria de estudio (061), ya armada; solo con la autorización de familia y estudiante. */
+  memoriaEstudio?: string;
 }
 
 const DOCUMENT_CONTEXT_LIMIT = 30000; // chars
@@ -244,6 +246,10 @@ ${text}
   if (ctx.tool === 'guide' || ctx.tool === 'simplify') {
     parts.push(getToolInstructions(ctx.tool));
   }
+
+  // Al final: es lo único que cambia de una charla a otra, así lo de arriba
+  // sigue siendo el mismo prefijo
+  if (ctx.memoriaEstudio) parts.push(ctx.memoriaEstudio);
 
   return parts.join('\n');
 }

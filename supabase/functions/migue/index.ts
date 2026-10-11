@@ -11,13 +11,19 @@
  * La búsqueda de normativa corre con el JWT del usuario, no con el service
  * role: así la RLS de la 015 decide qué normas entran al prompt. Es la
  * diferencia entre filtrar y solo pedirle a la IA que no cuente.
+ *
+ * Al proveedor de IA no le llegan nombres del padrón de la escuela ni datos
+ * de contacto (_datos-personales.ts): se tapan al mandar y los nombres
+ * vuelven en la respuesta. Al estudiante y a la familia, además, el prompt
+ * no los nombra ni dice la escuela.
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
-  buildSystemPrompt, RIESGO_SYSTEM,
+  buildSystemPromptPartes, RIESGO_SYSTEM,
   type MigueAudience, type PolicyHit, type RefHit,
 } from './_prompts.ts';
+import { padronDeEscuela, proveedorPrivado, Seudonimos, taparContacto } from './_datos-personales.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -93,18 +99,24 @@ async function pasadaClasificador(
       body: JSON.stringify({
         model: modelo,
         max_tokens: 300,
+        // Sin razonamiento: en Sonnet 5 (el respaldo) viene prendido y se
+        // comía los 300 tokens antes de llegar al JSON
+        reasoning: { enabled: false },
+        provider: proveedorPrivado(),
         usage: { include: true },
         messages: [
           { role: 'system', content: RIESGO_SYSTEM },
           // El texto del chico va delimitado y el prompt dice que es dato.
-          // Además se recorta: un mensaje larguísimo es una vía para
-          // empujar la instrucción fuera de la ventana de atención.
+          // Entero: el mensaje ya viene limitado a 4000 caracteres, y con un
+          // recorte lo que escribía al final (lo más grave, a veces) no se leía.
           {
             role: 'user',
-            content: `<mensaje_del_estudiante>\n${texto.slice(0, 3000)}\n</mensaje_del_estudiante>`,
+            content: `<mensaje_del_estudiante>\n${texto.slice(0, 6000)}\n</mensaje_del_estudiante>`,
           },
         ],
       }),
+      // Si el proveedor se cuelga, que caiga en "no pude evaluar" y deje la señal
+      signal: AbortSignal.timeout(15_000),
     });
     if (!r.ok) {
       console.error('clasificador HTTP', modelo, r.status, (await r.text()).slice(0, 300));
@@ -305,8 +317,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Contexto extra por audiencia ──
-  let cursoNombre: string | undefined;
-  let hijosNombres: string[] | undefined;
+  let anio: number | null = null;
   let contextoEscuela: string | undefined;
   let studentId: string | null = null;
 
@@ -342,22 +353,18 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .maybeSingle();
     studentId = st?.id ?? null;
-    cursoNombre = (st as any)?.courses?.name ?? undefined;
-  }
-  if (audience === 'familia') {
-    const { data: hijos } = await admin
-      .from('student_guardians')
-      .select('students(first_name)')
-      .eq('guardian_user_id', user.id);
-    hijosNombres = (hijos ?? [])
-      .map((h: any) => h.students?.first_name)
-      .filter(Boolean);
+    // Solo el año ("3° A" → 3): alcanza para el nivel y no identifica
+    anio = Number(((st as any)?.courses?.name ?? '').match(/\d/)?.[0]) || null;
   }
 
-  const systemPrompt = buildSystemPrompt({
-    audience, nombre, escuela, policyHits, refHits, cursoNombre, hijosNombres, contextoEscuela,
+  // Dos partes: la fija se cachea; la normativa de esta pregunta cambia
+  const { base: promptBase, contexto: promptNormativa } = buildSystemPromptPartes({
+    audience, nombre, escuela, policyHits, refHits, anio, contextoEscuela,
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
+
+  // Nombres del padrón y datos de contacto: tapados para el proveedor
+  const seudo = new Seudonimos(await padronDeEscuela(admin, profile.school_id));
 
   if (audience === 'estudiante' && !studentId) {
     console.error('Migue: estudiante sin fila en students', user.id);
@@ -370,7 +377,7 @@ Deno.serve(async (req: Request) => {
   let derivada: 'seguimiento' | 'urgente' | null = null;
   if (audience === 'estudiante' && studentId) {
     const pasadas: Parameters<typeof registrarConsumo>[1][] = [];
-    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimo.content, (modelo, u) => {
+    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, seudo.tapar(ultimo.content), (modelo, u) => {
       pasadas.push({
         user_id: user.id, school_id: profile.school_id, role: profile.role,
         feature: 'migue_riesgo', model: modelo,
@@ -383,10 +390,13 @@ Deno.serve(async (req: Request) => {
       // Falló la evaluación. No es "no pasa nada": se deja una señal para
       // que alguien mire, acotada a una por día para no inundar el tablero
       // durante una caída del proveedor.
+      // Con lo que escribió (nadie del equipo puede leer sus charlas): si
+      // falla de nuevo el mismo día, se suma a la misma señal.
+      const fragmento = taparContacto(ultimo.content).slice(0, 600);
       const hoyIso = new Date().toISOString().split('T')[0];
       const { data: yaHay } = await admin
         .from('wellbeing_signals')
-        .select('id')
+        .select('id, excerpt')
         .eq('student_id', studentId)
         .eq('reason', REASON_SIN_CLASIFICAR)
         .gte('created_at', `${hoyIso}T00:00:00Z`)
@@ -397,18 +407,25 @@ Deno.serve(async (req: Request) => {
           school_id: profile.school_id,
           level: 'seguimiento',
           reason: REASON_SIN_CLASIFICAR,
-          excerpt: null,
+          excerpt: fragmento,
         });
         if (error) console.error('wellbeing_signals (sin clasificar):', JSON.stringify(error));
+      } else {
+        const anterior = (yaHay[0] as { excerpt: string | null }).excerpt ?? '';
+        const { error } = await admin.from('wellbeing_signals')
+          .update({ excerpt: `${anterior}${anterior ? '\n— ' : ''}${fragmento}`.slice(-4000) })
+          .eq('id', (yaHay[0] as { id: string }).id);
+        if (error) console.error('wellbeing_signals (sin clasificar, sumar):', JSON.stringify(error));
       }
       // Al chico no se le dice nada: no se evaluó nada sobre él.
     } else if (clasif.nivel !== 'ninguno') {
+      // La escuela lee los nombres reales: las marcas se destapan acá
       const { error } = await admin.from('wellbeing_signals').insert({
         student_id: studentId,
         school_id: profile.school_id,
         level: clasif.nivel,
-        reason: clasif.motivo,
-        excerpt: clasif.frase,
+        reason: seudo.destapar(clasif.motivo),
+        excerpt: clasif.frase ? seudo.destapar(clasif.frase) : null,
       });
       if (error) {
         // No se guardó: Migue NO puede decirle que la escuela ya sabe.
@@ -434,18 +451,26 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
   // El historial sale de la base, no del cliente: así nadie puede
   // fabricar turnos de Migue que no existieron (por ejemplo, uno donde
   // "prometió" no avisarle a la escuela).
+  // Pregunta y respuesta se guardan juntas (mismo created_at): a igual hora,
+  // 'assistant' < 'user' en el orden descendente deja la pregunta primero.
   const { data: guardados } = await admin
     .from('migue_messages')
     .select('role, content')
     .eq('session_id', sessionId)
     .order('created_at', { ascending: false })
+    .order('role', { ascending: true })
     .limit(HISTORY_LIMIT);
 
   const historial = (guardados ?? [])
     .reverse()
     .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: seudo.tapar(m.content) }));
+  // Tiene que empezar por quien pregunta
+  while (historial[0]?.role === 'assistant') historial.shift();
 
+  // Caché de prompts sobre la parte fija (identidad y reglas): lo que se
+  // repite en cada mensaje de la conversación se cobra al 10%. La normativa
+  // de esta pregunta y el aviso van después, sin caché.
   const orBody = {
     model: MODEL_CHAT,
     max_tokens: MAX_TOKENS,
@@ -453,10 +478,22 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     stream_options: { include_usage: true },
     // Que el último chunk traiga también el costo (Consumo de IA)
     usage: { include: true },
+    // Solo endpoints sin retención de datos (Bedrock / Vertex)
+    provider: proveedorPrivado(),
+    // Escuchar y orientar no necesita el razonamiento largo que Sonnet 5 trae
+    // por defecto (se cobra como salida). Medio y no bajo: es el canal donde
+    // un chico cuenta lo que le pasa.
+    reasoning: { effort: 'medium' },
     messages: [
-      { role: 'system', content: systemPrompt + avisoDerivacion },
+      {
+        role: 'system',
+        content: [
+          { type: 'text', text: promptBase, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: promptNormativa + avisoDerivacion },
+        ],
+      },
       ...historial,
-      { role: 'user', content: ultimo.content },
+      { role: 'user', content: seudo.tapar(ultimo.content) },
     ],
   };
 
@@ -500,6 +537,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     async start(controller) {
       const encoder = new TextEncoder();
       let buffer = '';
+      // Las marcas [N1]… vuelven a ser nombres antes de llegar al usuario
+      const nombresDeVuelta = seudo.flujo();
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -517,8 +556,11 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
 
             const delta = ev?.choices?.[0]?.delta?.content;
             if (delta) {
-              fullContent += delta;
-              controller.enqueue(encoder.encode(sseEvent('token', { text: delta })));
+              const texto = nombresDeVuelta.empujar(delta);
+              if (texto) {
+                fullContent += texto;
+                controller.enqueue(encoder.encode(sseEvent('token', { text: texto })));
+              }
             }
             if (ev?.usage) {
               tokensIn = ev.usage.prompt_tokens ?? 0;
@@ -526,6 +568,11 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
               costUsd = costoDe(ev.usage);
             }
           }
+        }
+        const resto = nombresDeVuelta.cerrar();
+        if (resto) {
+          fullContent += resto;
+          controller.enqueue(encoder.encode(sseEvent('token', { text: resto })));
         }
 
         // ── Persistencia: el par pregunta/respuesta y las normas citadas ──
@@ -581,6 +628,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         console.error('stream error', err);
         controller.enqueue(encoder.encode(sseEvent('error', {
           code: 'STREAM_ERROR', message: 'Se cortó la respuesta. Probá de nuevo.',
+          // Si la escuela ya fue avisada, el chico se entera igual
+          derivada,
         })));
       } finally {
         controller.close();

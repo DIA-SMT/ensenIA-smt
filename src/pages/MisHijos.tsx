@@ -10,6 +10,7 @@ import { getTerms, pickCurrentTerm } from '../services/gradebook.service';
 import { resumirNotas, formatoNota, type ResumenNotas } from '../lib/resumenNotas';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
+import { MemoriaFamilia } from '../components/MemoriaEstudio';
 import type { Student, AlertThresholds, AcademicTerm, TermGrade } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -157,6 +158,9 @@ export default function MisHijos() {
                 </div>
               </section>
             )}
+
+            {/* Autorización de la memoria de estudio (061); no aparece hasta que haya un texto publicado */}
+            <MemoriaFamilia studentId={c.id} nombre={c.firstName} />
 
             <Link to="/comunicados-familia" className="mh-cta">
               <MessageSquare size={15} aria-hidden="true" />

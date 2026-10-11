@@ -11,10 +11,16 @@ import { usoIAGastado } from '../lib/usoIA';
 
 // ── Types ──
 
+/** Estudiante: el servidor le avisó a la escuela por lo que escribió. */
+export type Derivada = 'seguimiento' | 'urgente' | null;
+
 export interface StreamCallbacks {
   onToken: (text: string) => void;
-  onDone: (metadata: { messageId: string; model: string; tokensIn: number; tokensOut: number }) => void;
-  onError: (error: { code: string; message: string }) => void;
+  onDone: (metadata: { messageId: string; model: string; tokensIn: number; tokensOut: number; derivada?: Derivada }) => void;
+  /** derivada viaja también en el error: si la escuela ya fue avisada, el chico tiene que enterarse. */
+  onError: (error: { code: string; message: string; derivada?: Derivada }) => void;
+  /** Llega antes del primer token: la escuela ya fue avisada por lo que escribió. */
+  onDerivada?: (derivada: NonNullable<Derivada>) => void;
 }
 
 interface StreamOptions {
@@ -123,6 +129,9 @@ export async function streamChat(
                 break;
               case 'error':
                 callbacks.onError(data);
+                break;
+              case 'derivada':
+                if (data.derivada) callbacks.onDerivada?.(data.derivada);
                 break;
             }
           } catch {

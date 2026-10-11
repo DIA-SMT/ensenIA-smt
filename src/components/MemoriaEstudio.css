@@ -1,0 +1,102 @@
+/* Memoria de estudio de EstudIA (061): tarjeta del estudiante, bloque de la
+   familia y el diálogo con el texto del consentimiento. */
+
+.mem-tarjeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  margin-bottom: var(--space-3);
+}
+.mem-tarjeta.activa { border-color: var(--cyan-bright); background: var(--cyan-subtle); }
+.mem-tarjeta-icono { flex-shrink: 0; color: var(--acento); }
+.mem-tarjeta-texto { flex: 1; min-width: 0; }
+.mem-tarjeta-texto strong { display: block; font-size: 0.9375rem; color: var(--text-primary); }
+.mem-tarjeta-texto span { display: block; font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px; }
+.mem-tarjeta .btn { flex-shrink: 0; font-size: inherit; }
+
+@media (max-width: 560px) {
+  .mem-tarjeta { flex-wrap: wrap; }
+  .mem-tarjeta .btn { width: 100%; }
+}
+
+/* ── Diálogo ── */
+.mem-dialogo { width: min(640px, calc(100vw - 2 * var(--space-4))); }
+.mem-dialogo-cuerpo {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  padding: var(--space-1) 0 var(--space-3);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+.mem-dialogo-cuerpo p { margin: 0 0 var(--space-3); }
+.mem-dialogo-cuerpo ul { margin: 0 0 var(--space-3); padding-left: 1.25rem; }
+.mem-dialogo-cuerpo li { margin-bottom: var(--space-1); }
+.mem-dialogo-pie {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.mem-dialogo-pie .btn { font-size: inherit; min-height: var(--touch); }
+.mem-version { font-size: 0.75rem; color: var(--text-subtle); margin-top: var(--space-2); }
+
+/* ── Lo que recuerda ── */
+.mem-grupo { margin-bottom: var(--space-4); }
+.mem-grupo h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+.mem-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  background: var(--bg-elevated);
+}
+.mem-nota-texto { flex: 1; min-width: 0; font-size: 0.875rem; }
+.mem-nota-tipo { font-weight: 650; color: var(--acento); margin-right: 4px; }
+.mem-nota-fecha { display: block; font-size: 0.75rem; color: var(--text-subtle); margin-top: 2px; }
+.mem-nota .btn-icon { flex-shrink: 0; }
+.mem-revisiones {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  margin-bottom: var(--space-3);
+}
+.mem-revisiones ul { margin: var(--space-1) 0 0; padding-left: 1.1rem; }
+
+/* ── Familia (dentro de la tarjeta de cada hijo) ── */
+.mem-familia-estado { font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 var(--space-2); }
+.mem-familia-estado strong { color: var(--text-primary); }
+.mem-familia-acciones { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.mem-familia-acciones .btn { font-size: inherit; }
+
+/* ── Aviso de que se le avisó a la escuela, en el chat de EstudIA ── */
+.guia-derivada {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.guia-derivada svg { flex-shrink: 0; margin-top: 2px; }
+.guia-derivada.seguimiento { background: var(--cyan-subtle); border: 1px solid var(--cyan-bright); }
+.guia-derivada.urgente { background: var(--danger-light); border: 1px solid var(--danger); }

@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare,
+  MessagesSquare, Brain,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -71,6 +71,7 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/comunicaciones', etiqueta: 'Comunicaciones', icono: MessageSquare, grupo: 'Comunidad', enBarra: true, claves: 'comunicados avisos mensajes' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
+  { ruta: '/memoria-estudio', etiqueta: 'Memoria de estudio', titulo: 'Memoria de estudio de EstudIA', icono: Brain, grupo: 'Comunidad', ia: true, claves: 'memoria estudia consentimiento autorización familias privacidad datos personales auditoría revisar papel firmado' },
   { ruta: '/mi-escuela', etiqueta: 'Mi escuela', titulo: 'Gestión de la escuela', icono: Building2, grupo: 'Cuenta', claves: 'usuarios cuentas docentes alumnos cursos materias alta clave dni' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración umbrales accesibilidad letra contraste datos' },
 ];
