@@ -46,3 +46,54 @@
 .ev-pie { align-items: center; flex-wrap: wrap; }
 .ev-cuenta { margin-right: auto; font-size: 0.8125rem; color: var(--text-secondary); }
 .ev-borrar { color: var(--danger); }
+
+/* Cómo se registra: con nota o sin nota (063) */
+.ev-escala { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.ev-escala legend { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; padding: 0; }
+.ev-escala label { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; min-height: 36px; cursor: pointer; }
+.ev-escala input { accent-color: var(--acento); width: 16px; height: 16px; }
+
+.ev-lista.con-marcas .ev-lista-cabecera,
+.ev-lista.con-marcas .ev-fila { grid-template-columns: 1fr 140px 64px; }
+.ev-marcas { display: flex; justify-content: center; gap: 4px; }
+.ev-marca {
+  width: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-weight: 750;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.ev-marca:disabled { opacity: 0.5; cursor: default; }
+.ev-marca.elegida.completo { background: var(--success); border-color: var(--success); color: #fff; }
+.ev-marca.elegida.incompleto { background: var(--warning); border-color: var(--warning); color: #1a1a1a; }
+.ev-marca.elegida.no_entrego { background: var(--danger); border-color: var(--danger); color: #fff; }
+.ev-marca:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--cyan-glow); }
+
+.ev-nombre { display: flex; align-items: center; gap: 4px; }
+.ev-com-abrir {
+  background: none;
+  border: 0;
+  padding: 4px;
+  color: var(--text-subtle);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 6px);
+  min-width: 28px;
+  min-height: 28px;
+}
+.ev-com-abrir:hover, .ev-com-abrir:focus-visible { color: var(--acento); }
+.ev-comentario {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 36px;
+  font-size: 0.8125rem;
+  padding: 4px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.ev-comentario:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--cyan-glow); }

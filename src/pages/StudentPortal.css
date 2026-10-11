@@ -788,3 +788,17 @@ html[data-contraste="alto"] .sp-hoy::before { display: none; }
   .sp-anillo svg { width: 72px; height: 72px; }
   .sp-anillo-num { font-size: 1.125rem; }
 }
+
+/* Puntos de cada parte (063) */
+.sp-q-puntos {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+}

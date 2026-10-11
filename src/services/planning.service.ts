@@ -28,6 +28,20 @@ export async function getTemasConFecha(teacherId: string): Promise<PlanningUnit[
   return data.map(mapUnit);
 }
 
+/** Un tema con su unidad (para prepararlo: /tema/:id). null si no existe o no es del docente. */
+export async function getTema(classId: string): Promise<{ tema: PlanningClass; unidad: PlanningUnit } | null> {
+  const { data, error } = await supabase
+    .from('planning_classes')
+    .select('*, planning_units(*)')
+    .eq('id', classId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const row = data as Record<string, unknown> & { planning_units: Record<string, unknown> | null };
+  if (!row.planning_units) return null;
+  return { tema: mapClass(row), unidad: mapUnit({ ...row.planning_units, planning_classes: [] }) };
+}
+
 export async function getPlanningBySubjectAndCourse(
   subjectId: string,
   courseId: string,

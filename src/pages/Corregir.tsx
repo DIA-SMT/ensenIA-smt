@@ -14,7 +14,7 @@ import {
     Sparkles, PartyPopper, X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { getPendingGrading, gradeSubmission, setSubmissionReaction, type PendingGrading } from '../services/activities.service';
+import { getPendingGrading, gradeSubmission, setSubmissionReaction, porPartes, type PendingGrading } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import SugerirDevolucion from '../components/SugerirDevolucion';
 import { sugerirDevolucion, type Devolucion } from '../components/devolucion-ia';
@@ -158,7 +158,7 @@ export default function Corregir() {
         }
     };
 
-    const sinDevolucion = pending.filter(p => !feedbacks[p.submissionId]?.trim());
+    const sinDevolucion = pending.filter(p => !p.enPapel && !feedbacks[p.submissionId]?.trim());
 
     const handleSugerirLote = async () => {
         if (sugiriendoId || lote) return;
@@ -309,8 +309,18 @@ export default function Corregir() {
 
                             {open && (
                                 <div className="corr-item-body">
+                                    {porPartes(p.questions) && (
+                                        <p className="corr-partes">
+                                            Tiene puntos por parte: podés poner la nota acá o{' '}
+                                            <button type="button" className="btn-link" onClick={() => navigate(`/actividades/${p.activityId}`)}>
+                                                corregir parte por parte en la actividad
+                                            </button>.
+                                        </p>
+                                    )}
                                     {/* Respuestas */}
-                                    {p.questions.length > 0 ? (
+                                    {p.enPapel ? (
+                                        <p className="text-sm text-secondary">Lo entregó en papel: las respuestas están en su hoja.</p>
+                                    ) : p.questions.length > 0 ? (
                                         <div className="corr-answers">
                                             {p.questions.map((q, i) => {
                                                 const ans = answerFor(p, q.id);
@@ -392,7 +402,7 @@ export default function Corregir() {
                                             ))}
                                         </div>
 
-                                        <SugerirDevolucion
+                                        {!p.enPapel && <SugerirDevolucion
                                             cargando={sugiriendoId === p.submissionId}
                                             alTocar={() => handleSugerir(p)}
                                             alCancelar={lote ? undefined : () => unoRef.current?.abort()}
@@ -400,7 +410,7 @@ export default function Corregir() {
                                             motivo={lote
                                                 ? 'Esperá a que termine la sugerencia en lote.'
                                                 : sugiriendoId ? 'Esperá: la IA está escribiendo otra devolución.' : undefined}
-                                        />
+                                        />}
 
                                         <textarea
                                             id={`corr-fb-${p.submissionId}`}

@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   CalendarRange, FileUp, RefreshCw, Plus, Check, Sparkles, Presentation, ClipboardList,
-  FileCheck2, MessageSquare, Boxes, Trash2, Pencil, AlertTriangle, CalendarClock, Brain, ChevronDown,
+  FileCheck2, MessageSquare, Boxes, Trash2, Pencil, AlertTriangle, CalendarClock, Brain, ChevronDown, FolderOpen,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ImportProgramModal from '../components/ImportProgramModal';
@@ -319,12 +319,9 @@ export default function Planificacion() {
           <span className="pl-hoy-etiqueta">Hoy toca</span>
           <strong>{deHoy.tema.title}</strong>
           <span className="text-secondary text-sm">{deHoy.tema.unidad.title} · {deHoy.numero}° encuentro de {deHoy.tema.encuentros || 1}</span>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => {
-            setAbierto(deHoy.tema.id);
-            document.getElementById(`tema-${deHoy.tema.id}`)?.scrollIntoView({ block: 'center' });
-          }}>
+          <Link to={`/tema/${deHoy.tema.id}`} className="btn btn-primary btn-sm">
             <Sparkles size={15} aria-hidden="true" /> Preparar
-          </button>
+          </Link>
         </section>
       )}
 
@@ -428,10 +425,11 @@ function FilaTema({ tema, hoy, encuentros, abierto, alAbrir, alCambiarFecha, alM
 
   // Desde cada tema, lo que hay para preparar (antes eran pantallas sueltas)
   const preparar = [
+    { a: `/tema/${t.id}`, icono: FolderOpen, etiqueta: 'Todo lo del tema', detalle: 'El material de la clase y lo de los chicos, en un lugar' },
     { a: `/modulo?tema=${t.id}`, icono: Boxes, etiqueta: 'La clase completa', detalle: 'Apunte, diapositivas, juego y tarea, para mandar juntos' },
     { a: `/ia-lab?clase=${t.id}&herramienta=pres`, icono: Presentation, etiqueta: 'Presentación', detalle: 'Diapositivas que podés corregir y proyectar' },
-    { a: `/ia-lab?clase=${t.id}&herramienta=act`, icono: ClipboardList, etiqueta: 'Trabajo práctico o actividad', detalle: 'Para publicar al curso' },
-    { a: `/ia-lab?clase=${t.id}&herramienta=eval`, icono: FileCheck2, etiqueta: 'Evaluación', detalle: 'Con criterios y rúbrica' },
+    { a: `/actividades/nueva?tema=${t.id}&tipo=tp`, icono: ClipboardList, etiqueta: 'Trabajo práctico', detalle: 'Por partes y con puntos; en el celular o en papel' },
+    { a: `/actividades/nueva?tema=${t.id}&tipo=evaluacion`, icono: FileCheck2, etiqueta: 'Evaluación', detalle: 'Por partes y con puntos; se corrige sola la opción múltiple' },
     { a: `/ia-lab?clase=${t.id}`, icono: MessageSquare, etiqueta: 'Preguntale a la IA', detalle: 'Ideas, ejemplos, adaptaciones' },
   ];
 

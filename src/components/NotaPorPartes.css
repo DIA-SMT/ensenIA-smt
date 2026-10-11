@@ -1,0 +1,34 @@
+/* Corregir por partes (063) */
+.npp { display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.npp-fila {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  min-height: 48px;
+}
+.npp-fila + .npp-fila { border-top: 1px solid var(--border-subtle, var(--border-color)); }
+.npp-parte { font-size: 0.8125rem; font-weight: 650; white-space: nowrap; }
+.npp-parte small { font-weight: 600; }
+.npp-enunciado {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.npp-valor { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-secondary); }
+.npp-valor input {
+  width: 56px;
+  min-height: 38px;
+  text-align: center;
+  font-weight: 650;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.npp-valor input.mala { border-color: var(--danger); }
+.npp-valor input:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--cyan-glow); }

@@ -415,3 +415,23 @@
 }
 .acts-grupo-titulo { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
 .acts-grupo-cuenta { font-size: 0.8125rem; color: var(--text-subtle); flex: 1; }
+
+/* Crear: TP o evaluación, o actividad rápida (063) */
+.acts-crear { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Borrador y entregas en papel (063) */
+.acts-borrador {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.acts-borrador span { flex: 1 1 220px; }
+.acts-papel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 0.8125rem; color: var(--text-secondary); }
+.acts-papel-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.acts-grade-box .npp { margin-bottom: 8px; }

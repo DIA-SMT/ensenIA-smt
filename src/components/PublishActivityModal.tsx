@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { X, Send, Sparkles, Trash2, AlertCircle, CheckCircle, ListChecks } from 'lucide-react';
 import { createActivity } from '../services/activities.service';
 import { extractQuestions } from '../services/documents.service';
@@ -35,7 +36,7 @@ export default function PublishActivityModal(props: Props) {
   const [questions, setQuestions] = useState<ActivityQuestion[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<{ id: string; borrador: boolean } | null>(null);
   const [error, setError] = useState('');
 
   const handleExtract = async () => {
@@ -56,12 +57,13 @@ export default function PublishActivityModal(props: Props) {
 
   const removeQuestion = (id: string) => setQuestions(prev => prev.filter(q => q.id !== id));
 
-  const handlePublish = async () => {
+  const handlePublish = async (estado: 'published' | 'draft' = 'published') => {
     if (!title.trim()) { setError('Poné un título.'); return; }
     setPublishing(true);
     setError('');
     try {
-      await createActivity({
+      const act = await createActivity({
+        estado,
         title: title.trim(),
         description: description.trim() || undefined,
         contentMd: props.contentMd,
@@ -76,7 +78,7 @@ export default function PublishActivityModal(props: Props) {
         dueDate: dueDate ? new Date(dueDate + 'T23:59:00').toISOString() : null,
         points: points ? Number(points) : null,
       });
-      setDone(true);
+      setDone({ id: act.id, borrador: estado === 'draft' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error publicando la actividad.');
     } finally {
@@ -96,10 +98,12 @@ export default function PublishActivityModal(props: Props) {
           {done ? (
             <div className="em-processing">
               <CheckCircle size={40} className="text-success" />
-              <p><strong>¡Actividad publicada!</strong></p>
+              <p><strong>{done.borrador ? 'Guardada como borrador' : '¡Actividad publicada!'}</strong></p>
               <p className="text-sm text-secondary">
-                Los estudiantes de {props.courseName} ya la ven en su portal.
-                Vas a poder seguir sus avances y su huella digital en <strong>Actividades</strong>.
+                {done.borrador
+                  ? <>Los estudiantes no la ven hasta que la publiques. Podés ponerle puntos por parte, corregir las preguntas y publicarla desde <Link to={`/actividades/${done.id}/editar`}>el editor</Link>.</>
+                  : <>Los estudiantes de {props.courseName} ya la ven en su portal.
+                    Vas a poder seguir sus avances y su huella digital en <strong>Actividades</strong>. Si querés corregir algo, <Link to={`/actividades/${done.id}/editar`}>editala</Link>.</>}
               </p>
             </div>
           ) : (
@@ -175,7 +179,11 @@ export default function PublishActivityModal(props: Props) {
           ) : (
             <>
               <button className="btn btn-outline btn-sm" onClick={props.onClose}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={handlePublish} disabled={publishing}>
+              <button className="btn btn-secondary btn-sm" onClick={() => handlePublish('draft')} disabled={publishing}
+                title="Los estudiantes no la ven hasta que la publiques">
+                Guardar borrador
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => handlePublish()} disabled={publishing}>
                 {publishing ? 'Publicando...' : <><Send size={15} /> Publicar a {props.courseName}</>}
               </button>
             </>

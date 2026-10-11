@@ -43,6 +43,13 @@ const PRINCIPALES: Opcion[] = [
         nota: 'Todo de una, con un solo envío',
     },
     {
+        a: '/actividades/nueva?tipo=tp',
+        icono: ListChecks,
+        titulo: 'Trabajo práctico o evaluación',
+        texto: 'Por partes y con puntos. Lo hacen en el celular o en papel, y todo queda en la libreta.',
+        nota: 'Se corrige sola la opción múltiple',
+    },
+    {
         a: '/actividad-rapida',
         icono: Zap,
         titulo: 'Actividad rápida',
@@ -52,7 +59,7 @@ const PRINCIPALES: Opcion[] = [
 ];
 
 const HERRAMIENTAS: Opcion[] = [
-    { a: '/ia-lab?herramienta=eval', icono: ListChecks, titulo: 'Evaluación', texto: 'Con rúbrica y criterios de corrección.', nota: '' },
+    { a: '/ia-lab?herramienta=eval', icono: ListChecks, titulo: 'Rúbrica de evaluación', texto: 'Criterios de corrección para una prueba que tomás vos.', nota: '' },
     { a: '/ia-lab?herramienta=pres', icono: Presentation, titulo: 'Diapositivas para proyectar', texto: 'Una presentación con notas para vos.', nota: '' },
     { a: '/ia-lab?herramienta=sum', icono: FileInput, titulo: 'Resumen', texto: 'Pegás un texto largo y lo sintetiza.', nota: '' },
     { a: '/ia-lab?herramienta=oral', icono: Mic, titulo: 'Exposiciones orales', texto: 'Rúbricas para orales y debates.', nota: '' },

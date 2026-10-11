@@ -96,6 +96,9 @@ function App() {
                 {ruta('/biblioteca', ['docente'])}
                 {ruta('/actividades', ['docente'])}
                 {ruta('/actividades/:id', ['docente'])}
+                {ruta('/actividades/nueva', ['docente'])}
+                {ruta('/actividades/:id/editar', ['docente'])}
+                {ruta('/tema/:id', ['docente'])}
 
                 {/* Familia */}
                 {ruta('/comunicados-familia', ['padre'])}

@@ -1,0 +1,70 @@
+/* Armar o editar una actividad, un TP o una evaluación (063) */
+.ea-contenedor { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+.ea-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.ea-card .form-select { min-height: 42px; }
+.ea-card textarea,
+.ea-card input[type='text'],
+.ea-card input[type='date'] { width: 100%; }
+
+.ea-encabezado { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.ea-encabezado h2 { margin: 0; font-size: 1.125rem; }
+.ea-para { font-size: 0.875rem; color: var(--text-secondary); }
+
+.ea-aviso {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.ea-aviso svg { flex-shrink: 0; margin-top: 2px; }
+
+.ea-etiqueta { display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.ea-tipos { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.ea-tipos button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.ea-tipos button.activo { border-color: var(--acento); color: var(--text-primary); font-weight: 650; background: var(--acento-suave); }
+
+.ea-ia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+}
+.ea-ia .em-field { flex: 1 1 260px; margin: 0; }
+.ea-ia .btn { min-height: 42px; }
+
+.ea-partes-cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.ea-partes-cabecera h3 { margin: 0; font-size: 1rem; }
+.ea-con-puntos { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; min-height: 36px; cursor: pointer; }
+.ea-con-puntos input { width: 16px; height: 16px; accent-color: var(--acento); }
+.ea-total { font-size: 0.8125rem; color: var(--text-secondary); }
+.ea-total.mal strong { color: var(--danger); }
+
+.ea-pie { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.ea-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--acento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ea-link:disabled { opacity: 0.6; cursor: default; }

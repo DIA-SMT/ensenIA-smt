@@ -161,7 +161,10 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname === '/ia-lab') return 'Preparar con la IA';
   if (pathname === '/agenda') return 'Mi horario';
   if (pathname === '/migue') return 'Migue';
+  if (pathname === '/actividades/nueva') return 'Armar actividad, TP o evaluación';
+  if (pathname.startsWith('/actividades/') && pathname.endsWith('/editar')) return 'Editar la actividad';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
+  if (pathname.startsWith('/tema/')) return 'Preparar la clase';
   if (pathname.startsWith('/mis-actividades/')) return 'Actividad';
   if (pathname.startsWith('/materia/')) return 'Mi materia';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
@@ -177,7 +180,7 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   if (pathname.startsWith('/actividades/')) return '/actividades';
   // Preparar un tema (la clase completa o con la IA) cuelga de la
   // planificación; la actividad rápida, de "Crear"
-  if (['/modulo', '/ia-lab'].includes(pathname)) return rol === 'docente' ? '/planificacion' : null;
+  if (['/modulo', '/ia-lab'].includes(pathname) || pathname.startsWith('/tema/')) return rol === 'docente' ? '/planificacion' : null;
   if (pathname === '/actividad-rapida') return rol === 'docente' ? '/crear' : null;
   if (pathname === '/agenda') return '/mis-clases';
   if (pathname.startsWith('/mis-actividades/') || pathname.startsWith('/materia/')) return '/mis-actividades';

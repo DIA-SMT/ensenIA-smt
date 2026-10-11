@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, CheckCircle, Clock, ChevronRight, Sparkles,
-  CircleDot, Lock, Unlock, Trash2, QrCode, Search,
+  CircleDot, Lock, Unlock, Trash2, QrCode, Search, FileText, PencilLine,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -14,6 +14,7 @@ import QrModal from '../components/QrModal';
 import BotonCopiarActividad from '../components/CopiarActividad';
 import { avisar, confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import { TIPOS_ACTIVIDAD } from '../lib/actividades';
 import EmojiMateria from '../components/ui/EmojiMateria';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import type { Activity, ActivitySubmission, Subject } from '../types';
@@ -144,24 +145,29 @@ export default function Actividades() {
   const tarjeta = (a: ActivityWithStats, enSeccion: boolean) => (
     <div key={a.id} className={`card acts-card ${a.status === 'closed' ? 'closed' : ''}`}>
       <div className="acts-card-main">
-        <Link to={`/actividades/${a.id}`} className="acts-card-title">
-          {a.title}
+        <Link to={a.status === 'draft' ? `/actividades/${a.id}/editar` : `/actividades/${a.id}`} className="acts-card-title">
+          <span aria-hidden="true">{TIPOS_ACTIVIDAD[a.tipo].emoji}</span> {a.title}
           <ChevronRight size={16} />
         </Link>
         <div className="acts-card-meta">
           {!enSeccion && <span className="badge badge-cyan"><EmojiMateria nombre={a.subjectName} /> {a.subjectName}</span>}
           {!enSeccion && <span className="badge badge-neutral">{a.courseName}</span>}
           {a.sourceTool && <span className="badge badge-ia">IA</span>}
+          {a.tipo !== 'actividad' && <span className="badge badge-neutral">{TIPOS_ACTIVIDAD[a.tipo].label}</span>}
           {a.status === 'closed'
             ? <span className="badge badge-danger">Cerrada</span>
-            : <span className="badge badge-success"><CircleDot size={10} /> Publicada</span>}
+            : a.status === 'draft'
+              ? <span className="badge badge-neutral" title="Los estudiantes todavía no la ven">Borrador</span>
+              : <span className="badge badge-success"><CircleDot size={10} /> Publicada</span>}
           {a.dueDate && (
             <span className="text-xs text-subtle flex items-center gap-1">
               <Clock size={12} /> Vence {new Date(a.dueDate).toLocaleDateString('es-AR')}
             </span>
           )}
           {a.questions.length > 0 && (
-            <span className="text-xs text-subtle">{a.questions.length} preguntas</span>
+            <span className="text-xs text-subtle">
+              {a.questions.length} {a.tipo === 'actividad' ? 'preguntas' : 'partes'}{a.points != null ? ` · ${a.points} pts` : ''}
+            </span>
           )}
         </div>
       </div>
@@ -182,20 +188,28 @@ export default function Actividades() {
           >
             <QrCode size={16} />
           </button>
-          <button
-            className="btn-icon"
-            title={a.status === 'closed' ? 'Reabrir' : 'Cerrar entregas'}
-            onClick={() => handleToggleStatus(a)}
-          >
-            {a.status === 'closed' ? <Unlock size={16} /> : <Lock size={16} />}
-          </button>
+          {a.status !== 'draft' && (
+            <button
+              className="btn-icon"
+              title={a.status === 'closed' ? 'Reabrir' : 'Cerrar entregas'}
+              onClick={() => handleToggleStatus(a)}
+            >
+              {a.status === 'closed' ? <Unlock size={16} /> : <Lock size={16} />}
+            </button>
+          )}
           <BotonCopiarActividad activity={a} compacto alCopiar={load} />
           <button className="btn-icon" title="Eliminar" onClick={() => handleDelete(a)}>
             <Trash2 size={16} />
           </button>
-          <Link to={`/actividades/${a.id}`} className="btn btn-secondary btn-sm">
-            <Users size={14} /> Resultados
-          </Link>
+          {a.status === 'draft' ? (
+            <Link to={`/actividades/${a.id}/editar`} className="btn btn-secondary btn-sm">
+              <PencilLine size={14} /> Seguir armando
+            </Link>
+          ) : (
+            <Link to={`/actividades/${a.id}`} className="btn btn-secondary btn-sm">
+              <Users size={14} /> Resultados
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -212,9 +226,14 @@ export default function Actividades() {
         </div>
         {/* Con la lista vacía, el botón está en el estado vacío */}
         {(loading || activities.length > 0) && (
-          <Link to="/actividad-rapida" className="btn btn-primary btn-sm">
-            <Sparkles size={15} aria-hidden="true" /> Crear actividad
-          </Link>
+          <div className="acts-crear">
+            <Link to="/actividades/nueva?tipo=tp" className="btn btn-primary btn-sm">
+              <FileText size={15} aria-hidden="true" /> Trabajo práctico o evaluación
+            </Link>
+            <Link to="/actividad-rapida" className="btn btn-outline btn-sm">
+              <Sparkles size={15} aria-hidden="true" /> Actividad rápida
+            </Link>
+          </div>
         )}
       </div>
 

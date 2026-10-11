@@ -699,3 +699,22 @@
   .lib-table-boletin .lib-comment { width: 100%; min-height: var(--touch); }
   .lib-table-boletin .lib-conduct-btn { min-width: var(--touch); min-height: 40px; }
 }
+
+/* Lo que se registra sin nota y lo de papel (063) */
+.libreta-marca { font-weight: 750; }
+.libreta-marca.completo { color: var(--success); }
+.libreta-marca.incompleto { color: var(--warning); }
+.libreta-marca.no_entrego { color: var(--danger); }
+.libreta-papel { margin-left: 2px; vertical-align: super; color: var(--text-subtle); }
+.libreta-alumno {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 40px;
+}
+.libreta-alumno:hover .font-medium,
+.libreta-alumno:focus-visible .font-medium { text-decoration: underline; }

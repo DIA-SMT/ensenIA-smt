@@ -106,7 +106,12 @@ export interface ActivityQuestion {
   prompt: string;
   options?: string[];
   correct_index?: number;
+  /** Puntos de esta parte (063). Si alguna los tiene, el total es la suma. */
+  points?: number | null;
 }
+
+/** actividad: práctica · tp: trabajo práctico · evaluacion (063) */
+export type TipoActividad = 'actividad' | 'tp' | 'evaluacion';
 
 export interface Activity {
   id: string;
@@ -125,6 +130,9 @@ export interface Activity {
   dueDate?: string | null;
   points?: number | null;
   createdAt: string;
+  tipo: TipoActividad;
+  /** La primera vez que se publicó; null mientras es borrador */
+  publishedAt?: string | null;
   subjectName?: string;
   courseName?: string;
 }
@@ -151,7 +159,13 @@ export interface ActivitySubmission {
   startedAt?: string | null;
   submittedAt?: string | null;
   gradedAt?: string | null;
+  /** Puntaje que el docente le puso a cada parte (063) */
+  puntajes?: Record<string, number> | null;
+  /** Lo que anotó el docente de fuera de la app: entregó en papel o no entregó (063) */
+  registro?: RegistroEntrega | null;
 }
+
+export type RegistroEntrega = 'papel' | 'no_entrego';
 
 // ── Bienestar: check-in emocional ──
 // 'libre' = check-in del día, sin actividad de por medio.
@@ -410,7 +424,16 @@ export interface NotaItem {
   ausente?: boolean;
   /** Actividad de la app entregada y todavía sin corregir */
   sinCorregir?: boolean;
+  /** Lo que se registra sin nota (control de carpeta, entregó o no), 063 */
+  marca?: MarcaCumplimiento | null;
+  /** Comentario corto del docente: lo ven el estudiante y su familia */
+  comentario?: string | null;
+  /** Actividad de la app que se hizo en papel o que no entregó */
+  registro?: RegistroEntrega | null;
 }
+
+/** completo: la carpeta completa / lo entregó · incompleto · no_entrego: no la trajo / no lo entregó */
+export type MarcaCumplimiento = 'completo' | 'incompleto' | 'no_entrego';
 
 /** Fila de la libreta que ve el docente: estudiante + nota + sugerencia. */
 export interface GradebookRow {

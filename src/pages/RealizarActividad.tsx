@@ -27,6 +27,7 @@ import PedirDevolucion from '../components/PedirDevolucion';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar, confirmar } from '../components/ui/avisar';
+import { TIPOS_ACTIVIDAD, puntosATexto } from '../lib/actividades';
 import type { Activity, ActivitySubmission, ActivityAnswer, Student, CheckinFeeling, CheckinMoment } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
@@ -285,6 +286,7 @@ export default function RealizarActividad() {
           <div>
             <h2>{activity.title}</h2>
             <div className="sp-activity-meta mt-1">
+              {activity.tipo !== 'actividad' && <span className="badge badge-neutral">{TIPOS_ACTIVIDAD[activity.tipo].label}</span>}
               <span className="badge badge-cyan">{activity.subjectName}</span>
               {activity.points != null && <span className="badge badge-neutral">{activity.points} pts</span>}
               {activity.dueDate && (
@@ -316,8 +318,8 @@ export default function RealizarActividad() {
 
         {error && <div className="em-error"><AlertCircle size={15} /> {error}</div>}
 
-        {/* Estado: sin comenzar */}
-        {!submission && !isDone && (
+        {/* Estado: sin comenzar (o el docente anotó que no la entregó: igual puede hacerla) */}
+        {(!submission || submission.status === 'pending') && !isDone && (
           isClosed ? (
             <div className="sp-notice">Esta actividad está cerrada y ya no acepta entregas.</div>
           ) : (
@@ -340,7 +342,10 @@ export default function RealizarActividad() {
             )}
             {activity.questions.map((q, qi) => (
               <div key={q.id} className="sp-question card">
-                <p className="sp-question-prompt"><span className="sp-q-num">{qi + 1}</span> {q.prompt}</p>
+                <p className="sp-question-prompt">
+                  <span className="sp-q-num">{qi + 1}</span> {q.prompt}
+                  {typeof q.points === 'number' && <span className="sp-q-puntos">{puntosATexto(q.points)} {q.points === 1 ? 'punto' : 'puntos'}</span>}
+                </p>
                 {q.type === 'multiple_choice' && q.options ? (
                   <div className="sp-options">
                     {q.options.map((opt, oi) => (
@@ -406,7 +411,9 @@ export default function RealizarActividad() {
                 <span className="text-sm text-secondary" style={{ display: 'block' }}>
                   {pendingSync
                     ? 'Quedó guardada en tu dispositivo y se envía sola apenas tengas conexión. 📶'
-                    : submission?.submittedAt && `Entregaste el ${new Date(submission.submittedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.`}
+                    : submission?.registro === 'papel'
+                      ? 'La entregaste en papel y tu docente la anotó acá.'
+                      : submission?.submittedAt && `Entregaste el ${new Date(submission.submittedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.`}
                   {submission?.feedback && ' Tu docente te dejó una devolución 👇'}
                 </span>
               </div>
@@ -437,9 +444,19 @@ export default function RealizarActividad() {
               <div className="sp-form">
                 {activity.questions.map((q, qi) => {
                   const a = submission?.answers[q.id];
+                  // Puntaje de la parte: el que puso el docente; si no, el de la corrección automática
+                  const puntaje = submission?.puntajes?.[q.id]
+                    ?? (typeof q.points === 'number' && q.type === 'multiple_choice' && a?.correct != null ? (a.correct ? q.points : 0) : null);
                   return (
                     <div key={q.id} className="sp-question card readonly">
-                      <p className="sp-question-prompt"><span className="sp-q-num">{qi + 1}</span> {q.prompt}</p>
+                      <p className="sp-question-prompt">
+                        <span className="sp-q-num">{qi + 1}</span> {q.prompt}
+                        {typeof q.points === 'number' && (
+                          <span className="sp-q-puntos">
+                            {puntaje != null ? `${puntosATexto(puntaje)} de ${puntosATexto(q.points)}` : `${puntosATexto(q.points)} pts`}
+                          </span>
+                        )}
+                      </p>
                       {q.type === 'multiple_choice' && q.options ? (
                         a == null ? (
                           <p className="sp-answer-review text-subtle">Sin responder</p>

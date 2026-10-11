@@ -2,15 +2,18 @@
  * Cargar (o corregir) las notas de una evaluación del trimestre: una prueba
  * escrita, un TP, un oral... Título, tipo y fecha, y la lista del curso
  * para tipear cada nota (Enter pasa al siguiente) o marcar "ausente".
- * Sin señal se guarda en el equipo y se envía sola (cola offline).
+ * Lo que no lleva nota (control de carpeta) se registra como completo,
+ * incompleto o no lo entregó, y cada alumno puede tener un comentario
+ * corto (063). Sin señal se guarda en el equipo y se envía sola.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { X, Save, Trash2, Loader2, ClipboardList } from 'lucide-react';
+import { X, Save, Trash2, Loader2, ClipboardList, MessageSquarePlus } from 'lucide-react';
 import Dialogo from './shell/Dialogo';
 import { confirmar } from './ui/avisar';
 import {
-  borrarEvaluacion, TIPOS_EVALUACION, type Evaluacion, type TipoEvaluacion,
+  borrarEvaluacion, MARCAS, TIPOS_EVALUACION,
+  type EscalaEvaluacion, type Evaluacion, type MarcaCumplimiento, type TipoEvaluacion,
 } from '../services/evaluaciones.service';
 import {
   guardarEvaluacionResiliente, olvidarPendiente, claveEvaluacion, type ResultadoGuardado,
@@ -61,9 +64,19 @@ export default function EvaluacionEditor({
 
   const [titulo, setTitulo] = useState(evaluacion?.titulo ?? '');
   const [tipo, setTipo] = useState<TipoEvaluacion>(evaluacion?.tipo ?? 'prueba');
+  const [escala, setEscala] = useState<EscalaEvaluacion>(evaluacion?.escala ?? 'nota');
+  // En una nueva, el control de carpeta arranca sin nota hasta que el docente elija
+  const [escalaElegida, setEscalaElegida] = useState(!!evaluacion);
   const [fecha, setFecha] = useState(fechaInicial);
   const [valores, setValores] = useState<Record<string, string>>(() =>
     Object.fromEntries(alumnos.map(a => [a.studentId, notaATexto(evaluacion?.notas[a.studentId]?.nota)])));
+  const [marcas, setMarcas] = useState<Record<string, MarcaCumplimiento | null>>(() =>
+    Object.fromEntries(alumnos.map(a => [a.studentId, evaluacion?.notas[a.studentId]?.marca ?? null])));
+  const [comentarios, setComentarios] = useState<Record<string, string>>(() =>
+    Object.fromEntries(alumnos.map(a => [a.studentId, evaluacion?.notas[a.studentId]?.comentario ?? ''])));
+  // De quiénes está abierto el comentario (los que ya tienen uno, abiertos)
+  const [conComentario, setConComentario] = useState<Set<string>>(() =>
+    new Set(alumnos.filter(a => evaluacion?.notas[a.studentId]?.comentario).map(a => a.studentId)));
   const [ausentes, setAusentes] = useState<Set<string>>(() =>
     new Set(alumnos.filter(a => evaluacion?.notas[a.studentId]?.ausente).map(a => a.studentId)));
   const [error, setError] = useState('');
@@ -97,7 +110,48 @@ export default function EvaluacionEditor({
     document.querySelector<HTMLInputElement>(`input[data-nota-idx="${idx + 1}"]`)?.focus();
   };
 
-  const conNota = alumnos.filter(a => !ausentes.has(a.studentId) && leerNota(valores[a.studentId] ?? '') !== null).length;
+  const cambiarMarca = (id: string, m: MarcaCumplimiento) => {
+    setMarcas(prev => ({ ...prev, [id]: prev[id] === m ? null : m }));
+    setSucio(true);
+  };
+  const cambiarComentario = (id: string, v: string) => {
+    setComentarios(prev => ({ ...prev, [id]: v }));
+    setSucio(true);
+  };
+  const abrirComentario = (id: string) => {
+    setConComentario(prev => new Set(prev).add(id));
+    requestAnimationFrame(() => document.getElementById(`ev-com-${id}`)?.focus());
+  };
+  // ¿Hay algo cargado en la escala que se dejaría? (las notas o las marcas)
+  const hayCargado = (en: EscalaEvaluacion) => alumnos.some(a => en === 'nota'
+    ? (valores[a.studentId] ?? '').trim() !== ''
+    : !!marcas[a.studentId]);
+
+  const cambiarEscala = async (nueva: EscalaEvaluacion) => {
+    if (nueva === escala) return;
+    if (hayCargado(escala) && !(await confirmar({
+      titulo: nueva === 'nota' ? '¿Pasar a nota de 1 a 10?' : '¿Pasar a sin nota?',
+      mensaje: escala === 'nota'
+        ? 'Las notas que cargaste se borran al guardar: quedan solo las marcas (completo, incompleto, no lo entregó).'
+        : 'Las marcas que cargaste se borran al guardar: quedan solo las notas.',
+      accion: 'Cambiar',
+    }))) return;
+    setEscala(nueva);
+    setEscalaElegida(true);
+    setSucio(true);
+  };
+
+  const elegirTipo = (t: TipoEvaluacion) => {
+    setTipo(t);
+    // El control de carpeta casi nunca lleva nota: se propone sin nota,
+    // salvo que ya haya algo cargado
+    if (!escalaElegida && !hayCargado(escala)) setEscala(t === 'carpeta' ? 'cumplimiento' : 'nota');
+    setSucio(true);
+  };
+
+  const tieneValor = (id: string) => ausentes.has(id)
+    || (escala === 'nota' ? leerNota(valores[id] ?? '') !== null : !!marcas[id]);
+  const conNota = alumnos.filter(a => !ausentes.has(a.studentId) && tieneValor(a.studentId)).length;
 
   const guardar = async () => {
     if (!titulo.trim()) {
@@ -105,31 +159,44 @@ export default function EvaluacionEditor({
       tituloRef.current?.focus();
       return;
     }
-    const malas = alumnos.filter(a => !ausentes.has(a.studentId) && Number.isNaN(leerNota(valores[a.studentId] ?? '') as number));
-    if (malas.length > 0) {
-      setError(`Las notas van de 1 a 10. Revisá: ${malas.map(a => `${a.firstName} ${a.lastName}`).join(', ')}.`);
+    if (escala === 'nota') {
+      const malas = alumnos.filter(a => !ausentes.has(a.studentId) && Number.isNaN(leerNota(valores[a.studentId] ?? '') as number));
+      if (malas.length > 0) {
+        setError(`Las notas van de 1 a 10. Revisá: ${malas.map(a => `${a.firstName} ${a.lastName}`).join(', ')}.`);
+        return;
+      }
+    }
+    // Un comentario solo no se guarda (la fila necesita nota, marca o ausente)
+    const comentarioSolo = alumnos.filter(a => comentarios[a.studentId]?.trim() && !tieneValor(a.studentId));
+    if (comentarioSolo.length > 0) {
+      setError(`Para guardar el comentario, poné también ${escala === 'nota' ? 'la nota' : 'cómo lo entregó'} o marcá ausente: ${comentarioSolo.map(a => `${a.firstName} ${a.lastName}`).join(', ')}.`);
       return;
     }
     setGuardando(true);
     setError('');
     const id = evaluacion?.id ?? crypto.randomUUID();
-    const notas = alumnos.map(a => ({
-      studentId: a.studentId,
-      ausente: ausentes.has(a.studentId),
-      nota: ausentes.has(a.studentId) ? null : leerNota(valores[a.studentId] ?? ''),
-    }));
+    const notas = alumnos.map(a => {
+      const ausente = ausentes.has(a.studentId);
+      return {
+        studentId: a.studentId,
+        ausente,
+        nota: ausente || escala !== 'nota' ? null : leerNota(valores[a.studentId] ?? ''),
+        marca: ausente || escala !== 'cumplimiento' ? null : marcas[a.studentId] ?? null,
+        comentario: comentarios[a.studentId]?.trim() || null,
+      };
+    });
     try {
       const resultado = await guardarEvaluacionResiliente(
-        { id, subjectId: contexto.subjectId, courseId: contexto.courseId, termId: contexto.termId, titulo: titulo.trim(), tipo, fecha, notas },
+        { id, subjectId: contexto.subjectId, courseId: contexto.courseId, termId: contexto.termId, titulo: titulo.trim(), tipo, escala, fecha, notas },
         `${TIPOS_EVALUACION[tipo].label} «${titulo.trim()}» · ${contexto.subjectName} ${contexto.courseName}`,
       );
       setSucio(false);
       alGuardar({
         id, subjectId: contexto.subjectId, courseId: contexto.courseId, termId: contexto.termId,
-        titulo: titulo.trim(), tipo, fecha, pendiente: resultado === 'pendiente',
+        titulo: titulo.trim(), tipo, escala, fecha, pendiente: resultado === 'pendiente',
         notas: Object.fromEntries(notas
-          .filter(n => n.ausente || n.nota !== null)
-          .map(n => [n.studentId, { nota: n.nota, ausente: n.ausente }])),
+          .filter(n => n.ausente || n.nota !== null || n.marca)
+          .map(n => [n.studentId, { nota: n.nota, ausente: n.ausente, marca: n.marca, comentario: n.comentario }])),
       }, resultado);
     } catch (err) {
       console.error(err);
@@ -204,7 +271,7 @@ export default function EvaluacionEditor({
             <div className="em-field">
               <label htmlFor="ev-tipo">Tipo</label>
               <select id="ev-tipo" className="form-select" value={tipo}
-                onChange={e => { setTipo(e.target.value as TipoEvaluacion); setSucio(true); }}>
+                onChange={e => elegirTipo(e.target.value as TipoEvaluacion)}>
                 {(Object.entries(TIPOS_EVALUACION) as [TipoEvaluacion, { label: string; emoji: string }][]).map(([v, m]) => (
                   <option key={v} value={v}>{m.emoji} {m.label}</option>
                 ))}
@@ -217,36 +284,86 @@ export default function EvaluacionEditor({
             </div>
           </div>
 
-          <div className="ev-lista" role="group" aria-label="Notas de cada alumno">
+          <fieldset className="ev-escala">
+            <legend>Cómo se registra</legend>
+            <label>
+              <input type="radio" name="ev-escala" checked={escala === 'nota'}
+                onChange={() => { void cambiarEscala('nota'); }} />
+              Con nota (1 a 10)
+            </label>
+            <label>
+              <input type="radio" name="ev-escala" checked={escala === 'cumplimiento'}
+                onChange={() => { void cambiarEscala('cumplimiento'); }} />
+              Sin nota: completo, incompleto o no lo entregó
+            </label>
+          </fieldset>
+
+          <div className={`ev-lista ${escala === 'cumplimiento' ? 'con-marcas' : ''}`} role="group" aria-label="Lo de cada alumno">
             <div className="ev-lista-cabecera">
               <span>Alumno</span>
-              <span>Nota (1 a 10)</span>
+              <span>{escala === 'nota' ? 'Nota (1 a 10)' : 'Cómo lo entregó'}</span>
               <span>Ausente</span>
             </div>
             {alumnos.map((a, idx) => {
               const ausente = ausentes.has(a.studentId);
               const v = valores[a.studentId] ?? '';
-              const mala = !ausente && Number.isNaN(leerNota(v) as number);
+              const mala = escala === 'nota' && !ausente && Number.isNaN(leerNota(v) as number);
+              const nombre = `${a.firstName} ${a.lastName}`;
               return (
                 <div key={a.studentId} className={`ev-fila ${ausente ? 'ausente' : ''}`}>
-                  <span className="ev-nombre">{a.lastName}, {a.firstName}</span>
-                  <input
-                    className={`ev-nota ${mala ? 'mala' : ''}`}
-                    inputMode="decimal"
-                    maxLength={5}
-                    value={ausente ? '' : v}
-                    placeholder={ausente ? 'A' : '—'}
-                    disabled={ausente}
-                    data-nota-idx={idx}
-                    aria-label={`Nota de ${a.firstName} ${a.lastName}`}
-                    aria-invalid={mala}
-                    onChange={e => cambiarNota(a.studentId, e.target.value)}
-                    onKeyDown={e => alTeclear(e, idx)}
-                  />
+                  <span className="ev-nombre">
+                    {a.lastName}, {a.firstName}
+                    {!conComentario.has(a.studentId) && (
+                      <button type="button" className="ev-com-abrir" onClick={() => abrirComentario(a.studentId)}
+                        aria-label={`Agregar un comentario para ${nombre}`} title="Agregar un comentario (lo ven el alumno y su familia)">
+                        <MessageSquarePlus size={14} aria-hidden="true" />
+                      </button>
+                    )}
+                  </span>
+                  {escala === 'nota' ? (
+                    <input
+                      className={`ev-nota ${mala ? 'mala' : ''}`}
+                      inputMode="decimal"
+                      maxLength={5}
+                      value={ausente ? '' : v}
+                      placeholder={ausente ? 'A' : '—'}
+                      disabled={ausente}
+                      data-nota-idx={idx}
+                      aria-label={`Nota de ${nombre}`}
+                      aria-invalid={mala}
+                      onChange={e => cambiarNota(a.studentId, e.target.value)}
+                      onKeyDown={e => alTeclear(e, idx)}
+                    />
+                  ) : (
+                    <span className="ev-marcas" role="group" aria-label={`Cómo lo entregó ${nombre}`}>
+                      {(Object.keys(MARCAS) as MarcaCumplimiento[]).map(m => (
+                        <button key={m} type="button" aria-pressed={marcas[a.studentId] === m}
+                          className={`ev-marca ${m} ${marcas[a.studentId] === m ? 'elegida' : ''}`}
+                          disabled={ausente}
+                          title={MARCAS[m].label}
+                          aria-label={MARCAS[m].label}
+                          onClick={() => cambiarMarca(a.studentId, m)}>
+                          {MARCAS[m].simbolo}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                   <label className="ev-ausente">
                     <input type="checkbox" checked={ausente} onChange={() => alternarAusente(a.studentId)}
-                      aria-label={`${a.firstName} ${a.lastName} estuvo ausente`} />
+                      aria-label={`${nombre} estuvo ausente`} />
                   </label>
+                  {conComentario.has(a.studentId) && (
+                    <input
+                      id={`ev-com-${a.studentId}`}
+                      className="ev-comentario"
+                      type="text"
+                      maxLength={200}
+                      value={comentarios[a.studentId] ?? ''}
+                      placeholder="Comentario (lo ven el alumno y su familia)"
+                      aria-label={`Comentario para ${nombre}`}
+                      onChange={e => cambiarComentario(a.studentId, e.target.value)}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -260,7 +377,7 @@ export default function EvaluacionEditor({
               <Trash2 size={14} aria-hidden="true" /> Borrar
             </button>
           )}
-          <span className="ev-cuenta">{conNota} con nota · {ausentes.size} ausente{ausentes.size !== 1 ? 's' : ''}</span>
+          <span className="ev-cuenta">{conNota} {escala === 'nota' ? 'con nota' : 'anotados'} · {ausentes.size} ausente{ausentes.size !== 1 ? 's' : ''}</span>
           <button type="button" className="btn btn-outline btn-sm" onClick={cerrar} disabled={guardando}>Cancelar</button>
           <button type="button" className="btn btn-primary btn-sm" onClick={guardar} disabled={guardando}>
             {guardando ? <Loader2 size={14} className="spin" aria-hidden="true" /> : <Save size={14} aria-hidden="true" />}

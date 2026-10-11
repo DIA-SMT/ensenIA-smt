@@ -199,8 +199,11 @@ export default function ArmarModulo() {
     //  · de un material de la biblioteca → en ese mismo material (antes se
     //    creaba un "Módulo:" nuevo cada vez y las placas se rehacían siempre);
     //  · de un tema de la planificación → en el material de ese tema.
+    //    Solo el apunte que armó esta pantalla (etiqueta 'módulo'): desde la
+    //    063 un tema también tiene archivos y presentaciones, y el texto de
+    //    un PDF del docente no se pisa con el módulo.
     const destino = origen === 'material' ? baseMaterial
-        : origen === 'tema' && baseTema ? materials.find(m => m.classId === baseTema.id) ?? null
+        : origen === 'tema' && baseTema ? materials.find(m => m.classId === baseTema.id && m.tags.includes('módulo')) ?? null
         : null;
     const placasGuardadas = destino?.studyCards?.length ? destino.studyCards : null;
     const podcastGuardado = destino?.podcastStatus === 'ready' && destino.podcastPath ? destino.podcastPath : null;
@@ -328,8 +331,10 @@ export default function ArmarModulo() {
                 return pieza(key, async () => {
                     const limpio = normalizarMazo(await generateSlides(content, moduleName, contexto));
                     if (!limpio) throw new Error('mazo vacío');
-                    // Material aparte del apunte, sin class_id: el material "del tema" es el apunte
+                    // Material aparte del apunte, en el mismo tema (063): el apunte se
+                    // reconoce por la etiqueta 'módulo', así que no lo tapa
                     const m = await createMaterial({
+                        classId: origen === 'tema' && baseTema ? baseTema.id : null,
                         title: `Diapositivas: ${moduleName}`.slice(0, 120),
                         description: `${limpio.diapositivas.length} diapositivas para ${subjectName} · ${assignment.courseName}`,
                         fileType: 'doc',

@@ -3,14 +3,17 @@ import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
-  PencilLine,
+  PencilLine, Undo2, Ban,
 } from 'lucide-react';
 import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivityById, getSubmissionsByActivity, getEventsByActivity,
   getEnrolledStudents, gradeSubmission, setSubmissionReaction, updateActivity,
+  registrarEntregaDocente, porPartes, puntajesAutomaticos,
 } from '../services/activities.service';
+import NotaPorPartes from '../components/NotaPorPartes';
+import { TIPOS_ACTIVIDAD, leerPuntajes, partesCompletas, puntosATexto, sumaPuntajes } from '../lib/actividades';
 import { getCheckinsByActivity, getObservationsByStudent } from '../services/wellbeing.service';
 import { guardarObservacionResiliente } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -66,6 +69,13 @@ export default function ActividadDetalle() {
   const [showQr, setShowQr] = useState(false);
   const [gradeInput, setGradeInput] = useState('');
   const [feedbackInput, setFeedbackInput] = useState('');
+  // Corrección por partes (063): lo tipeado en cada parte. Mientras el
+  // docente no toque la nota final, la nota es la suma.
+  const [partesInput, setPartesInput] = useState<Record<string, string>>({});
+  const [notaTocada, setNotaTocada] = useState(false);
+  // Anotar la entrega en papel de quien no la hizo en la app
+  const [anotandoPapel, setAnotandoPapel] = useState(false);
+  const [anotando, setAnotando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
   const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
@@ -183,6 +193,9 @@ export default function ActividadDetalle() {
 
   const statusOf = (st: EnrolledStudent) => {
     const sub = subByStudent.get(st.id);
+    if (sub?.registro === 'no_entrego' && sub.status === 'in_progress') return { label: 'La está haciendo (anotaste que no la entregó)', cls: 'badge-warning' };
+    if (sub?.registro === 'no_entrego' && sub.status !== 'graded' && sub.status !== 'submitted') return { label: 'No entregó', cls: 'badge-danger' };
+    if (sub?.registro === 'papel') return { label: sub.status === 'graded' ? 'En papel · calificada' : 'En papel', cls: 'badge-success' };
     if (sub?.status === 'graded') return { label: 'Calificada', cls: 'badge-success' };
     if (sub?.status === 'submitted') return { label: 'Entregada', cls: 'badge-success' };
     if (sub?.status === 'in_progress') return { label: 'En curso', cls: 'badge-warning' };
@@ -207,8 +220,23 @@ export default function ActividadDetalle() {
     cortarSugerencia();
     setSelected(st);
     const sub = subByStudent.get(st.id);
-    setGradeInput(sub?.score != null ? String(sub.score) : sub?.autoScore != null ? String(sub.autoScore) : '');
     setFeedbackInput(sub?.feedback ?? '');
+    setAnotandoPapel(false);
+    // Lo de papel no tiene autocorrección
+    const auto = sub?.registro === 'papel' ? null : sub?.autoScore ?? null;
+    // Por partes: lo que ya puso el docente, o lo que corrigió la base en las de opción múltiple
+    if (activity && porPartes(activity.questions)) {
+      const base = sub?.puntajes ?? (sub ? puntajesAutomaticos(activity.questions, sub) : {});
+      setPartesInput(Object.fromEntries(Object.entries(base).map(([k, v]) => [k, puntosATexto(v)])));
+      // La nota sigue a las partes salvo que el docente haya puesto otra
+      setNotaTocada(sub?.score != null && !(sub.puntajes && sumaPuntajes(sub.puntajes) === sub.score));
+      setGradeInput(sub?.score != null ? String(sub.score)
+        : partesCompletas(activity.questions, base) ? String(sumaPuntajes(base)) : '');
+    } else {
+      setPartesInput({});
+      setNotaTocada(sub?.score != null);
+      setGradeInput(sub?.score != null ? String(sub.score) : auto != null ? String(auto) : '');
+    }
     setObsNote('');
     setObsSaved(false);
     setObsError('');
@@ -262,19 +290,110 @@ export default function ActividadDetalle() {
     }
   };
 
+  const cambiarParte = (qid: string, texto: string) => {
+    if (!activity) return;
+    const nuevos = { ...partesInput, [qid]: texto };
+    setPartesInput(nuevos);
+    // Mientras no toque la nota final, la nota es la suma de las partes, y
+    // solo cuando están todas: un subtotal no es la nota
+    if (!notaTocada) {
+      const { puntajes, mala } = leerPuntajes(activity.questions, nuevos);
+      if (mala === null) setGradeInput(partesCompletas(activity.questions, puntajes) ? String(sumaPuntajes(puntajes)) : '');
+    }
+  };
+
+  /** Nota, puntajes por parte y devolución, validados; null si algo está mal (ya avisado). */
+  const leerCorreccion = (): { score: number | null; puntajes?: Record<string, number> | null } | null => {
+    if (!activity) return null;
+    const tope = activity.points ?? 100;
+    const score = gradeInput.trim() === '' ? null : Number(gradeInput.replace(',', '.'));
+    if (score !== null && (!Number.isFinite(score) || score < 0 || score > tope)) {
+      avisar.error('Revisá la nota', `Va de 0 a ${tope}.`);
+      return null;
+    }
+    if (!porPartes(activity.questions)) return { score };
+    const { puntajes, mala } = leerPuntajes(activity.questions, partesInput);
+    if (mala !== null) {
+      const q = activity.questions[mala - 1];
+      avisar.error(`Revisá la parte ${mala}`, `Va de 0 a ${puntosATexto(q?.points ?? 0)}.`);
+      return null;
+    }
+    return { score, puntajes };
+  };
+
   const handleGrade = async () => {
     const sub = selected ? subByStudent.get(selected.id) : null;
-    if (!sub || gradeInput === '') return;
+    if (!sub || !activity || gradeInput === '') return;
+    const c = leerCorreccion();
+    if (!c || c.score === null) return;
     try {
-      await gradeSubmission(sub.id, Number(gradeInput), feedbackInput.trim() || undefined);
+      if (sub.registro === 'papel') {
+        await registrarEntregaDocente(activity.id, sub.studentId, 'papel', { score: c.score, puntajes: c.puntajes, feedback: feedbackInput });
+      } else {
+        await gradeSubmission(sub.id, c.score, feedbackInput.trim() || undefined, c.puntajes);
+      }
     } catch (err) {
       console.error(err);
-      avisar.error('No se pudo guardar la nota', 'Probá de nuevo.');
+      avisar.error('No se pudo guardar la nota', err instanceof Error && err.message ? err.message : 'Probá de nuevo.');
       return;
     }
     avisar.exito(selected ? `Nota de ${selected.firstName} guardada` : 'Nota guardada');
     await load();
     closeStudent();
+  };
+
+  /** Lo que pasó fuera de la app: lo entregó en papel (con o sin nota) o no lo entregó. null deshace. */
+  const anotar = async (registro: 'papel' | 'no_entrego' | null) => {
+    if (!selected || !activity || anotando) return;
+    let datos: { score?: number | null; puntajes?: Record<string, number> | null; feedback?: string | null } = {};
+    if (registro === 'papel') {
+      const c = leerCorreccion();
+      if (!c) return;
+      datos = { score: c.score, puntajes: c.puntajes ?? null, feedback: feedbackInput };
+    } else if (registro === null) {
+      const sub = subByStudent.get(selected.id);
+      if (sub?.registro === 'papel' && (sub.score != null || sub.feedback)) {
+        const ok = await confirmar({
+          titulo: '¿Borrar lo anotado?',
+          mensaje: `Se borra la entrega en papel de ${selected.firstName}, con su nota y su devolución.`,
+          accion: 'Borrar',
+          peligro: true,
+        });
+        if (!ok) return;
+      }
+    }
+    // "No lo entregó" va sin devolución: lo que quedó escrito en el panel
+    // era para otra cosa, y el alumno lo vería
+    setAnotando(true);
+    try {
+      await registrarEntregaDocente(activity.id, selected.id, registro, datos);
+    } catch (err) {
+      console.error(err);
+      avisar.error('No se pudo anotar', err instanceof Error && err.message ? err.message : 'Probá de nuevo.');
+      return;
+    } finally {
+      setAnotando(false);
+    }
+    avisar.exito(
+      registro === 'papel' ? `Anotado: ${selected.firstName} lo entregó en papel`
+        : registro === 'no_entrego' ? `Anotado: ${selected.firstName} no lo entregó`
+          : 'Se borró lo anotado',
+      registro === 'no_entrego' ? 'Si después lo entrega en la app, queda como entregado.' : undefined,
+    );
+    await load();
+    closeStudent();
+  };
+
+  const publicar = async () => {
+    if (!activity) return;
+    try {
+      await updateActivity(activity.id, { status: 'published' });
+    } catch (err) {
+      avisar.error('No se pudo publicar', err instanceof Error && err.message ? err.message : 'Probá de nuevo.');
+      return;
+    }
+    avisar.exito('Publicada', `Ya la ven en ${activity.courseName ?? 'el curso'}.`);
+    await load();
   };
 
   // Al pedido va la actividad y las respuestas: nunca el nombre ni otros datos del estudiante
@@ -310,6 +429,7 @@ export default function ActividadDetalle() {
       setFeedbackInput(d.devolucion);
       if (d.puntaje != null) {
         setGradeInput(String(d.puntaje));
+        setNotaTocada(true);
         setNotaSugerida(true);
       }
       requestAnimationFrame(() => document.getElementById('ad-devolucion')?.focus());
@@ -358,6 +478,7 @@ export default function ActividadDetalle() {
               </button>
             </h2>
             <div className="acts-card-meta mt-1">
+              {activity.tipo !== 'actividad' && <span className="badge badge-neutral">{TIPOS_ACTIVIDAD[activity.tipo].emoji} {TIPOS_ACTIVIDAD[activity.tipo].label}</span>}
               <span className="badge badge-cyan">{activity.subjectName}</span>
               <span className="badge badge-neutral">{activity.courseName}</span>
               {activity.points != null && <span className="badge badge-neutral">{activity.points} pts</span>}
@@ -369,6 +490,9 @@ export default function ActividadDetalle() {
             </div>
           </div>
           <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+            <Link to={`/actividades/${activity.id}/editar`} className="btn btn-outline btn-sm" title="Consigna, partes, puntos, respuesta correcta y fecha">
+              <PencilLine size={14} /> Editar
+            </Link>
             <BotonCopiarActividad activity={activity} />
             <button className="btn btn-secondary btn-sm" onClick={() => setShowQr(true)} title="Para proyectar en el aula">
               <QrCode size={14} /> QR
@@ -394,6 +518,14 @@ export default function ActividadDetalle() {
                 ))}
               </ol>
             )}
+          </div>
+        )}
+
+        {activity.status === 'draft' && (
+          <div className="acts-borrador" role="status">
+            <span>Es un borrador: los estudiantes todavía no la ven.</span>
+            <Link to={`/actividades/${activity.id}/editar`} className="btn btn-outline btn-sm"><PencilLine size={14} /> Seguir armando</Link>
+            <button type="button" className="btn btn-primary btn-sm" onClick={publicar}><Send size={14} /> Publicar</button>
           </div>
         )}
 
@@ -516,6 +648,9 @@ export default function ActividadDetalle() {
               {selectedSub && (
                 <section>
                   <h4 className="acts-side-title">Respuestas</h4>
+                  {selectedSub.registro === 'papel' && Object.keys(selectedSub.answers).length === 0 && !selectedSub.responseText ? (
+                    <p className="text-sm text-secondary">Lo hizo en papel: las respuestas están en su hoja.</p>
+                  ) : <>
                   {activity.questions.length === 0 && (
                     <p className="acts-answer-text">{selectedSub.responseText || <em className="text-subtle">Sin texto</em>}</p>
                   )}
@@ -536,6 +671,7 @@ export default function ActividadDetalle() {
                       </div>
                     );
                   })}
+                  </>}
 
                   {(selectedSub.status === 'submitted' || selectedSub.status === 'graded') && (
                     <div className="mt-3">
@@ -557,6 +693,18 @@ export default function ActividadDetalle() {
 
                   {(selectedSub.status === 'submitted' || selectedSub.status === 'graded') && (
                     <div className="acts-grade-box">
+                      {selectedSub.registro === 'papel' && (
+                        <p className="acts-papel">
+                          <FileText size={14} aria-hidden="true" /> Lo entregó en papel.
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => anotar(null)} disabled={anotando}>
+                            <Undo2 size={13} /> Deshacer
+                          </button>
+                        </p>
+                      )}
+                      {porPartes(activity.questions) && (
+                        <NotaPorPartes partes={activity.questions} textos={partesInput} alCambiar={cambiarParte}
+                          respuestas={selectedSub.answers} />
+                      )}
                       <div className="em-row">
                         <div className="em-field">
                           <label htmlFor="ad-nota">Nota final {activity.points != null ? `(sobre ${activity.points})` : ''}</label>
@@ -564,7 +712,7 @@ export default function ActividadDetalle() {
                             id="ad-nota"
                             type="number"
                             value={gradeInput}
-                            onChange={e => { setGradeInput(e.target.value); setNotaSugerida(false); }}
+                            onChange={e => { setGradeInput(e.target.value); setNotaSugerida(false); setNotaTocada(true); }}
                             min={0}
                             max={activity.points ?? 100}
                           />
@@ -582,15 +730,72 @@ export default function ActividadDetalle() {
                           aria-busy={sugiriendo}
                         />
                       </div>
-                      <SugerirDevolucion
-                        className="mt-2"
-                        cargando={sugiriendo}
-                        alTocar={handleSugerirDevolucion}
-                        alCancelar={cortarSugerencia}
-                      />
+                      {/* En papel no hay respuestas en la app: la IA no tiene qué leer */}
+                      {selectedSub.registro !== 'papel' && (
+                        <SugerirDevolucion
+                          className="mt-2"
+                          cargando={sugiriendo}
+                          alTocar={handleSugerirDevolucion}
+                          alCancelar={cortarSugerencia}
+                        />
+                      )}
                       <button className="btn btn-primary btn-sm w-full mt-2" onClick={handleGrade} disabled={gradeInput === ''}>
                         <CheckCircle size={14} /> Guardar calificación
                       </button>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Lo que pasó fuera de la app (063): lo hizo en papel o no lo entregó */}
+              {activity.status !== 'draft' && selectedSub?.registro !== 'papel'
+                && (!selectedSub || selectedSub.status === 'pending' || selectedSub.status === 'in_progress') && (
+                <section>
+                  <h4 className="acts-side-title"><FileText size={14} /> En papel</h4>
+                  {selectedSub?.registro === 'no_entrego' ? (
+                    <p className="acts-papel">
+                      <Ban size={14} aria-hidden="true" /> Anotado: no lo entregó.
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => anotar(null)} disabled={anotando}>
+                        <Undo2 size={13} /> Deshacer
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-subtle">
+                      Si lo hizo en la carpeta o en una hoja, anotalo acá: queda en la libreta junto con lo de la app.
+                    </p>
+                  )}
+                  {!anotandoPapel ? (
+                    <div className="acts-papel-acciones">
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAnotandoPapel(true)} disabled={anotando}>
+                        <FileText size={14} /> Lo entregó en papel
+                      </button>
+                      {selectedSub?.registro !== 'no_entrego' && (
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => anotar('no_entrego')} disabled={anotando}>
+                          <Ban size={14} /> No lo entregó
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="acts-grade-box">
+                      {porPartes(activity.questions) && (
+                        <NotaPorPartes partes={activity.questions} textos={partesInput} alCambiar={cambiarParte} />
+                      )}
+                      <div className="em-field">
+                        <label htmlFor="ad-nota-papel">Nota {activity.points != null ? `(sobre ${activity.points})` : ''} — si todavía no lo corregiste, dejala vacía</label>
+                        <input id="ad-nota-papel" type="number" value={gradeInput} min={0} max={activity.points ?? 100}
+                          onChange={e => { setGradeInput(e.target.value); setNotaTocada(true); }} />
+                      </div>
+                      <div className="em-field mt-2">
+                        <label htmlFor="ad-devolucion-papel">Devolución (opcional)</label>
+                        <textarea id="ad-devolucion-papel" rows={2} value={feedbackInput}
+                          onChange={e => setFeedbackInput(e.target.value)} placeholder="Lo ve en la app" />
+                      </div>
+                      <div className="acts-papel-acciones mt-2">
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => setAnotandoPapel(false)} disabled={anotando}>Cancelar</button>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => anotar('papel')} disabled={anotando}>
+                          <CheckCircle size={14} /> {anotando ? 'Guardando…' : 'Guardar'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </section>

@@ -1,4 +1,4 @@
-import { supabase, unwrap } from './_helpers';
+import { supabase, unwrap, ServiceError } from './_helpers';
 import type { LibraryMaterial } from '../types';
 
 export async function getMaterialsByTeacher(teacherId: string): Promise<LibraryMaterial[]> {
@@ -149,16 +149,25 @@ function mapMaterial(row: any): LibraryMaterial {
   };
 }
 
-/** El material que ya se generó para un tema, si existe. Se genera una vez y queda. */
-export async function getMaterialByClass(classId: string): Promise<LibraryMaterial | null> {
-  const { data } = await supabase
-    .from('library_materials')
-    .select('*')
-    .eq('class_id', classId)
-    .order('uploaded_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data ? mapMaterial(data) : null;
+/** Los materiales de un tema de la planificación (apunte, presentación, archivos), del más viejo al más nuevo. */
+export async function getMaterialsByClass(classId: string): Promise<LibraryMaterial[]> {
+  const data = unwrap(
+    await supabase
+      .from('library_materials')
+      .select('*')
+      .eq('class_id', classId)
+      .order('uploaded_at')
+  );
+  return data.map(mapMaterial);
+}
+
+/**
+ * Sumar un material a un tema (o sacarlo, con null). La base controla que
+ * el tema sea de tu planificación de esa materia y curso (063).
+ */
+export async function asignarTema(materialId: string, classId: string | null): Promise<void> {
+  const { error } = await supabase.from('library_materials').update({ class_id: classId } as never).eq('id', materialId);
+  if (error) throw new ServiceError(error.message, error);
 }
 
 /** Etiqueta de las versiones adaptadas que se leen con letra grande e interlineado. */

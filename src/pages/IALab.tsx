@@ -773,9 +773,15 @@ export default function IALab() {
         if (!limpio) throw new Error('Las diapositivas quedaron vacías.');
         if (!currentAssignment) throw new Error('Elegí una materia primero (arriba a la izquierda).');
         const unitTitle = selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined;
-        // Sin class_id a propósito: el material con class_id es "el material del
-        // tema" (placas y podcast de Armar módulo) y las diapositivas lo taparían.
+        // Las diapositivas quedan en su tema (063): aparecen en "Preparar la
+        // clase". Armar la clase reconoce su propio apunte por la etiqueta
+        // 'módulo', así que ya no se tapan. Solo si el tema es de esta
+        // materia y curso (la base lo exige).
+        const unidadDelTema = selectedClass ? allUnits.find(u => u.id === selectedClass.unitId) : undefined;
+        const temaDeEsteCurso = unidadDelTema && unidadDelTema.subjectId === currentAssignment.subjectId
+            && unidadDelTema.courseId === currentAssignment.courseId ? selectedClass?.id ?? null : null;
         const mat = await createMaterial({
+            classId: temaDeEsteCurso,
             title,
             description: selectedClass
                 ? `Diapositivas del tema "${selectedClass.title}" · preparadas con la IA`
@@ -1394,7 +1400,7 @@ export default function IALab() {
                                     {/* La salida a la clase armada: de este tema salen diapositivas, juego, tarea…
                                         Si ya se generó, se muestra lo que hay en vez de invitar a rehacerlo. */}
                                     {(() => {
-                                        const mat = materials.find(m => m.classId === selectedClass.id);
+                                        const mat = materials.find(m => m.classId === selectedClass.id && m.tags.includes('módulo'));
                                         if (!mat) return (
                                             <button
                                                 className="btn btn-primary btn-sm"

@@ -5,10 +5,11 @@
  * y huella digital (activity_events).
  */
 
-import { supabase, unwrap } from './_helpers';
+import { supabase, unwrap, ServiceError } from './_helpers';
 import type {
   Activity, ActivityQuestion, ActivitySubmission, ActivityEvent,
   ActivityEventType, ActivityAnswer, Enrollment, IAToolType, Student,
+  TipoActividad, RegistroEntrega,
 } from '../types';
 
 // ── Mappers ──
@@ -31,6 +32,8 @@ function mapActivity(row: any): Activity {
     dueDate: row.due_date,
     points: row.points,
     createdAt: row.created_at,
+    tipo: row.tipo ?? 'actividad',
+    publishedAt: row.published_at ?? null,
     subjectName: row.subjects?.name,
     courseName: row.courses?.name,
   };
@@ -52,6 +55,8 @@ function mapSubmission(row: any): ActivitySubmission {
     startedAt: row.started_at,
     submittedAt: row.submitted_at,
     gradedAt: row.graded_at,
+    puntajes: row.puntajes ?? null,
+    registro: row.registro ?? null,
   };
 }
 
@@ -82,6 +87,10 @@ export async function createActivity(a: {
   sourceTool?: IAToolType | null;
   dueDate?: string | null;
   points?: number | null;
+  /** Por defecto 'actividad' */
+  tipo?: TipoActividad;
+  /** 'draft': se guarda sin que la vean los estudiantes. Por defecto se publica. */
+  estado?: 'draft' | 'published';
 }): Promise<Activity> {
   const row = unwrap(
     await supabase
@@ -98,14 +107,27 @@ export async function createActivity(a: {
         unit_id: a.unitId ?? null,
         class_id: a.classId ?? null,
         source_tool: (a.sourceTool as any) ?? null,
-        status: 'published',
+        status: a.estado ?? 'published',
         due_date: a.dueDate ?? null,
         points: a.points ?? null,
-      })
+        ...(a.tipo && a.tipo !== 'actividad' ? { tipo: a.tipo } : {}),
+      } as never)
       .select('*')
       .single()
   );
   return mapActivity(row);
+}
+
+/** Actividades, TP y evaluaciones de un tema de la planificación (borradores incluidos). */
+export async function getActivitiesByClass(classId: string): Promise<Activity[]> {
+  const data = unwrap(
+    await supabase
+      .from('activities')
+      .select('*')
+      .eq('class_id', classId)
+      .order('created_at')
+  );
+  return data.map(mapActivity);
 }
 
 export async function getActivitiesByTeacher(teacherId: string): Promise<Activity[]> {
@@ -128,17 +150,41 @@ export async function getActivityById(id: string): Promise<Activity | null> {
   return data ? mapActivity(data) : null;
 }
 
-export async function updateActivity(id: string, changes: { title?: string; description?: string }): Promise<void> {
-  const { error } = await supabase
-    .from('activities')
-    .update({ ...(changes.title !== undefined && { title: changes.title }), ...(changes.description !== undefined && { description: changes.description }) })
-    .eq('id', id);
-  if (error) throw error;
+/**
+ * Editar una actividad, también después de publicada (063). Con entregas,
+ * la base deja corregir textos, la respuesta correcta y los puntos (y
+ * vuelve a corregir lo entregado), pero no agregar ni quitar partes: el
+ * error trae el motivo para mostrárselo al docente.
+ */
+export async function updateActivity(id: string, changes: {
+  title?: string;
+  description?: string | null;
+  contentMd?: string;
+  questions?: ActivityQuestion[];
+  points?: number | null;
+  dueDate?: string | null;
+  tipo?: TipoActividad;
+  classId?: string | null;
+  status?: 'draft' | 'published' | 'closed';
+}): Promise<void> {
+  const db: Record<string, unknown> = {};
+  if (changes.title !== undefined) db.title = changes.title;
+  if (changes.description !== undefined) db.description = changes.description;
+  if (changes.contentMd !== undefined) db.content_md = changes.contentMd;
+  if (changes.questions !== undefined) db.questions = changes.questions;
+  if (changes.points !== undefined) db.points = changes.points;
+  if (changes.dueDate !== undefined) db.due_date = changes.dueDate;
+  if (changes.tipo !== undefined) db.tipo = changes.tipo;
+  if (changes.classId !== undefined) db.class_id = changes.classId;
+  if (changes.status !== undefined) db.status = changes.status;
+  const { error } = await supabase.from('activities').update(db as never).eq('id', id);
+  // Con el mensaje de la base: dice por qué no se pudo (por ejemplo, que ya hay entregas)
+  if (error) throw new ServiceError(error.message, error);
 }
 
 export async function updateActivityStatus(id: string, status: 'published' | 'closed'): Promise<void> {
   const { error } = await supabase.from('activities').update({ status }).eq('id', id);
-  if (error) throw error;
+  if (error) throw new ServiceError(error.message, error);
 }
 
 export async function deleteActivity(id: string): Promise<void> {
@@ -182,6 +228,8 @@ export async function gradeSubmission(
   submissionId: string,
   score: number,
   feedback?: string,
+  /** Puntaje de cada parte (063). Sin darlo, no se toca lo que había. */
+  puntajes?: Record<string, number> | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('activity_submissions')
@@ -190,9 +238,54 @@ export async function gradeSubmission(
       feedback: feedback ?? null,
       status: 'graded',
       graded_at: new Date().toISOString(),
-    })
+      ...(puntajes !== undefined ? { puntajes: puntajes && Object.keys(puntajes).length ? puntajes : null } : {}),
+    } as never)
     .eq('id', submissionId);
-  if (error) throw error;
+  if (error) throw new ServiceError(error.message, error);
+}
+
+/**
+ * Lo que pasó fuera de la app, en la misma actividad (063): lo entregó en
+ * papel (con nota, puntaje por parte y devolución, o todavía sin corregir)
+ * o no lo entregó. null borra lo anotado. Lo que entregó en la app no se
+ * pisa: se corrige en su entrega.
+ */
+export async function registrarEntregaDocente(
+  activityId: string,
+  studentId: string,
+  registro: RegistroEntrega | null,
+  datos: { score?: number | null; puntajes?: Record<string, number> | null; feedback?: string | null } = {},
+): Promise<void> {
+  const { error } = await supabase.rpc('registrar_entrega_docente' as never, {
+    p_activity: activityId,
+    p_student: studentId,
+    p_registro: registro,
+    p_score: datos.score ?? null,
+    p_puntajes: datos.puntajes && Object.keys(datos.puntajes).length ? datos.puntajes : null,
+    p_feedback: datos.feedback?.trim() || null,
+  } as never);
+  if (error) {
+    if (error.code === 'PGRST202') throw new Error('Falta correr la migración 063_preparar_la_clase.sql en Supabase.');
+    throw new ServiceError(error.message, error);
+  }
+}
+
+/** ¿La actividad se corrige por partes? (alguna parte tiene puntos) */
+export const porPartes = (questions: ActivityQuestion[]) =>
+  questions.some(q => typeof q.points === 'number');
+
+/** Puntos de cada parte de opción múltiple que ya corrigió la base, por id. */
+export function puntajesAutomaticos(questions: ActivityQuestion[], sub: ActivitySubmission): Record<string, number> {
+  const out: Record<string, number> = {};
+  // Solo lo que corrigió la base al entregar: mientras está en curso, el
+  // campo correct lo escribe el celular del alumno
+  if (sub.registro === 'papel' || (sub.status !== 'submitted' && sub.status !== 'graded')) return out;
+  for (const q of questions) {
+    if (q.type !== 'multiple_choice' || typeof q.points !== 'number') continue;
+    const a = sub.answers[q.id];
+    if (a && typeof a.correct === 'boolean') out[q.id] = a.correct ? q.points : 0;
+  }
+  return out;
 }
 
 /** Alumnos inscriptos a la materia+curso de una actividad. */
@@ -380,6 +473,18 @@ export async function getOrCreateSubmission(activityId: string, studentId: strin
     .eq('activity_id', activityId)
     .eq('student_id', studentId)
     .maybeSingle();
+  // El docente anotó "no lo entregó" (063): la fila existe pero no empezó.
+  // Empieza ahora; si la entrega, deja de figurar como no entregada.
+  if (existing && existing.status === 'pending') {
+    const { data: enCurso, error } = await supabase
+      .from('activity_submissions')
+      .update({ status: 'in_progress' })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) throw new ServiceError(error.message, error);
+    return mapSubmission(enCurso);
+  }
   if (existing) return mapSubmission(existing);
 
   const { data: created, error } = await supabase
@@ -478,6 +583,8 @@ export interface PendingGrading {
   answers: Record<string, ActivityAnswer>;
   responseText?: string | null;
   questions: ActivityQuestion[];
+  /** La entregó en papel (063): no hay respuestas en la app */
+  enPapel?: boolean;
   /** Consigna de la actividad (para sugerir la devolución con IA). */
   activityContent?: string;
   activityDescription?: string | null;
@@ -492,7 +599,7 @@ export async function getPendingGrading(teacherId: string): Promise<PendingGradi
     await supabase
       .from('activity_submissions')
       .select(
-        'id, auto_score, submitted_at, answers, response_text,' +
+        'id, auto_score, submitted_at, answers, response_text, registro,' +
         ' students(first_name, last_name, avatar_initials),' +
         ' activities!inner(id, title, description, content_md, points, questions, teacher_id, subjects(name), courses(name))'
       )
@@ -510,7 +617,8 @@ export async function getPendingGrading(teacherId: string): Promise<PendingGradi
     subjectName: r.activities?.subjects?.name ?? '',
     courseName: r.activities?.courses?.name ?? '',
     points: r.activities?.points != null ? Number(r.activities.points) : null,
-    autoScore: r.auto_score != null ? Number(r.auto_score) : null,
+    autoScore: r.registro === 'papel' || r.auto_score == null ? null : Number(r.auto_score),
+    enPapel: r.registro === 'papel',
     submittedAt: r.submitted_at,
     answers: r.answers ?? {},
     responseText: r.response_text,

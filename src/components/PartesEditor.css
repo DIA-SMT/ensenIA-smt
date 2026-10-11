@@ -1,0 +1,74 @@
+/* Las partes de una actividad, un TP o una evaluación (063) */
+.partes { display: flex; flex-direction: column; gap: var(--space-3); }
+.partes-vacio { margin: 0; font-size: 0.8125rem; color: var(--text-secondary); }
+.partes-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+
+.parte {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--bg-surface);
+}
+.parte-cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.parte-cabecera strong { font-size: 0.875rem; }
+
+.parte-tipo { display: inline-flex; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+.parte-tipo button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.parte-tipo button + button { border-left: 1px solid var(--border-color); }
+.parte-tipo button.activa { background: var(--acento-suave, var(--cyan-glow)); color: var(--text-primary); font-weight: 650; }
+.parte-tipo button:disabled { cursor: default; }
+.parte-tipo button:disabled:not(.activa) { opacity: 0.5; }
+
+.parte-puntos { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--text-secondary); }
+.parte-puntos input {
+  width: 56px;
+  min-height: 34px;
+  text-align: center;
+  font-weight: 650;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.parte-puntos input.mala { border-color: var(--danger); }
+.parte-acciones { margin-left: auto; display: inline-flex; gap: 2px; }
+
+.parte-enunciado,
+.parte-opcion input[type='text'] {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 8px 10px;
+}
+.parte-enunciado { resize: vertical; }
+.parte-enunciado:focus,
+.parte-opcion input[type='text']:focus,
+.parte-puntos input:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--cyan-glow); }
+
+.parte-opciones { display: flex; flex-direction: column; gap: 6px; }
+.parte-opcion { display: grid; grid-template-columns: 24px 18px 1fr auto; align-items: center; gap: 6px; }
+.parte-opcion input[type='radio'] { width: 18px; height: 18px; accent-color: var(--success); }
+.parte-opcion.correcta input[type='text'] { border-color: var(--success); }
+.parte-letra { font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); }
+.parte-agregar-opcion { align-self: flex-start; }
+.parte-ayuda { margin: 0; font-size: 0.75rem; color: var(--text-subtle); }
+
+.partes-agregar { display: flex; flex-wrap: wrap; gap: 8px; }

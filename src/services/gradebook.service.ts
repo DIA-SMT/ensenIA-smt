@@ -16,7 +16,7 @@ import {
   getEvaluacionesDelTrimestre, notaDeActividad, type Evaluacion, type TipoEvaluacion,
 } from './evaluaciones.service';
 import type {
-  AcademicTerm, TermGrade, TermGradeStatus, GradebookRow, Student, NotaItem,
+  AcademicTerm, TermGrade, TermGradeStatus, GradebookRow, Student, NotaItem, TipoActividad,
 } from '../types';
 
 // ── Trimestres ──
@@ -116,6 +116,8 @@ export interface ColumnaLibreta {
   fecha: string;
   /** La evaluación completa, para editarla (solo las cargadas) */
   evaluacion?: Evaluacion;
+  /** Actividad, TP o evaluación de la app (solo las de la app) */
+  tipoActividad?: TipoActividad;
 }
 
 export interface LibretaTrimestre {
@@ -156,21 +158,25 @@ export async function getGradebook(params: {
   // fuera de todos los trimestres.
   const from = new Date(`${term.startsOn}T00:00:00-03:00`).toISOString();
   const to = new Date(`${term.endsOn}T23:59:59.999-03:00`).toISOString();
+  // Por la fecha en que se publicó (063): un borrador no está en la libreta,
+  // y uno armado en un trimestre y publicado en el siguiente cae en el siguiente.
   const actRows = unwrap(
     await supabase
       .from('activities')
-      .select('id, title, points, created_at')
+      .select('id, title, points, tipo, published_at' as '*')
       .eq('teacher_id', teacherId)
       .eq('subject_id', subjectId)
       .eq('course_id', courseId)
-      .gte('created_at', from)
-      .lte('created_at', to)
-      .order('created_at')
-  ) as unknown as { id: string; title: string; points: number | null; created_at: string }[];
+      .neq('status', 'draft')
+      .gte('published_at', from)
+      .lte('published_at', to)
+      .order('published_at')
+  ) as unknown as { id: string; title: string; points: number | null; tipo: string | null; published_at: string }[];
 
-  // Solo las que tienen puntaje se pueden pasar a la escala de la libreta
-  const actividades = actRows.filter(a => a.points && a.points > 0);
-  const pointsByActivity = new Map(actividades.map(a => [a.id, a.points as number]));
+  // Las que tienen puntaje se pasan a la escala de la libreta. Los TP y las
+  // evaluaciones van siempre: aunque no tengan nota, queda quién entregó.
+  const actividades = actRows.filter(a => (a.points && a.points > 0) || a.tipo === 'tp' || a.tipo === 'evaluacion');
+  const pointsByActivity = new Map(actividades.map(a => [a.id, a.points ?? 0]));
 
   const [subs, gradeRows, evaluaciones] = await Promise.all([
     getSubmissionsByActivityIds(actividades.map(a => a.id)),
@@ -186,7 +192,8 @@ export async function getGradebook(params: {
 
   const columnas: ColumnaLibreta[] = [
     ...actividades.map(a => ({
-      id: a.id, origen: 'actividad' as const, tipo: 'actividad' as const, titulo: a.title, fecha: diaLocal(a.created_at),
+      id: a.id, origen: 'actividad' as const, tipo: 'actividad' as const, titulo: a.title, fecha: diaLocal(a.published_at),
+      tipoActividad: (a.tipo ?? 'actividad') as TipoActividad,
     })),
     ...evaluaciones.map(e => ({
       id: e.id, origen: 'evaluacion' as const, tipo: e.tipo, titulo: e.titulo, fecha: e.fecha, evaluacion: e,
@@ -201,13 +208,25 @@ export async function getGradebook(params: {
     return n;
   };
   for (const s of subs) {
+    if (!pointsByActivity.has(s.activityId)) continue;
+    const points = pointsByActivity.get(s.activityId) ?? 0;
+    const registro = s.registro ?? null;
+    // "No entregó" anotado por el docente (y todavía no lo entregó en la app)
+    if (registro === 'no_entrego' && s.status !== 'graded') {
+      de(s.studentId)[s.activityId] = { nota: null, registro };
+      continue;
+    }
     if (s.status !== 'submitted' && s.status !== 'graded') continue;
-    const points = pointsByActivity.get(s.activityId);
-    if (!points) continue;
-    const score = s.score ?? s.autoScore;
+    // Sin puntaje (un TP sin nota): queda que lo entregó
+    if (points <= 0) {
+      de(s.studentId)[s.activityId] = { nota: null, marca: 'completo', registro };
+      continue;
+    }
+    // Lo de papel no tiene autocorrección: hasta que el docente ponga nota, sin corregir
+    const score = s.score ?? (registro === 'papel' ? null : s.autoScore);
     de(s.studentId)[s.activityId] = score === null || score === undefined
-      ? { nota: null, sinCorregir: true }
-      : { nota: notaDeActividad(score, points) };
+      ? { nota: null, sinCorregir: true, registro }
+      : { nota: notaDeActividad(score, points), registro };
   }
   for (const e of evaluaciones) {
     for (const [studentId, n] of Object.entries(e.notas)) de(studentId)[e.id] = n;

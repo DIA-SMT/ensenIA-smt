@@ -26,6 +26,8 @@ import {
 } from '../services/gradebook.service';
 import { TIPOS_EVALUACION, type Evaluacion } from '../services/evaluaciones.service';
 import EvaluacionEditor from '../components/EvaluacionEditor';
+import RegistroDelEstudiante, { CeldaLibreta } from '../components/RegistroDelEstudiante';
+import { TIPOS_ACTIVIDAD } from '../lib/actividades';
 import { formatoNota } from '../lib/resumenNotas';
 import {
   getThresholds, DEFAULT_THRESHOLDS, notaLlevaADiciembre, textoReglaDiciembre,
@@ -546,6 +548,8 @@ export default function Libreta() {
   const [columnas, setColumnas] = useState<ColumnaLibreta[]>([]);
   // La evaluación que se está cargando: 'nueva' o una existente
   const [editando, setEditando] = useState<Evaluacion | 'nueva' | null>(null);
+  // El registro de un estudiante: todo lo del trimestre, de la app y de papel
+  const [registroDe, setRegistroDe] = useState<string | null>(null);
   const [thresholds, setThresholds] = useState<AlertThresholds | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -651,7 +655,10 @@ export default function Libreta() {
       if (e.subjectId !== assignment.subjectId || e.courseId !== assignment.courseId || e.termId !== term.id) continue;
       libreta = conEvaluacion(libreta, {
         ...e, pendiente: true,
-        notas: Object.fromEntries(e.notas.filter(n => n.ausente || n.nota !== null).map(n => [n.studentId, { nota: n.nota, ausente: n.ausente }])),
+        escala: e.escala ?? 'nota',
+        notas: Object.fromEntries(e.notas
+          .filter(n => n.ausente || n.nota !== null || n.marca)
+          .map(n => [n.studentId, { nota: n.nota, ausente: n.ausente, marca: n.marca ?? null, comentario: n.comentario ?? null }])),
       });
     }
     const enEspera = pendientesDe('notas').find(op => op.clave === claveNotas(assignment.subjectId, assignment.courseId, term.id));
@@ -946,8 +953,8 @@ export default function Libreta() {
                               <span className="libreta-col-fecha">{diaMes(c.fecha)}{c.evaluacion.pendiente && <CloudUpload size={11} aria-label=" sin enviar" />}</span>
                             </button>
                           ) : (
-                            <Link to={`/actividades/${c.id}`} className="libreta-col-btn" title={`Actividad de la app · ${diaMes(c.fecha)}`}>
-                              <span aria-hidden="true">💻</span>
+                            <Link to={`/actividades/${c.id}`} className="libreta-col-btn" title={`${TIPOS_ACTIVIDAD[c.tipoActividad ?? 'actividad'].label} de la app · ${diaMes(c.fecha)}. Ahí anotás también las entregas en papel.`}>
+                              <span aria-hidden="true">{TIPOS_ACTIVIDAD[c.tipoActividad ?? 'actividad'].emoji}</span>
                               <span className="libreta-col-titulo">{c.titulo}</span>
                               <span className="libreta-col-fecha">{diaMes(c.fecha)}</span>
                             </Link>
@@ -963,19 +970,17 @@ export default function Libreta() {
                     {rows.map(r => (
                       <tr key={r.studentId}>
                         <td>
-                          <div className="student-cell">
+                          <button type="button" className="student-cell libreta-alumno" onClick={() => setRegistroDe(r.studentId)}
+                            title={`Todo lo de ${r.firstName} en el trimestre: lo de la app y lo de papel`}>
                             <div className="student-avatar">{r.avatarInitials}</div>
                             <span className="font-medium">{r.firstName} {r.lastName}</span>
-                          </div>
+                          </button>
                         </td>
                         {columnas.map(c => {
                           const n = r.notas[c.id];
                           return (
                             <td key={c.id} data-label={c.titulo} className="libreta-celda">
-                              {!n ? <span className="text-subtle" aria-label="sin nota">·</span>
-                                : n.ausente ? <span className="libreta-ausente" title="Ausente">A</span>
-                                  : n.sinCorregir ? <span className="text-subtle" title="La entregó y falta corregirla">s/c</span>
-                                    : <span className={n.nota !== null && n.nota < 6 ? 'libreta-baja' : undefined}>{formatoNota(n.nota as number)}</span>}
+                              <CeldaLibreta n={n} />
                             </td>
                           );
                         })}
@@ -1052,6 +1057,19 @@ export default function Libreta() {
                   alBorrar={alBorrarEvaluacion}
                 />
               )}
+
+              {registroDe && (() => {
+                const fila = rows.find(x => x.studentId === registroDe);
+                return fila && (
+                  <RegistroDelEstudiante
+                    fila={fila}
+                    columnas={columnas}
+                    contexto={`${subjectsMap[assignment?.subjectId ?? '']?.name ?? 'Materia'} · ${assignment?.courseName ?? ''} · ${term?.name ?? ''}`}
+                    alEditarEvaluacion={e => { setRegistroDe(null); setEditando(e); }}
+                    alCerrar={() => setRegistroDe(null)}
+                  />
+                );
+              })()}
 
               {thresholds && (
                 <p className="libreta-rule">

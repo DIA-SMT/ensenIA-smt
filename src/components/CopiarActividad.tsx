@@ -120,6 +120,9 @@ function DialogoCopiar({ activity, destinos, alCerrar, alCopiar }: DialogoProps)
           unitId: null,
           classId: null,
           sourceTool: activity.sourceTool ?? null,
+          // Lo mismo que la original: un TP sigue siendo TP, y un borrador se copia como borrador
+          tipo: activity.tipo,
+          estado: activity.status === 'draft' ? 'draft' : 'published',
           dueDate,
           points: activity.points ?? null,
         });

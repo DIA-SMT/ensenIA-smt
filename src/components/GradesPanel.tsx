@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BookMarked, ChevronDown } from 'lucide-react';
 import { getPublishedGradesByStudent } from '../services/gradebook.service';
-import { getNotasDelAlumno, TIPOS_EVALUACION, type NotaDelAlumno } from '../services/evaluaciones.service';
+import { getNotasDelAlumno, MARCAS, TIPOS_EVALUACION, type NotaDelAlumno } from '../services/evaluaciones.service';
 import { formatoNota } from '../lib/resumenNotas';
 import type { TermGrade, AlertThresholds } from '../types';
 import EstadoVacio from './ui/EstadoVacio';
@@ -214,11 +214,13 @@ function DetalleMateria({ materia }: { materia: Materia }) {
                   <span className="la-item-texto">
                     <span>{x.titulo}</span>
                     <small>{x.tipo === 'actividad' ? 'Actividad de la app' : TIPOS_EVALUACION[x.tipo].label} · {diaMes(x.fecha)}</small>
+                    {x.comentario && <small className="la-item-comentario">“{x.comentario}”</small>}
                   </span>
                   <span className="la-item-nota">
                     {x.ausente ? 'Ausente'
-                      : x.sinCorregir ? 'Sin corregir'
-                        : x.nota !== null ? <strong className={x.nota < 6 ? 'baja' : undefined}>{formatoNota(x.nota)}</strong> : '—'}
+                      : x.marca ? MARCAS[x.marca].label
+                        : x.sinCorregir ? 'Sin corregir'
+                          : x.nota !== null ? <strong className={x.nota < 6 ? 'baja' : undefined}>{formatoNota(x.nota)}</strong> : '—'}
                   </span>
                 </li>
               ))}

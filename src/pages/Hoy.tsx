@@ -331,8 +331,8 @@ export default function Hoy() {
                                 <div className="hoy-class-actions">
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate(`/planificacion?materia=${cls.subjectId}&curso=${cls.courseId}${tema ? `&clase=${tema.id}` : ''}`)}
-                                        title={tema ? 'Presentación, trabajo práctico o evaluación del tema de hoy' : 'Armar la planificación de este curso'}
+                                        onClick={() => navigate(tema ? `/tema/${tema.id}` : `/planificacion?materia=${cls.subjectId}&curso=${cls.courseId}`)}
+                                        title={tema ? 'El material, el trabajo práctico y la evaluación del tema de hoy' : 'Armar la planificación de este curso'}
                                     >
                                         <Sparkles size={15} /> Preparar
                                     </button>

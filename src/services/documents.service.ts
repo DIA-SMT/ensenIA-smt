@@ -8,7 +8,7 @@
 
 import { supabase } from './_helpers';
 import { normalizarMazo, desdeLegado, aTextoPlano, type Mazo, type MazoLegado } from '../lib/diapositivas';
-import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard } from '../types';
+import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard, TipoActividad } from '../types';
 import { usoIAGastado } from '../lib/usoIA';
 import { esErrorDeRed } from '../lib/conexion';
 
@@ -332,6 +332,46 @@ export async function generateStudyGuide(materialId: string): Promise<{ guide: s
     materialId,
   });
   return { guide: guide ?? '', cached: cached ?? false };
+}
+
+/**
+ * Arma una actividad, un TP o una evaluación de un tema (063): título,
+ * consigna y partes con puntos. Va el tema de la planificación (título,
+ * objetivos, contenido), nunca datos de estudiantes.
+ */
+export async function armarActividad(p: {
+  tipo: TipoActividad;
+  tema: string;
+  unidad?: string;
+  objetivos?: string[];
+  contenido?: string;
+  pedido?: string;
+  materia?: string;
+  curso?: string;
+}): Promise<{ titulo: string; consigna: string; partes: ActivityQuestion[] }> {
+  const texto = [
+    p.unidad ? `Unidad: ${p.unidad}` : '',
+    `Tema: ${p.tema}`,
+    p.objetivos?.length ? `Objetivos:\n${p.objetivos.map(o => `- ${o}`).join('\n')}` : '',
+    p.contenido?.trim() ? `Contenido del tema:\n${p.contenido.trim()}` : '',
+  ].filter(Boolean).join('\n\n');
+  const r = await callProcessDocument<{ titulo: string; consigna: string; partes: Omit<ActivityQuestion, 'id'>[] }>({
+    mode: 'armar_actividad',
+    text: texto,
+    variante: p.tipo,
+    pedido: p.pedido?.trim() || undefined,
+    context: { subjectName: p.materia, courseName: p.curso },
+  });
+  return {
+    titulo: r.titulo ?? '',
+    consigna: r.consigna ?? '',
+    partes: (r.partes ?? []).map((q, i) => ({
+      ...q,
+      id: `q${i + 1}`,
+      options: q.type === 'multiple_choice' ? q.options ?? [] : [],
+      correct_index: q.type === 'multiple_choice' ? q.correct_index ?? 0 : 0,
+    })),
+  };
 }
 
 export async function extractQuestions(contentMd: string): Promise<ActivityQuestion[]> {

@@ -8,6 +8,7 @@
  *  - summarize:         texto o PDF → resumen pedagógico en Markdown
  *  - import_program:    programa anual (PDF/texto) → { subject_name, course_name, units[] } (structured output)
  *  - extract_questions: consigna en Markdown → { questions[] } autocorregibles (structured output)
+ *  - armar_actividad:   tema de la planificación → { titulo, consigna, partes[] con puntos } (063)
  *  - practice_quiz:     materialId → quiz pedagógico para estudiantes, CACHEADO en el material (1 sola generación)
  *  - study_guide:       materialId → guía de estudio para estudiantes, CACHEADA en el material
  *
@@ -25,7 +26,8 @@ const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
-  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image' | 'diagram' | 'word_game';
+  | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image' | 'diagram' | 'word_game'
+  | 'armar_actividad';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
 const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
@@ -40,9 +42,9 @@ interface ProcessRequest {
   materialId?: string;
   context?: { subjectName?: string; courseName?: string };
   videoUrl?: string;
-  /** diagram: flujo | ciclo | causa_efecto | mapa_mental | linea_tiempo */
+  /** diagram: flujo | ciclo | causa_efecto | mapa_mental | linea_tiempo · armar_actividad: actividad | tp | evaluacion */
   variante?: string;
-  /** slides: lo que pidió el docente (cantidad, enfoque, extras) cuando el texto es un material adjunto. */
+  /** slides y armar_actividad: lo que pidió el docente (cantidad, enfoque, extras). */
   pedido?: string;
 }
 
@@ -448,6 +450,32 @@ const QUESTIONS_SCHEMA = {
   },
 };
 
+/** Una actividad, un TP o una evaluación por partes, con puntos (063). */
+const ACTIVIDAD_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['titulo', 'consigna', 'partes'],
+  properties: {
+    titulo: { type: 'string' },
+    consigna: { type: 'string', description: 'Para el estudiante, en Markdown: qué va a hacer y cómo se califica.' },
+    partes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'prompt', 'options', 'correct_index', 'points'],
+        properties: {
+          type: { type: 'string', enum: ['multiple_choice', 'open'] },
+          prompt: { type: 'string' },
+          options: { type: 'array', items: { type: 'string' }, description: 'Vacío en las de desarrollo.' },
+          correct_index: { type: 'integer', description: 'Posición (desde 0) de la correcta; 0 en las de desarrollo.' },
+          points: { type: 'number', description: 'Puntos de la parte: entero o con medio punto.' },
+        },
+      },
+    },
+  },
+};
+
 // ── Prompts ──
 
 const PROMPTS: Record<Mode, string> = {
@@ -595,6 +623,23 @@ Reglas:
 
 Lenguaje cercano y motivador, español rioplatense. Fiel al material: no inventes contenido que no esté.`,
 
+  armar_actividad: `Armás una actividad de secundaria (Argentina) para que el estudiante la haga solo, en el celular y sin conexión: tiene que entenderse sin que el docente la explique.
+
+Recibís el tema de la planificación (unidad, tema, objetivos, contenido), el tipo y a veces un pedido del docente.
+
+Tipo:
+- actividad: práctica corta, 3 a 5 partes, casi todas de opción múltiple.
+- tp (trabajo práctico): 3 a 6 partes de lo simple a lo integrador; combiná opción múltiple y desarrollo; al menos una aplica el tema a un caso o situación concreta.
+- evaluacion: 5 a 10 partes que cubran los objetivos; mayoría de opción múltiple y 1 a 3 de desarrollo.
+
+Reglas:
+- titulo: corto, nombra el tema (sin "TP N°").
+- consigna: para el estudiante, 2 a 5 líneas en Markdown: qué va a hacer y cómo se califica. Si una parte necesita un texto, un caso o datos, ponelos en su enunciado.
+- Cada parte se entiende sola. Opción múltiple: 3 o 4 opciones plausibles, una sola correcta, sin "todas/ninguna de las anteriores"; correct_index es su posición desde 0. Desarrollo: type "open", options vacío, correct_index 0.
+- points: enteros o con medio punto; en total suman 10 salvo que el pedido diga otro total. Más puntos a lo que más cuesta.
+- Fiel al tema; no inventes datos dudosos. Español rioplatense, al nivel del curso.
+- Si hay notas de cómo trabaja el docente, respetalas. Si el pedido contradice algo de esto, vale el pedido.`,
+
   extract_questions: `Sos un asistente pedagógico. A partir de la consigna/actividad dada, extraé o generá preguntas para un cuestionario autocorregible para estudiantes de secundaria.
 
 Reglas:
@@ -604,6 +649,32 @@ Reglas:
 - Si la actividad no tiene preguntas explícitas, generá 3-5 preguntas de comprensión sobre su contenido (mayoría multiple_choice con 4 opciones plausibles).
 - Redactá en español rioplatense, nivel secundaria.`,
 };
+
+/**
+ * Las notas de la memoria del docente (062) que sirven para armar una
+ * actividad: formato, preferencias, lo que corrige y cómo es el curso.
+ * Si apagó la memoria, no hay filas (apagarla las borra).
+ */
+async function notasDelDocente(db: SupabaseClient, teacherId: string, materia?: string, curso?: string): Promise<string> {
+  const { data, error } = await db
+    .from('memoria_docente')
+    .select('materia, curso, tipo, texto')
+    .eq('teacher_id', teacherId)
+    .in('tipo', ['formato', 'prefiere', 'evita', 'grupo'])
+    .order('ultima_vez', { ascending: false })
+    .limit(20);
+  if (error || !data) return '';
+  const plegar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const m = plegar(materia ?? '');
+  const c = plegar(curso ?? '');
+  return (data as { materia: string | null; curso: string | null; tipo: string; texto: string }[])
+    .filter(n => (!n.materia || !m || plegar(n.materia) === m) && (!n.curso || !c || plegar(n.curso) === c))
+    // Lo del grupo es de un curso: sin curso no se sabe de cuál
+    .filter(n => n.tipo !== 'grupo' || n.curso)
+    .slice(0, 8)
+    .map(n => `- ${n.texto}`)
+    .join('\n');
+}
 
 // ── Main handler ──
 
@@ -959,7 +1030,7 @@ Deno.serve(async (req: Request) => {
 
   // ── Build OpenRouter request ──
   const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz' || mode === 'slides'
-    || mode === 'diagram' || mode === 'word_game';
+    || mode === 'diagram' || mode === 'word_game' || mode === 'armar_actividad';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   // Los modos estructurados devuelven JSON: si el techo de tokens corta la
   // respuesta, el JSON queda partido al medio y JSON.parse revienta — el
@@ -975,6 +1046,8 @@ Deno.serve(async (req: Request) => {
     diagram: 6000,
     word_game: 6000,
     extract_questions: 8000,
+    // Hasta 10 partes con sus opciones: alcanza con holgura
+    armar_actividad: 5000,
     student_summary: 3000,
     class_report: 2000,
     summarize: 6000,
@@ -993,7 +1066,11 @@ Deno.serve(async (req: Request) => {
   }
   const hints: string[] = [];
   if (title) hints.push(`Título del documento: ${title}`);
-  if (mode === 'slides' && body.pedido?.trim()) hints.push(`Pedido del docente (respetalo): ${body.pedido.trim().slice(0, 1500)}`);
+  if ((mode === 'slides' || mode === 'armar_actividad') && body.pedido?.trim()) hints.push(`Pedido del docente (respetalo): ${body.pedido.trim().slice(0, 1500)}`);
+  if (mode === 'armar_actividad' && profile?.role === 'docente') {
+    const notas = await notasDelDocente(supabase, user.id, context?.subjectName, context?.courseName);
+    if (notas) hints.push(`Cómo trabaja este docente (lo fue pidiendo en otras charlas):\n${notas}`);
+  }
   if (cacheMaterial?.subject_name) hints.push(`Materia: ${cacheMaterial.subject_name}`);
   if (context?.subjectName) hints.push(`Materia esperada: ${context.subjectName}`);
   if (context?.courseName) hints.push(`Curso esperado: ${context.courseName}`);
@@ -1015,6 +1092,7 @@ Deno.serve(async (req: Request) => {
         : mode === 'slides' ? 'Armá las diapositivas de la clase.'
         : mode === 'diagram' ? `Armá el diagrama. Variante: ${['flujo', 'ciclo', 'causa_efecto', 'mapa_mental', 'linea_tiempo'].includes(body.variante ?? '') ? body.variante : 'mapa_mental'}.`
         : mode === 'word_game' ? 'Prepará las palabras y la frase para los juegos.'
+        : mode === 'armar_actividad' ? `Armá: ${['actividad', 'tp', 'evaluacion'].includes(body.variante ?? '') ? body.variante : 'tp'}.`
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
         : mode === 'practice_quiz' ? 'Generá el quiz de práctica.'
         : mode === 'study_guide' ? 'Escribí la guía de estudio.'
@@ -1044,6 +1122,7 @@ Deno.serve(async (req: Request) => {
       slides: { name: 'diapositivas', schema: SLIDES_SCHEMA },
       diagram: { name: 'diagrama', schema: DIAGRAM_SCHEMA },
       word_game: { name: 'juegos', schema: WORD_GAME_SCHEMA },
+      armar_actividad: { name: 'actividad', schema: ACTIVIDAD_SCHEMA },
       practice_quiz: { name: 'quiz_practica', schema: PRACTICE_QUIZ_SCHEMA },
     };
     orBody.response_format = {
@@ -1143,6 +1222,10 @@ Deno.serve(async (req: Request) => {
     if (mode === 'slides') return json({ deck: parsed, truncated });
     if (mode === 'diagram') return json({ diagram: parsed, truncated });
     if (mode === 'word_game') return json({ game: parsed, truncated });
+    if (mode === 'armar_actividad') {
+      if (truncated) return json({ error: 'API_ERROR', message: 'Salió incompleta. Probá de nuevo o pedí menos partes.' }, 502);
+      return json({ titulo: parsed.titulo ?? '', consigna: parsed.consigna ?? '', partes: parsed.partes ?? [] });
+    }
     if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
 
     // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──
