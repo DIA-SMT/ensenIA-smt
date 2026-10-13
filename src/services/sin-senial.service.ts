@@ -24,6 +24,7 @@ import type { LibraryMaterial, User } from '../types';
 import { bajarYa } from '../lib/pantallas';
 import { deAPocas } from '../lib/deAPocas';
 import { haySenial } from '../lib/conexion';
+import { SERVIDOR_DATOS } from '../lib/supabase';
 import { ESTADO_SIN_SENIAL_KEY, generacionSinSenial } from '../lib/sinSenialEstado';
 import { archivosDe, guardarArchivos, puedeGuardarSinConexion, yaGuardado } from '../lib/archivosOffline';
 import {
@@ -48,6 +49,8 @@ const ARCHIVOS_POR_VEZ = 150;
 
 export interface EstadoSinSenial {
   userId: string;
+  /** De qué servidor es la copia: la guarda el service worker por la dirección de cada pedido */
+  servidor?: string;
   /** ISO: la última vez que se bajó todo */
   cuando: string;
   actividades: number;
@@ -82,7 +85,11 @@ export function sabeSiHayWifi(): boolean {
 export function estadoSinSenial(userId: string): EstadoSinSenial | null {
   try {
     const e = JSON.parse(localStorage.getItem(ESTADO_SIN_SENIAL_KEY) ?? 'null') as EstadoSinSenial | null;
-    return e?.userId === userId && typeof e.archivosFaltan === 'number' ? e : null;
+    if (e?.userId !== userId || typeof e.archivosFaltan !== 'number') return null;
+    // Lo bajado de otro servidor (antes de una mudanza) ya no sirve sin señal.
+    // Las marcas viejas no anotaban el servidor: eran de Supabase Cloud.
+    const mismoServidor = e.servidor ? e.servidor === SERVIDOR_DATOS : SERVIDOR_DATOS.endsWith('.supabase.co');
+    return mismoServidor ? e : null;
   } catch {
     return null;
   }
@@ -200,6 +207,7 @@ export function prepararSinSenial(
     const pdfQueFaltan = new Set(faltan);
     const estado: EstadoSinSenial = {
       userId: user.id,
+      servidor: SERVIDOR_DATOS,
       cuando: new Date().toISOString(),
       actividades: actividades.length,
       materiales: materiales.length,

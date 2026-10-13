@@ -62,9 +62,22 @@ async function fetchConSenial(input: RequestInfo | URL, init?: RequestInit): Pro
   }
 }
 
+/**
+ * Donde supabase-js guarda la sesión. Es el nombre que la librería le daba
+ * por defecto con el servidor de Supabase Cloud, pero fijo: por defecto lo
+ * arma con la dirección del servidor, y al mudarlo (a la VPS) cambiaría
+ * el nombre, todos quedarían afuera y, sin señal, nadie podría entrar con la
+ * sesión guardada. No cambiarlo.
+ */
+const CLAVE_SESION = 'sb-bfvynebiwezksariylvh-auth-token';
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: { storageKey: CLAVE_SESION },
   global: { fetch: fetchConSenial },
 });
+
+/** El servidor de datos, para saber si lo guardado en el equipo es de este servidor. */
+export const SERVIDOR_DATOS = new URL(supabaseUrl).host;
 
 /**
  * Una pregunta mínima al servidor que nunca sale de la copia guardada:
@@ -97,9 +110,6 @@ if (typeof window !== 'undefined') {
   });
   setInterval(() => { if (!haySenial()) void sondearSenial(); }, 20_000);
 }
-
-/** Donde supabase-js guarda la sesión (su nombre por defecto). */
-const CLAVE_SESION = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
 
 /**
  * La sesión que quedó guardada en el equipo, sin preguntarle al servidor.
