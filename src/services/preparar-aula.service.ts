@@ -32,6 +32,7 @@ import { getAchievementsByStudent } from './gamification.service';
 import { getStudentAwards } from './awards.service';
 import { getStudentProgress } from './practice.service';
 import { archivosDe, guardarArchivos } from '../lib/archivosOffline';
+import { SERVIDOR_DATOS } from '../lib/supabase';
 
 const PREPARADO_KEY = 'estudia_preparado_aula';
 
@@ -47,11 +48,18 @@ export interface ResultadoPreparar {
   total: number;
 }
 
-/** Cuándo se preparó por última vez en este equipo, para esta cuenta. */
+/**
+ * Cuándo se preparó por última vez en este equipo, para esta cuenta y este
+ * servidor: la copia se guarda por la dirección de cada pedido, así que lo
+ * bajado de otro servidor (antes de una mudanza) ya no sirve sin señal.
+ * Las marcas de antes no anotaban el servidor: eran todas de Supabase Cloud.
+ */
 export function preparadoEl(userId: string): Date | null {
   try {
-    const guardado = JSON.parse(localStorage.getItem(PREPARADO_KEY) ?? 'null') as { userId: string; cuando: string } | null;
-    return guardado?.userId === userId ? new Date(guardado.cuando) : null;
+    const guardado = JSON.parse(localStorage.getItem(PREPARADO_KEY) ?? 'null') as { userId: string; cuando: string; servidor?: string } | null;
+    if (guardado?.userId !== userId) return null;
+    const mismoServidor = guardado.servidor ? guardado.servidor === SERVIDOR_DATOS : SERVIDOR_DATOS.endsWith('.supabase.co');
+    return mismoServidor ? new Date(guardado.cuando) : null;
   } catch {
     return null;
   }
@@ -154,7 +162,7 @@ export async function prepararParaElAula(user: User, alAvanzar: (a: Avance) => v
   }
 
   try {
-    localStorage.setItem(PREPARADO_KEY, JSON.stringify({ userId: user.id, cuando: new Date().toISOString() }));
+    localStorage.setItem(PREPARADO_KEY, JSON.stringify({ userId: user.id, cuando: new Date().toISOString(), servidor: SERVIDOR_DATOS }));
   } catch { /* sin storage: no se recuerda cuándo, lo bajado quedó igual */ }
   return { fallaron, total };
 }
