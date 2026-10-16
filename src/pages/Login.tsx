@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth, SESION_VENCIDA_KEY } from '../contexts/AuthContext';
 import { esEquipoPersonal } from '../lib/equipoPersonal';
+import { URL_INGRESO_CIDITUC, antesDeIrACidituc, mensajeDeErrorCidituc, tomarSesionCidituc } from '../services/cidituc.service';
 import { LogIn, Eye, EyeOff, AlertCircle, Feather, Accessibility, ShieldCheck, Clock } from 'lucide-react';
 import LoginChalkboard from '../components/login/LoginChalkboard';
 import LoginMascot from '../components/login/LoginMascot';
@@ -24,11 +25,12 @@ const DEMO = [
 
 export default function Login() {
   const { login, isAuthenticated, isLoading } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  // Si vuelve de CiDiTuc sin poder entrar (?cidituc_error=), arranca explicando por qué
+  const [error, setError] = useState(() => mensajeDeErrorCidituc(searchParams.get('cidituc_error')) ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [rejection, setRejection] = useState(0);
   const [miguePose, setMiguePose] = useState<MiguePose>('neutral');
@@ -47,6 +49,24 @@ export default function Login() {
   useEffect(() => {
     try { sessionStorage.removeItem(SESION_VENCIDA_KEY); } catch { /* noop */ }
   }, []);
+
+  // Vuelta del ingreso con CiDiTuc (api/_cidituc.ts): ?cidituc=listo trae la
+  // sesión lista para tomar; ?cidituc_error= (el mensaje sale en el estado
+  // inicial de error, arriba) explica por qué no se pudo
+  const [ciditucEntrando, setCiditucEntrando] = useState(() => searchParams.get('cidituc') === 'listo');
+  const sesionCiditucTomada = useRef(false);
+  useEffect(() => {
+    const listo = searchParams.get('cidituc') === 'listo';
+    if (!listo && !searchParams.has('cidituc_error')) return;
+    setSearchParams(prev => { prev.delete('cidituc'); prev.delete('cidituc_error'); return prev; }, { replace: true });
+    // Una sola vez: la entrega se borra al tomarla (y en desarrollo los efectos corren dos veces)
+    if (!listo || sesionCiditucTomada.current) return;
+    sesionCiditucTomada.current = true;
+    void tomarSesionCidituc().then(r => {
+      // Si salió bien, AuthContext carga el usuario y el <Navigate> de abajo redirige
+      if (!r.ok) { setError(r.error); setCiditucEntrando(false); }
+    });
+  }, [searchParams, setSearchParams]);
 
   // Destino post-login: si vino de un QR (?next=/mis-actividades/...),
   // va derecho ahí; si no, a "/" y HomeRedirect resuelve según el rol.
@@ -180,7 +200,7 @@ export default function Login() {
               </span>
             </label>
 
-            <button type="submit" className="login-submit" disabled={submitting} aria-busy={submitting}>
+            <button type="submit" className="login-submit" disabled={submitting || ciditucEntrando} aria-busy={submitting}>
               {submitting ? (
                 <><span className="login-spinner" aria-hidden="true" /><span>Entrando…</span></>
               ) : (
@@ -188,6 +208,25 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* CiDiTuc, la identidad digital de la Municipalidad: se suma, no reemplaza */}
+          <div className="login-separador" aria-hidden="true"><span>o</span></div>
+          <a
+            className="login-cidituc"
+            href={URL_INGRESO_CIDITUC}
+            onClick={() => antesDeIrACidituc(equipoPersonal)}
+            aria-busy={ciditucEntrando}
+            aria-describedby="login-cidituc-ayuda"
+          >
+            {ciditucEntrando ? (
+              <><span className="login-spinner" aria-hidden="true" /><span>Entrando con CiDiTuc…</span></>
+            ) : (
+              <><img src="/Logo_SMT_blanco.png" width={507} height={206} alt="" /><span>Ingresar con CiDiTuc</span></>
+            )}
+          </a>
+          <p className="login-cidituc-ayuda" id="login-cidituc-ayuda">
+            Con tu CUIL y la clave de CiDiTuc, la cuenta ciudadana de la Municipalidad.
+          </p>
 
           {import.meta.env.VITE_DEMO_LOGIN === 'true' && (
             <div className="login-demo">

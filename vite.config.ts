@@ -1,6 +1,30 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { iniciar, volver, quienSoy, salir, leerConfig } from './api/_cidituc'
+
+/**
+ * Ingreso con CiDiTuc en desarrollo: las mismas cuatro piezas que en Vercel
+ * (api/auth/cidituc/*), servidas por Vite con el mismo código. Lee las
+ * variables CIDITUC_* del .env.local (ver .env.example).
+ */
+function ingresoCiditucEnDesarrollo(mode: string): Plugin {
+  return {
+    name: 'estudia-cidituc-desarrollo',
+    apply: 'serve',
+    configureServer(server) {
+      const config = leerConfig(loadEnv(mode, process.cwd(), ''))
+      server.middlewares.use((req, res, next) => {
+        const ruta = (req.url ?? '').split('?')[0]
+        if (ruta === '/api/auth/cidituc/login') return iniciar(req, res, config)
+        if (ruta === '/auth/cidituc/callback' || ruta === '/api/auth/cidituc/callback') return void volver(req, res, config)
+        if (ruta === '/api/auth/cidituc/me') return quienSoy(req, res, config)
+        if (ruta === '/api/auth/cidituc/logout') return salir(req, res)
+        next()
+      })
+    },
+  }
+}
 
 /**
  * Las reglas de la copia sin conexión reconocen el servidor de datos por su
@@ -21,6 +45,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      ingresoCiditucEnDesarrollo(mode),
       VitePWA({
         registerType: 'autoUpdate',
         // Lo registramos a mano en main.tsx: el que entra por el QR de una
@@ -54,6 +79,9 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           navigateFallback: '/index.html',
+          // El ingreso con CiDiTuc es del servidor: si el service worker
+          // contestara con la app, la vuelta de Derivador nunca llegaría.
+          navigateFallbackDenylist: [/^\/api\//, /^\/auth\/cidituc\//],
           // Que tome el control de la página ya en la primera visita: si no,
           // lo que se baja en esa visita no queda guardado para usar sin conexión.
           // Con skipWaiting, una versión nueva se activa sin esperar a que se

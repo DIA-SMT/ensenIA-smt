@@ -156,6 +156,38 @@ html[data-contraste="alto"] .login-marca::before { display: none; }
 }
 @keyframes login-gira { to { transform: rotate(360deg); } }
 
+/* ── Ingresar con CiDiTuc (identidad visual de CiDiTuc: azul #1b86e3) ── */
+.login-separador {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.8125rem; font-weight: 600;
+}
+.login-separador::before,
+.login-separador::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+.login-cidituc {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  background: #1b86e3;
+  color: #FFFFFF;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.login-cidituc:hover { background: #1672c4; box-shadow: 0 6px 18px rgba(27, 134, 227, 0.35); color: #FFFFFF; }
+.login-cidituc:focus-visible { outline: 3px solid #1b86e3; outline-offset: 3px; }
+.login-cidituc[aria-busy="true"] { opacity: 0.85; pointer-events: none; }
+/* El logo de la Municipalidad, en blanco, a la altura del texto */
+.login-cidituc img { height: 22px; width: auto; flex-shrink: 0; }
+.login-cidituc-ayuda {
+  margin: -8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
 .login-error {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 10px 14px;

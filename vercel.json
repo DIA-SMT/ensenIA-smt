@@ -1,6 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/auth/cidituc/callback", "destination": "/api/auth/cidituc/callback" },
+    { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(api/auth/cidituc/.*|auth/cidituc/.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ]
+    }
   ]
 }

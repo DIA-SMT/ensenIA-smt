@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "pruebas:diapositivas": "tsx src/lib/diapositivas.pruebas.ts",
-    "pruebas:visuales": "tsx src/lib/visuales.pruebas.ts"
+    "pruebas:visuales": "tsx src/lib/visuales.pruebas.ts",
+    "pruebas:cidituc": "tsx api/_cidituc.pruebas.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",

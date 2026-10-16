@@ -32,3 +32,5 @@ supabase/.temp/
 *.sln
 *.sw?
 .env*
+# El ejemplo no tiene valores reales: sí va al repo
+!.env.example
