@@ -68,7 +68,8 @@ export interface NewAccount {
   role: Exclude<UserRole, 'superadmin'>;
   firstName: string;
   lastName: string;
-  dni?: string;
+  /** obligatorio para todos: con el DNI se entra con CiDiTuc */
+  dni: string;
   email?: string;
   /** obligatorio para estudiantes */
   courseId?: string;
@@ -331,6 +332,11 @@ export function createAccount(a: NewAccount): Promise<AccountCredentials> {
 /** Clave inicial nueva (la persona la cambia al entrar). */
 export function resetPassword(userId: string): Promise<{ login: string; password: string }> {
   return callAdminUsuarios({ action: 'reset_password', userId });
+}
+
+/** Carga o corrige el DNI de quien entra con email (para el ingreso con CiDiTuc). */
+export function setDni(userId: string, dni: string): Promise<{ dni: string }> {
+  return callAdminUsuarios({ action: 'set_dni', userId, dni });
 }
 
 // ── Alumnos de muestra (solo superadmin, migración 048) ──

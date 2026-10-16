@@ -235,12 +235,21 @@ export function validar(
     if (!curso) return { tipo: 'error', motivo: f.cursoTexto ? `No entiendo el curso "${f.cursoTexto}"` : 'Falta el curso' };
     const nuevo = !existeCurso(curso);
     if (nuevo && !ctx.crearCursos) return { tipo: 'error', motivo: `No existe el curso ${curso.year}° ${curso.division}` };
-    if (f.tutor && (!f.tutor.apellido || !f.tutor.nombre || (!f.tutor.dni && !f.tutor.email))) {
-      return { tipo: 'error', motivo: 'Datos del tutor incompletos (apellido, nombre y DNI o email)' };
+    if (f.tutor && (!f.tutor.apellido || !f.tutor.nombre)) {
+      return { tipo: 'error', motivo: 'Datos del tutor incompletos (apellido y nombre)' };
     }
     if (f.tutor?.dni && (f.tutor.dni.length < 6 || f.tutor.dni.length > 9)) return { tipo: 'error', motivo: 'DNI del tutor inválido' };
     return { tipo: 'ok', cursoNuevo: nuevo };
   });
+}
+
+/**
+ * La familia vino sin DNI: el estudiante se carga igual y la familia no. El
+ * DNI es obligatorio para todas las cuentas desde el ingreso con CiDiTuc
+ * (que encuentra la cuenta por DNI); se la suma después desde Familias.
+ */
+export function familiaSinDni(f: FilaPlanilla): boolean {
+  return !!f.tutor && !f.tutor.dni;
 }
 
 /** La plantilla vacía, para abrir con Excel (punto y coma y BOM: así la lee bien en español) */

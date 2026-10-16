@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { UserPlus, KeyRound, UserMinus, Plus, X, Users, AlertCircle, ShieldCheck } from 'lucide-react';
+import { UserPlus, KeyRound, UserMinus, Plus, X, Users, AlertCircle, ShieldCheck, IdCard } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  createAccount, resetPassword, removeMember, addAssignment, removeAssignment, type AdminMember, type AdminAssignment,
+  createAccount, resetPassword, removeMember, addAssignment, removeAssignment, setDni,
+  type AdminMember, type AdminAssignment,
 } from '../../services/admin.service';
-import { loginLabel } from '../../lib/dni';
+import { entraConDni, loginLabel } from '../../lib/dni';
 import { avisar, confirmar } from '../../components/ui/avisar';
 import { Barra, Campo, DialogoForm, Iniciales, Vacio } from './ui';
 import type { TabProps } from './GestionEscuela';
@@ -15,6 +16,7 @@ export default function PersonalTab(props: TabProps) {
   const { data, isSuperadmin, run, showCredentials, irA } = props;
   const { user } = useAuth();
   const [alta, setAlta] = useState(false);
+  const [dniDe, setDniDe] = useState<AdminMember | null>(null);
 
   const directors = data.members.filter(m => m.role === 'director');
   const teachers = data.members.filter(m => m.role === 'docente');
@@ -66,7 +68,7 @@ export default function PersonalTab(props: TabProps) {
               accion={{ etiqueta: 'Sumar persona', icono: UserPlus, alTocar: () => setAlta(true) }} />
           ) : <p className="adm-ayuda">Sin director/a asignado/a.</p>
         ) : directors.map(m => (
-          <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove} />
+          <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove} onDni={setDniDe} />
         ))}
       </section>
 
@@ -82,14 +84,71 @@ export default function PersonalTab(props: TabProps) {
           <Vacio icono={Users} titulo="Sin docentes" texto="Sumá a los docentes y asignales sus materias en cada curso."
             accion={{ etiqueta: 'Sumar docente', icono: UserPlus, alTocar: () => setAlta(true) }} />
         ) : teachers.map(m => (
-          <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove}>
+          <PersonRow key={m.membershipId} m={m} canManage={canManage(m)} onReset={handleReset} onRemove={handleRemove} onDni={setDniDe}>
             <Assignments teacherId={m.userId} data={data} run={run} />
           </PersonRow>
         ))}
       </section>
 
       <AltaPersonal abierto={alta} alCerrar={() => setAlta(false)} {...props} />
+      <DialogoDni key={dniDe?.userId ?? 'cerrado'} persona={dniDe} alCerrar={() => setDniDe(null)} reload={props.reload} />
     </div>
+  );
+}
+
+/**
+ * Cargar o corregir el DNI de quien entra con email. Desde el ingreso con
+ * CiDiTuc el DNI es obligatorio: CiDiTuc dice el CUIL de la persona y con el
+ * DNI se encuentra su cuenta (api/_cidituc.ts). Las cuentas de antes no lo
+ * tienen; se completan con esto.
+ */
+export function DialogoDni({ persona, alCerrar, reload }: {
+  persona: AdminMember | null;
+  alCerrar: () => void;
+  reload: () => Promise<void>;
+}) {
+  const [dni, setDniTexto] = useState(persona?.dni ?? '');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+  const limpio = dni.replace(/\D/g, '');
+  const listo = limpio.length >= 6 && limpio.length <= 9 && limpio !== persona?.dni;
+
+  const guardar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!persona || !listo || guardando) return;
+    setGuardando(true);
+    setError('');
+    try {
+      await setDni(persona.userId, limpio);
+      await reload();
+      alCerrar();
+      avisar.exito(`${persona.firstName} ${persona.lastName} ya puede entrar con CiDiTuc`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el DNI.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <DialogoForm abierto={!!persona} alCerrar={alCerrar} id="dialogo-dni"
+      titulo={persona?.dni ? 'Corregir DNI' : 'Cargar DNI'}
+      bajada={persona ? `${persona.firstName} ${persona.lastName} sigue entrando con su email y su clave. Con el DNI también puede entrar con CiDiTuc, la cuenta ciudadana de la Municipalidad.` : undefined}
+      pie={<>
+        <button type="button" className="btn btn-ghost" onClick={alCerrar}>Cancelar</button>
+        <button type="submit" form="form-dni" className="btn btn-primary" disabled={!listo || guardando}>
+          {guardando ? 'Guardando...' : 'Guardar DNI'}
+        </button>
+      </>}>
+      <form id="form-dni" className="adm-form" onSubmit={guardar}>
+        {error && <div className="adm-error" role="alert"><AlertCircle size={15} aria-hidden="true" /> {error}</div>}
+        <Campo label="DNI" htmlFor="dni-persona">
+          <input id="dni-persona" className="form-input" data-inicial inputMode="numeric" value={dni}
+            onChange={e => setDniTexto(e.target.value)} autoComplete="off" />
+        </Campo>
+        <p className="adm-ayuda">Revisalo bien: quien entre con CiDiTuc con este DNI entra a esta cuenta.</p>
+      </form>
+    </DialogoForm>
   );
 }
 
@@ -104,7 +163,7 @@ function AltaPersonal({ abierto, alCerrar, data, isSuperadmin, reload, showCrede
   const [email, setEmail] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const listo = firstName.trim() && lastName.trim() && (dni.trim() || email.trim());
+  const listo = firstName.trim() && lastName.trim() && dni.trim();
 
   // El error va adentro del diálogo: arriba de la página quedaría tapado
   const crear = async (e: React.FormEvent) => {
@@ -115,7 +174,7 @@ function AltaPersonal({ abierto, alCerrar, data, isSuperadmin, reload, showCrede
     try {
       const c = await createAccount({
         schoolId: data.school.id, role, firstName, lastName,
-        dni: dni.trim() || undefined, email: email.trim() || undefined,
+        dni: dni.trim(), email: email.trim() || undefined,
       });
       await reload();
       setFirstName(''); setLastName(''); setDni(''); setEmail('');
@@ -166,19 +225,22 @@ function AltaPersonal({ abierto, alCerrar, data, isSuperadmin, reload, showCrede
             <input id="per-email" className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />
           </Campo>
         </div>
-        <p className="adm-ayuda">Con email entra con el email; si no, con el DNI.</p>
+        <p className="adm-ayuda">Con email entra con el email; si no, con el DNI. Con el DNI también puede entrar con CiDiTuc.</p>
       </form>
     </DialogoForm>
   );
 }
 
-export function PersonRow({ m, canManage, onReset, onRemove, children }: {
+export function PersonRow({ m, canManage, onReset, onRemove, onDni, children }: {
   m: AdminMember;
   canManage: boolean;
   onReset: (m: AdminMember) => void;
   onRemove: (m: AdminMember) => void;
+  /** cargar o corregir el DNI (solo a quien entra con email: si no, el DNI es su usuario) */
+  onDni?: (m: AdminMember) => void;
   children?: React.ReactNode;
 }) {
+  const puedeDni = canManage && onDni && !entraConDni(m.email);
   return (
     <div className="adm-persona">
       <div className="adm-persona-fila">
@@ -188,10 +250,20 @@ export function PersonRow({ m, canManage, onReset, onRemove, children }: {
           <span>
             <code>{loginLabel(m.email, m.dni)}</code>
             {m.mustChangePassword && <span className="badge badge-warning">todavía no entró</span>}
+            {!m.dni && <span className="badge badge-neutral" title="Sin DNI no puede entrar con CiDiTuc">sin DNI</span>}
           </span>
         </div>
         {canManage && (
           <div className="adm-persona-acciones">
+            {puedeDni && (m.dni ? (
+              <button type="button" className="btn-icon" onClick={() => onDni(m)} aria-label={`Corregir el DNI de ${m.firstName} ${m.lastName}`} title="Corregir DNI">
+                <IdCard size={16} aria-hidden="true" />
+              </button>
+            ) : (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => onDni(m)} title="Para que pueda entrar con CiDiTuc">
+                <IdCard size={14} aria-hidden="true" /> <span className="adm-solo-ancho">Cargar DNI</span>
+              </button>
+            ))}
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => onReset(m)} title="Generar una clave inicial nueva">
               <KeyRound size={14} aria-hidden="true" /> <span className="adm-solo-ancho">Nueva clave</span>
             </button>

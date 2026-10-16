@@ -26,6 +26,11 @@ export function toLoginEmail(input: string): string {
  * mostrarle el DNI lo dejaría afuera.
  */
 export function loginLabel(email: string, dni?: string | null): string {
-  if (!email.endsWith(`@${DNI_EMAIL_DOMAIN}`)) return email;
+  if (!entraConDni(email)) return email;
   return dni || email.split('@')[0];
+}
+
+/** Si la cuenta es por DNI: ahí el DNI es el usuario y no se cambia. */
+export function entraConDni(email: string): boolean {
+  return email.endsWith(`@${DNI_EMAIL_DOMAIN}`);
 }
