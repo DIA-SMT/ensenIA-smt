@@ -3,7 +3,8 @@
  *
  * El contrato de Derivador:
  *   1. /api/auth/cidituc/login genera un `state`, lo guarda en una cookie
- *      httpOnly corta y manda a <CIDITUC_LOGIN_URL>/login?next=<clave>&state=…
+ *      httpOnly corta y manda a <CIDITUC_LOGIN_URL>/#/login?next=<clave>&state=…
+ *      (Derivador usa rutas con #: sin el #, su pantalla de ingreso no ve el next)
  *   2. Derivador pide CUIL y clave y vuelve a /auth/cidituc/callback?auth=<JWT>&state=…
  *      (el JWT se entrega una sola vez; Derivador no guarda sesión).
  *   3. El callback compara el state con la cookie, valida el JWT contra
@@ -48,7 +49,8 @@ export interface Config {
 
 export function leerConfig(env: NodeJS.ProcessEnv = process.env): Config | null {
   const sinBarra = (s?: string) => s?.replace(/\/+$/, '');
-  const loginUrl = sinBarra(env.CIDITUC_LOGIN_URL);
+  // Con o sin el # de las rutas de Derivador: el # lo pone iniciar()
+  const loginUrl = env.CIDITUC_LOGIN_URL?.replace(/[/#]+$/, '');
   const backendUrl = sinBarra(env.CIDITUC_BACKEND_URL);
   const nextKey = env.CIDITUC_NEXT_KEY;
   const sessionSecret = env.CIDITUC_SESSION_SECRET;
@@ -296,7 +298,7 @@ const conError = (codigo: string) => `/login?cidituc_error=${codigo}`;
 export function iniciar(req: IncomingMessage, res: ServerResponse, config = leerConfig()) {
   if (!config) return redirigir(res, conError('config'));
   const state = randomBytes(32).toString('base64url');
-  const destino = `${config.loginUrl}/login?next=${encodeURIComponent(config.nextKey)}&state=${encodeURIComponent(state)}`;
+  const destino = `${config.loginUrl}/#/login?next=${encodeURIComponent(config.nextKey)}&state=${encodeURIComponent(state)}`;
   redirigir(res, destino, [cookie(req, COOKIE_STATE, state, { maxAge: DURACION_STATE_S })]);
 }
 

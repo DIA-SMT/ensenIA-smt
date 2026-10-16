@@ -92,6 +92,10 @@ const conf = leerConfig({
   CIDITUC_SESSION_SECRET: CONFIG.sessionSecret, CIDITUC_PUENTE_SECRET: 'p', VITE_SUPABASE_URL: 'https://d.ejemplo', VITE_SUPABASE_ANON_KEY: 'a',
 });
 ok(conf?.loginUrl === 'https://cidituc.ejemplo', 'completa → arranca (sin la barra del final)');
+ok(leerConfig({
+  CIDITUC_LOGIN_URL: 'https://cidituc.ejemplo/#/', CIDITUC_BACKEND_URL: 'https://b.ejemplo', CIDITUC_NEXT_KEY: 'estudia',
+  CIDITUC_SESSION_SECRET: CONFIG.sessionSecret, CIDITUC_PUENTE_SECRET: 'p', VITE_SUPABASE_URL: 'https://d.ejemplo', VITE_SUPABASE_ANON_KEY: 'a',
+})?.loginUrl === 'https://cidituc.ejemplo', 'la dirección de Derivador con el # también sirve');
 
 // ═══ 4. Iniciar ═══
 console.log('4. Ingresar con CiDiTuc');
@@ -106,9 +110,13 @@ let stateGuardado = '';
   iniciar(req, res, CONFIG);
   const c = cookieLlamada(r, COOKIE_STATE);
   stateGuardado = valorDe(c);
+  // Derivador usa rutas con #: el next y el state van adentro del #, que es
+  // donde los lee su pantalla de ingreso (useLocation de un HashRouter)
   const destino = new URL(String(r.headers.location));
-  ok(r.statusCode === 302 && destino.origin + destino.pathname === 'https://cidituc.ejemplo/login', 'manda a Derivador /login');
-  ok(destino.searchParams.get('next') === 'estudia' && destino.searchParams.get('state') === stateGuardado, 'con next y el mismo state que la cookie');
+  const [ruta, consulta] = destino.hash.slice(1).split('?');
+  const params = new URLSearchParams(consulta);
+  ok(r.statusCode === 302 && destino.origin + destino.pathname === 'https://cidituc.ejemplo/' && ruta === '/login', 'manda a Derivador #/login');
+  ok(destino.search === '' && params.get('next') === 'estudia' && params.get('state') === stateGuardado, 'con next y el mismo state que la cookie, adentro del #');
   ok(stateGuardado.length >= 40, 'state largo y al azar');
   ok(!!c && /HttpOnly/.test(c) && /Secure/.test(c) && /SameSite=Lax/.test(c) && /Max-Age=600/.test(c) && /Path=\//.test(c), 'cookie httpOnly, Secure, Lax, 10 minutos');
 }
