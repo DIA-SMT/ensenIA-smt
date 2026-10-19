@@ -6,6 +6,7 @@ import { haySenial, suscribirConexion } from '../lib/conexion';
 import { esEquipoPersonal, marcarEquipoPersonal } from '../lib/equipoPersonal';
 import { getProfile, getSchool, getMySchools, switchSchool as switchSchoolRpc, type MySchool } from '../services/profiles.service';
 import { toLoginEmail } from '../lib/dni';
+import { cerrarSesionCidituc } from '../services/cidituc.service';
 import { olvidarBusquedas } from '../services/busqueda.service';
 import { setDuenioCola, borradoresEnCola } from '../services/offline-queue.service';
 import { olvidarSinSenial } from '../lib/sinSenialEstado';
@@ -339,6 +340,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('signOut falló (¿sin conexión?):', err);
     }
+    // Si entró con CiDiTuc, que el servidor borre también esas cookies
+    cerrarSesionCidituc();
     navigate('/login');
   }, [navigate]);
 

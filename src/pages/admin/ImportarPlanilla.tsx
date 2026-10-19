@@ -14,7 +14,7 @@ import {
   createAccount, createCourse, listCourses, addGuardianLink, getStudentIdByUser,
 } from '../../services/admin.service';
 import {
-  leerCsv, textoDeCsv, interpretar, validar, plantillaCsv, credencialesCsv,
+  leerCsv, textoDeCsv, interpretar, validar, plantillaCsv, credencialesCsv, familiaSinDni,
   type FilaPlanilla, type EstadoFila,
 } from '../../lib/planilla';
 import { DialogoForm } from './ui';
@@ -63,7 +63,8 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
   const nuevos = estados.filter(e => e.tipo === 'ok').length;
   const yaEstan = estados.filter(e => e.tipo === 'existe').length;
   const conError = estados.filter(e => e.tipo === 'error').length;
-  const familiasNuevas = filas.filter((f, i) => f.tutor && estados[i].tipo !== 'error').length;
+  const familiasNuevas = filas.filter((f, i) => f.tutor && !familiaSinDni(f) && estados[i].tipo !== 'error').length;
+  const familiasSinDni = filas.filter((f, i) => familiaSinDni(f) && estados[i].tipo !== 'error').length;
   const cursosNuevos = [...new Set(filas
     .filter((_, i) => estados[i].tipo === 'ok' && (estados[i] as { cursoNuevo: boolean }).cursoNuevo)
     .map(f => nombreCurso(f.curso!)))];
@@ -141,11 +142,13 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
             studentId = await getStudentIdByUser(c.userId);
           }
           let detalle = e.tipo === 'existe' ? 'Ya estaba cargado' : 'Cuenta creada';
-          if (f.tutor && studentId) {
+          if (f.tutor && studentId && familiaSinDni(f)) {
+            detalle += ' · familia sin DNI: sumala desde Familias';
+          } else if (f.tutor && studentId) {
             const t = f.tutor;
             const ct = await createAccount({
               schoolId: data.school.id, role: 'padre', firstName: t.nombre, lastName: t.apellido,
-              dni: t.dni || undefined, email: t.email || undefined,
+              dni: t.dni, email: t.email || undefined,
             });
             if (!ct.existing) cr.push({ name: `${t.nombre} ${t.apellido}`, login: ct.login, password: ct.password, tipo: `Familia de ${f.nombre}`, curso: curso ? nombreCurso(curso) : '' });
             await addGuardianLink(studentId, ct.userId, t.parentesco).catch(err => {
@@ -210,7 +213,7 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
               <li><b>Curso</b>: "2° A", "2do A", "2A"… Puede tener estudiantes de varios años.</li>
               <li><b>Apellido</b> y <b>Nombre</b>, o una sola columna <b>Apellido y nombre</b> ("Pérez, Juan").</li>
               <li><b>DNI</b>, con o sin puntos: es su usuario para entrar.</li>
-              <li>Opcional, la familia: <b>Apellido tutor</b>, <b>Nombre tutor</b>, <b>DNI tutor</b> o <b>Email tutor</b>, <b>Parentesco</b>.</li>
+              <li>Opcional, la familia: <b>Apellido tutor</b>, <b>Nombre tutor</b>, <b>DNI tutor</b> (sin DNI la familia no se carga), <b>Email tutor</b>, <b>Parentesco</b>.</li>
             </ul>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => descargar('plantilla-estudiantes.csv', plantillaCsv())}>
               <Download size={14} aria-hidden="true" /> Descargar la plantilla vacía
@@ -227,6 +230,7 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
             {yaEstan > 0 && <span className="imp-chip">{yaEstan} ya estaban</span>}
             {conError > 0 && <span className="imp-chip err">{conError} con errores (no se cargan)</span>}
             {familiasNuevas > 0 && <span className="imp-chip">{familiasNuevas} con familia</span>}
+            {familiasSinDni > 0 && <span className="imp-chip err">{familiasSinDni} familia{familiasSinDni !== 1 ? 's' : ''} sin DNI (no se cargan)</span>}
           </div>
           {porCurso.length > 0 && <p className="adm-ayuda">Por curso: {porCurso.map(([c, n]) => `${c} (${n})`).join(' · ')}</p>}
 
@@ -259,7 +263,10 @@ export default function ImportarPlanilla({ abierto, alCerrar, data, reload }: Ta
                       <td>{f.dni || '—'}</td>
                       <td>{f.curso ? nombreCurso(f.curso) : (f.cursoTexto || (cursoFijo?.name ?? '—'))}</td>
                       <td>{f.tutor ? `${f.tutor.apellido}, ${f.tutor.nombre}` : '—'}</td>
-                      <td>{e.tipo === 'ok' ? (e.cursoNuevo ? 'Nuevo · curso nuevo' : 'Nuevo') : e.tipo === 'existe' ? (f.tutor ? 'Ya estaba · se suma la familia' : 'Ya estaba') : e.motivo}</td>
+                      <td>{e.tipo === 'error' ? e.motivo : [
+                        e.tipo === 'ok' ? (e.cursoNuevo ? 'Nuevo · curso nuevo' : 'Nuevo') : 'Ya estaba',
+                        familiaSinDni(f) ? 'familia sin DNI, no se carga' : f.tutor && e.tipo === 'existe' ? 'se suma la familia' : '',
+                      ].filter(Boolean).join(' · ')}</td>
                     </tr>
                   );
                 })}

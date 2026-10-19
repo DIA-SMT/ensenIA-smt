@@ -6,13 +6,19 @@
  * Crear cuentas y resetear claves necesita la service role, que no puede
  * estar en el navegador. Esta función es la única puerta:
  *
- *  - create:          { action, schoolId, role, firstName, lastName, dni?, email?, courseId? }
+ *  - create:          { action, schoolId, role, firstName, lastName, dni, email?, courseId? }
  *                     → { userId, login, password? , existing }
  *                     Si la persona ya tiene cuenta (un docente que suma una
  *                     segunda escuela), solo se le agrega la membresía.
  *                     Si es estudiante, también crea su ficha en `students`
  *                     (y la base lo inscribe solo en las materias del curso).
  *  - reset_password:  { action, userId } → { login, password }
+ *  - set_dni:         { action, userId, dni } → { dni }
+ *                     Carga o corrige el DNI de quien entra con email. El DNI
+ *                     es obligatorio desde el ingreso con CiDiTuc, que busca
+ *                     la cuenta por DNI: las cuentas viejas sin DNI se
+ *                     completan con esto. Mismo permiso que reset_password:
+ *                     quien puede darle una clave nueva puede cargarle el DNI.
  *
  * Quién puede qué lo deciden admin_can_create / admin_can_manage_user
  * (migración 039), llamadas con el JWT de quien pide: la regla vive en la
@@ -70,6 +76,29 @@ const cleanDni = (v: unknown) => String(v ?? '').replace(/\D/g, '');
 const loginDe = (email: string | null | undefined, dni: string | null | undefined, dniDomain: string) =>
   email && !email.endsWith(`@${dniDomain}`) ? email : (dni || (email ?? '').split('@')[0]);
 
+/**
+ * Le pone el DNI a una cuenta que entra con email. El DNI no puede ser de
+ * otra cuenta (la base además lo tiene UNIQUE) y a quien entra con su DNI
+ * no se le cambia: es su usuario, cambiarlo es cambiar la cuenta.
+ * Devuelve el error para mostrar, o null si quedó cargado.
+ */
+async function ponerDni(admin: SupabaseClient, userId: string, dni: string, dniDomain: string): Promise<{ error: string; status: number } | null> {
+  const { data: p } = await admin.from('profiles').select('email, dni, role').eq('id', userId).maybeSingle();
+  if (!p) return { error: 'No se encontró la cuenta', status: 404 };
+  if (p.dni === dni) return null;
+  if (p.role === 'estudiante' || (p.email ?? '').endsWith(`@${dniDomain}`)) {
+    return { error: 'Esta cuenta entra con su DNI: no se le puede cambiar.', status: 400 };
+  }
+  const { data: otra } = await admin.from('profiles').select('id').eq('dni', dni).neq('id', userId).maybeSingle();
+  if (otra) return { error: 'Ese DNI ya es de otra cuenta.', status: 409 };
+  const { error } = await admin.from('profiles').update({ dni }).eq('id', userId);
+  if (error) {
+    if (error.code === '23505') return { error: 'Ese DNI ya es de otra cuenta.', status: 409 };
+    throw error;
+  }
+  return null;
+}
+
 async function allowed(userDb: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<boolean> {
   const { data, error } = await userDb.rpc(fn, args);
   if (error) {
@@ -122,6 +151,20 @@ Deno.serve(async (req: Request) => {
       return json({ login: loginDe(p?.email, p?.dni, dniDomain), password });
     }
 
+    // ── Cargar o corregir el DNI ──
+    if (body.action === 'set_dni') {
+      const userId = String(body.userId ?? '');
+      const dni = cleanDni(body.dni);
+      if (!userId) return json({ error: 'Falta userId' }, 400);
+      if (dni.length < 6 || dni.length > 9) return json({ error: 'El DNI tiene que tener entre 6 y 9 números' }, 400);
+      if (!(await allowed(userDb, 'admin_can_manage_user', { p_user: userId }))) {
+        return json({ error: 'No podés cambiar los datos de esta persona.' }, 403);
+      }
+      const fallo = await ponerDni(admin, userId, dni, dniDomain);
+      if (fallo) return json({ error: fallo.error }, fallo.status);
+      return json({ dni });
+    }
+
     if (body.action !== 'create') return json({ error: 'Acción desconocida' }, 400);
 
     // ── Crear cuenta (o sumar a la escuela si ya existe) ──
@@ -135,10 +178,11 @@ Deno.serve(async (req: Request) => {
 
     if (!schoolId || !ROLES.includes(role)) return json({ error: 'Escuela o rol inválido' }, 400);
     if (!firstName || !lastName) return json({ error: 'Falta el nombre o el apellido' }, 400);
-    if (dni && (dni.length < 6 || dni.length > 9)) return json({ error: 'El DNI tiene que tener entre 6 y 9 números' }, 400);
+    // El DNI es obligatorio para todos: con él se entra con CiDiTuc
+    if (!dni) return json({ error: 'Falta el DNI' }, 400);
+    if (dni.length < 6 || dni.length > 9) return json({ error: 'El DNI tiene que tener entre 6 y 9 números' }, 400);
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'El email no es válido' }, 400);
-    if (!dni && !email) return json({ error: 'Hace falta el DNI o el email' }, 400);
-    if (role === 'estudiante' && (!dni || !courseId)) {
+    if (role === 'estudiante' && !courseId) {
       return json({ error: 'Para un estudiante hacen falta el DNI y el curso' }, 400);
     }
 
@@ -168,11 +212,25 @@ Deno.serve(async (req: Request) => {
       if (role === 'estudiante') {
         return json({ error: 'Ya hay una cuenta con ese DNI. Un estudiante no puede estar en dos escuelas.' }, 409);
       }
+      // Se encontró por email: si ya tiene otro DNI, algo está mal escrito
+      if (existing.dni && existing.dni !== dni) {
+        return json({ error: 'Ya hay una cuenta con ese email y otro DNI. Revisá los datos.' }, 409);
+      }
+      if (!existing.dni) {
+        const { data: otra } = await admin.from('profiles').select('id').eq('dni', dni).maybeSingle();
+        if (otra) return json({ error: 'Ese DNI ya es de otra cuenta.' }, 409);
+      }
       const { error } = await admin.from('school_memberships')
         .insert({ user_id: existing.id, school_id: schoolId, role });
       if (error) {
         if (error.code === '23505') return json({ error: 'Esa persona ya es parte de esta escuela.' }, 409);
         throw error;
+      }
+      // Cuenta de antes de que el DNI fuera obligatorio: se completa, si quien
+      // la suma puede manejarla (la misma regla que para darle clave nueva)
+      if (!existing.dni && await allowed(userDb, 'admin_can_manage_user', { p_user: existing.id })) {
+        const fallo = await ponerDni(admin, existing.id, dni, dniDomain);
+        if (fallo) console.warn('admin-usuarios: no se cargó el DNI al sumar a la escuela:', fallo.error);
       }
       // Sigue entrando con su cuenta de siempre, no con lo que se escribió ahora
       return json({ userId: existing.id, login: loginDe(existing.email, existing.dni, dniDomain), existing: true });

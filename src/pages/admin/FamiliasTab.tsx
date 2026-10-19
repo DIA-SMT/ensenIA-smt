@@ -5,7 +5,7 @@ import {
   createAccount, resetPassword, removeMember, addGuardianLink, removeGuardianLink, type AdminMember,
 } from '../../services/admin.service';
 import { avisar, confirmar } from '../../components/ui/avisar';
-import { PersonRow } from './PersonalTab';
+import { DialogoDni, PersonRow } from './PersonalTab';
 import { Barra, Campo, DialogoForm, Vacio } from './ui';
 import type { SchoolData, TabProps } from './GestionEscuela';
 
@@ -32,6 +32,7 @@ export default function FamiliasTab(props: TabProps) {
   const { data, run, showCredentials, irA } = props;
   const { user } = useAuth();
   const [alta, setAlta] = useState(false);
+  const [dniDe, setDniDe] = useState<AdminMember | null>(null);
 
   const guardians = data.members.filter(m => m.role === 'padre');
   const sinEstudiantes = data.students.length === 0;
@@ -85,13 +86,14 @@ export default function FamiliasTab(props: TabProps) {
             texto="Cada adulto responsable tiene su cuenta y ve solo lo de sus hijos. Si tiene varios en la escuela, se vinculan todos a la misma cuenta."
             accion={sinEstudiantes ? undefined : { etiqueta: 'Sumar familia', icono: UserPlus, alTocar: () => setAlta(true) }} />
         ) : guardians.map(m => (
-          <PersonRow key={m.membershipId} m={m} canManage={m.userId !== user?.id} onReset={handleReset} onRemove={handleRemove}>
+          <PersonRow key={m.membershipId} m={m} canManage={m.userId !== user?.id} onReset={handleReset} onRemove={handleRemove} onDni={setDniDe}>
             <Links guardianId={m.userId} data={data} run={run} studentLabel={studentLabel} />
           </PersonRow>
         ))}
       </section>
 
       <AltaFamilia abierto={alta} alCerrar={() => setAlta(false)} {...props} />
+      <DialogoDni key={dniDe?.userId ?? 'cerrado'} persona={dniDe} alCerrar={() => setDniDe(null)} reload={props.reload} />
     </div>
   );
 }
@@ -108,7 +110,7 @@ function AltaFamilia({ abierto, alCerrar, data, reload, showCredentials }: TabPr
   const [relationship, setRelationship] = useState('madre');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const listo = firstName.trim() && lastName.trim() && (dni.trim() || email.trim()) && studentId;
+  const listo = firstName.trim() && lastName.trim() && dni.trim() && studentId;
 
   const crear = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +120,7 @@ function AltaFamilia({ abierto, alCerrar, data, reload, showCredentials }: TabPr
     try {
       const c = await createAccount({
         schoolId: data.school.id, role: 'padre', firstName, lastName,
-        dni: dni.trim() || undefined, email: email.trim() || undefined,
+        dni: dni.trim(), email: email.trim() || undefined,
       });
       // Si falla el vínculo la cuenta ya existe: se vincula después desde la
       // lista. Pero se avisa: si no, la familia queda creada sin ver a nadie.
@@ -176,7 +178,7 @@ function AltaFamilia({ abierto, alCerrar, data, reload, showCredentials }: TabPr
             <input id="fam-email" className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />
           </Campo>
         </div>
-        <p className="adm-ayuda">Con email entra con el email; si no, con el DNI.</p>
+        <p className="adm-ayuda">Con email entra con el email; si no, con el DNI. Con el DNI también puede entrar con CiDiTuc.</p>
       </form>
     </DialogoForm>
   );
