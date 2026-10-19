@@ -24,6 +24,7 @@ import {
   type MigueAudience, type PolicyHit, type RefHit,
 } from './_prompts.ts';
 import { padronDeEscuela, proveedorPrivado, Seudonimos, taparContacto } from './_datos-personales.ts';
+import { pantallaActual } from './_guia.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -41,6 +42,9 @@ interface MigueRequest {
    *  arma el servidor desde migue_messages: si lo mandara el cliente,
    *  cualquiera podría inventar lo que Migue supuestamente respondió. */
   messages: { role: 'user' | 'assistant'; content: string }[];
+  /** Ruta desde la que se abrió el globito. Solo vale si está en la lista
+   *  de _guia.ts, que es la que pone el nombre de la pantalla. */
+  pantalla?: unknown;
 }
 
 function sseEvent(event: string, data: Record<string, unknown>): string {
@@ -359,7 +363,7 @@ Deno.serve(async (req: Request) => {
 
   // Dos partes: la fija se cachea; la normativa de esta pregunta cambia
   const { base: promptBase, contexto: promptNormativa } = buildSystemPromptPartes({
-    audience, nombre, escuela, policyHits, refHits, anio, contextoEscuela,
+    audience, rol: profile.role, nombre, escuela, policyHits, refHits, anio, contextoEscuela,
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
 
@@ -489,7 +493,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         role: 'system',
         content: [
           { type: 'text', text: promptBase, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: promptNormativa + avisoDerivacion },
+          { type: 'text', text: promptNormativa + avisoDerivacion + pantallaActual(profile.role, body.pantalla) },
         ],
       },
       ...historial,
