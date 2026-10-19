@@ -120,7 +120,10 @@ export default function FloatingMigue() {
 
       <Dialogo abierto={abierto} alCerrar={() => setAbierto(false)} etiqueta="Migue, asistente pedagógico" className="dialogo-migue">
         <Suspense fallback={<Cargando texto="Abriendo a Migue…" />}>
-          <Migue enPanel alCerrar={() => setAbierto(false)} />
+          {/* La pantalla desde la que se abrió: Migue la usa para guiar
+              ("en esta pantalla, tocá…"). Solo la ruta; el nombre lo pone
+              el servidor con su propia lista (supabase/functions/migue/_guia.ts). */}
+          <Migue enPanel alCerrar={() => setAbierto(false)} pantalla={pathname} />
         </Suspense>
       </Dialogo>
     </>

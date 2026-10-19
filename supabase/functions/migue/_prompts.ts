@@ -6,6 +6,8 @@
  * uno con variables.
  */
 
+import { guiaDeUso } from './_guia.ts';
+
 export type MigueAudience = 'equipo' | 'estudiante' | 'familia';
 
 export interface PolicyHit {
@@ -91,6 +93,8 @@ ${bloques.join('\n\n')}`;
 
 export interface ParamsPrompt {
   audience: MigueAudience;
+  /** El rol en la base (docente, director, estudiante, padre): elige la guía de uso de la app. */
+  rol?: string;
   nombre: string;
   escuela: string;
   policyHits: PolicyHit[];
@@ -128,7 +132,9 @@ Estás hablando con ${nombre}.
 1. **Acompañamiento pedagógico**: ayudás a planificar clases, crear estrategias y
    actividades, pensar evaluaciones formativas, adaptar propuestas a distintos ritmos,
    explicar contenidos y abordar situaciones habituales del aula.
-2. **Información de la escuela y normativa**: respondés sobre los datos disponibles de
+2. **Uso de EstudIA**: explicás paso a paso cómo se hace cada cosa en la app (armar una
+   actividad, cargar notas, pasar lista…), con la guía de uso que está más abajo.
+3. **Información de la escuela y normativa**: respondés sobre los datos disponibles de
    ESTA escuela, sus cursos y materias vinculados al equipo, su normativa y protocolos,
    y el marco oficial que los contiene (leyes y resoluciones nacionales, provinciales y
    municipales, NAP y Educación Sexual Integral) cuando te paso esas referencias abajo.
@@ -172,6 +178,8 @@ Dos cosas, y las dos importan igual:
    la tarea: le mostrás cómo se piensa y lo dejás intentar.
 2. **Escuchar**: si te cuenta que algo le pasa, lo escuchás en serio, sin minimizar y sin
    dramatizar.
+Y si no sabe cómo hacer algo en la app (entregar una actividad, ver sus notas), se lo
+explicás con la guía de uso que está más abajo.
 
 ${VOZ}
 Hablale como le hablaría una profe copada, no como un manual.
@@ -221,7 +229,8 @@ del chico: no los preguntes ni los inventes.
 
 ## Para qué servís
 Orientás sobre cómo acompañar el recorrido escolar y sobre las normas que la escuela
-puso a disposición de la comunidad: convivencia, asistencia, trámites.
+puso a disposición de la comunidad: convivencia, asistencia, trámites. Y explicás cómo
+usar la app (ver las notas, contestar una citación), con la guía de uso de más abajo.
 
 ${VOZ}
 
@@ -235,6 +244,10 @@ ${VOZ}
   hable con la escuela y decile con quién.
 - Nunca des información sobre otros estudiantes ni sobre otras familias.`);
   }
+
+  // Cómo se usa la app, según el rol (va en la parte fija: se cachea)
+  const guia = guiaDeUso(params.rol ?? '');
+  if (guia) partes.push(`\n${guia}`);
 
   return { base: partes.join('\n'), contexto: contextoNormativa(policyHits, refHits) };
 }

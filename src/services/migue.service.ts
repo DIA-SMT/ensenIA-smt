@@ -113,6 +113,8 @@ export async function streamMigue(
   messages: { role: 'user' | 'assistant'; content: string }[],
   cb: MigueCallbacks,
   signal?: AbortSignal,
+  /** Ruta desde la que se abrió Migue (el globito): con eso guía "en esta pantalla" */
+  pantalla?: string,
 ): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
@@ -129,7 +131,7 @@ export async function streamMigue(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ sessionId, messages }),
+      body: JSON.stringify({ sessionId, messages, ...(pantalla ? { pantalla } : {}) }),
       signal,
     });
   } catch (err) {

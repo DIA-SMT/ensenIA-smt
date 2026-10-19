@@ -72,7 +72,12 @@ const ENCUADRE: Record<MigueAudience, {
   },
 };
 
-export default function Migue({ enPanel = false, alCerrar }: { enPanel?: boolean; alCerrar?: () => void }) {
+export default function Migue({ enPanel = false, alCerrar, pantalla }: {
+  enPanel?: boolean;
+  alCerrar?: () => void;
+  /** Ruta desde la que se abrió el globito, para que Migue sepa dónde está la persona */
+  pantalla?: string;
+}) {
   const { user } = useAuth();
   const audience = user ? audienceForRole(user.role) : null;
 
@@ -187,6 +192,7 @@ export default function Migue({ enPanel = false, alCerrar }: { enPanel?: boolean
         },
       },
       ctrl.signal,
+      pantalla,
     );
     setEnVuelo(false);
   };
