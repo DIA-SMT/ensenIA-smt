@@ -168,13 +168,18 @@ export default function ClaseEnVivoInvitado() {
     // ══════════════════════════════════════
     // Adentro
     // ══════════════════════════════════════
-    if (state?.status === 'ended') {
+    if (state?.status === 'ended' || state?.status === 'cerrada' || state?.status === 'expulsado') {
+        const [titulo, texto] = state.status === 'ended'
+            ? ['Terminó la clase', `Gracias por participar, ${guest.displayName}.`]
+            : state.status === 'cerrada'
+                ? ['La sala se cerró a invitados', 'El docente cerró la participación sin cuenta. Gracias por participar.']
+                : ['Ya no estás en la sala', 'El docente te sacó de la clase.'];
         return (
             <div className="inv-shell">
                 <div className="inv-card animate-in">
                     <div className="inv-brand"><span className="inv-logo">SMT EstudIA</span></div>
-                    <h1 className="inv-title">Terminó la clase</h1>
-                    <p className="inv-sub">Gracias por participar, {guest.displayName}.</p>
+                    <h1 className="inv-title">{titulo}</h1>
+                    <p className="inv-sub">{texto}</p>
                 </div>
             </div>
         );

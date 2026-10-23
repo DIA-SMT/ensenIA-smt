@@ -72,7 +72,8 @@ export interface LiveResults {
   courseTotal: number;
   responded: number;
   counts: Record<string, number>;
-  texts: { id: string; name: string | null; text: string }[];
+  /** oculta (067): sonaba a que la está pasando mal; no se proyecta y llega sin texto (el texto va por la alerta) */
+  texts: { id: string; name: string | null; text: string | null; oculta?: boolean }[];
   words: { word: string; n: number }[];
 }
 
@@ -400,8 +401,10 @@ export async function getLiveSessionSummary(sessionId: string): Promise<ResumenC
   return (data as unknown as ResumenClase | null) ?? null;
 }
 
+/** El informe nombra a los chicos: va a su tabla, que leen solo el docente y la dirección (067). */
 export async function saveLiveSessionReport(sessionId: string, informe: string): Promise<void> {
-  const { error } = await supabase.from('live_sessions').update({ ai_summary: informe }).eq('id', sessionId);
+  const { error } = await supabase.from('live_session_informes' as never)
+    .upsert({ session_id: sessionId, informe, updated_at: new Date().toISOString() } as never, { onConflict: 'session_id' });
   if (error) throw error;
 }
 
@@ -603,22 +606,34 @@ export async function deleteLiveResponse(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export interface InvitadoEnSala { id: string; nombre: string; vistoAt: string }
+
 /**
- * Cuántos invitados están realmente en la sala ahora.
- *
- * Cuenta los vistos en los últimos 2 minutos, no los que alguna vez
- * entraron: en la pantalla proyectada el número tiene que ser el de la
- * gente que está, no un acumulado que solo sube.
+ * Los invitados que siguen en la sala (sin los que el docente sacó), con
+ * su última señal: el panel los lista para poder sacar a uno.
  */
-export async function getConnectedGuests(sessionId: string): Promise<number> {
-  const since = new Date(Date.now() - 120_000).toISOString();
-  const { count, error } = await supabase
+export async function getInvitadosEnSala(sessionId: string): Promise<InvitadoEnSala[]> {
+  const { data, error } = await supabase
     .from('live_guests')
-    .select('id', { count: 'exact', head: true })
+    .select('id, display_name, last_seen_at')
     .eq('session_id', sessionId)
-    .gt('last_seen_at', since);
+    .is('expulsado_at' as never, null)
+    .order('created_at');
   if (error) throw error;
-  return count ?? 0;
+  return ((data ?? []) as { id: string; display_name: string; last_seen_at: string }[])
+    .map(g => ({ id: g.id, nombre: g.display_name, vistoAt: g.last_seen_at }));
+}
+
+/** Saca a un invitado de la sala y borra lo que mandó (067). */
+export async function sacarInvitado(guestId: string): Promise<void> {
+  const { error } = await supabase.rpc('sacar_invitado' as never, { p_guest: guestId } as never);
+  if (error) throw error;
+}
+
+/** Saca una palabra de la nube (todas las respuestas con esa palabra). */
+export async function sacarPalabraEnVivo(activityId: string, palabra: string): Promise<void> {
+  const { error } = await supabase.rpc('sacar_palabra_en_vivo' as never, { p_activity: activityId, p_palabra: palabra } as never);
+  if (error) throw error;
 }
 
 // ── Presencia: quién está conectado ahora (migración 014) ──

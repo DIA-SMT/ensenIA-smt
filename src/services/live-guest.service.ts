@@ -34,6 +34,10 @@ export interface GuestActivity {
 export type GuestState =
   /** El docente terminó la clase. */
   | { status: 'ended' }
+  /** El docente cerró la sala a invitados: salen todos (067). */
+  | { status: 'cerrada' }
+  /** El docente sacó a este invitado (067). */
+  | { status: 'expulsado' }
   /** Hay clase, pero ninguna actividad lanzada: el celular queda en pausa. */
   | { status: 'idle'; title: string; reactionsEnabled: boolean }
   | {

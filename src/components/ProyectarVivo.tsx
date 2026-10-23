@@ -104,7 +104,8 @@ export default function ProyectarVivo({ session, activity, results, connected, r
             </header>
 
             {!live ? (
-                <JoinBoard code={session.joinCode} qr={qr} url={joinUrl} />
+                // El QR solo con la sala abierta a invitados: si no, invita a cualquiera a entrar
+                <JoinBoard code={session.guestsEnabled ? session.joinCode : null} qr={qr} url={joinUrl} />
             ) : (
                 <main className="pv-main">
                     <h1 className="pv-question">
@@ -198,7 +199,7 @@ function JoinBoard({ code, qr, url }: {
     if (!code) {
         return (
             <main className="pv-main pv-center">
-                <p className="pv-waiting">Abrí la sala a invitados para mostrar el QR.</p>
+                <p className="pv-waiting">Esperando la próxima pregunta…</p>
             </main>
         );
     }
@@ -244,7 +245,8 @@ function Board({ activity, results }: { activity: LiveActivity; results: LiveRes
     if (activity.kind === 'texto') {
         return (
             <div className="pv-texts">
-                {results.texts.slice(0, 12).map(t => (
+                {/* Los últimos 12, sin los ocultos (lo que preocupa no se proyecta) */}
+                {results.texts.filter(t => !t.oculta && t.text).slice(-12).map(t => (
                     <div key={t.id} className="pv-text-card">{t.text}</div>
                 ))}
             </div>

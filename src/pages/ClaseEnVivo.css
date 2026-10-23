@@ -815,3 +815,26 @@
 .cv-pasada-texto { display: flex; flex-direction: column; min-width: 0; }
 .cv-pasada-texto strong { font-size: 0.875rem; }
 .cv-pasada-texto span::first-letter { text-transform: uppercase; }
+
+/* ── Cuidar la sala (067) ── */
+.cv-invitados { flex-basis: 100%; font-size: 0.8125rem; }
+.cv-invitados summary { cursor: pointer; color: var(--text-secondary); min-height: 32px; display: flex; align-items: center; }
+.cv-invitados ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+.cv-invitados li { display: flex; align-items: center; justify-content: space-between; gap: 8px; overflow-wrap: anywhere; }
+.cv-sacar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 4px;
+  border-radius: var(--radius-full);
+  color: var(--text-subtle);
+  vertical-align: middle;
+}
+.cv-sacar:hover, .cv-sacar:focus-visible { background: var(--danger-light); color: var(--danger-ink); }
+.cv-join { flex-wrap: wrap; }
+.cv-text-item { position: relative; }
+.cv-text-item:has(.cv-sacar) { padding-right: 34px; }
+.cv-text-item .cv-sacar { position: absolute; top: 4px; right: 4px; }
+.cv-text-item.oculta { border-style: dashed; }
+.cv-text-oculta { color: var(--danger-ink); font-size: 0.8125rem; font-style: italic; }

@@ -23,7 +23,8 @@ import GruposModal from '../components/GruposModal';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
     getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, setGuestsEnabled, getConnectedGuests, getOnlineStudentIds, setLiveMaterial,
+    getRecentReactions, setGuestsEnabled, getInvitadosEnSala, sacarInvitado, deleteLiveResponse, sacarPalabraEnVivo,
+    getOnlineStudentIds, setLiveMaterial, type InvitadoEnSala,
     getCorrectResponders, getMyPastSessions, sincronizarMaterialesDeClase,
     LIVE_KIND_META, type EleccionMaterial,
     type LiveSession, type LiveActivity, type LiveActivityKind,
@@ -77,6 +78,8 @@ export default function ClaseEnVivo() {
     const [showQr, setShowQr] = useState(false);
     const [projecting, setProjecting] = useState(false);
     const [connected, setConnected] = useState(0);
+    // Los invitados que siguen en la sala (para poder sacar a uno)
+    const [invitados, setInvitados] = useState<InvitadoEnSala[]>([]);
     const [joinQr, setJoinQr] = useState('');
 
     // Quiénes están: la lista del curso + los que laten ahora
@@ -187,7 +190,14 @@ export default function ClaseEnVivo() {
                 getRecentReactions(session.id, since).then(setReactions).catch(console.error);
             }
             if (state.session.guestsEnabled) {
-                getConnectedGuests(session.id).then(setConnected).catch(console.error);
+                getInvitadosEnSala(session.id).then(l => {
+                    setInvitados(l);
+                    // Conectados: los que dieron señal en los últimos 2 minutos
+                    const desde = Date.now() - 120_000;
+                    setConnected(l.filter(g => new Date(g.vistoAt).getTime() > desde).length);
+                }).catch(console.error);
+            } else {
+                setInvitados([]);
             }
             getOnlineStudentIds(session.id).then(setOnlineIds).catch(console.error);
         } catch (err) {
@@ -294,13 +304,50 @@ export default function ClaseEnVivo() {
     const handleToggleGuests = async () => {
         if (!session) return;
         const next = !session.guestsEnabled;
+        // Abrirla deja entrar a cualquiera con el código, en una clase con chicos
+        if (next && !(await confirmar({
+            titulo: '¿Abrir la sala a invitados?',
+            mensaje: 'Cualquiera con el código o el QR entra sin cuenta, con el nombre que quiera, y puede contestar y mandar emojis. Sirve para una visita o una jornada; en una clase común no hace falta. Al cerrarla, salen todos.',
+            accion: 'Abrir la sala',
+        }))) return;
         setSession({ ...session, guestsEnabled: next });
         try {
             await setGuestsEnabled(session.id, next);
+            if (!next) avisar.info('Sala cerrada a invitados', 'Los que estaban adentro ya no ven la clase.');
         } catch (err) {
             console.error(err);
             setSession({ ...session, guestsEnabled: !next });
             avisar.error('No se pudo cambiar el acceso de invitados. Probá de nuevo.');
+        }
+    };
+
+    const sacar = async (g: InvitadoEnSala) => {
+        if (!(await confirmar({
+            titulo: `¿Sacar a "${g.nombre}" de la sala?`,
+            mensaje: 'Deja de ver la clase y se borra lo que mandó (respuestas y emojis).',
+            accion: 'Sacar',
+            peligro: true,
+        }))) return;
+        try {
+            await sacarInvitado(g.id);
+            setInvitados(prev => prev.filter(x => x.id !== g.id));
+            if (activity) getLiveResults(activity.id).then(setResults).catch(console.error);
+        } catch (err) {
+            console.error(err);
+            avisar.error('No se pudo sacar al invitado. Probá de nuevo.');
+        }
+    };
+
+    /** Saca una respuesta (texto) o una palabra de la nube sin frenar la clase. */
+    const sacarRespuesta = async (que: { id: string } | { palabra: string }) => {
+        if (!activity) return;
+        try {
+            if ('id' in que) await deleteLiveResponse(que.id);
+            else await sacarPalabraEnVivo(activity.id, que.palabra);
+            setResults(await getLiveResults(activity.id));
+        } catch (err) {
+            console.error(err);
+            avisar.error('No se pudo sacar. Probá de nuevo.');
         }
     };
 
@@ -570,6 +617,21 @@ export default function ClaseEnVivo() {
                                 : 'Sin cuenta, sin instalar nada'}
                         </p>
                     </div>
+                    {invitados.length > 0 && (
+                        <details className="cv-invitados">
+                            <summary>Invitados ({invitados.length})</summary>
+                            <ul>
+                                {invitados.map(g => (
+                                    <li key={g.id}>
+                                        <span>{g.nombre}</span>
+                                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => sacar(g)}>
+                                            <X size={13} aria-hidden="true" /> Sacar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    )}
                 </div>
             )}
 
@@ -654,7 +716,7 @@ export default function ClaseEnVivo() {
                     </div>
                     {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
 
-                    <LiveResultsView activity={activity} results={results} isTeacher />
+                    <LiveResultsView activity={activity} results={results} isTeacher onSacar={sacarRespuesta} />
 
                     <div className="cv-activity-actions">
                         {activity.kind === 'quiz' && activity.status === 'active' && (
@@ -856,12 +918,14 @@ export default function ClaseEnVivo() {
 }
 
 /* ── Resultados en vivo (compartido docente/estudiante) ── */
-export function LiveResultsView({ activity, results, isTeacher = false }: {
+export function LiveResultsView({ activity, results, isTeacher = false, onSacar }: {
     /* Solo necesita la forma de la actividad: así la reusa también la
        pantalla de invitados, que recibe una versión recortada. */
     activity: Pick<LiveActivity, 'kind' | 'config' | 'status'>;
     results: LiveResults | null;
     isTeacher?: boolean;
+    /** Solo el docente: sacar un texto o una palabra que no tiene que estar */
+    onSacar?: (que: { id: string } | { palabra: string }) => void;
 }) {
     if (!results || results.responded === 0) {
         return <p className="cv-waiting">Esperando respuestas<span className="cv-ellipsis" />​</p>;
@@ -910,6 +974,12 @@ export function LiveResultsView({ activity, results, isTeacher = false }: {
                         style={{ fontSize: `${13 + (w.n / maxN) * 17}px`, opacity: 0.55 + (w.n / maxN) * 0.45 }}
                     >
                         {w.word}
+                        {onSacar && (
+                            <button type="button" className="cv-sacar" aria-label={`Sacar la palabra ${w.word}`}
+                                onClick={() => onSacar({ palabra: w.word })}>
+                                <X size={12} aria-hidden="true" />
+                            </button>
+                        )}
                     </span>
                 ))}
             </div>
@@ -919,10 +989,18 @@ export function LiveResultsView({ activity, results, isTeacher = false }: {
     // texto libre
     return (
         <div className="cv-texts">
-            {results.texts.slice(-30).map((t, i) => (
-                <div key={i} className="cv-text-item">
+            {results.texts.slice(-30).map(t => (
+                <div key={t.id} className={`cv-text-item ${t.oculta ? 'oculta' : ''}`}>
                     {isTeacher && t.name && <span className="cv-text-name">{t.name}</span>}
-                    <p>{t.text}</p>
+                    {t.oculta
+                        // El texto no viene: el panel puede estar proyectado. Llega por la alerta.
+                        ? <p className="cv-text-oculta">No se muestra: puede ser algo que preocupa. Te llegó una alerta.</p>
+                        : <p>{t.text}</p>}
+                    {onSacar && (
+                        <button type="button" className="cv-sacar" aria-label="Sacar esta respuesta" onClick={() => onSacar({ id: t.id })}>
+                            <X size={12} aria-hidden="true" />
+                        </button>
+                    )}
                 </div>
             ))}
         </div>

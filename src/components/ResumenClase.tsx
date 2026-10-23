@@ -24,10 +24,16 @@ const pct = (n: number, de: number) => (de > 0 ? Math.round((n / de) * 100) : 0)
 const fecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
-/** Los números de la clase en texto, para que la IA escriba el informe. */
-function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): string {
+/**
+ * Los números de la clase en texto, para que la IA escriba el informe.
+ * Sin nombres: cada chico va como "Estudiante N" (los nombres de menores no
+ * salen de la escuela); `ponerNombres` los devuelve al informe que vuelve.
+ */
+function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): { texto: string; ponerNombres: (informe: string) => string } {
   const t = d.totales;
   const l: string[] = [];
+  const codigos = new Map<string, string>();
+  d.alumnos.forEach((s, i) => codigos.set(`Estudiante ${i + 1}`, s.nombre));
   l.push(`Clase: ${d.sesion.titulo}. Duración: ${d.sesion.minutos} minutos.`);
   if (materiales.length > 1) {
     l.push(`Materiales que se usaron: ${materiales.map(m => `${m.titulo} (${m.detalle})`).join('; ')}.`);
@@ -46,12 +52,12 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): string {
     if (a.grupal) x += ' (por grupos)';
     l.push(x);
   }
-  l.push('', 'Por estudiante:');
-  for (const s of d.alumnos) {
-    l.push(`- ${s.nombre}: ${s.conectado ? 'conectado' : 'no se conectó'}, ${s.respuestas} respuestas` +
+  l.push('', 'Por estudiante (cada uno con un código: usalo tal cual, "Estudiante N", sin inventar nombres):');
+  d.alumnos.forEach((s, i) => {
+    l.push(`- Estudiante ${i + 1}: ${s.conectado ? 'conectado' : 'no se conectó'}, ${s.respuestas} respuestas` +
       (s.preguntas ? `, ${s.aciertos}/${s.preguntas} aciertos` : '') +
       (s.medallas ? `, ${s.medallas} medalla(s)` : '') + '.');
-  }
+  });
   if (d.animo.length) {
     l.push('', `Check-in de ánimo: ${d.animo.map(a => `${FEELING_META[a.estado as CheckinFeeling]?.label ?? a.estado} ${a.n}`).join(', ')}.`);
   }
@@ -61,7 +67,9 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): string {
   if (d.medallas.length) {
     l.push(`Medallas dadas: ${d.medallas.map(m => `${AWARD_META[m.medalla]?.label ?? m.medalla} ${m.n}`).join(', ')}.`);
   }
-  return l.join('\n');
+  const ponerNombres = (informe: string) =>
+    informe.replace(/Estudiante (\d+)/g, (todo, n: string) => codigos.get(`Estudiante ${n}`) ?? todo);
+  return { texto: l.join('\n'), ponerNombres };
 }
 
 export default function ResumenClase({ sessionId, onVolver }: { sessionId: string; onVolver: () => void }) {
@@ -88,7 +96,8 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
     setGenerando(true);
     setErrorInforme('');
     try {
-      const texto = await classReport(datosParaInforme(datos, materiales));
+      const { texto: pedido, ponerNombres } = datosParaInforme(datos, materiales);
+      const texto = ponerNombres(await classReport(pedido));
       setInforme(texto);
       await saveLiveSessionReport(sessionId, texto).catch(err => {
         console.error(err);
