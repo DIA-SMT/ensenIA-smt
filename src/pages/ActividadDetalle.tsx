@@ -13,6 +13,7 @@ import {
   registrarEntregaDocente, porPartes, puntajesAutomaticos,
 } from '../services/activities.service';
 import NotaPorPartes from '../components/NotaPorPartes';
+import AclaracionesEditor from '../components/AclaracionesEditor';
 import { TIPOS_ACTIVIDAD, leerPuntajes, partesCompletas, puntosATexto, sumaPuntajes } from '../lib/actividades';
 import { getCheckinsByActivity, getObservationsByStudent } from '../services/wellbeing.service';
 import { guardarObservacionResiliente } from '../services/offline-queue.service';
@@ -538,6 +539,9 @@ export default function ActividadDetalle() {
             <strong>{students.length - submittedCount - startedCount - viewedOnly}</strong> sin actividad
           </div>
         </div>
+
+        {/* Lo que el docente aclara para todos (fase 4) */}
+        <AclaracionesEditor activityId={activity.id} estado={activity.status} />
 
         {questionStats.length > 0 && (
           <div>

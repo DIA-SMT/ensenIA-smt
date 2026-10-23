@@ -13,10 +13,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   MessagesSquare, Megaphone, CalendarClock, Plus, Send, Loader2, ArrowLeft, Archive, ArchiveRestore,
-  ShieldCheck, Eye, Search, X, Inbox, Reply, Check,
+  ShieldCheck, Eye, Search, X, Inbox, Reply, Check, ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -65,6 +65,7 @@ function AvisoSupervision({ soyParticipante }: { soyParticipante: boolean }) {
 
 // ── Una conversación abierta ──
 function VistaConversacion({ id, yo, alVolver, alCambiar }: { id: string; yo: string; alVolver: () => void; alCambiar: () => void }) {
+  const { user } = useAuth();
   const [conv, setConv] = useState<Conversacion | null | undefined>(undefined);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -123,6 +124,12 @@ function VistaConversacion({ id, yo, alVolver, alCambiar }: { id: string; yo: st
         <div className="msj-vista-titulo">
           <h3>{conv.asunto}</h3>
           <p>{conv.participantes.map(p => `${p.nombre}${p.id === yo ? ' (vos)' : ''} · ${p.detalle || NOMBRE_ROL[p.rol] || ''}`).join('  —  ')}</p>
+          {/* Consulta sobre una actividad (066): ir a la actividad */}
+          {conv.activityId && (user?.role === 'docente' || user?.role === 'estudiante') && (
+            <Link className="msj-actividad" to={user.role === 'docente' ? `/actividades/${conv.activityId}` : `/mis-actividades/${conv.activityId}`}>
+              <ClipboardList size={13} aria-hidden="true" /> Ver la actividad{conv.actividad ? `: ${conv.actividad}` : ''}
+            </Link>
+          )}
         </div>
         {conv.soyParticipante && (
           <button className="btn btn-ghost btn-sm" onClick={async () => { await archivar(id, !conv.archivada); alCambiar(); alVolver(); }}

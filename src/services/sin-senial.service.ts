@@ -41,6 +41,7 @@ import { getCommunicationsBySchool } from './communications.service';
 import { getSyllabusForTerm } from './syllabus.service';
 import { getPublishedRecordings } from './recordings.service';
 import { getMisDocentes } from './alerts.service';
+import { getAclaraciones } from './seguimiento.service';
 
 const CADA_CON_WIFI_MS = 30 * 60 * 1000;
 const CADA_CON_DATOS_MS = 3 * 60 * 60 * 1000;
@@ -185,6 +186,8 @@ export function prepararSinSenial(
       ...trimestres.map(t => () => getSyllabusForTerm(t.id)),
       // Cada actividad, como la pide al abrirse (con su consigna y sus partes)
       ...actividades.map(a => () => getActivityForStudent(a.id)),
+      // Y lo que el docente aclaró para todo el curso (066)
+      ...actividades.map(a => () => getAclaraciones(a.id)),
       // Mi materia: las evaluaciones que vienen
       ...(trimestre ? materias.map(m => () => getEvaluacionesDelTrimestre(m.subjectId, m.courseId, trimestre.id)) : []),
     ];

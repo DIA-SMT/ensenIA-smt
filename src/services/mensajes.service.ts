@@ -10,7 +10,7 @@
 import { supabase } from './_helpers';
 import type { UserRole } from '../types';
 
-export type OrigenConversacion = 'mensaje' | 'comunicado' | 'citacion' | 'pedido_hablar' | 'aviso_direccion';
+export type OrigenConversacion = 'mensaje' | 'comunicado' | 'citacion' | 'pedido_hablar' | 'aviso_direccion' | 'consulta';
 
 export interface Persona {
   id: string;
@@ -31,6 +31,9 @@ export interface ResumenConversacion {
   sinLeer: boolean;
   ultimo: { autor: string; cuerpo: string } | null;
   participantes: Persona[];
+  /** Consulta sobre una actividad (066): de cuál */
+  activityId?: string | null;
+  actividad?: string | null;
 }
 
 export interface Mensaje {
@@ -75,10 +78,14 @@ export async function iniciarConversacion(para: string[], asunto: string, texto:
   return id;
 }
 
-export async function enviarMensaje(conversacionId: string, autorId: string, cuerpo: string): Promise<void> {
+/**
+ * Con id: reintentar el mismo envío (la respuesta se perdió) no lo duplica;
+ * los mensajes no se borran.
+ */
+export async function enviarMensaje(conversacionId: string, autorId: string, cuerpo: string, id?: string): Promise<void> {
   const { error } = await supabase.from('mensajes' as never)
-    .insert({ conversacion_id: conversacionId, autor_id: autorId, cuerpo: cuerpo.trim() } as never);
-  if (error) throw new Error('No se pudo enviar el mensaje. Revisá la conexión y probá de nuevo.');
+    .insert({ ...(id ? { id } : {}), conversacion_id: conversacionId, autor_id: autorId, cuerpo: cuerpo.trim() } as never);
+  if (error && !(id && error.code === '23505')) throw new Error('No se pudo enviar el mensaje. Revisá la conexión y probá de nuevo.');
 }
 
 export async function marcarLeida(conversacionId: string): Promise<void> {

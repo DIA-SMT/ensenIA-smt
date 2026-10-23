@@ -1,0 +1,28 @@
+/* Aclaraciones para todo el curso, en la actividad del docente (fase 4) */
+.acl-ed { display: flex; flex-direction: column; gap: 8px; }
+.acl-ed-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.acl-ed-cabecera h4 { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.875rem; }
+.acl-ed-vacio { margin: 0; font-size: 0.8125rem; color: var(--text-subtle); }
+.acl-ed-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.acl-ed-lista li {
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--acento);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.acl-ed-lista p { margin: 0; white-space: pre-wrap; font-size: 0.875rem; overflow-wrap: anywhere; }
+.acl-ed-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.acl-ed textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.acl-ed-nueva { display: flex; flex-direction: column; gap: 6px; }

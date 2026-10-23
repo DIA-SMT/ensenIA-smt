@@ -1,0 +1,61 @@
+/* Aclaraciones y consultas en la actividad del estudiante (fase 4) */
+.cact { display: flex; flex-direction: column; gap: var(--space-3); }
+.cact h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9375rem; }
+
+.cact-aclaraciones {
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--acento);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+}
+.cact-aclaraciones ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cact-aclaraciones p { margin: 0; white-space: pre-wrap; font-size: 0.875rem; }
+.cact-aclaraciones small { font-size: 0.75rem; color: var(--text-subtle); }
+
+.cact-consulta {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.cact-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+.cact-charla { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cact-charla li {
+  max-width: 88%;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+}
+.cact-charla li.mio { align-self: flex-end; background: var(--acento-suave); }
+.cact-charla li.pendiente { opacity: 0.8; border-style: dashed; }
+.cact-charla p { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.875rem; }
+.cact-autor { font-size: 0.75rem; font-weight: 650; color: var(--text-secondary); }
+.cact-charla small { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6875rem; color: var(--text-subtle); }
+
+.cact-escribir { display: flex; flex-direction: column; gap: 8px; }
+.cact-escribir textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+    padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.cact-escribir textarea:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--cyan-glow); }
+.cact-pie { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.cact-aviso { flex: 1 1 220px; margin: 0; font-size: 0.75rem; color: var(--text-subtle); }
+.cact-bandeja { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; align-self: flex-start; min-height: 32px; }
+
+/* Lo que el servidor no aceptó: se ve con su texto y el motivo */
+.cact-charla li.rechazada { border-color: var(--danger); border-style: dashed; }
+.cact-charla li.rechazada small { color: var(--danger-ink); }
+.cact-rech-acciones { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* Un enlace largo pegado en una aclaración no desborda */
+.cact-aclaraciones p, .cact-charla p { overflow-wrap: anywhere; }

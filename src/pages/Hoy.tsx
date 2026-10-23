@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
-    Users, ClipboardCheck, ChevronRight, Check, Upload, Rocket, Boxes,
+    Users, ClipboardCheck, ChevronRight, HelpCircle, Check, Upload, Rocket, Boxes,
     History, ClipboardList, Wand2, CalendarDays, Target, WifiOff, Megaphone,
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -29,6 +29,7 @@ import { getMyLiveSession, type LiveSession } from '../services/live.service';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import { pendientesDe } from '../services/offline-queue.service';
+import { consultasSinResponder } from '../services/seguimiento.service';
 import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
 import { getTemasConFecha } from '../services/planning.service';
 import { hoyISO, getDiasSinClase, type DiaSinClase } from '../services/planificacion.service';
@@ -99,11 +100,16 @@ export default function Hoy() {
     const [planificacion, setPlanificacion] = useState<PlanningUnit[]>([]);
     // Si dirección cargó hoy como feriado, receso o jornada
     const [sinClaseHoy, setSinClaseHoy] = useState<DiaSinClase | null>(null);
+    // Consultas de estudiantes sobre una actividad que esperan respuesta (066)
+    const [consultas, setConsultas] = useState(0);
 
     useEffect(() => {
         if (!user) return;
         const hoy = hoyISO();
         getTemasConFecha(user.id).then(setPlanificacion).catch(() => setPlanificacion([]));
+        consultasSinResponder()
+            .then(l => setConsultas(l.reduce((t, c) => t + c.cantidad, 0)))
+            .catch(() => setConsultas(0));
         getDiasSinClase(user.schoolId, Number(hoy.slice(0, 4)))
             .then(dias => setSinClaseHoy(dias.find(d => d.desde <= hoy && hoy <= d.hasta) ?? null))
             .catch(() => setSinClaseHoy(null));
@@ -228,6 +234,22 @@ export default function Hoy() {
                     <div>
                         <h4>Tenés una clase en vivo abierta</h4>
                         <p className="text-sm text-secondary">{liveSession.title} · tocá para volver al panel</p>
+                    </div>
+                    <ChevronRight size={18} className="text-subtle" />
+                </Link>
+            )}
+
+            {/* Estudiantes que preguntaron algo de una actividad */}
+            {consultas > 0 && (
+                <Link to="/seguimiento" className="card hoy-pending-banner">
+                    <span className="hoy-pending-icon"><HelpCircle size={18} /></span>
+                    <div>
+                        <h4>
+                            {consultas} consulta{consultas !== 1 ? 's' : ''} de estudiantes sin responder
+                        </h4>
+                        <p className="text-sm text-secondary">
+                            Respondé ahí mismo, a quien preguntó o para todo el curso.
+                        </p>
                     </div>
                     <ChevronRight size={18} className="text-subtle" />
                 </Link>

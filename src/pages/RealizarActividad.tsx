@@ -26,6 +26,7 @@ import { useSenial } from '../lib/useSenial';
 import { leerBorrador, guardarBorrador, borrarBorrador, conBorrador } from '../lib/borradorEntrega';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
+import ConsultaActividad from '../components/ConsultaActividad';
 import PedirDevolucion from '../components/PedirDevolucion';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -410,6 +411,9 @@ export default function RealizarActividad() {
         <div className="sp-content">
           <MarkdownRenderer content={activity.contentMd} />
         </div>
+
+        {/* Aclaraciones del docente y "¿Tenés una duda?" (fase 4) */}
+        <ConsultaActividad activityId={activity.id} miUserId={user.id} />
 
         {error && <div className="em-error"><AlertCircle size={15} /> {error}</div>}
         {noSeMando && (

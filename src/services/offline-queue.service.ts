@@ -43,6 +43,7 @@ import { saveGrades } from './gradebook.service';
 import { upsertGrade } from './libreta.service';
 import { guardarEvaluacion, type EvaluacionAGuardar } from './evaluaciones.service';
 import { pedirHablarConDocente } from './alerts.service';
+import { consultarActividad } from './seguimiento.service';
 import { haySenial, esErrorDeRed, suscribirConexion } from '../lib/conexion';
 import { supabase } from './_helpers';
 import { borrarBorrador } from '../lib/borradorEntrega';
@@ -76,6 +77,9 @@ type OpEstudiante =
   | { kind: 'iniciar'; activityId: string; studentId: string; startedAt: string }
   | { kind: 'avance'; activityId: string; studentId: string; updates: Avance }
   | { kind: 'entregar'; activityId: string; studentId: string; payload: Entrega }
+  // Una consulta al docente desde la actividad (066)
+  // id: lo elige el celular, así un reintento no la duplica (066)
+  | { kind: 'consulta'; id?: string; activityId: string; texto: string }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown> }
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string }
   | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number }
@@ -162,6 +166,9 @@ async function run(op: QueuedOp): Promise<void> {
       return guardarAvance(op.activityId, op.studentId, op.updates);
     case 'entregar':
       return entregar(op.activityId, op.studentId, op.payload);
+    case 'consulta':
+      await consultarActividad(op.activityId, op.texto, op.id);
+      return;
     case 'checkin':
       return saveCheckin({
         studentId: op.studentId,
@@ -211,6 +218,7 @@ const DESCRIPCION_ESTUDIANTE: Record<OpEstudiante['kind'], string> = {
   iniciar: 'Empezar una actividad',
   avance: 'Avance de una actividad',
   entregar: 'Entrega de una actividad',
+  consulta: 'Una consulta a tu docente',
   event: 'Registro de actividad',
   checkin: 'Cómo te sentiste',
   practice: 'Una práctica',
@@ -218,6 +226,8 @@ const DESCRIPCION_ESTUDIANTE: Record<OpEstudiante['kind'], string> = {
 };
 
 function describir(op: QueuedOp): string {
+  // La consulta con su texto: si no salió, que se pueda recuperar
+  if (op.kind === 'consulta') return `Consulta a tu docente: «${op.texto.length > 120 ? `${op.texto.slice(0, 120)}…` : op.texto}»`;
   return 'descripcion' in op ? op.descripcion : DESCRIPCION_ESTUDIANTE[op.kind];
 }
 
@@ -464,6 +474,37 @@ export async function entregarResiliente(activityId: string, studentId: string, 
     }
     throw err;
   }
+}
+
+/**
+ * Una consulta al docente desde la actividad: con señal va directo; sin
+ * señal queda en el equipo y se manda sola cuando vuelva.
+ */
+export async function consultarResiliente(activityId: string, texto: string): Promise<ResultadoGuardado> {
+  const op = { kind: 'consulta' as const, id: crypto.randomUUID(), activityId, texto: texto.trim() };
+  // Detrás de las que esperan: si no, llegaría antes que una escrita primero
+  if (!haySenial() || consultasEnCola(activityId).length) { enqueue(op); void flush(); return 'pendiente'; }
+  try {
+    await consultarActividad(activityId, op.texto, op.id);
+    return 'enviado';
+  } catch (err) {
+    if (esPasajero(err)) { enqueue(op); return 'pendiente'; }
+    throw err;
+  }
+}
+
+/** Las consultas de esta actividad que el servidor no aceptó: se muestran con su texto y el motivo. */
+export function consultasRechazadas(activityId: string): { ts: number; texto: string; motivo: string }[] {
+  return misRechazadas()
+    .filter(r => r.op.kind === 'consulta' && r.op.activityId === activityId)
+    .map(r => ({ ts: r.op.ts, texto: (r.op as Extract<QueuedOp, { kind: 'consulta' }>).texto, motivo: r.motivo }));
+}
+
+/** Las consultas de esta actividad que esperan señal para salir (para mostrarlas). */
+export function consultasEnCola(activityId: string): string[] {
+  return queue
+    .filter((op): op is Extract<QueuedOp, { kind: 'consulta' }> => esMia(op) && op.kind === 'consulta' && op.activityId === activityId)
+    .map(op => op.texto);
 }
 
 export function logEventResilient(

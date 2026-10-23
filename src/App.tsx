@@ -86,6 +86,7 @@ function App() {
                 {ruta('/libreta', ['docente'])}
                 {ruta('/asistencia', ['docente'])}
                 {ruta('/corregir', ['docente'])}
+                {ruta('/seguimiento', ['docente'])}
                 {ruta('/modulo', ['docente'])}
                 {ruta('/crear', ['docente'])}
                 {ruta('/agenda', ['docente'])}

@@ -81,6 +81,8 @@ export const cargadores = {
   '/mis-clases':          () => import('../pages/MisClases'),
   '/asistencia':          () => import('../pages/Asistencia'),
   '/corregir':            () => import('../pages/Corregir'),
+  // Seguimiento del curso y consultas (066)
+  '/seguimiento':         () => import('../pages/Seguimiento'),
   '/modulo':              () => import('../pages/ArmarModulo'),
   '/crear':               () => import('../pages/Crear'),
   '/clase-en-vivo':       () => import('../pages/ClaseEnVivo'),
