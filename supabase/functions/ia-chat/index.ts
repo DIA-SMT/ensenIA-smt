@@ -36,7 +36,12 @@ import { consolidarDocente, memoriaDocenteDesde, memoriaDocenteParaPrompt } from
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_SONNET = 'anthropic/claude-sonnet-5';
 const MODEL_HAIKU = 'anthropic/claude-haiku-4.5';
-const DAILY_QUOTA = 50;
+// Usos de IA por día, compartidos entre ia-chat y process-document (misma
+// tabla ia_usage). El personal tiene 15 y los estudiantes 50: decidido el
+// 23/10/2026 para cuidar el gasto en el piloto (antes eran 50 para todos).
+// El número que ve el docente sale de src/lib/usoIA.ts: cambiarlos juntos.
+const CUPO_DIARIO_EQUIPO = 15;
+const CUPO_DIARIO_ESTUDIANTE = 50;
 // Sonnet 5 razona por defecto y eso cuenta dentro de max_tokens:
 // margen para razonamiento + respuesta larga (streaming, sin timeout).
 const MAX_TOKENS = 12000;
@@ -250,11 +255,12 @@ Deno.serve(async (req: Request) => {
     .eq('usage_date', today)
     .maybeSingle();
 
-  if (usage && usage.message_count >= DAILY_QUOTA) {
+  const cupo = isStudent ? CUPO_DIARIO_ESTUDIANTE : CUPO_DIARIO_EQUIPO;
+  if (usage && usage.message_count >= cupo) {
     return new Response(
       sseEvent('error', {
         code: 'QUOTA_EXCEEDED',
-        message: `Alcanzaste el límite de ${DAILY_QUOTA} mensajes por hoy. ¡Volvé mañana! 💪`,
+        message: `Alcanzaste el límite de ${cupo} usos de IA por hoy. ¡Volvé mañana! 💪`,
       }),
       { headers: { ...corsHeaders(), 'Content-Type': 'text/event-stream' } },
     );

@@ -8,6 +8,7 @@ import {
     Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
 } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
+import { LIMITE_DIARIO_IA } from '../lib/usoIA';
 import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
 import IrAlFinal from '../components/ui/IrAlFinal';
 import { useAuth } from '../contexts/AuthContext';
@@ -63,7 +64,7 @@ function nivelDelCurso(courseName?: string): string | null {
     return anio ? (['1ro', '2do', '3ro', '4to', '5to'][Number(anio) - 1]) : null;
 }
 
-const DAILY_QUOTA = 50;
+const DAILY_QUOTA = LIMITE_DIARIO_IA;
 const SUMMARY_INPUT_LIMIT = 8000;
 
 type CenterMode = 'chat' | 'editor';
