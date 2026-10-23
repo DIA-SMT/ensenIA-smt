@@ -8,6 +8,9 @@
  * cámara en vivo (permiso negado, navegador viejo) se usa la cámara del
  * celular o fotos de la galería, con el mismo procesado.
  *
+ * Cada página queda guardada en el equipo mientras se escanea (lib/
+ * escaneoGuardado): si la pestaña se muere, al volver se ofrece seguir.
+ *
  * Las cuentas (bordes, enderezar, filtros) están en lib/escaner.
  */
 
@@ -20,6 +23,7 @@ import Dialogo from './shell/Dialogo';
 import { avisar, confirmar } from './ui/avisar';
 import { detectarHoja, distanciaEsquinas, escalarEsquinas, ampliarEsquinas, esquinasDelCuadro, ordenarEsquinas, formanHoja, type Esquinas, type Filtro, type Giro, type Punto } from '../lib/escaner';
 import { abrirImagen, pixeles, guardarFoto, buscarHoja, procesarPagina, armarPdf, LADO_DETECCION, SIN_MEMORIA, type PaginaLista } from '../lib/escanerNavegador';
+import { leerEscaneo, guardarEscaneo, borrarEscaneo, type EscaneoGuardado } from '../lib/escaneoGuardado';
 
 const esSinMemoria = (err: unknown) => err instanceof Error && err.message === SIN_MEMORIA;
 import './Escaner.css';
@@ -44,6 +48,8 @@ interface Pagina {
 }
 
 type Modo =
+  | { tipo: 'buscando' } // si quedó un escaneo guardado
+  | { tipo: 'recuperar'; escaneo: EscaneoGuardado }
   | { tipo: 'camara'; rehacer?: string }
   | { tipo: 'paginas' }
   | { tipo: 'pagina'; id: string }
@@ -51,6 +57,8 @@ type Modo =
   | { tipo: 'armando' };
 
 interface EscanerProps {
+  /** Quién escanea: lo guardado en el equipo es suyo y solo se le ofrece a esa cuenta */
+  duenio: string;
   /** Fotos para empezar (por ejemplo, la que se eligió en "Subir") */
   fotos?: File[];
   alListo: (pdf: File) => void;
@@ -118,7 +126,7 @@ function useEncajar(ancho: number, alto: number) {
   return { ref, estilo: tam ? { width: tam.w, height: tam.h } : { visibility: 'hidden' as const } };
 }
 
-export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
+export default function Escaner({ duenio, fotos, alListo, alCerrar }: EscanerProps) {
   const [paginas, setPaginas] = useState<Pagina[]>([]);
   // Las páginas al día también fuera del render (procesar y armar el PDF son asincrónicos)
   const paginasRef = useRef<Pagina[]>([]);
@@ -126,8 +134,9 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
     paginasRef.current = cambio(paginasRef.current);
     setPaginas(paginasRef.current);
   }, []);
-  const [modo, setModo] = useState<Modo>(fotos?.length ? { tipo: 'paginas' } : { tipo: 'camara' });
-  const [filtroNuevas, setFiltroNuevas] = useState<Filtro>('documento');
+  const [modo, setModo] = useState<Modo>({ tipo: 'buscando' });
+  // El filtro de las páginas que vienen (en una referencia: las fotos con las que se abrió se agregan desde una promesa)
+  const filtroNuevas = useRef<Filtro>('documento');
   const [anuncio, setAnuncioTexto] = useState('');
   // Un lector de pantalla no repite un texto igual al anterior: se vacía y se vuelve a poner
   const setAnuncio = useCallback((texto: string) => {
@@ -190,7 +199,7 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
   const agregar = useCallback((datos: Pick<Pagina, 'foto' | 'ancho' | 'alto' | 'esquinas'>, rehacer?: string) => {
     const vieja = rehacer ? paginasRef.current.find(x => x.id === rehacer) : undefined;
     // Al sacarla de nuevo conserva su filtro
-    const p: Pagina = { id: crypto.randomUUID(), ...datos, filtro: vieja?.filtro ?? filtroNuevas, giro: 0, version: 0 };
+    const p: Pagina = { id: crypto.randomUUID(), ...datos, filtro: vieja?.filtro ?? filtroNuevas.current, giro: 0, version: 0 };
     const n = vieja ? paginasRef.current.indexOf(vieja) + 1 : paginasRef.current.length + 1;
     if (vieja) soltar(vieja.miniatura);
     actualizar(prev => (vieja ? prev.map(x => (x.id === vieja.id ? p : x)) : [...prev, p]));
@@ -198,7 +207,7 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
     setAnuncio(vieja ? `Página ${n} sacada de nuevo` : `Página ${n} guardada`);
     if (vieja) setModo({ tipo: 'pagina', id: p.id });
     return p;
-  }, [filtroNuevas, actualizar, procesar, setAnuncio]);
+  }, [actualizar, procesar, setAnuncio]);
 
   // Fotos de la galería o de la cámara del celular: mismo camino que la cámara en vivo
   const agregarFotos = useCallback(async (archivos: File[], rehacer?: string) => {
@@ -224,13 +233,66 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
     if (!rehacer) setModo(m => (m.tipo === 'camara' && !m.rehacer ? { tipo: 'paginas' } : m));
   }, [agregar]);
 
-  // Las fotos con las que se abrió (una sola vez, aunque React monte dos veces en desarrollo)
+  // ── Lo guardado en el equipo ──
+
+  // Recién se guarda cuando se decidió qué hacer con un escaneo anterior:
+  // antes, la pila vacía borraría lo que quedó sin preguntar
+  const guardando = useRef(false);
   const inicio = useRef(false);
-  useEffect(() => {
-    if (inicio.current || !fotos?.length) return;
+
+  /** Arrancar: con las páginas de un escaneo anterior o de cero, y después las fotos con las que se abrió */
+  const arrancar = useCallback((anterior?: EscaneoGuardado) => {
+    // Una sola vez, aunque React monte dos veces en desarrollo
+    if (inicio.current) return;
     inicio.current = true;
-    void agregarFotos(fotos);
-  }, [fotos, agregarFotos]);
+    if (anterior?.paginas.length) {
+      const recuperadas: Pagina[] = anterior.paginas.map(p => ({ ...p, version: 0 }));
+      actualizar(() => recuperadas);
+      // Se rehacen desde la foto guardada, con sus bordes, filtro y giro
+      recuperadas.forEach(procesar);
+      filtroNuevas.current = recuperadas[recuperadas.length - 1].filtro;
+      setAnuncio(`Se recuperaron ${recuperadas.length} ${recuperadas.length === 1 ? 'página' : 'páginas'}`);
+    }
+    guardando.current = true;
+    setModo(anterior?.paginas.length || fotos?.length ? { tipo: 'paginas' } : { tipo: 'camara' });
+    if (fotos?.length) void agregarFotos(fotos);
+  }, [fotos, actualizar, procesar, setAnuncio, agregarFotos]);
+
+  useEffect(() => {
+    let vigente = true;
+    void leerEscaneo(duenio).then(anterior => {
+      if (!vigente || inicio.current) return;
+      if (anterior) setModo({ tipo: 'recuperar', escaneo: anterior });
+      else arrancar();
+    });
+    return () => { vigente = false; };
+  }, [duenio, arrancar]);
+
+  const empezarDeNuevo = async (anterior: EscaneoGuardado) => {
+    const n = anterior.paginas.length;
+    const ok = await confirmar({
+      titulo: '¿Empezar de nuevo?',
+      mensaje: `${n === 1 ? 'Se borra la página guardada' : `Se borran las ${n} páginas guardadas`}. No se subió nada.`,
+      accion: 'Borrar y empezar',
+      peligro: true,
+    });
+    if (!ok) return;
+    void borrarEscaneo();
+    arrancar();
+  };
+
+  // Cada cambio que importa (una página nueva, otro orden, bordes, filtro o
+  // giro: lo que sube `version`) se guarda. Lo procesado no: se rehace.
+  const firma = paginas.map(p => `${p.id}:${p.version}`).join(' ');
+  const avisoSinLugar = useRef(false);
+  useEffect(() => {
+    if (!guardando.current) return;
+    void guardarEscaneo(duenio, paginasRef.current).then(r => {
+      if (r !== 'no-entra' || avisoSinLugar.current || !vivo.current) return;
+      avisoSinLugar.current = true;
+      avisar.info('No entran más páginas en el equipo', 'El escaneo sigue, pero si se cierra la pestaña antes de subirlo, las páginas nuevas se pierden.');
+    });
+  }, [firma, duenio]);
 
   const elegirFotos = (lista: FileList | null, rehacer?: string) => {
     const archivos = Array.from(lista ?? []);
@@ -292,7 +354,9 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
       accion: 'Descartar',
       peligro: true,
     });
-    if (ok) alCerrar();
+    if (!ok) return;
+    void borrarEscaneo();
+    alCerrar();
   };
 
   const pagina = (id: string) => paginas.find(p => p.id === id);
@@ -307,6 +371,18 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
           onChange={e => elegirFotos(e.target.files, modo.tipo === 'camara' ? modo.rehacer : undefined)} />
         <input ref={camaraNativaRef} type="file" accept="image/*" capture="environment" hidden
           onChange={e => elegirFotos(e.target.files, modo.tipo === 'camara' ? modo.rehacer : undefined)} />
+
+        {modo.tipo === 'buscando' && <div aria-busy="true" />}
+
+        {modo.tipo === 'recuperar' && (
+          <VistaRecuperar
+            escaneo={modo.escaneo}
+            fotos={fotos?.length ?? 0}
+            alSeguir={() => arrancar(modo.escaneo)}
+            alEmpezarDeNuevo={() => void empezarDeNuevo(modo.escaneo)}
+            alCerrar={alCerrar}
+          />
+        )}
 
         {modo.tipo === 'camara' && (
           <VistaCamara
@@ -339,10 +415,10 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
             numero={numero(modo.id)}
             total={paginas.length}
             alVolver={() => setModo({ tipo: 'paginas' })}
-            alFiltro={f => { cambiar(modo.id, { filtro: f }); setFiltroNuevas(f); }}
+            alFiltro={f => { cambiar(modo.id, { filtro: f }); filtroNuevas.current = f; }}
             alFiltroATodas={f => {
               paginasRef.current.filter(p => p.filtro !== f).forEach(p => cambiar(p.id, { filtro: f }));
-              setFiltroNuevas(f);
+              filtroNuevas.current = f;
               setAnuncio(`${FILTROS.find(x => x.valor === f)?.nombre} en todas las páginas`);
             }}
             alGirar={() => { const p = pagina(modo.id)!; cambiar(modo.id, { giro: ((p.giro + 90) % 360) as Giro }); }}
@@ -384,6 +460,58 @@ export default function Escaner({ fotos, alListo, alCerrar }: EscanerProps) {
         )}
       </div>
     </Dialogo>
+  );
+}
+
+// ── Un escaneo que quedó sin terminar ──
+
+function cuandoFue(ms: number): string {
+  const d = new Date(ms);
+  const dia = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dias = Math.round((dia(new Date()) - dia(d)) / 86_400_000);
+  const hora = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (dias === 0) return `de hoy a las ${hora}`;
+  if (dias === 1) return `de ayer a las ${hora}`;
+  return `del ${d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
+}
+
+function VistaRecuperar({ escaneo, fotos, alSeguir, alEmpezarDeNuevo, alCerrar }: {
+  escaneo: EscaneoGuardado;
+  /** Fotos con las que se abrió el escáner: se suman al final */
+  fotos: number;
+  alSeguir: () => void;
+  alEmpezarDeNuevo: () => void;
+  alCerrar: () => void;
+}) {
+  const titulo = useTituloEnfocado();
+  // La primera, como se sacó: alcanza para reconocerlo (todas juntas no entran en la memoria de un celular viejo)
+  const url = useUrlDe(escaneo.paginas[0]?.foto);
+  const n = escaneo.paginas.length;
+  const paginasTexto = `${n} ${n === 1 ? 'página' : 'páginas'}`;
+  return (
+    <div className="esc-recuperar">
+      <header className="esc-barra">
+        <button type="button" className="esc-btn esc-btn-icono" aria-label="Cerrar el escáner" onClick={alCerrar}><X size={20} /></button>
+        <h2 className="esc-titulo" tabIndex={-1} ref={titulo}>Escaneo sin terminar</h2>
+        <span />
+      </header>
+      <div className="esc-escenario">
+        <div className="esc-sin-camara">
+          {url && <img src={url} alt="La primera página, como se sacó" className="esc-recuperar-foto" />}
+          <p>Quedó guardado en este equipo un escaneo de {paginasTexto}, {cuandoFue(escaneo.actualizado)}. Todavía no se subió.</p>
+          {escaneo.incompleto && <p className="esc-sub">Algunas páginas no entraron en el equipo: hay que sacarlas de nuevo.</p>}
+          {fotos > 0 && <p className="esc-sub">{fotos === 1 ? 'La foto que elegiste se suma al final.' : 'Las fotos que elegiste se suman al final.'}</p>}
+          <div className="esc-sin-camara-botones">
+            <button type="button" className="esc-btn esc-btn-grande esc-btn-primario" onClick={alSeguir}>
+              <Check size={18} /> Seguir con el escaneo de {paginasTexto}
+            </button>
+            <button type="button" className="esc-btn esc-btn-grande" onClick={alEmpezarDeNuevo}>
+              <RefreshCw size={18} /> Empezar de nuevo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

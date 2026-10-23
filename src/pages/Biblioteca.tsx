@@ -6,6 +6,7 @@ import {
   Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff, ScanLine,
 } from 'lucide-react';
 import { hayQueAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
+import { borrarEscaneo } from '../lib/escaneoGuardado';
 import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
@@ -53,7 +54,7 @@ const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingm
 // Más que esto no se intenta achicar en el navegador (un celular se queda sin memoria)
 const MAXIMO_PARA_ACHICAR = 150 * 1024 * 1024;
 
-type EscanerComponente = ComponentType<{ fotos?: File[]; alListo: (pdf: File) => void; alCerrar: () => void }>;
+type EscanerComponente = ComponentType<{ duenio: string; fotos?: File[]; alListo: (pdf: File) => void; alCerrar: () => void }>;
 
 export default function Biblioteca() {
   const { user } = useAuth();
@@ -84,7 +85,8 @@ export default function Biblioteca() {
   const [uplAchicado, setUplAchicado] = useState<{ antes: number; despues: number } | null>(null);
   const [uplTexto, setUplTexto] = useState<string | undefined>(undefined);
   const pedidoAchicar = useRef(0);
-  // Lo escaneado vive solo en esta pestaña: cerrar sin subir lo pierde
+  // Lo escaneado: sus páginas quedan guardadas en el equipo hasta subirlo o
+  // descartarlo (lib/escaneoGuardado), así que cerrar sin subir lo descarta
   const [uplEsEscaneo, setUplEsEscaneo] = useState(false);
   // Sin señal al subir un escaneo: se ofrece guardarlo en el equipo
   const [uplSinRed, setUplSinRed] = useState(false);
@@ -358,6 +360,7 @@ export default function Biblioteca() {
         peligro: true,
       });
       if (!ok) return;
+      void borrarEscaneo();
     }
     cerrarSubir();
   };
@@ -409,6 +412,8 @@ export default function Biblioteca() {
         isSharedWithStudents: uplShare,
       });
 
+      // Ya está en la Biblioteca: las fotos guardadas para no perder el escaneo no hacen falta más
+      if (uplEsEscaneo) void borrarEscaneo();
       setShowUpload(false);
       refresh();
       avisar.exito('Material subido', uplShare ? `Ya lo ven tus estudiantes de ${destino.etiqueta.replace('mis cursos', 'tus cursos')}.` : undefined);
@@ -1376,7 +1381,7 @@ export default function Biblioteca() {
       </Dialogo>
 
       {escaner && (
-        <escaner.Componente fotos={escaner.fotos} alListo={recibirEscaneo} alCerrar={cerrarEscaner} />
+        <escaner.Componente duenio={user.id} fotos={escaner.fotos} alListo={recibirEscaneo} alCerrar={cerrarEscaner} />
       )}
 
       {/* ── Visor de placas ── */}

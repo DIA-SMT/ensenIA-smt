@@ -11,6 +11,7 @@ import { olvidarBusquedas } from '../services/busqueda.service';
 import { setDuenioCola, borradoresEnCola } from '../services/offline-queue.service';
 import { olvidarSinSenial } from '../lib/sinSenialEstado';
 import { borrarBorradoresSalvo } from '../lib/borradorEntrega';
+import { borrarEscaneo } from '../lib/escaneoGuardado';
 
 /**
  * Reglas de este contexto (aprendidas a fuerza de bugs):
@@ -119,6 +120,8 @@ function borrarDatosOffline() {
   // vuelva a entrar); las demás no quedan en un equipo compartido
   borrarBorradoresSalvo(borradoresEnCola());
   olvidarBusquedas();
+  // El escaneo a medio hacer de la Biblioteca: fotos que pueden mostrar trabajos de chicos
+  void borrarEscaneo();
 }
 
 function reclamarDatosLocales(userId: string) {

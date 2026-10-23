@@ -247,6 +247,11 @@
 /* Los avisos, abajo: arriba taparían la X y «Aplicar» (dentro de un diálogo van arriba) */
 .dialogo-escaner .avisos { top: auto; bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
 
+/* Un escaneo que quedó sin terminar (con el margen automático se centra y, si no entra, no se corta arriba) */
+.esc-recuperar .esc-escenario { overflow-y: auto; align-items: flex-start; }
+.esc-recuperar .esc-sin-camara { margin: auto; }
+.esc-recuperar-foto { display: block; max-width: 100%; max-height: 30dvh; border-radius: 6px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5); }
+
 /* Armando el PDF */
 .esc-armando { flex: 1; align-items: center; justify-content: center; gap: var(--space-3); color: var(--esc-suave); }
 
