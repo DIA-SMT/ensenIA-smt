@@ -26,7 +26,17 @@ export default function LoginMascot({ pose, rejection, passwordVisible }: { pose
     const region = host?.closest<HTMLElement>('[data-migue-region]');
     if (!host || !region) return;
     const desktop = matchMedia('(min-width: 861px)');
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string; downlink?: number };
+    }).connection;
+    // The model is ~21 MB: on a slow or crowded network (a school Wi-Fi with a
+    // whole staff logging in at once) it would compete with the app itself.
+    // Chrome/Edge estimate the connection; Safari/Firefox don't, and keep loading it.
+    const slow = () => !!connection && (
+      !!connection.saveData
+      || (!!connection.effectiveType && connection.effectiveType !== '4g')
+      || (typeof connection.downlink === 'number' && connection.downlink < 5)
+    );
     let generation = 0;
     let disposed = false;
 
@@ -34,7 +44,14 @@ export default function LoginMascot({ pose, rejection, passwordVisible }: { pose
       const ticket = ++generation;
       controllerRef.current?.dispose();
       controllerRef.current = null;
-      if (!host || !desktop.matches || connection?.saveData || disposed) return;
+      if (!host || !desktop.matches || disposed) return;
+      if (slow()) { host.dataset.state = 'unavailable'; return; }
+      // Let the login form and the app's own code load first
+      await new Promise<void>(resolve => {
+        if ('requestIdleCallback' in window) requestIdleCallback(() => resolve(), { timeout: 2500 });
+        else setTimeout(resolve, 1200);
+      });
+      if (disposed || ticket !== generation) return;
       host.dataset.state = 'loading';
       try {
         // The 3D library and model are optional; the login is usable while loading.
