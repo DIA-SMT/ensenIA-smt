@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import PrepararAula from '../components/PrepararAula';
+import InstalarApp from '../components/InstalarApp';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { useAuth } from '../contexts/AuthContext';
 import EmojiMateria from '../components/ui/EmojiMateria';
@@ -187,6 +188,9 @@ export default function Hoy() {
                 </div>
                 {/* Crear está en la barra superior, en todas las pantallas */}
             </header>
+
+            {/* Instalarla en el teléfono (solo celular; se puede cerrar) */}
+            <InstalarApp variante="tarjeta" />
 
             {/* Primer uso */}
             {isNew && !loading && (
