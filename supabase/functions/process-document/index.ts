@@ -21,7 +21,14 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_SONNET = 'anthropic/claude-sonnet-5';
 const MODEL_HAIKU = 'anthropic/claude-haiku-4.5';
-const DAILY_QUOTA = 50;
+// Usos de IA por día, compartidos entre ia-chat y process-document (misma
+// tabla ia_usage). El personal tiene 15 y los estudiantes 50: decidido el
+// 23/10/2026 para cuidar el gasto en el piloto (antes eran 50 para todos).
+// El número que ve el docente sale de src/lib/usoIA.ts: cambiarlos juntos.
+const CUPO_DIARIO_EQUIPO = 15;
+const CUPO_DIARIO_ESTUDIANTE = 50;
+const cupoDiario = (rol: string | null | undefined) =>
+  rol === 'estudiante' ? CUPO_DIARIO_ESTUDIANTE : CUPO_DIARIO_EQUIPO;
 const MAX_PDF_BASE64 = 15_000_000; // ~11 MB binario
 const MAX_TEXT_INPUT = 60_000; // chars
 
@@ -789,8 +796,8 @@ Deno.serve(async (req: Request) => {
       .eq('teacher_id', user.id)
       .eq('usage_date', hoy)
       .maybeSingle();
-    if (usoImg && usoImg.message_count >= DAILY_QUOTA) {
-      return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${DAILY_QUOTA} usos de IA por hoy.` }, 429);
+    if (usoImg && usoImg.message_count >= cupoDiario(profile?.role)) {
+      return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${cupoDiario(profile?.role)} usos de IA por hoy.` }, 429);
     }
 
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
@@ -1024,8 +1031,8 @@ Deno.serve(async (req: Request) => {
     .eq('usage_date', today)
     .maybeSingle();
 
-  if (usage && usage.message_count >= DAILY_QUOTA) {
-    return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${DAILY_QUOTA} usos de IA por hoy.` }, 429);
+  if (usage && usage.message_count >= cupoDiario(profile?.role)) {
+    return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${cupoDiario(profile?.role)} usos de IA por hoy.` }, 429);
   }
 
   // ── Build OpenRouter request ──

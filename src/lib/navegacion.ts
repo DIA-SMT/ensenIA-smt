@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare, Brain, CalendarRange,
+  MessagesSquare, Brain, CalendarRange, BarChart3,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -82,6 +82,7 @@ const DIRECTOR: ItemNav[] = [
 // El superadmin administra escuelas y cuentas: no usa la app como aula.
 const SUPERADMIN: ItemNav[] = [
   { ruta: '/admin', etiqueta: 'Escuelas', icono: Building2, grupo: 'Administración', enBarra: true, claves: 'escuelas directores usuarios cuentas alta' },
+  { ruta: '/admin/uso', etiqueta: 'Uso de la plataforma', icono: BarChart3, grupo: 'Administración', enBarra: true, claves: 'métricas uso adopción docentes ingresos escuelas actividad quién entra nunca entró herramientas informe' },
   { ruta: '/admin/consumo-ia', etiqueta: 'Consumo de IA', icono: Activity, grupo: 'Administración', enBarra: true, claves: 'gasto costo tokens uso inteligencia artificial dólares' },
   { ruta: '/admin/referencias', etiqueta: 'Biblioteca de referencia', icono: Library, grupo: 'Administración', claves: 'normativa leyes resoluciones nap esi núcleos aprendizajes prioritarios técnicas pedagógicas cargar' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', enBarra: true, claves: 'configuración accesibilidad letra contraste datos' },

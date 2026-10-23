@@ -3448,6 +3448,10 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      uso_plataforma: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       demo_alumnos_estado: {
         Args: { p_school: string }
         Returns: Json

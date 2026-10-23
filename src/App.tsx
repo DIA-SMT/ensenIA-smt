@@ -131,6 +131,7 @@ function App() {
                 {ruta('/admin', ['superadmin'])}
                 {ruta('/admin/escuelas/:id', ['superadmin'])}
                 {ruta('/admin/consumo-ia', ['superadmin'])}
+                {ruta('/admin/uso', ['superadmin'])}
                 {ruta('/admin/referencias', ['superadmin'])}
               </Route>
 
