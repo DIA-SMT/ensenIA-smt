@@ -1,0 +1,37 @@
+/* Uso de la plataforma (superadmin). Lo común está en ConsumoIA.css (cia-*). */
+
+.upl-de { font-size: 0.9375rem; font-weight: 500; color: var(--text-secondary); }
+
+.upl-titulo { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+
+/* Herramientas: nombre, barra de cuántos del personal la usaron y el dato */
+.upl-herr { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.upl-herr li {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+}
+.upl-herr-nombre { font-weight: 600; }
+.upl-herr-barra { height: 10px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; }
+.upl-herr-barra span { display: block; height: 100%; border-radius: 999px; background: var(--acento); }
+.upl-herr-dato { color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.upl-herr-cero .upl-herr-nombre,
+.upl-herr-cero .upl-herr-dato { color: var(--text-subtle); font-weight: 400; }
+
+@media (max-width: 600px) {
+  .upl-herr li { grid-template-columns: 1fr auto; }
+  .upl-herr-barra { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* Tabla de personas: encabezados que ordenan, ceros apagados */
+.upl-orden {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.upl-orden:hover { color: var(--acento); }
+.upl-orden:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; border-radius: 3px; }
+.upl-personas td:not(:first-child),
+.upl-personas th:not(:first-child) { text-align: right; white-space: nowrap; }
+.upl-cero { color: var(--text-subtle); }
