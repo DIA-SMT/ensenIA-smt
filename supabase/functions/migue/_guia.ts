@@ -114,7 +114,10 @@ const CUENTA = `### Entrar y la cuenta
 - No hay "olvidé mi contraseña" ni forma de cambiarla después desde la app: si se la
   olvidó, la dirección le genera una nueva.
 - "Ajustes": "Tamaño de letra", "Contraste alto", "Reducir movimiento", "Ahorro de datos"
-  y "Cerrar sesión" (al cerrar sesión se borra lo guardado para usar sin señal).`;
+  y "Cerrar sesión" (al cerrar sesión se borra lo guardado para usar sin señal).
+- Instalar la app en el teléfono: en "Ajustes" → "Instalar la app" (y en el celular, la
+  tarjeta "Instalá EstudIA en tu teléfono"). En Android se instala con "Instalar"; en iPhone,
+  "Compartir" (el cuadrado con la flecha) → "Agregar a pantalla de inicio" → "Agregar".`;
 
 // Mensajes: igual para docentes y dirección
 const MENSAJES_EQUIPO = `### Mensajes

@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+// Android avisa una sola vez, al cargar, que la app se puede instalar: hay que escucharlo ya
+import './lib/instalarApp'
 import App from './App.tsx'
 import { cuandoNoHayaSinGuardar } from './lib/sinGuardar'
 
