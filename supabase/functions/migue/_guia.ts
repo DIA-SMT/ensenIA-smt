@@ -145,7 +145,7 @@ grupo "Escuela": "Mensajes", "Citaciones", "Alertas", "Comunicados", "Normativa"
 la IA" (abre "Preparar con la IA"), "Mi horario de la semana", la asistencia (desde "Hoy"
 → "Pasar lista") y "Para corregir" (desde "Hoy").
 Sin materias asignadas, la app dice "Todavía no tenés cursos asignados": se las asigna la
-dirección. La IA tiene 50 usos por día ("Te quedan N usos de IA hoy").
+dirección. La IA tiene 15 usos por día ("Te quedan N usos de IA hoy").
 
 ### Armar un TP, una evaluación o una actividad con preguntas (opción múltiple o desarrollo)
 Se entra por "Crear" → "Trabajo práctico o evaluación", por "Actividades" → "Trabajo
