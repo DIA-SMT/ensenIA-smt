@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
   Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
-  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff,
+  Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff, ScanLine,
 } from 'lucide-react';
-import { haySenial } from '../lib/conexion';
+import { hayQueAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
+import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
@@ -49,6 +50,10 @@ const fileIcons: Record<string, typeof FileText> = {
 };
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+// Más que esto no se intenta achicar en el navegador (un celular se queda sin memoria)
+const MAXIMO_PARA_ACHICAR = 150 * 1024 * 1024;
+
+type EscanerComponente = ComponentType<{ fotos?: File[]; alListo: (pdf: File) => void; alCerrar: () => void }>;
 
 export default function Biblioteca() {
   const { user } = useAuth();
@@ -74,6 +79,21 @@ export default function Biblioteca() {
   const [uploading, setUploading] = useState(false);
   const [uplError, setUplError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Achicar lo que no entra: en qué va, cuánto pesaba y el texto del PDF original
+  const [achicando, setAchicando] = useState<string | null>(null);
+  const [uplAchicado, setUplAchicado] = useState<{ antes: number; despues: number } | null>(null);
+  const [uplTexto, setUplTexto] = useState<string | undefined>(undefined);
+  const pedidoAchicar = useRef(0);
+  // Lo escaneado vive solo en esta pestaña: cerrar sin subir lo pierde
+  const [uplEsEscaneo, setUplEsEscaneo] = useState(false);
+  // Sin señal al subir un escaneo: se ofrece guardarlo en el equipo
+  const [uplSinRed, setUplSinRed] = useState(false);
+  // A dónde vuelve el foco al cerrar el escáner
+  const abridorEscaner = useRef<HTMLElement | null>(null);
+
+  // Escáner: se baja recién al usarlo (pesa, y no todos los docentes lo usan)
+  const [escaner, setEscaner] = useState<{ Componente: EscanerComponente; fotos?: File[]; desdeSubir: boolean } | null>(null);
+  const [abriendoEscaner, setAbriendoEscaner] = useState(false);
 
   // Procesamiento de texto en curso (por material) y por qué falló
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -222,13 +242,57 @@ export default function Biblioteca() {
   // ── Upload flow ──
 
   const openUpload = () => {
+    pedidoAchicar.current++;
     setUplFile(null);
     setUplTitle('');
     setUplDestino(asignacionFiltro?.clave ?? destinos[0]?.clave ?? '');
     setUplTags('');
     setUplShare(false);
     setUplError('');
+    setAchicando(null);
+    setUplAchicado(null);
+    setUplTexto(undefined);
+    setUplEsEscaneo(false);
+    setUplSinRed(false);
     setShowUpload(true);
+  };
+
+  const abrirEscaner = async (fotos?: File[]) => {
+    const desdeSubir = showUpload;
+    abridorEscaner.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setAbriendoEscaner(true);
+    try {
+      // jsPDF arma el PDF al final: se baja ahora, con señal, y queda guardado
+      const [{ default: Componente }] = await Promise.all([
+        import('../components/Escaner'),
+        import('../lib/escanerNavegador').then(m => m.cargarJspdf()),
+      ]);
+      setShowUpload(false);
+      setEscaner({ Componente, fotos, desdeSubir });
+    } catch (err) {
+      console.error('No se pudo abrir el escáner:', err);
+      avisar.error('No se pudo abrir el escáner', haySenial() ? 'Probá de nuevo en un rato.' : 'La primera vez hace falta conexión para bajarlo.');
+    } finally {
+      setAbriendoEscaner(false);
+    }
+  };
+
+  const cerrarEscaner = () => {
+    const volver = escaner?.desdeSubir;
+    setEscaner(null);
+    if (volver) setShowUpload(true);
+    // El escáner se desmonta abierto: el foco vuelve a mano al botón que lo abrió
+    else window.setTimeout(() => { if (abridorEscaner.current?.isConnected) abridorEscaner.current.focus(); }, 0);
+  };
+
+  /** Lo escaneado vuelve a "Subir material", listo para elegir materia y curso */
+  const recibirEscaneo = (pdf: File) => {
+    const venia = escaner?.desdeSubir;
+    setEscaner(null);
+    if (!venia) openUpload();
+    else setShowUpload(true);
+    if (!venia || !uplTitle.trim()) setUplTitle(pdf.name.replace(/\.pdf$/i, ''));
+    void elegirArchivo(pdf, { conservarTitulo: true, escaneo: true });
   };
 
   const openVideo = () => {
@@ -237,14 +301,76 @@ export default function Biblioteca() {
     setVideoDestino(asignacionFiltro?.clave ?? destinos[0]?.clave ?? '');
   };
 
-  const handlePickFile = (f: File | null) => {
+  /**
+   * El archivo elegido (o escaneado). Si pesa más de lo que entra, o es una
+   * foto en un formato que el depósito no acepta, se achica acá mismo.
+   */
+  const elegirArchivo = async (f: File | null, { conservarTitulo = false, escaneo = false } = {}) => {
+    const pedido = ++pedidoAchicar.current;
     setUplError('');
+    setUplAchicado(null);
+    setUplTexto(undefined);
+    setAchicando(null);
+    setUplEsEscaneo(escaneo && !!f);
+    setUplSinRed(false);
     if (!f) return;
     const ok = f.type === 'application/pdf' || f.type === DOCX_MIME || f.type.startsWith('image/');
     if (!ok) { setUplError('Formato no soportado (PDF, Word .docx o imagen).'); return; }
-    if (f.size > 11 * 1024 * 1024) { setUplError('Máximo 11 MB.'); return; }
-    setUplFile(f);
-    if (!uplTitle.trim()) setUplTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
+    if (!conservarTitulo && !uplTitle.trim()) setUplTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
+    if (!hayQueAchicar(f)) { setUplFile(f); return; }
+    if (f.size > MAXIMO_PARA_ACHICAR) {
+      setUplFile(null);
+      setUplError(`Pesa ${formatFileSize(f.size)}: es demasiado para achicarlo en el navegador. Dividilo en partes más chicas (por ejemplo, por unidad) y subí cada una.`);
+      return;
+    }
+    setUplFile(null);
+    setAchicando('Preparando…');
+    const vigente = () => pedido === pedidoAchicar.current;
+    try {
+      const { archivo, texto } = await achicar(f, m => { if (!vigente()) return false; setAchicando(m); });
+      if (!vigente()) return;
+      setUplFile(archivo);
+      setUplTexto(texto);
+      if (f.size > LIMITE_SUBIDA) setUplAchicado({ antes: f.size, despues: archivo.size });
+    } catch (err) {
+      if (!vigente() || err instanceof AchicadoCancelado) return;
+      console.error('No se pudo achicar:', err);
+      // Los mensajes pensados para el docente, tal cual; los técnicos, no
+      setUplError(err instanceof NoSePudoAchicar ? err.message : 'No se pudo achicar el archivo. Probá de nuevo; si sigue, guardalo como PDF más liviano y subilo.');
+    } finally {
+      if (vigente()) setAchicando(null);
+    }
+  };
+  const handlePickFile = (f: File | null) => { void elegirArchivo(f); };
+
+  // Cerrar "Subir" corta el achicado que esté en curso
+  const cerrarSubir = () => {
+    pedidoAchicar.current++;
+    setAchicando(null);
+    setShowUpload(false);
+  };
+  const pedirCerrarSubir = async () => {
+    if (uplEsEscaneo && uplFile && !uploading) {
+      const ok = await confirmar({
+        titulo: '¿Descartar el escaneo?',
+        mensaje: 'Todavía no se subió: si cerrás, se pierde.',
+        accion: 'Descartar',
+        peligro: true,
+      });
+      if (!ok) return;
+    }
+    cerrarSubir();
+  };
+
+  /** Sin señal, lo escaneado se puede guardar en el equipo para no perderlo */
+  const guardarEnEquipo = () => {
+    if (!uplFile) return;
+    const url = URL.createObjectURL(uplFile);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = uplFile.name;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   const handleUpload = async () => {
@@ -253,8 +379,14 @@ export default function Biblioteca() {
       setUplError('Completá título, materia y curso, y archivo.');
       return;
     }
+    if (!haySenial()) {
+      setUplSinRed(true);
+      setUplError('Sin conexión no se puede subir. Queda acá: probá cuando vuelva la señal.');
+      return;
+    }
     setUploading(true);
     setUplError('');
+    setUplSinRed(false);
     try {
       const { storagePath, fileSizeBytes } = await uploadFile(user.id, uplFile);
 
@@ -281,12 +413,31 @@ export default function Biblioteca() {
       refresh();
       avisar.exito('Material subido', uplShare ? `Ya lo ven tus estudiantes de ${destino.etiqueta.replace('mis cursos', 'tus cursos')}.` : undefined);
 
-      // Word y PDF: leer el texto para que la IA pueda usarlo
-      void leerTexto({ ...material, storagePath }, uplFile);
+      // Word y PDF: leer el texto para que la IA pueda usarlo. Un PDF achicado
+      // ya no lo trae: se guarda el que se leyó del original, sin gastar IA.
+      if (uplTexto) void guardarTexto(material.id, uplTexto);
+      else void leerTexto({ ...material, storagePath }, uplFile);
     } catch (err) {
-      setUplError(err instanceof Error ? err.message : 'Error subiendo el material.');
+      const mensaje = err instanceof Error ? err.message : '';
+      if (esErrorDeRed(err) || /fetch|network|load failed/i.test(mensaje)) {
+        setUplSinRed(true);
+        setUplError('Se cortó la conexión y no se pudo subir. Queda acá: probá de nuevo cuando vuelva la señal.');
+      } else {
+        setUplError(mensaje || 'Error subiendo el material.');
+      }
     } finally {
       setUploading(false);
+    }
+  };
+
+  const guardarTexto = async (id: string, text: string) => {
+    try {
+      await updateMaterial(id, { extractedText: text });
+    } catch (err) {
+      console.error('No se pudo guardar el texto:', err);
+      setTextErrors(prev => ({ ...prev, [id]: 'No se pudo guardar el texto. Probá "Leer texto" de nuevo.' }));
+    } finally {
+      refresh();
     }
   };
 
@@ -776,6 +927,10 @@ export default function Biblioteca() {
             <Upload size={16} />
             Subir Material
           </button>
+          <button className="btn btn-secondary w-full mt-2" onClick={() => void abrirEscaner()} disabled={abriendoEscaner}>
+            {abriendoEscaner ? <Loader2 size={16} className="spin" /> : <ScanLine size={16} />}
+            Escanear con la cámara
+          </button>
           <button
             className="btn btn-secondary w-full mt-2"
             onClick={openVideo}
@@ -784,7 +939,7 @@ export default function Biblioteca() {
             Agregar video
           </button>
           <p className="text-xs text-subtle mt-2" style={{ textAlign: 'center' }}>
-            PDF, Word, imagen o video de YouTube · la IA lee el texto y los subtítulos
+            PDF, Word, imagen, hojas escaneadas o video de YouTube · la IA lee el texto y los subtítulos
           </p>
         </div>
       </aside>
@@ -805,6 +960,9 @@ export default function Biblioteca() {
           {/* En el celular la columna de la izquierda no está: filtros y botones acá */}
           <div className="bib-acciones-celu">
             <button className="btn btn-primary btn-sm" onClick={openUpload}><Upload size={15} /> Subir</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => void abrirEscaner()} disabled={abriendoEscaner}>
+              {abriendoEscaner ? <Loader2 size={15} className="spin" /> : <ScanLine size={15} />} Escanear
+            </button>
             <button className="btn btn-secondary btn-sm" onClick={openVideo}><Youtube size={15} /> Video</button>
           </div>
         </div>
@@ -1125,32 +1283,68 @@ export default function Biblioteca() {
       </Dialogo>
 
       {/* ── Modal: subir material ── */}
-      <Dialogo abierto={showUpload} alCerrar={() => setShowUpload(false)} etiquetadoPor="bib-subir-titulo" className="dialogo-em">
+      <Dialogo abierto={showUpload} alCerrar={cerrarSubir} alPedirCierre={uplEsEscaneo && uplFile ? () => void pedirCerrarSubir() : undefined} etiquetadoPor="bib-subir-titulo" className="dialogo-em">
         <div className="em-modal">
           <div className="em-modal-header">
             <h3 id="bib-subir-titulo"><Upload size={17} className="text-cyan" /> Subir material</h3>
-            <button className="btn-icon" aria-label="Cerrar" onClick={() => setShowUpload(false)}><X size={18} /></button>
+            <button className="btn-icon" aria-label="Cerrar" onClick={() => void pedirCerrarSubir()}><X size={18} /></button>
           </div>
           <div className="em-modal-body">
             {uplError && <div className="em-error"><AlertCircle size={15} /> {uplError}</div>}
+            {uplSinRed && uplEsEscaneo && uplFile && (
+              <button type="button" className="btn btn-outline btn-sm" onClick={guardarEnEquipo}>
+                <Download size={14} /> Guardar el escaneo en el equipo
+              </button>
+            )}
             <div
               className="em-dropzone"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => { if (!achicando) fileInputRef.current?.click(); }}
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); handlePickFile(e.dataTransfer.files[0] ?? null); }}
+              aria-busy={!!achicando}
             >
-              <FileUp size={26} />
-              {uplFile
-                ? <span className="em-file-name">{uplFile.name} · {formatFileSize(uplFile.size)}</span>
-                : <span>Arrastrá el archivo acá o hacé clic para elegirlo</span>}
+              {achicando ? (
+                <>
+                  <Loader2 size={26} className="spin" />
+                  <span role="status">{achicando}</span>
+                  <span className="text-xs text-subtle">Lo achicamos acá, en tu equipo, para que entre.</span>
+                </>
+              ) : (
+                <>
+                  <FileUp size={26} />
+                  {uplFile
+                    ? <span className="em-file-name">{uplFile.name} · {formatFileSize(uplFile.size)}</span>
+                    : <span>Arrastrá el archivo acá o hacé clic para elegirlo</span>}
+                </>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="application/pdf,.docx,image/*"
                 hidden
-                onChange={e => handlePickFile(e.target.files?.[0] ?? null)}
+                onChange={e => { handlePickFile(e.target.files?.[0] ?? null); e.target.value = ''; }}
               />
             </div>
+            {uplAchicado && (
+              <p className="em-hint" role="status">
+                <Check size={14} /> Pesaba {formatFileSize(uplAchicado.antes)} y quedó en {formatFileSize(uplAchicado.despues)}.
+                {uplTexto ? ' El texto se guarda igual.' : ''}
+              </p>
+            )}
+            {uplFile?.type.startsWith('image/') && !achicando && (
+              <div className="bib-sugerir-escaner">
+                <span>Es una foto: pasala por el escáner y queda derecha, limpia y en PDF, y la IA la puede leer.</span>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => void abrirEscaner([uplFile])} disabled={abriendoEscaner}>
+                  <ScanLine size={14} /> Escanear esta foto
+                </button>
+              </div>
+            )}
+            {!uplFile && !achicando && (
+              <button type="button" className="btn btn-secondary w-full bib-escanear" onClick={() => void abrirEscaner()} disabled={abriendoEscaner}>
+                {abriendoEscaner ? <Loader2 size={16} className="spin" /> : <ScanLine size={16} />}
+                Escanear con la cámara
+              </button>
+            )}
             <div className="em-field">
               <label>Título</label>
               <input type="text" value={uplTitle} onChange={e => setUplTitle(e.target.value)} placeholder="Ej: Guía de vectores — Unidad 2" />
@@ -1173,13 +1367,17 @@ export default function Biblioteca() {
             </label>
           </div>
           <div className="em-modal-footer">
-            <button className="btn btn-outline btn-sm" onClick={() => setShowUpload(false)} disabled={uploading}>Cancelar</button>
-            <button className="btn btn-primary btn-sm" onClick={handleUpload} disabled={uploading || !uplFile}>
+            <button className="btn btn-outline btn-sm" onClick={() => void pedirCerrarSubir()} disabled={uploading}>Cancelar</button>
+            <button className="btn btn-primary btn-sm" onClick={handleUpload} disabled={uploading || !uplFile || !!achicando}>
               {uploading ? 'Subiendo...' : 'Subir a la biblioteca'}
             </button>
           </div>
         </div>
       </Dialogo>
+
+      {escaner && (
+        <escaner.Componente fotos={escaner.fotos} alListo={recibirEscaneo} alCerrar={cerrarEscaner} />
+      )}
 
       {/* ── Visor de placas ── */}
       {podcastFor?.podcastPath && (

@@ -310,3 +310,27 @@
   border-radius: var(--radius-md);
   margin: 0;
 }
+
+/* ── Escáner y achicar al subir ── */
+.bib-escanear { justify-content: center; }
+.bib-sugerir-escaner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--cyan-subtle);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.bib-sugerir-escaner .btn { flex-shrink: 0; }
+.em-hint svg { vertical-align: -2px; color: var(--success); }
+@media (max-width: 480px) {
+  .bib-sugerir-escaner { flex-direction: column; align-items: stretch; }
+  /* Subir, Escanear y Video: si no entran al lado del buscador, abajo */
+  .biblioteca-main-header { flex-wrap: wrap; }
+  .bib-acciones-celu { width: 100%; }
+  .bib-acciones-celu .btn { flex: 1; justify-content: center; }
+}

@@ -1,0 +1,261 @@
+/* ── Escáner de la Biblioteca: pantalla completa, oscura como una cámara ── */
+.dialogo-escaner .dialogo-cuerpo {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #0b0d14;
+}
+.esc {
+  --esc-acento: #2db0ff;
+  --esc-acento-rgb: 45, 176, 255;
+  --esc-texto: #f1f5f9;
+  --esc-suave: #b6c2d1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--esc-texto);
+  font-size: 1rem;
+}
+.esc > div { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* Barra de arriba */
+.esc-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  padding-top: max(var(--space-2), env(safe-area-inset-top));
+  padding-left: max(var(--space-3), env(safe-area-inset-left));
+  padding-right: max(var(--space-3), env(safe-area-inset-right));
+  flex-shrink: 0;
+}
+.esc-titulo { margin: 0; font-size: 1rem; font-weight: 600; text-align: center; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* El título recibe el foco al cambiar de vista (para el lector de pantalla): sin anillo */
+.esc-titulo:focus { outline: none; }
+.esc-barra-acciones { display: flex; gap: var(--space-2); }
+
+/* Botones */
+.esc-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+  color: inherit;
+  font: inherit; font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.esc-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+.esc-btn:disabled { opacity: 0.45; cursor: default; }
+.esc-btn:focus-visible, .esc-disparador:focus-visible, .esc-miniatura:focus-visible, .esc-filtro:focus-visible, .esc-enlace:focus-visible {
+  outline: 2px solid var(--esc-acento);
+  outline-offset: 2px;
+}
+.esc-btn.on { background: rgba(var(--esc-acento-rgb), 0.25); border-color: var(--esc-acento); }
+.esc-btn-icono { width: 2.5rem; padding: 0; }
+.esc-btn-grande { min-height: 2.9rem; font-size: 0.95rem; padding: 0.5rem 1.1rem; }
+.esc-btn-primario { background: var(--esc-acento); border-color: var(--esc-acento); color: #04121f; font-weight: 600; }
+.esc-btn-primario:hover:not(:disabled) { background: #5cc3ff; }
+.esc-btn-peligro { color: #fca5a5; border-color: rgba(252, 165, 165, 0.4); }
+
+/* Escenario: lo que ve la cámara (o la foto), lo más grande posible */
+.esc-escenario {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.esc-video { position: relative; }
+.esc-video video, .esc-video img { display: block; width: 100%; height: 100%; object-fit: fill; user-select: none; -webkit-user-select: none; }
+.esc-contorno { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.esc-contorno polygon {
+  fill: rgba(var(--esc-acento-rgb), 0.16);
+  stroke: var(--esc-acento);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  transition: fill 0.2s;
+}
+.esc-contorno polygon.quieta { fill: rgba(var(--esc-acento-rgb), 0.3); }
+.esc-flash { position: absolute; inset: 0; background: #fff; animation: esc-flash 0.35s ease-out forwards; pointer-events: none; }
+@keyframes esc-flash { from { opacity: 0.85; } to { opacity: 0; } }
+
+.esc-mensaje {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-3);
+  transform: translateX(-50%);
+  max-width: calc(100% - 2rem);
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: 0.875rem;
+  text-align: center;
+  pointer-events: none;
+}
+.esc-aviso-centro { display: flex; align-items: center; gap: var(--space-2); color: var(--esc-suave); }
+.esc-gira { animation: esc-gira 1s linear infinite; }
+@keyframes esc-gira { to { transform: rotate(360deg); } }
+
+.esc-sin-camara {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+  max-width: 26rem; padding: var(--space-6); text-align: center;
+}
+.esc-sin-camara p { margin: 0; line-height: 1.5; }
+.esc-sub { color: var(--esc-suave); font-size: 0.9rem; }
+.esc-sin-camara-botones { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; margin-top: var(--space-2); }
+
+/* Pie: galería, disparador, páginas */
+.esc-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
+  flex-shrink: 0;
+}
+.esc-btn-lateral {
+  flex-direction: column; gap: 2px;
+  width: 4.5rem; min-height: 4.5rem;
+  border-radius: var(--radius-lg, 12px);
+  font-size: 0.75rem;
+  position: relative;
+}
+.esc-pila img { width: 2.6rem; height: 2.6rem; object-fit: cover; border-radius: 4px; border: 2px solid #fff; }
+.esc-pila-vacia { width: 2.6rem; height: 2.6rem; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 2px dashed rgba(255, 255, 255, 0.3); }
+.esc-cuenta {
+  position: absolute; top: 2px; right: 6px;
+  min-width: 1.3rem; height: 1.3rem; padding: 0 4px;
+  border-radius: 999px; background: var(--esc-acento); color: #04121f;
+  font-size: 0.75rem; font-weight: 700; line-height: 1.3rem;
+}
+.esc-disparador {
+  width: 4.8rem; height: 4.8rem;
+  padding: 0; border: 0; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  position: relative;
+  color: #0b0d14;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.esc-disparador:active { transform: scale(0.94); }
+.esc-disparador svg { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); transform: rotate(-90deg); }
+.esc-anillo-fondo { fill: none; stroke: transparent; stroke-width: 5; }
+.esc-anillo { fill: none; stroke: var(--esc-acento); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 0.12s linear; }
+
+/* Todas las páginas */
+.esc-grilla-zona { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-3); }
+.esc-grilla {
+  list-style: none; margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-3);
+}
+.esc-miniatura {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1.41;
+  padding: 0; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer; overflow: hidden; color: inherit;
+}
+.esc-miniatura img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.esc-mini-cargando { color: var(--esc-suave); }
+.esc-mini-numero {
+  position: absolute; left: 6px; bottom: 6px;
+  min-width: 1.6rem; height: 1.6rem; padding: 0 6px;
+  border-radius: 999px; background: rgba(0, 0, 0, 0.72); color: #fff;
+  font-size: 0.8rem; font-weight: 600; line-height: 1.6rem;
+}
+.esc-mini-error {
+  position: absolute; right: 6px; top: 6px;
+  width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: #dc2626; color: #fff; font-weight: 700; line-height: 1.6rem;
+}
+.esc-vacio { color: var(--esc-suave); text-align: center; margin: var(--space-8, 3rem) auto; max-width: 22rem; line-height: 1.5; }
+.esc-pie-paginas { flex-wrap: wrap; justify-content: center; }
+
+/* Una página */
+.esc-vista { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: var(--space-2) var(--space-3); }
+.esc-vista img { max-width: 100%; max-height: 100%; object-fit: contain; background: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); transition: opacity 0.2s; }
+.esc-vista img.esc-actualizando { opacity: 0.55; }
+.esc-herramientas {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) max(var(--space-3), env(safe-area-inset-right)) var(--space-2) max(var(--space-3), env(safe-area-inset-left));
+  padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  flex-shrink: 0;
+}
+.esc-filtros {
+  display: inline-flex; flex-wrap: wrap; justify-content: center; max-width: 100%;
+  padding: 3px; border-radius: 1.4rem; background: rgba(255, 255, 255, 0.08);
+}
+.esc-ayuda { margin: 0; color: var(--esc-suave); font-size: 0.8rem; text-align: center; }
+.esc-filtro {
+  border: 0; background: transparent; color: var(--esc-suave);
+  padding: 0.45rem 0.9rem; border-radius: 999px;
+  font: inherit; font-size: 0.85rem; cursor: pointer; white-space: nowrap;
+}
+.esc-filtro.on { background: #fff; color: #0b0d14; font-weight: 600; }
+.esc-enlace { border: 0; background: none; color: var(--esc-acento); font: inherit; font-size: 0.8rem; cursor: pointer; text-decoration: underline; min-height: 2.75rem; padding: 0.5rem 0.75rem; }
+.esc-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+
+/* Bordes a mano: con margen, para que una esquina en la orilla de la foto se vea y se pueda agarrar */
+.esc-escenario-bordes { padding: 1.5rem; }
+.esc-editable { touch-action: none; }
+.esc-editable polygon { fill: rgba(var(--esc-acento-rgb), 0.12); }
+.esc-toque { fill: transparent; cursor: grab; }
+.esc-esquina {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: var(--esc-acento);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  cursor: grab;
+}
+.esc-esquina.on { fill: var(--esc-acento); cursor: grabbing; }
+/* Con el teclado: relleno de color y borde oscuro (blanco sobre el papel no se vería) */
+.esc-esquina:focus-visible { outline: none; fill: var(--esc-acento); stroke: #0b0d14; stroke-width: 4; }
+.esc-lupa {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.esc-lupa span {
+  position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border: 2px solid var(--esc-acento); border-radius: 50%;
+}
+
+/* Los avisos, abajo: arriba taparían la X y «Aplicar» (dentro de un diálogo van arriba) */
+.dialogo-escaner .avisos { top: auto; bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
+
+/* Armando el PDF */
+.esc-armando { flex: 1; align-items: center; justify-content: center; gap: var(--space-3); color: var(--esc-suave); }
+
+@media (prefers-reduced-motion: reduce) {
+  .esc-flash { animation-duration: 0.01s; }
+  .esc-gira { animation-duration: 3s; }
+  .esc-anillo, .esc-disparador, .esc-vista img { transition: none; }
+}
+@media (max-width: 420px) {
+  .esc-filtro { padding: 0.45rem 0.65rem; }
+  .esc-btn { padding: 0.4rem 0.7rem; }
+}
