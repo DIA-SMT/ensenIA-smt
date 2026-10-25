@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
-import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults, type VistaCompetencia } from '../services/live.service';
+import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults, type VistaCompetencia, type PreguntaPublico } from '../services/live.service';
 import { RelojCompetencia, Podio } from './CompetenciaEnVivo';
 import { puntos } from '../lib/competencia';
 import { FEELING_META, type CheckinFeeling } from '../types';
@@ -34,10 +34,12 @@ interface Props {
     sinSenial?: boolean;
     /** Competencia (073): el reloj, el podio entre preguntas y el final */
     competencia?: { quedan: number | null; vista: VistaCompetencia | null; final: VistaCompetencia | null };
+    /** Preguntas del público (074): la destacada va grande; sin actividad, la lista */
+    preguntas?: { abiertas: boolean; lista: PreguntaPublico[] };
     onClose: () => void;
 }
 
-export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, competencia, onClose }: Props) {
+export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, competencia, preguntas, onClose }: Props) {
     const [qr, setQr] = useState('');
     const shellRef = useRef<HTMLDivElement>(null);
 
@@ -89,6 +91,8 @@ export default function ProyectarVivo({ session, activity, results, connected, r
     const live = activity && activity.status !== 'closed' ? activity : null;
     const comp = live?.config.competencia ?? null;
     const final = competencia?.final ?? null;
+    const destacada = preguntas?.lista.find(p => p.destacada && p.estado !== 'respondida') ?? null;
+    const enLista = (preguntas?.lista ?? []).filter(p => p.estado === 'visible').slice(0, 6);
 
     /**
      * Va en un portal al body, no donde está el componente: la página de
@@ -118,6 +122,34 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                     <h1 className="pv-question">🏆 ¡Terminó la competencia!</h1>
                     <Podio podio={final.podio} grande />
                     <p className="pv-final-pie">Cada uno ve en su celular en qué puesto quedó</p>
+                </main>
+            ) : destacada ? (
+                <main className="pv-main pv-center pv-pregunta-destacada">
+                    <p className="pv-pregunta-kicker">Pregunta del público</p>
+                    <h1 className="pv-question">{destacada.texto}</h1>
+                    {destacada.votos > 0 && <p className="pv-pregunta-votos">▲ {destacada.votos} {destacada.votos === 1 ? 'voto' : 'votos'}</p>}
+                </main>
+            ) : !live && preguntas?.abiertas ? (
+                <main className="pv-main">
+                    <h1 className="pv-question">Preguntas</h1>
+                    {enLista.length > 0 ? (
+                        <ol className="pv-preguntas">
+                            {enLista.map(p => (
+                                <li key={p.id}><span className="pv-pregunta-n">▲ {p.votos}</span><span>{p.texto}</span></li>
+                            ))}
+                        </ol>
+                    ) : (
+                        <p className="pv-waiting">Mandá tu pregunta desde el celular<span className="pv-dots" /></p>
+                    )}
+                    <footer className="pv-bottom">
+                        <span className="pv-preguntas-pie">{enLista.length > 0 ? 'Votá desde el celular las que también te interesan' : ''}</span>
+                        {session.guestsEnabled && session.joinCode && qr && (
+                            <span className="pv-mini-join">
+                                <img src={qr} alt="" className="pv-mini-qr" />
+                                <span className="pv-mini-code">{session.joinCode}</span>
+                            </span>
+                        )}
+                    </footer>
                 </main>
             ) : !live ? (
                 // El QR solo con la sala abierta a invitados: si no, invita a cualquiera a entrar

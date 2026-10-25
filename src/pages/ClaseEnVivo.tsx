@@ -27,6 +27,7 @@ import {
     setLiveMaterial, type InvitadoEnSala,
     getCorrectResponders, getMyPastSessions, sincronizarMaterialesDeClase,
     LIVE_KIND_META, type EleccionMaterial, getCompetencia, type VistaCompetencia,
+    SIN_PREGUNTAS, type PreguntasDelPublico, type PreguntaPublico,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
 } from '../services/live.service';
@@ -46,6 +47,7 @@ import ElegirMaterial from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
+import ModerarPreguntas from '../components/ModerarPreguntas';
 import SenialEnVivo from '../components/SenialEnVivo';
 import { useSondeo } from '../lib/sondeo';
 import { esErrorDeRed } from '../lib/conexion';
@@ -124,6 +126,10 @@ export default function ClaseEnVivo() {
     const [ronda, setRonda] = useState<Ronda | null>(null);
     const [vistaComp, setVistaComp] = useState<VistaCompetencia | null>(null);
     const [podioFinal, setPodioFinal] = useState<VistaCompetencia | null>(null);
+    // Preguntas del público (074). Sube con cada cambio del docente: una
+    // vuelta que salió antes trae lo de antes y no lo pisa
+    const [preguntas, setPreguntas] = useState<PreguntasDelPublico>(SIN_PREGUNTAS);
+    const preguntasVersion = useRef(0);
     const [competir, setCompetir] = useState(false);
     const [segundosComp, setSegundosComp] = useState(20);
     const { desfase, medir } = useDesfaseServidor();
@@ -294,6 +300,7 @@ export default function ClaseEnVivo() {
 
     const vuelta = useCallback(async (senal: AbortSignal) => {
         if (!sessionId) return;
+        const versionPreguntas = preguntasVersion.current;
         const e = await getEstadoDocente(sessionId, senal);
         if (!e) return;
         if (e.session.status === 'ended') {
@@ -337,6 +344,7 @@ export default function ClaseEnVivo() {
         if (e.activity && e.activity.status !== 'closed') setResults(e.results);
         setReactions(e.reacciones);
         setInvitados(e.invitados);
+        if (preguntasVersion.current === versionPreguntas) setPreguntas(e.preguntas);
         // Invitados conectados: los que dieron señal en los últimos 2 minutos
         // (con la hora del servidor: si la notebook tiene la hora corrida, igual cuenta bien)
         const desde = (e.ahora ? Date.parse(e.ahora) : Date.now()) - 120_000;
@@ -532,6 +540,15 @@ export default function ClaseEnVivo() {
         || (pickedKind === 'nube' && question.trim())
         || (pickedKind === 'texto' && question.trim())
         || (needsOptions && question.trim() && validOptions.length >= 2 && (pickedKind !== 'quiz' || correctId));
+
+    /** Un cambio del docente en una pregunta, al toque (null: sale de la lista) */
+    const cambiarPregunta = (id: string, cambio: Partial<PreguntaPublico> | null) => {
+        preguntasVersion.current++;
+        setPreguntas(p => ({
+            ...p,
+            lista: cambio === null ? p.lista.filter(x => x.id !== id) : p.lista.map(x => (x.id === id ? { ...x, ...cambio } : x)),
+        }));
+    };
 
     /**
      * Se lanzó algo: el podio final deja la pantalla (y el proyector). Si es
@@ -1110,6 +1127,9 @@ export default function ClaseEnVivo() {
             )}
 
             {/* Lo preparado en "Preparar la clase": se lanza de un toque, sin escribir en el celular */}
+            <ModerarPreguntas session={session} preguntas={preguntas} onSession={setSession}
+                onPregunta={cambiarPregunta} refrescar={sondeo.ahora} />
+
             <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching}
                 competir={ronda ? undefined : competirConPreparadas} />
 
@@ -1264,6 +1284,7 @@ export default function ClaseEnVivo() {
                     reactions={session.reactionsEnabled ? reactions : []}
                     sinSenial={sondeo.fallas >= 2}
                     competencia={{ quedan, vista: vistaComp, final: podioFinal }}
+                    preguntas={{ abiertas: session.preguntasAbiertas, lista: preguntas.lista }}
                     onClose={() => setProjecting(false)}
                 />
             )}

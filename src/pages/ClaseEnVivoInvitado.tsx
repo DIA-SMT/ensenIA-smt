@@ -15,11 +15,13 @@ import { Radio, Send, Loader2, LogIn, CloudUpload } from 'lucide-react';
 import {
     joinLiveSession, getGuestState, submitGuestResponse, sendGuestReaction,
     loadGuestSession, saveGuestSession, clearGuestSession, GuestError, getCompetenciaInvitado,
+    preguntarInvitado, votarPreguntaInvitado,
     type GuestSession, type GuestState, type GuestPayload,
 } from '../services/live-guest.service';
 import { LIVE_KIND_META, LIVE_REACTIONS, type VistaCompetencia } from '../services/live.service';
 import { useDesfaseServidor, useCuentaRegresiva, finDePregunta } from '../lib/competencia';
 import { RelojCompetencia, MiResultado } from '../components/CompetenciaEnVivo';
+import PreguntarEnVivo from '../components/PreguntarEnVivo';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type CheckinFeeling } from '../types';
 import { Cargando } from '../components/ui/Esqueleto';
@@ -298,6 +300,9 @@ export default function ClaseEnVivoInvitado() {
     const reactionsEnabled = state?.status === 'active' || state?.status === 'idle'
         ? state.reactionsEnabled : false;
     const title = state?.status === 'active' || state?.status === 'idle' ? state.title : '';
+    // Preguntas del público (074)
+    const preguntasAbiertas = state?.status === 'active' || state?.status === 'idle' ? Boolean(state.preguntasAbiertas) : false;
+    const preguntas = state?.status === 'active' || state?.status === 'idle' ? state.preguntas?.lista ?? [] : [];
     const answered = myAnswer !== null && myAnswer !== undefined;
     // Competencia: una sola respuesta, y con tiempo
     const comp = activity?.config.competencia ?? null;
@@ -483,6 +488,18 @@ export default function ClaseEnVivoInvitado() {
                     )}
                 </div>
             )}
+
+            <PreguntarEnVivo
+                abiertas={preguntasAbiertas}
+                preguntas={preguntas}
+                enviar={texto => preguntarInvitado(guest.token, texto)}
+                votar={(id, voto) => votarPreguntaInvitado(guest.token, id, voto)}
+                motivo={err => (err instanceof GuestError
+                    ? (err.code === 'SIN_SENIAL' ? 'Sin señal: no salió. Probá de nuevo cuando vuelva.' : err.message)
+                    : 'No se pudo. Probá de nuevo.')}
+                refrescar={sondeo.ahora}
+                invitado
+            />
 
             {reactionsEnabled && (
                 <div className="cv-reaction-bar card">

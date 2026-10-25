@@ -56,6 +56,9 @@ export interface LiveSession {
   classId: string | null;
   /** Los celulares del curso lo ven mientras dure la clase. */
   materialVisible: boolean;
+  /** Preguntas del público (074): abiertas, y si el docente las revisa antes de mostrarlas */
+  preguntasAbiertas: boolean;
+  preguntasModeradas: boolean;
   createdAt: string;
   endedAt?: string | null;
 }
@@ -124,6 +127,8 @@ function mapSession(row: any): LiveSession {
     materialId: row.material_id ?? null,
     classId: row.class_id ?? null,
     materialVisible: row.material_visible ?? false,
+    preguntasAbiertas: row.preguntas_abiertas ?? false,
+    preguntasModeradas: row.preguntas_moderadas ?? false,
     createdAt: row.created_at,
     endedAt: row.ended_at,
   };
@@ -205,6 +210,80 @@ export async function setReactionsEnabled(id: string, enabled: boolean): Promise
     .update({ reactions_enabled: enabled })
     .eq('id', id);
   if (error) throw error;
+}
+
+// ── Preguntas del público (074) ──
+
+export interface PreguntaPublico {
+  id: string;
+  texto: string;
+  /** pendiente: espera que el docente la muestre (al que la mandó, también si quedó retenida) */
+  estado: 'pendiente' | 'visible' | 'respondida';
+  /** La que el docente muestra en el proyector */
+  destacada: boolean;
+  votos: number;
+  /** Este participante la votó */
+  vote: boolean;
+  /** La mandó este participante */
+  mia: boolean;
+  /** Quién la hizo: solo le llega al docente */
+  autor?: string | null;
+  creada: string;
+}
+
+export interface PreguntasDelPublico {
+  lista: PreguntaPublico[];
+  /** Solo el docente: cuántas quedaron retenidas (el texto va por la alerta) */
+  retenidas: number;
+}
+
+export const SIN_PREGUNTAS: PreguntasDelPublico = { lista: [], retenidas: 0 };
+
+export async function setPreguntasAbiertas(id: string, abiertas: boolean): Promise<void> {
+  const { error } = await supabase.from('live_sessions').update({ preguntas_abiertas: abiertas } as never).eq('id', id);
+  if (error) throw error;
+}
+
+export async function setPreguntasModeradas(id: string, moderadas: boolean): Promise<void> {
+  const { error } = await supabase.from('live_sessions').update({ preguntas_moderadas: moderadas } as never).eq('id', id);
+  if (error) throw error;
+}
+
+/** Las de una clase (también terminada): el docente las ve con autor */
+export async function getPreguntasDelPublico(sessionId: string): Promise<PreguntasDelPublico> {
+  const { data, error } = await supabase.rpc('live_preguntas' as never, { p_session: sessionId } as never);
+  if (error) throw error;
+  return (data as unknown as PreguntasDelPublico | null) ?? SIN_PREGUNTAS;
+}
+
+export async function preguntar(sessionId: string, texto: string): Promise<void> {
+  const { error } = await supabase.rpc('live_preguntar' as never, { p_session: sessionId, p_texto: texto } as never);
+  if (error) throw error;
+}
+
+export async function votarPregunta(preguntaId: string, voto: boolean): Promise<void> {
+  const { error } = await supabase.rpc('live_votar_pregunta' as never, { p_pregunta: preguntaId, p_voto: voto } as never);
+  if (error) throw error;
+}
+
+export type AccionPregunta = 'mostrar' | 'destacar' | 'no_destacar' | 'respondida' | 'volver' | 'ocultar';
+
+export async function moderarPregunta(preguntaId: string, accion: AccionPregunta): Promise<void> {
+  const { error } = await supabase.rpc('live_moderar_pregunta' as never, { p_pregunta: preguntaId, p_accion: accion } as never);
+  if (error) throw error;
+}
+
+/** Por qué no salió una pregunta o un voto, para leer en el celular */
+export function motivoPregunta(err: unknown): string {
+  const m = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
+  if (m.includes('PREGUNTAS_CERRADAS')) return 'El docente cerró las preguntas.';
+  if (m.includes('PREGUNTA_VACIA')) return 'Escribí tu pregunta (al menos unas letras).';
+  if (m.includes('DEMASIADAS_PREGUNTAS')) return 'Ya mandaste 5 preguntas en esta clase.';
+  if (m.includes('DEMASIADAS_EN_LA_CLASE')) return 'Ya hay muchas preguntas en esta clase.';
+  if (m.includes('ESPERA_UN_MOMENTO')) return 'Esperá unos segundos antes de mandar otra.';
+  if (m.includes('PREGUNTA_PROPIA')) return 'Tu propia pregunta no se vota.';
+  if (m.includes('PREGUNTA_NO_DISPONIBLE')) return 'Esa pregunta ya no está para votar.';
+  return 'No se pudo. Probá de nuevo.';
 }
 
 // ── Material de la clase (041) ──
@@ -507,12 +586,12 @@ type Fila = Record<string, unknown>;
 interface FilaEstadoAlumno {
   estado?: string; sessionId?: string; titulo?: string;
   session?: Fila; activity?: Fila | null; myAnswer?: Fila | null; results?: LiveResults | null; medalla?: Fila | null;
-  ahora?: string;
+  ahora?: string; preguntas?: PreguntasDelPublico | null;
 }
 interface FilaEstadoDocente {
   session: Fila; activity: Fila | null; results: LiveResults | null; olvidada?: boolean;
   reacciones?: { emoji: string; createdAt: string }[]; invitados?: InvitadoEnSala[]; conectados?: string[];
-  ahora?: string;
+  ahora?: string; preguntas?: PreguntasDelPublico | null;
 }
 
 export type EstadoAlumno =
@@ -527,6 +606,8 @@ export type EstadoAlumno =
     medalla: StudentAward | null;
     /** La hora del servidor (073): la cuenta regresiva no depende del reloj del celular */
     ahora: string | null;
+    /** Preguntas del público (074), sin autor */
+    preguntas: PreguntasDelPublico;
   }
   | { estado: 'terminada'; sessionId: string; titulo: string }
   | { estado: 'sin_clase' };
@@ -555,6 +636,7 @@ export async function getEstadoAlumno(sessionId: string | null, medallasDesde: s
     results: d.results ?? null,
     medalla: d.medalla ? mapStudentAward(d.medalla) : null,
     ahora: d.ahora ?? null,
+    preguntas: d.preguntas ?? SIN_PREGUNTAS,
   };
 }
 
@@ -571,6 +653,8 @@ export interface EstadoDocente {
   conectados: Set<string>;
   /** La hora del servidor (073), para la cuenta regresiva */
   ahora: string | null;
+  /** Preguntas del público (074), con autor */
+  preguntas: PreguntasDelPublico;
 }
 
 /**
@@ -599,6 +683,7 @@ export async function getEstadoDocente(sessionId: string, senal?: AbortSignal): 
     invitados: d.invitados ?? [],
     conectados: new Set<string>(d.conectados ?? []),
     ahora: d.ahora ?? null,
+    preguntas: d.preguntas ?? SIN_PREGUNTAS,
   };
 }
 

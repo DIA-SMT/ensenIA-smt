@@ -432,3 +432,39 @@
 .pv-final .pv-question { margin-bottom: 0; }
 .pv-final .cmp-podio { width: 80vw; }
 .pv-final-pie { margin: 0; font-size: 1.6vw; color: var(--text-subtle); }
+
+/* ── Preguntas del público (074) ── */
+.pv-preguntas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6vh;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.pv-preguntas li {
+    display: flex;
+    align-items: center;
+    gap: 2vw;
+    padding: 1.6vh 1.8vw;
+    border-radius: 1.4vh;
+    border: 2px solid var(--border-color);
+    background: var(--bg-panel);
+    font-size: 2.1vw;
+    line-height: 1.25;
+}
+.pv-pregunta-n {
+    flex-shrink: 0;
+    min-width: 6vw;
+    font-weight: 800;
+    color: var(--cyan-bright);
+    font-variant-numeric: tabular-nums;
+}
+.pv-pregunta-destacada { gap: 3vh; padding: 6vh 8vw; }
+.pv-pregunta-destacada .pv-question { font-size: 4.6vw; margin: 0; }
+.pv-pregunta-kicker { margin: 0; font-size: 1.8vw; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.08em; }
+.pv-pregunta-votos { margin: 0; font-size: 2.4vw; font-weight: 700; color: var(--cyan-bright); }
+.pv-preguntas-pie { font-size: 1.5vw; color: var(--text-subtle); }

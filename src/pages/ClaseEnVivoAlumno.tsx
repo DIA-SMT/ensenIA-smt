@@ -18,10 +18,12 @@ import {
     getEstadoAlumno, upsertLiveResponse, sendLiveReaction, saveLiveCheckin,
     LIVE_KIND_META, LIVE_REACTIONS, getLiveClassMaterial, materialParaVisor,
     getCompetencia, codigoRespuestaRechazada, motivoRespuestaRechazada,
+    preguntar, votarPregunta, motivoPregunta, SIN_PREGUNTAS, type PreguntasDelPublico,
     type LiveSession, type LiveActivity, type LiveResults, type MaterialDeClase, type VistaCompetencia,
 } from '../services/live.service';
 import { useDesfaseServidor, useCuentaRegresiva, finDePregunta } from '../lib/competencia';
 import { RelojCompetencia, MiResultado } from '../components/CompetenciaEnVivo';
+import PreguntarEnVivo from '../components/PreguntarEnVivo';
 import MaterialViewer from '../components/MaterialViewer';
 import SenialEnVivo from '../components/SenialEnVivo';
 import { getMyGroup, type CourseGroup } from '../services/groups.service';
@@ -114,6 +116,8 @@ export default function ClaseEnVivoAlumno() {
     const { desfase, medir } = useDesfaseServidor();
     const [miComp, setMiComp] = useState<{ actividad: string; ronda: string; vista: VistaCompetencia | null } | null>(null);
     const miCompPedidaRef = useRef<string | null>(null);
+    // Preguntas del público (074)
+    const [preguntas, setPreguntas] = useState<PreguntasDelPublico>(SIN_PREGUNTAS);
 
     // Lo que quedó esperando señal antes de recargar la página
     useEffect(() => {
@@ -198,6 +202,7 @@ export default function ClaseEnVivoAlumno() {
         setSession(e.session);
         setActivity(e.activity);
         setResults(e.results);
+        setPreguntas(e.preguntas);
         medir(e.ahora);
         const comp = e.activity?.config.competencia;
         if (comp && e.activity?.status === 'revealed' && miCompPedidaRef.current !== e.activity.id) {
@@ -599,6 +604,16 @@ export default function ClaseEnVivoAlumno() {
                     )}
                 </div>
             )}
+
+            {/* Preguntas del público (074): las abre el docente */}
+            <PreguntarEnVivo
+                abiertas={session.preguntasAbiertas}
+                preguntas={preguntas.lista}
+                enviar={texto => preguntar(session.id, texto)}
+                votar={votarPregunta}
+                motivo={err => (esErrorDeRed(err) ? 'Sin señal: no salió. Probá de nuevo cuando vuelva.' : motivoPregunta(err))}
+                refrescar={sondeo.ahora}
+            />
 
             {/* ¡Medalla! (se la dio el docente durante la clase) */}
             {festejo && createPortal(

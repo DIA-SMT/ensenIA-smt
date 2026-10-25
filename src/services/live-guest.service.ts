@@ -13,7 +13,7 @@
 
 import { supabase } from './_helpers';
 import { esErrorDeRed } from '../lib/conexion';
-import type { LiveActivityKind, LiveActivityConfig, LiveActivityStatus, LiveResults, VistaCompetencia } from './live.service';
+import type { LiveActivityKind, LiveActivityConfig, LiveActivityStatus, LiveResults, VistaCompetencia, PreguntasDelPublico } from './live.service';
 
 // ── Tipos ──
 
@@ -42,7 +42,7 @@ export type GuestState =
   /** El docente sacó a este invitado (067). */
   | { status: 'expulsado'; motivo?: 'sacado' | 'sala_cerrada' }
   /** Hay clase, pero ninguna actividad lanzada: el celular queda en pausa. */
-  | { status: 'idle'; title: string; reactionsEnabled: boolean; ahora?: string }
+  | { status: 'idle'; title: string; reactionsEnabled: boolean; ahora?: string; preguntasAbiertas?: boolean; preguntas?: PreguntasDelPublico }
   | {
       status: 'active';
       title: string;
@@ -52,6 +52,9 @@ export type GuestState =
       results: LiveResults | null;
       /** La hora del servidor (073) */
       ahora?: string;
+      /** Preguntas del público (074) */
+      preguntasAbiertas?: boolean;
+      preguntas?: PreguntasDelPublico;
     };
 
 /** Lo que el invitado manda según el tipo de actividad. */
@@ -79,6 +82,14 @@ const MENSAJES: Record<string, string> = {
   // Competencia (073)
   TIEMPO_TERMINADO: 'Se terminó el tiempo para esta pregunta.',
   RESPUESTA_YA_ENVIADA: 'Ya habías respondido: en la competencia vale la primera.',
+  // Preguntas del público (074)
+  PREGUNTAS_CERRADAS: 'El docente cerró las preguntas.',
+  PREGUNTA_VACIA: 'Escribí tu pregunta (al menos unas letras).',
+  DEMASIADAS_PREGUNTAS: 'Ya mandaste 5 preguntas en esta clase.',
+  DEMASIADAS_EN_LA_CLASE: 'Ya hay muchas preguntas en esta clase.',
+  ESPERA_UN_MOMENTO: 'Esperá unos segundos antes de mandar otra.',
+  PREGUNTA_PROPIA: 'Tu propia pregunta no se vota.',
+  PREGUNTA_NO_DISPONIBLE: 'Esa pregunta ya no está para votar.',
   REACCIONES_CERRADAS: 'El docente apagó las reacciones.',
   EMOJI_NO_PERMITIDO: 'Ese emoji no está habilitado.',
   // No llegó al servidor (071): no es un rechazo, se puede reintentar
@@ -142,6 +153,17 @@ export async function getCompetenciaInvitado(token: string, ronda: string): Prom
   const { data, error } = await supabase.rpc('live_competencia_invitado' as never, { p_token: token, p_ronda: ronda } as never);
   if (error) fail(error);
   return (data as unknown as VistaCompetencia | null) ?? null;
+}
+
+/** Preguntas del público (074) */
+export async function preguntarInvitado(token: string, texto: string): Promise<void> {
+  const { error } = await supabase.rpc('live_preguntar_invitado' as never, { p_token: token, p_texto: texto } as never);
+  if (error) fail(error);
+}
+
+export async function votarPreguntaInvitado(token: string, preguntaId: string, voto: boolean): Promise<void> {
+  const { error } = await supabase.rpc('live_votar_pregunta_invitado' as never, { p_token: token, p_pregunta: preguntaId, p_voto: voto } as never);
+  if (error) fail(error);
 }
 
 export async function sendGuestReaction(token: string, emoji: string): Promise<void> {

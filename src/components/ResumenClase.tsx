@@ -7,9 +7,10 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile, ListChecks, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile, ListChecks, RotateCcw, MessageCircleQuestion } from 'lucide-react';
 import {
   getLiveSessionSummary, saveLiveSessionReport, getMaterialesDeClase, getLiveSession, getPreguntasDeLaClase,
+  getPreguntasDelPublico, type PreguntaPublico,
   LIVE_KIND_META, LIVE_REACTIONS,
   type ResumenClase as Datos, type MaterialEnLista, type LiveSession,
 } from '../services/live.service';
@@ -172,11 +173,18 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
   const [copiado, setCopiado] = useState(false);
   // Todos los materiales de la clase (049); con uno solo alcanza con datos.material
   const [materiales, setMateriales] = useState<MaterialEnLista[]>([]);
+  // Preguntas del público (074) que quedaron sin responder: para arrancar la próxima
+  const [sinResponder, setSinResponder] = useState<PreguntaPublico[]>([]);
+  // El resumen aparece en la misma pantalla que estaba proyectada: los nombres, a pedido
+  const [verAutores, setVerAutores] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
     getMaterialesDeClase(sessionId).then(m => { if (!cancelado) setMateriales(m); }).catch(console.error);
     getLiveSession(sessionId).then(s => { if (!cancelado) setSesion(s); }).catch(console.error);
+    getPreguntasDelPublico(sessionId)
+      .then(p => { if (!cancelado) setSinResponder(p.lista.filter(x => x.estado !== 'respondida')); })
+      .catch(() => { /* sin la 074, o sin señal: el resumen sigue */ });
     getLiveSessionSummary(sessionId)
       .then(d => { if (cancelado) return; setDatos(d); setInforme(d?.sesion.ai_summary ?? null); })
       .catch(err => { if (!cancelado) { setDatos(null); setError(err instanceof Error ? err.message : 'No se pudo cargar el resumen.'); } });
@@ -348,6 +356,38 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
               </Link>
             )}
           </div>
+        </section>
+      )}
+
+      {sinResponder.length > 0 && (
+        <section className="card rc-bloque" aria-labelledby="rc-preguntas">
+          <h3 id="rc-preguntas"><MessageCircleQuestion size={16} aria-hidden="true" /> Preguntas que quedaron sin responder</h3>
+          <p className="text-sm text-secondary">Las del público que no marcaste como respondidas, de la más votada a la menos. Sirven para arrancar la próxima clase.</p>
+          <label className="rc-ver-autores">
+            <input type="checkbox" checked={verAutores} onChange={e => setVerAutores(e.target.checked)} /> Ver quién preguntó
+          </label>
+          {sinResponder.some(p => p.estado === 'visible') && (
+            <ol className="rc-preguntas">
+              {sinResponder.filter(p => p.estado === 'visible').map(p => (
+                <li key={p.id}>
+                  <span className="rc-pregunta-votos" aria-label={`${p.votos} votos`}>▲ {p.votos}</span>
+                  <span className="rc-pregunta-texto">{p.texto}{verAutores && p.autor && <small>{p.autor}</small>}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {sinResponder.some(p => p.estado === 'pendiente') && (
+            <details className="rc-sin-revisar">
+              <summary>Quedaron sin revisar ({sinResponder.filter(p => p.estado === 'pendiente').length}): nadie más las vio</summary>
+              <ol className="rc-preguntas">
+                {sinResponder.filter(p => p.estado === 'pendiente').map(p => (
+                  <li key={p.id}>
+                    <span className="rc-pregunta-texto">{p.texto}{verAutores && p.autor && <small>{p.autor}</small>}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
         </section>
       )}
 

@@ -67,3 +67,13 @@
 .rc-sigue-item small { color: var(--text-subtle); font-size: 0.8125rem; line-height: 1.4; }
 .rc-sigue-item:hover:not(:disabled), .rc-sigue-item:focus-visible { border-color: var(--acento); }
 .rc-sigue-item:disabled { opacity: 0.7; cursor: default; }
+
+/* Preguntas del público que quedaron sin responder (074) */
+.rc-preguntas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rc-preguntas li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border-color); }
+.rc-preguntas li:last-child { border-bottom: none; }
+.rc-pregunta-votos { flex-shrink: 0; min-width: 3em; font-weight: 700; color: var(--acento); font-variant-numeric: tabular-nums; }
+.rc-pregunta-texto { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.rc-pregunta-texto small { font-size: 12px; color: var(--text-subtle); }
+.rc-ver-autores { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.rc-sin-revisar summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); min-height: 36px; display: flex; align-items: center; }

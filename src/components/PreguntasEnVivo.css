@@ -1,0 +1,63 @@
+/* Preguntas del público (074): en el celular y en el panel del docente */
+.pq { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.pq h4 { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; }
+.pq-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pq-opciones { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.pq-opciones .cv-groupmode { margin: 0; }
+
+.pq-form { display: flex; flex-direction: column; gap: 6px; }
+.pq-form textarea { width: 100%; resize: vertical; }
+.pq-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pq-pie .btn { min-height: 40px; }
+.pq-error { margin: 0; font-size: 13px; color: var(--danger-ink); }
+.pq-aviso { margin: 0; font-size: 13px; color: var(--success-ink); }
+.pq-subtitulo { margin: 4px 0 0; font-size: 12.5px; font-weight: 600; color: var(--warning-ink); }
+
+.pq-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pq-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+}
+.pq-item.destacada { border-color: var(--cyan-bright); background: var(--cyan-glow); }
+.pq-item.mia { border-style: dashed; }
+
+/* El voto: grande para el dedo */
+.pq-voto, .pq-votos {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.pq-voto { border: 1px solid var(--border-color); background: var(--bg-panel); cursor: pointer; }
+.pq-voto.on { border-color: var(--cyan-bright); background: var(--cyan-glow); color: var(--cyan-bright); }
+.pq-voto:disabled { cursor: default; opacity: 0.7; }
+.pq-votos { min-height: 36px; }
+
+.pq-texto { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; padding-top: 2px; }
+.pq-texto small { font-size: 12px; color: var(--text-subtle); }
+.pq-en-pantalla { color: var(--cyan-bright) !important; font-weight: 600; }
+
+.pq-acciones { flex-shrink: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 55%; }
+.pq-acciones .btn { min-height: 36px; }
+@media (max-width: 640px) {
+  .pq-docente .pq-item { flex-wrap: wrap; }
+  .pq-docente .pq-acciones { max-width: none; width: 100%; justify-content: flex-start; }
+}
+
+.pq-respondidas summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); min-height: 36px; display: flex; align-items: center; }
+.pq-respondidas .pq-lista { margin-top: 4px; opacity: 0.85; }
+.pq-cerrada .pq-texto em { color: var(--text-subtle); font-style: italic; }
