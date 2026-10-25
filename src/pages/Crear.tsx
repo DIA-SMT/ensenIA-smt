@@ -8,6 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { useMigue } from '../contexts/MigueContext';
 import {
     Zap, Boxes, Radio, ListChecks, FileInput, Presentation, Mic, MessagesSquare,
     ArrowRight, CalendarRange, Upload, ScanLine, type LucideIcon,
@@ -63,11 +64,11 @@ const HERRAMIENTAS: Opcion[] = [
     { a: '/ia-lab?herramienta=pres', icono: Presentation, titulo: 'Diapositivas para proyectar', texto: 'Una presentación con notas para vos.', nota: '' },
     { a: '/ia-lab?herramienta=sum', icono: FileInput, titulo: 'Resumen', texto: 'Pegás un texto largo y lo sintetiza.', nota: '' },
     { a: '/ia-lab?herramienta=oral', icono: Mic, titulo: 'Exposiciones orales', texto: 'Rúbricas para orales y debates.', nota: '' },
-    { a: '/ia-lab', icono: MessagesSquare, titulo: 'Preguntale a la IA', texto: 'Para lo que no está en la lista.', nota: '' },
     { a: '/clase-en-vivo', icono: Radio, titulo: 'Clase en vivo', texto: 'Preguntas que tus estudiantes responden desde el celular.', nota: '' },
 ];
 
 export default function Crear() {
+    const migue = useMigue();
     return (
         <div className="crear">
             <div className="crear-cabeza">
@@ -105,6 +106,18 @@ export default function Crear() {
                     </li>
                 ))}
             </ul>
+
+            {/* Lo que no está en la lista: Migue (el único asistente del docente) */}
+            {migue && (
+                <button type="button" className="crear-migue" onClick={() => migue.abrir()}>
+                    <span className="crear-migue-cara" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
+                    <span className="crear-herramienta-textos">
+                        <span className="crear-herramienta-titulo">¿No está en la lista? Preguntale a Migue</span>
+                        <span className="crear-herramienta-texto">Ideas, ejemplos, adaptaciones, una rúbrica, cómo usar la app. Lo que te sirva lo guardás o lo publicás.</span>
+                    </span>
+                    <MessagesSquare size={18} className="crear-herramienta-flecha" aria-hidden="true" />
+                </button>
+            )}
 
             <section className="crear-herramientas" aria-labelledby="crear-herramientas-titulo">
                 <h2 id="crear-herramientas-titulo" className="crear-seccion">Otras herramientas</h2>

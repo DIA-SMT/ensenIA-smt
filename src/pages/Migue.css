@@ -212,3 +212,33 @@
   .migue-container { padding: var(--space-4) var(--space-3); }
   .migue-burbuja.user { max-width: 92%; }
 }
+
+/* Migue conectado (UX docente): lo que está mirando y lo que se hace con la respuesta */
+.migue-contexto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--cyan-bright);
+  border-radius: var(--radius-md);
+  background: var(--cyan-glow);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.migue-contexto strong { overflow-wrap: anywhere; }
+.migue-contexto .btn-icon { flex-shrink: 0; }
+
+.migue-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border-color);
+}
+.migue-acciones .btn { min-height: 36px; }
+
+/* Las listas de la respuesta, adentro de la burbuja */
+.migue-burbuja ol, .migue-burbuja ul { padding-left: 1.4em; margin: 0.4em 0; }

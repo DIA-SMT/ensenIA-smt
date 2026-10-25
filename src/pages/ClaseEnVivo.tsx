@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useContextoMigue } from '../contexts/MigueContext';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
@@ -358,6 +359,9 @@ export default function ClaseEnVivo() {
         setOnlineIds(e.conectados);
     }, [sessionId, medir, dejarLaCompetencia, traerPosiciones]);
     const sondeo = useSondeo(vuelta, POLL_MS, Boolean(session && session.status === 'live'));
+
+    // Migue sabe qué clase está dando (lo último que lanzó, sin nombres)
+    useContextoMigue(session && session.status === 'live' ? { tipo: 'clase_en_vivo', id: session.id, titulo: session.title } : null);
 
     // ── Competencia: el reloj de la pregunta y el revelado solo ──
     const quedan = useCuentaRegresiva(finDePregunta(activity, activity?.createdAt), desfase);

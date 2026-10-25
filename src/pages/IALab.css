@@ -1408,3 +1408,6 @@
 
 /* .dialogo-ancho y .lab-mazo viven en MazoEditor.css: los usan también
    Mis materiales y Armar la clase */
+
+/* "Preguntale a Migue" en la lista de herramientas: un botón con la cara de los demás ítems */
+button.tool-item { width: 100%; background: none; font: inherit; font-size: 0.8125rem; text-align: left; }

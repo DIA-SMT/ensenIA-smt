@@ -25,6 +25,9 @@ import {
 } from './_prompts.ts';
 import { padronDeEscuela, proveedorPrivado, Seudonimos, taparContacto } from './_datos-personales.ts';
 import { pantallaActual } from './_guia.ts';
+import { leerPedido, resolverContexto, seccionContexto, type ContextoResuelto } from './_contexto.ts';
+import { accionesDe, GUIA_ACCIONES, sinMarcas } from './_acciones.ts';
+import { memoriaDocenteDesde, memoriaDocenteParaPrompt } from '../ia-chat/_memoria-docente.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -45,6 +48,9 @@ interface MigueRequest {
   /** Ruta desde la que se abrió el globito. Solo vale si está en la lista
    *  de _guia.ts, que es la que pone el nombre de la pantalla. */
   pantalla?: unknown;
+  /** Lo que el docente está mirando: solo { tipo, id }. Se lee con su RLS
+   *  (_contexto.ts); si no es suyo, no llega nada. */
+  contexto?: unknown;
 }
 
 function sseEvent(event: string, data: Record<string, unknown>): string {
@@ -297,6 +303,13 @@ Deno.serve(async (req: Request) => {
       `El mensaje es muy largo (máximo ${MAX_MSG_CHARS} caracteres).`);
   }
 
+  // ── Lo que el docente está mirando (UX docente): con SU permiso ──
+  let ctx: ContextoResuelto | null = null;
+  if (profile.role === 'docente') {
+    const pedido = leerPedido(body.contexto);
+    if (pedido) ctx = await resolverContexto(asUser, pedido);
+  }
+
   // ── Normativa: con la RLS del usuario ──
   let policyHits: PolicyHit[] = [];
   try {
@@ -312,9 +325,11 @@ Deno.serve(async (req: Request) => {
   // usuario: a un estudiante o una familia solo le llega lo de 'comunidad'.
   let refHits: RefHit[] = [];
   try {
-    const { data } = await asUser.rpc('buscar_referencias', {
-      q: ultimo.content, max_results: 4,
-    });
+    // Con un tema o un material de por medio, filtradas por su materia y su año
+    const anioCtx = Number((ctx?.curso ?? '').match(/\d/)?.[0]) || null;
+    const { data } = await asUser.rpc('buscar_referencias', ctx?.materia
+      ? { q: `${ctx.titulo}\n${ultimo.content}`, p_area: ctx.materia, p_anio: anioCtx, max_results: 4 }
+      : { q: ultimo.content, max_results: 4 });
     refHits = (data ?? []) as RefHit[];
   } catch (_e) {
     refHits = [];
@@ -369,6 +384,22 @@ Deno.serve(async (req: Request) => {
 
   // Nombres del padrón y datos de contacto: tapados para el proveedor
   const seudo = new Seudonimos(await padronDeEscuela(admin, profile.school_id));
+
+  // El docente: los botones que puede ofrecer (fijo, con caché), lo que está
+  // mirando y lo que ya se sabe de cómo trabaja (memoria docente, 062: solo
+  // si la tiene prendida; Migue la lee, no le agrega nada)
+  let extraDocente = '';
+  if (profile.role === 'docente') {
+    if (ctx) extraDocente += seudo.tapar(seccionContexto(ctx));
+    try {
+      if (await memoriaDocenteDesde(admin, user.id)) {
+        extraDocente += await memoriaDocenteParaPrompt(admin, user.id, ctx?.materia ?? undefined, ctx?.curso ?? undefined);
+      }
+    } catch (e) {
+      console.error('memoria docente en Migue:', String(e).slice(0, 200));
+    }
+  }
+  const promptFijo = profile.role === 'docente' ? `${promptBase}\n\n${GUIA_ACCIONES}` : promptBase;
 
   if (audience === 'estudiante' && !studentId) {
     console.error('Migue: estudiante sin fila en students', user.id);
@@ -492,8 +523,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
       {
         role: 'system',
         content: [
-          { type: 'text', text: promptBase, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: promptNormativa + avisoDerivacion + pantallaActual(profile.role, body.pantalla) },
+          { type: 'text', text: promptFijo, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: promptNormativa + avisoDerivacion + pantallaActual(profile.role, body.pantalla) + extraDocente },
         ],
       },
       ...historial,
@@ -579,6 +610,10 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           controller.enqueue(encoder.encode(sseEvent('token', { text: resto })));
         }
 
+        // Los botones salen de las marcas; lo que se guarda va sin ellas
+        const acciones = profile.role === 'docente' ? accionesDe(fullContent, ctx) : [];
+        const respuesta = sinMarcas(fullContent);
+
         // ── Persistencia: el par pregunta/respuesta y las normas citadas ──
         // Los errores se miran: un fallo silencioso acá le borra el
         // historial al usuario sin que nadie se entere.
@@ -589,7 +624,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           // llegar a usar el DEFAULT de la tabla.
           { session_id: sessionId, role: 'user', content: ultimo.content, cited_policy_ids: [] },
           {
-            session_id: sessionId, role: 'assistant', content: fullContent,
+            session_id: sessionId, role: 'assistant', content: respuesta,
             cited_policy_ids: citadas,
           },
         ]);
@@ -627,6 +662,12 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           // El cliente lo usa para mostrarle al chico, en la interfaz y no
           // solo dentro del texto de la IA, que esto se compartió.
           derivada,
+          // Docente: los botones de esta respuesta y sobre qué se habló
+          acciones,
+          contexto: ctx ? {
+            tipo: ctx.tipo, id: ctx.id, titulo: ctx.titulo, temaId: ctx.temaId,
+            subjectId: ctx.subjectId, courseId: ctx.courseId, materia: ctx.materia, curso: ctx.curso,
+          } : null,
         })));
       } catch (err) {
         console.error('stream error', err);

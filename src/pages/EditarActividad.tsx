@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useContextoMigue } from '../contexts/MigueContext';
 import { ArrowLeft, Save, Send, Sparkles, Loader2, Lock, FileText, Scale } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PartesEditor from '../components/PartesEditor';
@@ -147,6 +148,9 @@ export default function EditarActividad() {
         }
         const t = searchParams.get('tipo');
         if (t === 'actividad' || t === 'tp' || t === 'evaluacion') setTipo(t);
+        // Lo que Migue propuso pedir ("Armar la actividad"): queda escrito, no se manda solo
+        const p = searchParams.get('pedido');
+        if (p) setPedido(p.slice(0, 300));
         const temaId = searchParams.get('tema');
         if (temaId) {
           const r = await getTema(temaId).catch(() => null);
@@ -350,6 +354,9 @@ export default function EditarActividad() {
       setGuardando(false);
     }
   };
+
+  // Editando una que ya existe: Migue sabe cuál es
+  useContextoMigue(original ? { tipo: 'actividad', id: original.id, titulo: original.title } : null);
 
   if (!user) return null;
   if (cargando) return <div className="ea-contenedor"><Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando…" /></div>;

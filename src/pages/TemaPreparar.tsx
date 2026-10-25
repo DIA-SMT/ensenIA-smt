@@ -16,7 +16,7 @@ import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  FlaskConical, Layers, Lock, Pencil, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload, Users,
+  Layers, Lock, Pencil, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload, Users,
 } from 'lucide-react';
 import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,6 +24,8 @@ import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar, confirmar } from '../components/ui/avisar';
 import MaterialViewer from '../components/MaterialViewer';
+import BotonMigue from '../components/BotonMigue';
+import { useContextoMigue } from '../contexts/MigueContext';
 import { getTema, updateClass } from '../services/planning.service';
 import { getActivitiesByClass } from '../services/activities.service';
 import { asignarTema, getMaterialsByClass, getMaterialsByTeacher } from '../services/library.service';
@@ -110,6 +112,12 @@ export default function TemaPreparar() {
     unidad && m.subjectId === unidad.subjectId
     && (!m.courseId || m.courseId === unidad.courseId)
     && !m.classId), [biblioteca, unidad]);
+
+  // Migue sabe que está en este tema: lo que le pregunte, es sobre esto
+  const contextoMigue = tema
+    ? { tipo: 'tema' as const, id: tema.id, titulo: tema.title, detalle: [materiaNombre, curso].filter(Boolean).join(' · ') }
+    : null;
+  useContextoMigue(contextoMigue);
 
   if (!user) return null;
   if (cargando) return <div className="tp-contenedor"><Esqueleto tipo="tarjetas" cantidad={3} etiqueta="Cargando el tema…" /></div>;
@@ -259,6 +267,7 @@ export default function TemaPreparar() {
             {tema.isComplete ? <CheckCircle2 size={15} aria-hidden="true" /> : <Circle size={15} aria-hidden="true" />}
             {tema.isComplete ? 'Dada' : 'Marcar como dada'}
           </button>
+          <BotonMigue contexto={contextoMigue} />
         </div>
         {/* Diseño inverso: primero qué tienen que poder hacer los chicos al
             terminar. La IA lo usa para armar todo lo del tema. */}
@@ -419,9 +428,7 @@ export default function TemaPreparar() {
         <PreguntasEnVivoEditor classId={tema.id} actividades={actividades} />
       </section>
 
-      <Link to={`/ia-lab?clase=${tema.id}`} className="tp-ia">
-        <FlaskConical size={16} aria-hidden="true" /> ¿Otra cosa? Preguntale a la IA sobre este tema
-      </Link>
+      <BotonMigue contexto={contextoMigue} variante="enlace" className="tp-ia" texto="¿Otra cosa? Preguntale a Migue sobre este tema" />
 
       {viendo && (
         <MaterialViewer material={viendo} onClose={() => setViendo(null)}

@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useMigue } from '../contexts/MigueContext';
 import {
   CalendarRange, FileUp, RefreshCw, Plus, Check, Sparkles, Presentation, ClipboardList,
   FileCheck2, MessageSquare, Boxes, Trash2, Pencil, AlertTriangle, CalendarClock, Brain, ChevronDown, FolderOpen,
@@ -413,6 +414,7 @@ function FilaTema({ tema, hoy, encuentros, abierto, alAbrir, alCambiarFecha, alM
   alRenombrar: () => void;
 }) {
   const t = tema;
+  const migue = useMigue();
   const estado = t.isComplete ? 'dada' : t.fecha && t.fecha <= hoy ? 'en-curso' : 'proxima';
   // Dirección cargó un feriado o cambió un trimestre después de repartir:
   // la fecha guardada ya no es un día de clase
@@ -430,7 +432,6 @@ function FilaTema({ tema, hoy, encuentros, abierto, alAbrir, alCambiarFecha, alM
     { a: `/ia-lab?clase=${t.id}&herramienta=pres`, icono: Presentation, etiqueta: 'Presentación', detalle: 'Diapositivas que podés corregir y proyectar' },
     { a: `/actividades/nueva?tema=${t.id}&tipo=tp`, icono: ClipboardList, etiqueta: 'Trabajo práctico', detalle: 'Por partes y con puntos; en el celular o en papel' },
     { a: `/actividades/nueva?tema=${t.id}&tipo=evaluacion`, icono: FileCheck2, etiqueta: 'Evaluación', detalle: 'Por partes y con puntos; se corrige sola la opción múltiple' },
-    { a: `/ia-lab?clase=${t.id}`, icono: MessageSquare, etiqueta: 'Preguntale a la IA', detalle: 'Ideas, ejemplos, adaptaciones' },
   ];
 
   return (
@@ -470,6 +471,13 @@ function FilaTema({ tema, hoy, encuentros, abierto, alAbrir, alCambiarFecha, alM
                 <span><strong>{p.etiqueta}</strong><small>{p.detalle}</small></span>
               </Link>
             ))}
+            {/* Migue, con el tema ya cargado (antes: "Preguntale a la IA") */}
+            {migue && (
+              <button type="button" className="pl-opcion" onClick={() => migue.abrir({ contexto: { tipo: 'tema', id: t.id, titulo: t.title } })}>
+                <MessageSquare size={18} aria-hidden="true" />
+                <span><strong>Preguntale a Migue</strong><small>Ideas, ejemplos y adaptaciones para este tema</small></span>
+              </button>
+            )}
           </div>
           <div className="pl-preparar-pie">
             <label htmlFor={`fecha-${t.id}`} className="text-sm text-secondary">Arranca el</label>

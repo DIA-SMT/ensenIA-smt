@@ -5,17 +5,29 @@
  * está del lado del servidor: la audiencia se deriva del rol en la base
  * (017), no de lo que diga el cliente. Acá cambian el encuadre, las
  * sugerencias y el aviso de qué se comparte y qué no.
+ *
+ * Para el docente, Migue es el único asistente (UX docente, 25/10): sabe qué
+ * está mirando (un tema, un material, una actividad, la clase en vivo), le
+ * propone botones que lo llevan a hacerlo con todo cargado, y lo que le
+ * sirve de una respuesta lo guarda en el tema, como material o lo publica.
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info, X,
+  Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info, X, ArrowRight, Copy, Check, Wand2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  audienceForRole, getOrCreateSession, getMessages, resetSession, streamMigue,
+  audienceForRole, getOrCreateSession, getMessages, resetSession, streamMigue, sinMarcas,
+  type AccionMigue, type ContextoResueltoMigue,
 } from '../services/migue.service';
+import type { ContextoMigue } from '../contexts/MigueContext';
+import { createMaterial } from '../services/library.service';
+import { getTema, updateClass } from '../services/planning.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import RefineResultModal from '../components/RefineResultModal';
+import PublishActivityModal from '../components/PublishActivityModal';
 import IrAlFinal from '../components/ui/IrAlFinal';
 import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -32,6 +44,10 @@ interface Burbuja {
   content: string;
   citadas?: { id: string; title: string }[];
   derivada?: 'seguimiento' | 'urgente' | null;
+  /** Botones que propuso Migue (solo los de esta sesión: no se guardan) */
+  acciones?: AccionMigue[];
+  /** Sobre qué se habló (lo que leyó el servidor): habilita "Usar esto" */
+  contexto?: ContextoResueltoMigue | null;
 }
 
 const ENCUADRE: Record<MigueAudience, {
@@ -42,7 +58,7 @@ const ENCUADRE: Record<MigueAudience, {
 }> = {
   equipo: {
     titulo: 'Migue',
-    bajada: 'Tu asistente para pensar clases, estrategias pedagógicas y consultar información de la escuela.',
+    bajada: 'Tu asistente para preparar clases, pensar estrategias y usar la app. Sabe qué estás mirando y te lleva a hacerlo.',
     aviso: 'En pedagogía, Migue propone ideas para que vos decidas. Sobre la escuela y su normativa, usa solo la información disponible, cita las normas y te avisa si no encuentra un dato.',
     sugerencias: [
       'Ayudame a adaptar una actividad para distintos ritmos de aprendizaje',
@@ -72,21 +88,68 @@ const ENCUADRE: Record<MigueAudience, {
   },
 };
 
-export default function Migue({ enPanel = false, alCerrar, pantalla }: {
+const corto = (t: string, max = 42) => (t.length > max ? `${t.slice(0, max - 1)}…` : t);
+
+/** Para arrancar, según lo que está mirando */
+function sugerenciasDe(c: ContextoMigue): string[] {
+  switch (c.tipo) {
+    case 'tema': return [
+      `¿Cómo arranco la clase de «${corto(c.titulo)}»?`,
+      'Dame una actividad corta para ver si entendieron',
+      '¿Cómo lo adapto para los que van más despacio?',
+    ];
+    case 'material': return [
+      '¿Cómo uso este material en la clase?',
+      'Armame 5 preguntas sobre esto para la clase en vivo',
+      'Explicámelo en lenguaje simple para los chicos',
+    ];
+    case 'actividad': return [
+      '¿Qué devolución les doy a los que se equivocaron?',
+      'Dame una rúbrica simple para esta actividad',
+      '¿Cómo la adapto para distintos ritmos?',
+    ];
+    case 'clase_en_vivo': return [
+      'Una pregunta rápida para ver si entendieron',
+      'Ideas para que participen más',
+      '¿Cómo cierro la clase?',
+    ];
+  }
+}
+
+const ETIQUETA_TIPO: Record<ContextoMigue['tipo'], string> = {
+  tema: 'el tema', material: 'el material', actividad: 'la actividad', clase_en_vivo: 'la clase en vivo',
+};
+// "Hablando del tema…" (con la contracción)
+const HABLANDO_DE: Record<ContextoMigue['tipo'], string> = {
+  tema: 'del tema', material: 'del material', actividad: 'de la actividad', clase_en_vivo: 'de la clase en vivo',
+};
+
+export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = null, borradorInicial = '' }: {
   enPanel?: boolean;
   alCerrar?: () => void;
   /** Ruta desde la que se abrió el globito, para que Migue sepa dónde está la persona */
   pantalla?: string;
+  /** Lo que está mirando el docente (un tema, un material…): Migue lo tiene en cuenta */
+  contexto?: ContextoMigue | null;
+  /** Lo que se deja escrito al abrir (desde un "Preguntale a Migue sobre esto") */
+  borradorInicial?: string;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const audience = user ? audienceForRole(user.role) : null;
 
   const [sesion, setSesion] = useState<MigueSession | null>(null);
   const [burbujas, setBurbujas] = useState<Burbuja[]>([]);
-  const [texto, setTexto] = useState('');
+  const [texto, setTexto] = useState(borradorInicial);
   const [enVuelo, setEnVuelo] = useState(false);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
+  // El docente puede pedir que no lo tenga en cuenta (la charla sigue igual)
+  const [usarContexto, setUsarContexto] = useState(true);
+  const [copiada, setCopiada] = useState<number | null>(null);
+  // "Usar esto": revisar, guardar en el tema, como material o publicar
+  const [usando, setUsando] = useState<{ content: string; contexto: ContextoResueltoMigue } | null>(null);
+  const [publicando, setPublicando] = useState<{ content: string; title: string; contexto: ContextoResueltoMigue } | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -134,6 +197,9 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
   }
 
   const enc = ENCUADRE[audience];
+  const esEquipo = audience === 'equipo';
+  const contextoActivo = esEquipo && usarContexto ? contexto : null;
+  const sugerencias = contextoActivo ? sugerenciasDe(contextoActivo) : enc.sugerencias;
 
   const enviar = async (pregunta?: string) => {
     const contenido = (pregunta ?? texto).trim();
@@ -169,7 +235,14 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
             const ult = copia[copia.length - 1];
             if (ult?.role === 'assistant') {
               copia[copia.length - 1] = {
-                ...ult, citadas: meta.citedPolicies, derivada: meta.derivada,
+                ...ult,
+                citadas: [
+                  ...meta.citedPolicies,
+                  ...meta.citedReferencias.map(r => ({ id: r.id, title: r.numero ? `${r.titulo} (${r.numero})` : r.titulo })),
+                ],
+                derivada: meta.derivada,
+                acciones: meta.acciones,
+                contexto: meta.contexto,
               };
             }
             return copia;
@@ -192,7 +265,7 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
         },
       },
       ctrl.signal,
-      pantalla,
+      { pantalla, contexto: contextoActivo },
     );
     setEnVuelo(false);
   };
@@ -213,6 +286,22 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
     } catch (err) {
       console.error(err);
       setError('No se pudo borrar la conversación.');
+    }
+  };
+
+  /** Un botón de Migue: va a esa pantalla y el panel se cierra */
+  const ir = (ruta: string) => {
+    navigate(ruta);
+    alCerrar?.();
+  };
+
+  const copiar = async (i: number, contenido: string) => {
+    try {
+      await navigator.clipboard.writeText(sinMarcas(contenido));
+      setCopiada(i);
+      window.setTimeout(() => setCopiada(c => (c === i ? null : c)), 2000);
+    } catch {
+      setError('No se pudo copiar. Seleccioná el texto y copialo a mano.');
     }
   };
 
@@ -242,10 +331,24 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
         </div>
       </div>
 
-      <div className={`migue-aviso ${audience === 'estudiante' ? 'destacado' : ''}`}>
-        <Info size={14} />
-        <span>{enc.aviso}</span>
-      </div>
+      {/* Lo que está mirando: Migue lo tiene en cuenta, salvo que se lo saque */}
+      {contextoActivo ? (
+        <div className="migue-contexto" role="status">
+          <span>
+            Hablando {HABLANDO_DE[contextoActivo.tipo]} <strong>«{contextoActivo.titulo}»</strong>
+            {contextoActivo.detalle ? <span className="text-subtle"> · {contextoActivo.detalle}</span> : null}
+          </span>
+          <button type="button" className="btn-icon" onClick={() => setUsarContexto(false)}
+            aria-label={`Que Migue no tenga en cuenta ${ETIQUETA_TIPO[contextoActivo.tipo]}`} title="No tenerlo en cuenta">
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <div className={`migue-aviso ${audience === 'estudiante' ? 'destacado' : ''}`}>
+          <Info size={14} />
+          <span>{enc.aviso}</span>
+        </div>
+      )}
 
       <div className="migue-hilo">
         {cargando && <Cargando texto="Abriendo la conversación…" />}
@@ -257,7 +360,7 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
               : <Sparkles size={28} className="text-cyan" />}
             <p className="text-secondary text-sm">Podés arrancar por acá:</p>
             <div className="migue-sugerencias">
-              {enc.sugerencias.map(s => (
+              {sugerencias.map(s => (
                 <button key={s} className="migue-sugerencia" onClick={() => enviar(s)}>
                   {s}
                 </button>
@@ -267,7 +370,11 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
         )}
 
         {burbujas.map((b, i) => {
-          const contenido = enVuelo && i === burbujas.length - 1 ? textoEnVivo : b.content;
+          const enCurso = enVuelo && i === burbujas.length - 1;
+          const contenido = sinMarcas(enCurso ? textoEnVivo : b.content);
+          // "Usar esto": el docente, con una materia y un curso de por medio
+          const ctx = b.contexto;
+          const puedeUsar = user.role === 'docente' && Boolean(ctx?.subjectId && ctx?.courseId);
           return (
           <div key={i} className={`migue-burbuja ${b.role}`}>
             {b.role === 'assistant' ? (
@@ -295,6 +402,27 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
                     <span>Consultó: {b.citadas.map(c => c.title).join(' · ')}</span>
                   </div>
                 )}
+
+                {/* Lo que se puede hacer con la respuesta */}
+                {esEquipo && !enCurso && contenido && (
+                  <div className="migue-acciones">
+                    {b.acciones?.map(a => (
+                      <button key={a.clave + a.ruta} type="button" className="btn btn-primary btn-sm" onClick={() => ir(a.ruta)}>
+                        <ArrowRight size={14} aria-hidden="true" /> {a.etiqueta}
+                      </button>
+                    ))}
+                    {puedeUsar && ctx && (
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setUsando({ content: contenido, contexto: ctx })}
+                        title="Revisarla y guardarla en el tema, como material o publicarla como actividad">
+                        <Wand2 size={14} aria-hidden="true" /> Usar esto
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => copiar(i, b.content)}>
+                      {copiada === i ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+                      {copiada === i ? 'Copiada' : 'Copiar'}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <p>{b.content}</p>
@@ -317,7 +445,7 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
           rows={2}
           placeholder={audience === 'estudiante'
             ? 'Escribile a Migue…'
-            : 'Preguntale a Migue…'}
+            : contextoActivo ? `Preguntale a Migue sobre ${ETIQUETA_TIPO[contextoActivo.tipo]}…` : 'Preguntale a Migue…'}
           aria-label={audience === 'estudiante' ? 'Mensaje para Migue' : 'Pregunta para Migue'}
           value={texto}
           disabled={enVuelo || cargando || !sesion}
@@ -335,6 +463,65 @@ export default function Migue({ enPanel = false, alCerrar, pantalla }: {
           {enVuelo ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
         </button>
       </form>
+
+      {usando && (
+        <RefineResultModal
+          initialContent={usando.content}
+          defaultTitle={`${usando.contexto.titulo}: lo de Migue`.slice(0, 120)}
+          canInsertInClass={Boolean(usando.contexto.temaId)}
+          className={usando.contexto.tipo === 'tema' ? usando.contexto.titulo : 'el tema'}
+          onClose={() => setUsando(null)}
+          onInsertInClass={async (content) => {
+            const temaId = usando.contexto.temaId;
+            if (!temaId) return;
+            const r = await getTema(temaId);
+            if (!r) throw new Error('No encontramos el tema.');
+            await updateClass(temaId, { content: r.tema.content ? `${r.tema.content}\n\n${content}` : content });
+          }}
+          onSaveAsMaterial={async (content, title) => {
+            const c = usando.contexto;
+            if (!c.subjectId) throw new Error('Falta la materia.');
+            await createMaterial({
+              title,
+              description: 'Preparado con Migue',
+              fileType: 'doc',
+              fileName: '',
+              fileSize: '—',
+              subjectId: c.subjectId,
+              subjectName: c.materia ?? 'Materia',
+              courseId: c.courseId,
+              classId: c.temaId,
+              teacherId: user.id,
+              schoolId: user.schoolId,
+              tags: ['IA'],
+              extractedText: content,
+            });
+          }}
+          onPublish={(content, title) => {
+            setPublicando({ content, title, contexto: usando.contexto });
+            setUsando(null);
+          }}
+          onAskAdjust={(instruccion, content) => {
+            setUsando(null);
+            void enviar(`${instruccion}. Esto es lo que tengo:\n\n${content.slice(0, 3000)}`);
+          }}
+        />
+      )}
+      {publicando && publicando.contexto.subjectId && publicando.contexto.courseId && (
+        <PublishActivityModal
+          contentMd={publicando.content}
+          teacherId={user.id}
+          schoolId={user.schoolId}
+          subjectId={publicando.contexto.subjectId}
+          courseId={publicando.contexto.courseId}
+          subjectName={publicando.contexto.materia ?? 'Materia'}
+          courseName={publicando.contexto.curso ?? ''}
+          classId={publicando.contexto.temaId}
+          defaultTitle={publicando.title || `Actividad: ${publicando.contexto.titulo}`}
+          onClose={() => setPublicando(null)}
+          onPublished={() => setPublicando(null)}
+        />
+      )}
     </div>
   );
 }

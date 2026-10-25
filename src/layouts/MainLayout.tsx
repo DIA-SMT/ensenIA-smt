@@ -26,6 +26,7 @@ import LimitePantalla from '../components/shell/LimitePantalla';
 import GuiaRapida, { shouldAutoOpenGuide } from '../components/GuiaRapida';
 import CambiarClave from '../components/CambiarClave';
 import FloatingMigue from '../components/FloatingMigue';
+import { MigueProvider } from '../contexts/MigueContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usePreferencias } from '../contexts/PreferencesContext';
 import { NAV_POR_ROL, tituloDe } from '../lib/navegacion';
@@ -145,7 +146,11 @@ export default function MainLayout() {
   // Con la clave inicial que dio la escuela no se entra: primero una propia
   if (user?.mustChangePassword) return <CambiarClave />;
 
-  return (
+  // Migue conectado (UX docente): las pantallas le avisan qué está mirando el
+  // docente y cualquiera lo abre con un pedido ("Preguntale a Migue sobre esto").
+  // Solo para el equipo: para el resto, los botones de Migue no aparecen.
+  const conMigue = user?.role === 'docente' || user?.role === 'director';
+  const pantalla = (
     <div className="layout-container">
       <a href="#contenido" className="skip-link">Saltar al contenido</a>
 
@@ -166,7 +171,7 @@ export default function MainLayout() {
 
       <Buscador abierto={buscando} alCerrar={cerrarBuscador} />
 
-      {(user?.role === 'docente' || user?.role === 'director') && <FloatingMigue />}
+      {conMigue && <FloatingMigue />}
 
       <Dialogo abierto={prefsAbiertas} alCerrar={cerrarPreferencias} etiquetadoPor="prefs-titulo" className="dialogo-panel">
         <div className="dialogo-encabezado">
@@ -181,4 +186,5 @@ export default function MainLayout() {
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true" ref={anuncioRef} />
     </div>
   );
+  return conMigue ? <MigueProvider>{pantalla}</MigueProvider> : pantalla;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useMigue } from '../contexts/MigueContext';
 import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
@@ -123,6 +124,8 @@ function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
 }
 
 export default function IALab() {
+    // Las dudas sueltas van a Migue, el único asistente del docente (UX docente)
+    const migue = useMigue();
     const { user } = useAuth();
     const navigate = useNavigate();
 
@@ -921,6 +924,12 @@ export default function IALab() {
         setAllUnits(units);
     };
 
+    // ── Una duda suelta: a Migue, con el tema elegido (si hay) ──
+    const preguntarAMigue = () => {
+        if (!migue) { handleToolClick('free'); return; }
+        migue.abrir({ contexto: selectedClass ? { tipo: 'tema', id: selectedClass.id, titulo: selectedClass.title } : null });
+    };
+
     // ── Consolidar: guardar contenido (revisado) como material de Biblioteca ──
     const handleSaveAsMaterial = async (content: string, title: string) => {
         if (!currentAssignment) throw new Error('Elegí una materia primero.');
@@ -1203,10 +1212,10 @@ export default function IALab() {
                                             <span className="welcome-card-title">Armar un crucigrama</span>
                                             <span className="welcome-card-desc">Para imprimir y repasar en papel</span>
                                         </button>
-                                        <button className="welcome-card" onClick={() => handleToolClick('free')}>
+                                        <button className="welcome-card" onClick={preguntarAMigue}>
                                             <MessageSquare size={18} className="text-ia-accent" />
-                                            <span className="welcome-card-title">Pregunta libre</span>
-                                            <span className="welcome-card-desc">Consultá cualquier duda pedagógica</span>
+                                            <span className="welcome-card-title">Preguntale a Migue</span>
+                                            <span className="welcome-card-desc">Ideas, dudas y adaptaciones{selectedClass ? ' sobre este tema' : ''}</span>
                                         </button>
                                     </div>
                                     <p className="welcome-tip">
@@ -1604,16 +1613,13 @@ export default function IALab() {
                         </div>
                     ))}
                     {/* Free chat option */}
-                    <div
-                        className={`tool-item ${activeTool === 'free' ? 'active' : ''}`}
-                        onClick={() => handleToolClick('free')}
-                    >
-                        <MessageSquare size={16} className={activeTool === 'free' ? 'text-ia-accent' : 'text-secondary'} />
+                    <button type="button" className="tool-item" onClick={preguntarAMigue}>
+                        <MessageSquare size={16} className="text-secondary" />
                         <span className="tool-item-text">
-                            <span>Pregunta libre</span>
-                            <span className="tool-item-desc">Consultá cualquier duda pedagógica</span>
+                            <span>Preguntale a Migue</span>
+                            <span className="tool-item-desc">Ideas, dudas y adaptaciones</span>
                         </span>
-                    </div>
+                    </button>
                 </div>
 
                 {/* Config Section */}

@@ -156,3 +156,31 @@ html[data-contraste="alto"] .crear-herramienta { border-width: 2px; border-color
 .crear-material-boton strong { font-size: 0.9375rem; }
 .crear-material-boton small { font-size: 0.8125rem; color: var(--text-secondary); }
 .crear-material-boton:hover, .crear-material-boton:focus-visible { background: var(--cyan-glow); }
+
+/* Migue, para lo que no está en la lista (UX docente) */
+.crear-migue {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 0 0 var(--space-5);
+  padding: 14px 16px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.crear-migue:hover, .crear-migue:focus-visible { background: var(--cyan-glow); }
+.crear-migue-cara {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--acento);
+  background: #fff;
+}
+.crear-migue-cara img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.95); transform-origin: 50% 25%; }

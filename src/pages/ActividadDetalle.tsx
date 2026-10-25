@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import BotonMigue from '../components/BotonMigue';
+import { useContextoMigue } from '../contexts/MigueContext';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
@@ -167,6 +169,12 @@ export default function ActividadDetalle() {
       .filter(s => s.pct !== null)
       .sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
   }, [activity, submissions]);
+
+  // Migue sabe que está en esta actividad (sin nombres de los chicos: solo cuántos)
+  const contextoMigue = activity
+    ? { tipo: 'actividad' as const, id: activity.id, titulo: activity.title, detalle: [activity.subjectName, activity.courseName].filter(Boolean).join(' · ') }
+    : null;
+  useContextoMigue(contextoMigue);
 
   if (!user) return null;
   if (loading) return (
@@ -495,6 +503,7 @@ export default function ActividadDetalle() {
               <PencilLine size={14} /> Editar
             </Link>
             <BotonCopiarActividad activity={activity} />
+            <BotonMigue contexto={contextoMigue} />
             <button className="btn btn-secondary btn-sm" onClick={() => setShowQr(true)} title="Para proyectar en el aula">
               <QrCode size={14} /> QR
             </button>

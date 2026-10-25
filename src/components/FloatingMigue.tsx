@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import Dialogo from './shell/Dialogo';
+import { useMigue } from '../contexts/MigueContext';
 import { Cargando } from './ui/Esqueleto';
 import './FloatingMigue.css';
 
@@ -36,7 +37,9 @@ function posicionInicial(): Posicion {
 
 export default function FloatingMigue() {
   const { pathname } = useLocation();
-  const [abierto, setAbierto] = useState(false);
+  // Abierto, y con qué: lo comparten todas las pantallas ("Preguntale a Migue sobre esto")
+  const migue = useMigue();
+  const abierto = migue?.abierto ?? false;
   const [posicion, setPosicion] = useState<Posicion>(posicionInicial);
   const arrastre = useRef<{
     pointerId: number;
@@ -110,7 +113,7 @@ export default function FloatingMigue() {
         onPointerCancel={alTerminarArrastre}
         onClick={() => {
           if (ignorarClick.current) { ignorarClick.current = false; return; }
-          setAbierto(true);
+          migue?.abrir();
         }}
       >
         <span className="migue-flotante-retrato" aria-hidden="true">
@@ -121,12 +124,13 @@ export default function FloatingMigue() {
       </button>
       )}
 
-      <Dialogo abierto={abierto} alCerrar={() => setAbierto(false)} etiqueta="Migue, asistente pedagógico" className="dialogo-migue">
+      <Dialogo abierto={abierto} alCerrar={() => migue?.cerrar()} etiqueta="Migue, asistente pedagógico" className="dialogo-migue">
         <Suspense fallback={<Cargando texto="Abriendo a Migue…" />}>
           {/* La pantalla desde la que se abrió: Migue la usa para guiar
               ("en esta pantalla, tocá…"). Solo la ruta; el nombre lo pone
               el servidor con su propia lista (supabase/functions/migue/_guia.ts). */}
-          <Migue enPanel alCerrar={() => setAbierto(false)} pantalla={pathname} />
+          <Migue enPanel alCerrar={() => migue?.cerrar()} pantalla={pathname}
+            contexto={migue?.contexto ?? null} borradorInicial={migue?.borrador ?? ''} />
         </Suspense>
       </Dialogo>
     </>

@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useContextoMigue } from '../contexts/MigueContext';
 import { X, FileText, ExternalLink, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -47,6 +48,8 @@ interface MaterialViewerProps {
 const ERROR_ABRIR = 'No se pudo abrir el material. Probá de nuevo en un rato.';
 
 export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false, verNotas = false }: MaterialViewerProps) {
+  // Mientras lo mira, Migue sabe cuál es (solo el docente tiene a Migue conectado)
+  useContextoMigue(material.id ? { tipo: 'material', id: material.id, titulo: material.title, detalle: material.subjectName } : null);
   const conArchivo = Boolean(material.storagePath);
   const esImagen = conArchivo && material.fileType === 'image';
   const esPdf = conArchivo && material.fileType === 'pdf';

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useSyncExternalStore, type ComponentType } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useMigue } from '../contexts/MigueContext';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
-  Download, Trash2, Share2, FlaskConical, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
+  Download, Trash2, Share2, MessagesSquare, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
   Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff, ScanLine,
 } from 'lucide-react';
 import { hayQueAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
@@ -99,6 +100,7 @@ const MAXIMO_PARA_ACHICAR = 150 * 1024 * 1024;
 type EscanerComponente = ComponentType<{ duenio: string; fotos?: File[]; alListo: (pdf: File) => void; alCerrar: () => void }>;
 
 export default function Biblioteca() {
+  const migue = useMigue();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -1049,10 +1051,10 @@ export default function Biblioteca() {
             {mat.extractedText && !juegoMat && (
               <button
                 className="mat-action-btn"
-                title="Usar como contexto al preparar con la IA"
-                onClick={() => navigate(`/ia-lab?doc=${mat.id}`)}
+                title="Migue lo lee y te ayuda a usarlo: preguntas, adaptaciones, cómo darlo en clase"
+                onClick={() => migue?.abrir({ contexto: { tipo: 'material', id: mat.id, titulo: mat.title, detalle: mat.subjectName } })}
               >
-                <FlaskConical size={14} /> Usar en IA Lab
+                <MessagesSquare size={14} /> Preguntale a Migue
               </button>
             )}
             {mat.extractedText && !deck && !juegoMat && (

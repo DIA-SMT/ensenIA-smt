@@ -1,0 +1,43 @@
+/* "Preguntale a Migue sobre esto" (UX docente) */
+.boton-migue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.boton-migue.chip {
+  padding: 4px 14px 4px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+.boton-migue.chip:hover, .boton-migue.chip:focus-visible { border-color: var(--acento); color: var(--acento); }
+.boton-migue.enlace {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+}
+.boton-migue.enlace:hover, .boton-migue.enlace:focus-visible { color: var(--acento); }
+.boton-migue-cara {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--acento);
+  background: #fff;
+}
+.boton-migue.enlace .boton-migue-cara { width: 24px; height: 24px; }
+.boton-migue-cara img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.95);
+  transform-origin: 50% 25%;
+}

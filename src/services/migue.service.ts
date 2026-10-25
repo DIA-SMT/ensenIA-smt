@@ -91,13 +91,37 @@ export async function resetSession(sessionId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Un botón que propone Migue: lleva a una pantalla con todo cargado (lo arma el servidor) */
+export interface AccionMigue { clave: string; etiqueta: string; ruta: string }
+
+/** Lo que el servidor leyó de lo que el docente está mirando (con sus permisos) */
+export interface ContextoResueltoMigue {
+  tipo: 'tema' | 'material' | 'actividad' | 'clase_en_vivo';
+  id: string;
+  titulo: string;
+  temaId: string | null;
+  subjectId: string | null;
+  courseId: string | null;
+  materia: string | null;
+  curso: string | null;
+}
+
+/** Las marcas de acción que Migue deja al final: no se muestran como texto */
+export function sinMarcas(texto: string): string {
+  return texto.replace(/\[\[accion:[^\]]*\]\]\s*/g, '').replace(/\[\[[^\]]*$/, '').trimEnd();
+}
+
 export interface MigueCallbacks {
   onToken: (text: string) => void;
   onDone: (meta: {
     citedPolicies: { id: string; title: string }[];
+    /** Las referencias oficiales que consultó (leyes, NAP, ESI) */
+    citedReferencias: { id: string; titulo: string; numero: string | null }[];
     derivada: 'seguimiento' | 'urgente' | null;
     /** false = Migue respondió pero la conversación no quedó guardada. */
     persistido: boolean;
+    acciones: AccionMigue[];
+    contexto: ContextoResueltoMigue | null;
   }) => void;
   /** derivada viaja también en el error: si la escuela ya fue avisada, el
    *  chico tiene que enterarse aunque el chat se haya caído. */
@@ -113,9 +137,15 @@ export async function streamMigue(
   messages: { role: 'user' | 'assistant'; content: string }[],
   cb: MigueCallbacks,
   signal?: AbortSignal,
-  /** Ruta desde la que se abrió Migue (el globito): con eso guía "en esta pantalla" */
-  pantalla?: string,
+  opciones?: {
+    /** Ruta desde la que se abrió Migue: con eso guía "en esta pantalla" */
+    pantalla?: string;
+    /** Lo que está mirando: solo el tipo y el id (el servidor lo lee con sus permisos) */
+    contexto?: { tipo: string; id: string } | null;
+  },
 ): Promise<void> {
+  const pantalla = opciones?.pantalla;
+  const contexto = opciones?.contexto;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
     cb.onError({ code: 'AUTH_INVALID', message: 'No hay sesión activa.', derivada: null });
@@ -131,7 +161,11 @@ export async function streamMigue(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ sessionId, messages, ...(pantalla ? { pantalla } : {}) }),
+      body: JSON.stringify({
+        sessionId, messages,
+        ...(pantalla ? { pantalla } : {}),
+        ...(contexto ? { contexto: { tipo: contexto.tipo, id: contexto.id } } : {}),
+      }),
       signal,
     });
   } catch (err) {
@@ -173,8 +207,11 @@ export async function streamMigue(
         else if (evento === 'done') {
           cb.onDone({
             citedPolicies: payload.citedPolicies ?? [],
+            citedReferencias: payload.citedReferencias ?? [],
             derivada: payload.derivada ?? null,
             persistido: payload.persistido !== false,
+            acciones: Array.isArray(payload.acciones) ? payload.acciones : [],
+            contexto: payload.contexto ?? null,
           });
         } else if (evento === 'error') {
           cb.onError({

@@ -124,7 +124,8 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
     { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase completa clase armada material planificar armar placas tarjetas diapositivas juego crucigrama diagrama tarea enviar' },
-    { ruta: '/ia-lab', etiqueta: 'Preguntale a la IA', icono: FlaskConical, claves: 'laboratorio ia chat generar evaluación resumen presentación oral ideas' },
+    { ruta: '/migue', etiqueta: 'Migue, tu asistente', icono: Sparkles, claves: 'preguntale a la ia asistente ayuda ideas consulta chat adaptar rúbrica' },
+    { ruta: '/ia-lab', etiqueta: 'Preparar con la IA (presentación, evaluación, resumen)', icono: FlaskConical, claves: 'laboratorio ia generar evaluación resumen presentación diapositivas oral rúbrica' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
   ],
   director: [],
