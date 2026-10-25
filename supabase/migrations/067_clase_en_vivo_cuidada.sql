@@ -24,19 +24,60 @@
 -- Se puede correr más de una vez. Comprobación al final: una fila, todo true.
 -- ═══════════════════════════════════════════════════════════════════
 
--- ── 0. ¿El texto suena a que la está pasando mal? (misma lista que la 058) ──
+-- ── 0. ¿El texto suena a que la está pasando mal? ──
+-- El texto se normaliza (minúsculas, sin tildes, todo lo que no es letra o
+-- número pasa a un espacio): "me pega." o "no quiero\nvivir" se escriben así
+-- de verdad. Las frases se buscan desde el comienzo de una palabra.
 
+CREATE OR REPLACE FUNCTION texto_normalizado(p_texto TEXT)
+RETURNS TEXT LANGUAGE sql IMMUTABLE SET search_path = public AS $$
+  SELECT ' ' || btrim(regexp_replace(
+    lower(translate(coalesce(p_texto, ''), 'áéíóúüñÁÉÍÓÚÜÑàèìòù', 'aeiouunAEIOUUNaeiou')),
+    '[^a-z0-9]+', ' ', 'g')) || ' '
+$$;
+
+-- En primera persona: alguien cuenta que la está pasando mal. Se oculta y se
+-- avisa. (No "me toca": en clase es "es mi turno". No las palabras del tema
+-- solas: "el acoso escolar" es una respuesta normal en ESI o Historia.)
 CREATE OR REPLACE FUNCTION texto_preocupa(p_texto TEXT)
 RETURNS BOOLEAN LANGUAGE sql IMMUTABLE SET search_path = public AS $$
-  SELECT coalesce(
-    lower(translate(p_texto, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) || ' '
-      ~ '(quiero morir|me quiero matar|matarme|suicid|no quiero vivir|me corto|cortarme|autolesi|lastimarme|me lastimo|me pegan|me pega |me golpea|abusa|abuso|me acosa|acoso|bullying|me tocan|me toca |me amenaza|me odio|nadie me quiere)',
-    false)
+  SELECT texto_normalizado(p_texto) ~ (' (quiero morir|me quiero matar|me voy a matar|matarme|me mato|suicidarme|me suicido|me voy a suicidar'
+    || '|no quiero vivir|no quiero seguir|no quiero estar viv|no aguanto mas|me corto|cortarme|me corte|me lastimo|lastimarme|me autolesion'
+    || '|me pega|me golpea|me lastima|me maltrata|me abusa|abusa de mi|abusan de mi|abusaron de mi|abuso de mi|me manosea|me toco sin|me tocan sin'
+    || '|me acosa|me amenaza|me hacen bull|me hacen bul|me odio|nadie me quiere|me quiero escapar|me quiero ir de (mi )?casa|ya no quiero estar)')
+$$;
+
+-- Más amplia, para la devolución anónima (058): ahí "hay bullying en el
+-- curso" es justamente lo que hay que leer, y no se proyecta en ningún lado
+CREATE OR REPLACE FUNCTION texto_preocupa_amplio(p_texto TEXT)
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE SET search_path = public AS $$
+  SELECT texto_preocupa(p_texto)
+      OR texto_normalizado(p_texto) ~ ' (suicid|autolesi|abus|acos|bullying|bulling|bulin|violenc|violac|maltrat|me toca |me tocan )'
 $$;
 
 -- ── 1. Invitados ──
 
 ALTER TABLE live_guests ADD COLUMN IF NOT EXISTS expulsado_at TIMESTAMPTZ;
+-- Por qué salió: 'sacado' (lo sacó el docente) o 'sala_cerrada'
+ALTER TABLE live_guests ADD COLUMN IF NOT EXISTS motivo_salida TEXT;
+
+-- Cerrar la sala saca a los que estaban y cambia el código: reabrirla no los
+-- devuelve, y un enlace o una foto del QR que circule ya no sirve
+CREATE OR REPLACE FUNCTION cerrar_sala_a_invitados()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF OLD.guests_enabled AND NOT NEW.guests_enabled THEN
+    UPDATE live_guests SET expulsado_at = now(), motivo_salida = 'sala_cerrada'
+     WHERE session_id = NEW.id AND expulsado_at IS NULL;
+    NEW.join_code := gen_join_code();
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_cerrar_sala_a_invitados ON live_sessions;
+CREATE TRIGGER trg_cerrar_sala_a_invitados
+  BEFORE UPDATE OF guests_enabled ON live_sessions
+  FOR EACH ROW EXECUTE FUNCTION cerrar_sala_a_invitados();
 
 CREATE OR REPLACE FUNCTION live_guest_state(p_token UUID)
 RETURNS JSONB
@@ -53,7 +94,7 @@ BEGIN
   SELECT * INTO g FROM live_guests WHERE token = p_token;
   IF g.id IS NULL THEN RAISE EXCEPTION 'INVITADO_DESCONOCIDO'; END IF;
   IF g.expulsado_at IS NOT NULL THEN
-    RETURN jsonb_build_object('status', 'expulsado');
+    RETURN jsonb_build_object('status', 'expulsado', 'motivo', coalesce(g.motivo_salida, 'sacado'));
   END IF;
 
   IF g.last_seen_at < now() - interval '30 seconds' THEN
@@ -158,15 +199,21 @@ RETURNS VOID
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_sesion UUID;
 BEGIN
-  UPDATE live_guests g SET expulsado_at = coalesce(g.expulsado_at, now())
+  UPDATE live_guests g SET expulsado_at = coalesce(g.expulsado_at, now()), motivo_salida = coalesce(g.motivo_salida, 'sacado')
     FROM live_sessions s
-   WHERE g.id = p_guest AND s.id = g.session_id AND s.teacher_id = auth.uid();
-  IF NOT FOUND THEN
+   WHERE g.id = p_guest AND s.id = g.session_id AND s.teacher_id = auth.uid()
+  RETURNING g.session_id INTO v_sesion;
+  IF v_sesion IS NULL THEN
     RAISE EXCEPTION 'Ese invitado no está en una clase tuya.' USING ERRCODE = '42501';
   END IF;
   DELETE FROM live_responses WHERE guest_id = p_guest;
   DELETE FROM live_reactions WHERE guest_id = p_guest;
+  -- Código nuevo: con el enlace o el QR viejo no vuelve a entrar con otro
+  -- nombre (si está en el aula y escanea el nuevo, sí: ahí, cerrar la sala)
+  UPDATE live_sessions SET join_code = gen_join_code() WHERE id = v_sesion;
 END $$;
 
 -- Sacar una palabra de la nube (todas las respuestas con esa palabra):
@@ -207,6 +254,7 @@ DECLARE
   p JSONB := coalesce(NEW.payload, '{}'::jsonb);
   clean JSONB := '{}'::jsonb;
   sel JSONB;
+  ids TEXT[];
   v_texto TEXT;
 BEGIN
   SELECT * INTO act FROM live_activities WHERE id = NEW.activity_id;
@@ -224,28 +272,35 @@ BEGIN
     RAISE EXCEPTION 'ACTIVIDAD_NO_DISPONIBLE' USING ERRCODE = '42501';
   END IF;
 
-  -- Solo estos campos y con tope: lo que se escribe puede terminar proyectado
-  IF p ? 'opcion' THEN
-    clean := clean || jsonb_build_object('opcion', left(p->>'opcion', 40));
-  END IF;
-  IF p ? 'feeling' AND p->>'feeling' IN ('genial', 'bien', 'neutral', 'confundido', 'frustrado') THEN
-    clean := clean || jsonb_build_object('feeling', p->>'feeling');
-  END IF;
-  IF p ? 'texto' THEN
-    clean := clean || jsonb_build_object('texto', left(btrim(p->>'texto'), 300));
-  END IF;
-  IF p ? 'palabra' THEN
-    clean := clean || jsonb_build_object('palabra', left(btrim(p->>'palabra'), 30));
-  END IF;
-  IF p ? 'selected' AND jsonb_typeof(p->'selected') = 'array' THEN
-    SELECT jsonb_agg(v) INTO sel FROM (
-      SELECT left(value, 40) AS v FROM jsonb_array_elements_text(p->'selected') LIMIT 20
-    ) t;
-    clean := clean || jsonb_build_object('selected', coalesce(sel, '[]'::jsonb));
+  -- Solo lo que corresponde al tipo de pregunta, y con tope: lo que se
+  -- escribe puede terminar proyectado. Las opciones, solo las de la pregunta
+  -- (si no, un texto cualquiera viaja como "opción" a todos los celulares).
+  ids := ARRAY(SELECT o->>'id' FROM jsonb_array_elements(
+           CASE WHEN jsonb_typeof(act.config->'options') = 'array' THEN act.config->'options' ELSE '[]'::jsonb END) o);
+  IF act.kind IN ('quiz', 'encuesta') AND (p->>'opcion') = ANY (ids) THEN
+    clean := jsonb_build_object('opcion', p->>'opcion');
+  ELSIF act.kind = 'chips' AND jsonb_typeof(p->'selected') = 'array' THEN
+    SELECT coalesce(jsonb_agg(DISTINCT v), '[]'::jsonb) INTO sel
+      FROM jsonb_array_elements_text(p->'selected') v WHERE v = ANY (ids);
+    clean := jsonb_build_object('selected', sel);
+  ELSIF act.kind = 'checkin' AND p->>'feeling' IN ('genial', 'bien', 'neutral', 'confundido', 'frustrado') THEN
+    clean := jsonb_build_object('feeling', p->>'feeling');
+  ELSIF act.kind = 'texto' AND btrim(coalesce(p->>'texto', '')) <> '' THEN
+    clean := jsonb_build_object('texto', left(btrim(p->>'texto'), 300));
+  ELSIF act.kind = 'nube' AND btrim(coalesce(p->>'palabra', '')) <> '' THEN
+    clean := jsonb_build_object('palabra', left(btrim(p->>'palabra'), 30));
   END IF;
   IF clean = '{}'::jsonb THEN
     RAISE EXCEPTION 'RESPUESTA_VACIA' USING ERRCODE = '22023';
   END IF;
+
+  -- Las fechas las pone la base (ordenan los textos y alimentan las señales)
+  IF TG_OP = 'INSERT' THEN
+    NEW.created_at := now();
+  ELSE
+    NEW.created_at := OLD.created_at;
+  END IF;
+  NEW.updated_at := now();
 
   v_texto := concat_ws(' ', clean->>'texto', clean->>'palabra');
   IF v_texto <> '' AND texto_preocupa(v_texto) THEN
@@ -259,13 +314,16 @@ BEGIN
 END $$;
 
 DROP TRIGGER IF EXISTS trg_cuidar_respuesta_en_vivo ON live_responses;
+-- Cualquier cambio (también de fechas) pasa por acá
 CREATE TRIGGER trg_cuidar_respuesta_en_vivo
-  BEFORE INSERT OR UPDATE OF payload, activity_id, session_id, student_id, guest_id ON live_responses
+  BEFORE INSERT OR UPDATE ON live_responses
   FOR EACH ROW EXECUTE FUNCTION cuidar_respuesta_en_vivo();
 
 -- Después de guardar (no antes: un "insertar o actualizar" corre el
 -- trigger de insertar aunque termine actualizando, y avisaría dos veces).
--- Una alerta por texto nuevo: reenviar lo mismo o cambiar de opción no la repite.
+-- Una sola alerta por chico y por clase: cada texto nuevo que preocupa se
+-- SUMA a esa alerta (y la vuelve a marcar sin leer); nunca se descarta. La
+-- dirección se entera con la primera. Reenviar lo mismo no repite nada.
 CREATE OR REPLACE FUNCTION avisar_respuesta_que_preocupa()
 RETURNS TRIGGER
 LANGUAGE plpgsql SECURITY DEFINER
@@ -274,36 +332,56 @@ AS $$
 DECLARE
   ses live_sessions;
   st RECORD;
-  v_texto TEXT := concat_ws(' ', NEW.payload->>'texto', NEW.payload->>'palabra');
+  v_texto TEXT := left(concat_ws(' ', NEW.payload->>'texto', NEW.payload->>'palabra'), 300);
+  v_quien TEXT;
+  v_titulo TEXT;
   v_alerta UUID;
 BEGIN
   IF NOT NEW.payload ? 'oculta' THEN RETURN NULL; END IF;
   IF TG_OP = 'UPDATE' AND OLD.payload ? 'oculta'
-     AND concat_ws(' ', OLD.payload->>'texto', OLD.payload->>'palabra') = v_texto THEN
+     AND left(concat_ws(' ', OLD.payload->>'texto', OLD.payload->>'palabra'), 300) = v_texto THEN
     RETURN NULL;
   END IF;
   SELECT * INTO ses FROM live_sessions WHERE id = NEW.session_id;
+
   IF NEW.student_id IS NOT NULL THEN
     SELECT s.id, s.first_name, s.last_name INTO st FROM students s WHERE s.id = NEW.student_id;
-    INSERT INTO alerts (type, category, title, message, date_label, teacher_id, school_id)
-    VALUES ('danger', 'system', 'Escribió algo que preocupa en la clase en vivo',
-            st.first_name || ' ' || st.last_name || ' escribió en "' || ses.title || '": "' || left(v_texto, 300)
-              || '". No se mostró en el proyector ni a sus compañeros.',
-            'Hoy', ses.teacher_id, ses.school_id)
-    RETURNING id INTO v_alerta;
+    v_quien := st.first_name || ' ' || st.last_name;
+    v_titulo := 'Escribió algo que preocupa en la clase en vivo';
+    SELECT a.id INTO v_alerta
+      FROM alerts a JOIN alert_students x ON x.alert_id = a.id
+     WHERE a.title = v_titulo AND a.teacher_id = ses.teacher_id AND x.student_id = st.id
+       AND a.created_at >= ses.created_at
+     ORDER BY a.created_at DESC LIMIT 1;
+  ELSE
+    -- Un invitado sin cuenta: una alerta por clase con todo lo de los invitados
+    v_quien := 'El invitado "' || coalesce((SELECT g.display_name FROM live_guests g WHERE g.id = NEW.guest_id), 'sin nombre') || '"';
+    v_titulo := 'Un invitado escribió algo que preocupa en la clase en vivo';
+    SELECT a.id INTO v_alerta FROM alerts a
+     WHERE a.title = v_titulo AND a.teacher_id = ses.teacher_id AND a.created_at >= ses.created_at
+       AND a.message LIKE '%' || ses.title || '%'
+     ORDER BY a.created_at DESC LIMIT 1;
+  END IF;
+
+  IF v_alerta IS NOT NULL THEN
+    UPDATE alerts SET message = left(message || ' · Después, ' || v_quien || ': "' || v_texto || '"', 4000), is_read = false
+     WHERE id = v_alerta;
+    RETURN NULL;
+  END IF;
+
+  INSERT INTO alerts (type, category, title, message, date_label, teacher_id, school_id)
+  VALUES ('danger', 'system', v_titulo,
+          v_quien || ' escribió en "' || ses.title || '": "' || v_texto
+            || '". No se mostró en el proyector ni a sus compañeros.',
+          'Hoy', ses.teacher_id, ses.school_id)
+  RETURNING id INTO v_alerta;
+  IF NEW.student_id IS NOT NULL THEN
     INSERT INTO alert_students (alert_id, student_id) VALUES (v_alerta, st.id);
     PERFORM notificar_a_direccion(
       ses.school_id, ses.teacher_id,
       'Un estudiante escribió algo que preocupa',
-      st.first_name || ' ' || st.last_name || ' escribió en la clase en vivo "' || ses.title || '": "'
-        || left(v_texto, 300) || '". Conviene una charla con el estudiante.');
-  ELSE
-    -- Un invitado sin cuenta: al docente, que está en la clase
-    INSERT INTO notifications (from_user_id, to_user_id, title, message, priority, school_id)
-    VALUES (ses.teacher_id, ses.teacher_id, 'Un invitado escribió algo que preocupa',
-            'En "' || ses.title || '" un invitado escribió: "' || left(v_texto, 300)
-              || '". No se proyectó. Podés sacarlo de la sala desde el panel.',
-            'high', ses.school_id);
+      v_quien || ' escribió en la clase en vivo "' || ses.title || '": "' || v_texto
+        || '". Conviene una charla con el estudiante. Si escribe algo más en esta clase, se suma a la alerta del docente.');
   END IF;
   RETURN NULL;
 END $$;
@@ -326,6 +404,10 @@ BEGIN
   IF NEW.emoji IS NULL OR NEW.emoji NOT IN ('👏', '💡', '😮', '🔥', '🐢', '❓') THEN
     RAISE EXCEPTION 'EMOJI_NO_PERMITIDO' USING ERRCODE = '22023';
   END IF;
+  -- La hora la pone la base (si no, mandando una hora vieja se saltea el
+  -- freno) y de a uno por autor (dos pedidos a la vez no pasan los dos)
+  NEW.created_at := now();
+  PERFORM pg_advisory_xact_lock(hashtext('reaccion|' || coalesce(NEW.student_id::text, NEW.guest_id::text, '')));
   SELECT max(created_at) INTO ultima FROM live_reactions
    WHERE session_id = NEW.session_id
      AND ((NEW.student_id IS NOT NULL AND student_id = NEW.student_id)
@@ -342,9 +424,12 @@ CREATE TRIGGER trg_cuidar_reaccion_en_vivo
   BEFORE INSERT ON live_reactions
   FOR EACH ROW EXECUTE FUNCTION cuidar_reaccion_en_vivo();
 
--- ── 4. Resultados: lo oculto no se proyecta ni lo ven los compañeros ──
--- Al docente (y a la dirección) le llega marcado y sin el texto: su panel
--- puede estar en la pantalla del aula. El texto le llega por la alerta.
+-- ── 4. Resultados: lo retenido no viaja ──
+-- Ni el texto ni QUIÉN lo escribió: el panel del docente puede estar en la
+-- pantalla del aula. Al docente (y a la dirección) solo le llega cuántas
+-- respuestas se retuvieron; el texto y el nombre van por la alerta. A
+-- compañeros e invitados ni eso, ni en la cuenta de "respondieron" (con
+-- una pregunta dirigida, "1 de N" con el tablero vacío delataba al chico).
 
 CREATE OR REPLACE FUNCTION live_results_json(p_activity UUID, p_include_names BOOLEAN)
 RETURNS JSONB
@@ -359,6 +444,7 @@ DECLARE
   counts JSONB;
   texts JSONB;
   words JSONB;
+  retenidas INT;
 BEGIN
   SELECT * INTO act FROM live_activities WHERE id = p_activity;
   IF act.id IS NULL THEN RETURN NULL; END IF;
@@ -372,7 +458,9 @@ BEGIN
     SELECT count(*) INTO participants FROM students WHERE course_id = ses.course_id;
   END IF;
 
-  SELECT count(*) INTO responded FROM live_responses WHERE activity_id = p_activity;
+  SELECT count(*) FILTER (WHERE payload ? 'oculta'), count(*) FILTER (WHERE p_include_names OR NOT payload ? 'oculta')
+    INTO retenidas, responded
+    FROM live_responses WHERE activity_id = p_activity;
   participants := GREATEST(participants, responded);
 
   SELECT COALESCE(jsonb_object_agg(k, n), '{}'::jsonb) INTO counts FROM (
@@ -395,8 +483,7 @@ BEGIN
     'name', CASE WHEN p_include_names
                  THEN COALESCE(s.first_name || ' ' || s.last_name, g.display_name)
                  ELSE NULL END,
-    'text', CASE WHEN r.payload ? 'oculta' THEN NULL ELSE left(r.payload->>'texto', 300) END,
-    'oculta', r.payload ? 'oculta'
+    'text', left(r.payload->>'texto', 300)
   ) ORDER BY r.updated_at), '[]'::jsonb)
   INTO texts
   FROM live_responses r
@@ -404,7 +491,7 @@ BEGIN
   LEFT JOIN live_guests g ON g.id = r.guest_id
   WHERE r.activity_id = p_activity
     AND r.payload ? 'texto' AND btrim(r.payload->>'texto') <> ''
-    AND (p_include_names OR NOT r.payload ? 'oculta');
+    AND NOT r.payload ? 'oculta';
 
   SELECT COALESCE(jsonb_agg(jsonb_build_object('word', w, 'n', n) ORDER BY n DESC), '[]'::jsonb)
   INTO words
@@ -424,11 +511,106 @@ BEGIN
     'responded', responded,
     'counts', counts,
     'texts', texts,
-    'words', words
+    'words', words,
+    -- Solo para el docente y la dirección: cuántas se retuvieron, sin quién
+    'retenidas', CASE WHEN p_include_names THEN retenidas ELSE 0 END
   );
 END $$;
 
 REVOKE EXECUTE ON FUNCTION live_results_json(UUID, BOOLEAN) FROM PUBLIC, anon, authenticated;
+
+-- ── 4b. La devolución anónima (058), con el detector arreglado ──
+-- Tenía la misma lista adentro, con los mismos huecos ("me pega." no la
+-- disparaba). Igual que en la 058, salvo esa línea.
+
+CREATE OR REPLACE FUNCTION dar_devolucion(p_origen TEXT, p_ref UUID, p_valor INT, p_comentario TEXT DEFAULT NULL)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_st UUID := auth_student_id();
+  v_teacher UUID;
+  v_subject UUID;
+  v_course UUID;
+  v_school UUID;
+  v_comentario TEXT := nullif(left(trim(coalesce(p_comentario, '')), 300), '');
+  v_riesgo BOOLEAN := false;
+  v_avisados INT;
+BEGIN
+  IF v_st IS NULL THEN RAISE EXCEPTION 'Solo los estudiantes dan devoluciones'; END IF;
+  IF p_valor NOT BETWEEN 1 AND 3 THEN RAISE EXCEPTION 'Valor inválido'; END IF;
+
+  IF p_origen = 'actividad' THEN
+    -- Una tarea que entregó
+    SELECT a.teacher_id, a.subject_id, a.course_id, a.school_id
+      INTO v_teacher, v_subject, v_course, v_school
+    FROM activities a
+    WHERE a.id = p_ref
+      AND EXISTS (SELECT 1 FROM activity_submissions s
+                  WHERE s.activity_id = a.id AND s.student_id = v_st AND s.status IN ('submitted', 'graded'));
+  ELSIF p_origen = 'clase_en_vivo' THEN
+    -- Una clase en vivo de su curso en la que estuvo
+    SELECT ls.teacher_id, ls.subject_id, ls.course_id, ls.school_id
+      INTO v_teacher, v_subject, v_course, v_school
+    FROM live_sessions ls
+    WHERE ls.id = p_ref
+      AND ls.course_id = auth_student_course_id()
+      AND EXISTS (SELECT 1 FROM live_presence lp WHERE lp.session_id = ls.id AND lp.student_id = v_st);
+  ELSIF p_origen = 'clase_enviada' THEN
+    -- Una clase que le mandaron
+    SELECT ce.teacher_id, ce.subject_id, ce.course_id, ce.school_id
+      INTO v_teacher, v_subject, v_course, v_school
+    FROM clases_enviadas ce
+    WHERE ce.id = p_ref
+      AND student_sees_material(ce.subject_id, ce.course_id, ce.teacher_id);
+  ELSE
+    RAISE EXCEPTION 'Origen inválido';
+  END IF;
+
+  IF v_teacher IS NULL THEN
+    RAISE EXCEPTION 'No encontramos esa clase o tarea para vos';
+  END IF;
+
+  -- ¿El comentario suena a que la está pasando mal? (sin tildes, minúsculas)
+  IF v_comentario IS NOT NULL THEN
+    -- 067: texto normalizado (puntuación, saltos de línea) y lista amplia
+    v_riesgo := texto_preocupa_amplio(v_comentario);
+  END IF;
+
+  INSERT INTO devoluciones (school_id, teacher_id, subject_id, course_id, student_id, origen, ref_id, valor, comentario)
+  VALUES (v_school, v_teacher, v_subject, v_course, v_st, p_origen, p_ref, p_valor,
+          CASE WHEN v_riesgo THEN NULL ELSE v_comentario END)
+  ON CONFLICT (student_id, origen, ref_id)
+  DO UPDATE SET valor = EXCLUDED.valor, comentario = EXCLUDED.comentario, created_at = now();
+
+  IF v_riesgo THEN
+    -- A la dirección, sin nombre: el curso, la materia y lo que escribió.
+    -- Remitente: el docente de esa clase (la columna no admite vacío, y poner
+    -- al chico rompería el anonimato).
+    v_avisados := notificar_a_direccion(
+      v_school, v_teacher,
+      'Un estudiante escribió algo que preocupa',
+      'En una devolución anónima de ' || coalesce((SELECT name FROM courses WHERE id = v_course), 'un curso')
+        || ' (' || coalesce((SELECT name FROM subjects WHERE id = v_subject), 'una materia') || ') un estudiante escribió: "'
+        || v_comentario || '". Es anónimo: conviene una charla con el curso o con su preceptoría.'
+    );
+    -- Sin directivos cargados, que no quede sin nadie que lo lea: al docente
+    IF COALESCE(v_avisados, 0) = 0 THEN
+      INSERT INTO notifications (from_user_id, to_user_id, title, message, priority, school_id)
+      VALUES (v_teacher, v_teacher, 'Un estudiante escribió algo que preocupa',
+              'En una devolución anónima un estudiante de tu curso escribió: "' || v_comentario
+              || '". Es anónimo: conviene una charla con el curso y avisar a la escuela.', 'high', v_school);
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'riesgo', v_riesgo);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION dar_devolucion(TEXT, UUID, INT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION dar_devolucion(TEXT, UUID, INT, TEXT) TO authenticated;
 
 -- ── 5. El informe de la IA, aparte ──
 
@@ -592,4 +774,6 @@ SELECT
   EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_cuidar_reaccion_en_vivo') AS emojis_cuidados,
   EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'live_guests' AND column_name = 'expulsado_at') AS invitados_se_sacan,
   NOT has_function_privilege('anon', 'sacar_invitado(uuid)', 'EXECUTE') AS sacar_sin_anonimos,
-  texto_preocupa('nadie me quiere') AND NOT texto_preocupa('me encanta esta clase') AS detecta;
+  texto_preocupa('mi papá me pega.') AND texto_preocupa(E'no quiero\nvivir') AND texto_preocupa('Nadie  me quiere!!')
+    AND NOT texto_preocupa('mañana me toca exponer') AND NOT texto_preocupa('el acoso escolar es un problema')
+    AND texto_preocupa_amplio('hay bullying en el curso') AS detecta;

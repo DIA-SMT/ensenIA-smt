@@ -19,6 +19,9 @@ import { avisar } from './ui/avisar';
 import { AWARD_META, FEELING_META, type CheckinFeeling } from '../types';
 import './ResumenClase.css';
 
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const escapar = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const pct = (n: number, de: number) => (de > 0 ? Math.round((n / de) * 100) : 0);
 
 const fecha = (iso: string) =>
@@ -34,11 +37,40 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): { texto: str
   const l: string[] = [];
   const codigos = new Map<string, string>();
   d.alumnos.forEach((s, i) => codigos.set(`Estudiante ${i + 1}`, s.nombre));
-  l.push(`Clase: ${d.sesion.titulo}. Duración: ${d.sesion.minutos} minutos.`);
+
+  /**
+   * Los nombres que se cuelan en lo que escribió el docente (una pregunta
+   * dirigida, "Lu, ¿cómo estás?"; un título): se cambian por el código.
+   * Siempre el nombre completo; nombre y apellido sueltos, solo en las
+   * dirigidas (en otro texto, "Rosa" o "Flores" pueden ser otra cosa).
+   */
+  const sinNombres = (texto: string, sueltos = false) => {
+    let out = texto;
+    d.alumnos.forEach((s, i) => {
+      const partes = s.nombre.split(/\s+/).filter(x => x.length >= 3);
+      const variantes = [s.nombre, ...(sueltos ? partes : [])];
+      for (const v of variantes) {
+        // Con o sin tildes ("Sofía" y "Sofia")
+        const patron = sinTildes(v).split('').map(c => {
+          const con = { a: '[aá]', e: '[eé]', i: '[ií]', o: '[oó]', u: '[uúü]', n: '[nñ]' }[c.toLowerCase()];
+          return con ?? escapar(c);
+        }).join('');
+        out = out.replace(new RegExp(`(^|[^\\p{L}])${patron}(?![\\p{L}])`, 'giu'), (_m, antes: string) => `${antes}Estudiante ${i + 1}`);
+      }
+      // En una dirigida, también el apodo que es el comienzo del nombre ("Sofi" por "Sofía")
+      if (sueltos) {
+        const bases = partes.map(x => sinTildes(x).toLowerCase());
+        out = out.replace(/\p{L}{4,}/gu, w => (bases.some(b => b.startsWith(sinTildes(w).toLowerCase())) ? `Estudiante ${i + 1}` : w));
+      }
+    });
+    return out;
+  };
+
+  l.push(`Clase: ${sinNombres(d.sesion.titulo)}. Duración: ${d.sesion.minutos} minutos.`);
   if (materiales.length > 1) {
-    l.push(`Materiales que se usaron: ${materiales.map(m => `${m.titulo} (${m.detalle})`).join('; ')}.`);
+    l.push(`Materiales que se usaron: ${materiales.map(m => `${sinNombres(m.titulo)} (${m.detalle})`).join('; ')}.`);
   } else if (d.material) {
-    l.push(`Material: ${d.material.titulo}${d.material.unidad ? ` (${d.material.unidad})` : ''}.`);
+    l.push(`Material: ${sinNombres(d.material.titulo)}${d.material.unidad ? ` (${d.material.unidad})` : ''}.`);
   }
   l.push(`Estudiantes del curso: ${t.curso}. Se conectaron: ${t.conectados}. Participaron (respondieron algo): ${t.participaron}.`);
   if (t.invitados) l.push(`Invitados sin cuenta: ${t.invitados}.`);
@@ -46,7 +78,8 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): { texto: str
   if (d.actividades.length === 0) l.push('- No se lanzaron actividades.');
   for (const a of d.actividades) {
     const tipo = LIVE_KIND_META[a.tipo]?.label ?? a.tipo;
-    let x = `- ${tipo}${a.pregunta ? `: "${a.pregunta}"` : ''}. Respondieron ${a.respondieron}.`;
+    const pregunta = a.pregunta ? sinNombres(a.pregunta, a.dirigida) : '';
+    let x = `- ${tipo}${pregunta ? `: "${pregunta}"` : ''}. Respondieron ${a.respondieron}.`;
     if (a.aciertos != null) x += ` Acertaron ${a.aciertos}${a.correcta ? ` (correcta: "${a.correcta}")` : ''}.`;
     if (a.dirigida) x += ' (pregunta para un solo estudiante)';
     if (a.grupal) x += ' (por grupos)';
@@ -67,8 +100,10 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): { texto: str
   if (d.medallas.length) {
     l.push(`Medallas dadas: ${d.medallas.map(m => `${AWARD_META[m.medalla]?.label ?? m.medalla} ${m.n}`).join(', ')}.`);
   }
+  // "Estudiante 3", "estudiante 3", "Estudiantes 3 y 5", "Estudiantes 2, 4 y 7"
   const ponerNombres = (informe: string) =>
-    informe.replace(/Estudiante (\d+)/g, (todo, n: string) => codigos.get(`Estudiante ${n}`) ?? todo);
+    informe.replace(/estudiantes?\s+(\d+(?:\s*(?:,|y|e)\s*\d+)*)/giu, (_todo, lista: string) =>
+      lista.replace(/\d+/g, n => codigos.get(`Estudiante ${n}`) ?? `Estudiante ${n}`));
   return { texto: l.join('\n'), ponerNombres };
 }
 

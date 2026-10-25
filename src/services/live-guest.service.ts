@@ -37,7 +37,7 @@ export type GuestState =
   /** El docente cerró la sala a invitados: salen todos (067). */
   | { status: 'cerrada' }
   /** El docente sacó a este invitado (067). */
-  | { status: 'expulsado' }
+  | { status: 'expulsado'; motivo?: 'sacado' | 'sala_cerrada' }
   /** Hay clase, pero ninguna actividad lanzada: el celular queda en pausa. */
   | { status: 'idle'; title: string; reactionsEnabled: boolean }
   | {

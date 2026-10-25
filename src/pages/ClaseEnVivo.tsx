@@ -348,7 +348,7 @@ export default function ClaseEnVivo() {
         // Abrirla deja entrar a cualquiera con el código, en una clase con chicos
         if (next && !(await confirmar({
             titulo: '¿Abrir la sala a invitados?',
-            mensaje: 'Cualquiera con el código o el QR entra sin cuenta, con el nombre que quiera, y puede contestar y mandar emojis. Sirve para una visita o una jornada; en una clase común no hace falta. Al cerrarla, salen todos.',
+            mensaje: 'Cualquiera con el código o el QR entra sin cuenta, con el nombre que quiera, y puede contestar y mandar emojis. Sirve para una visita o una jornada; en una clase común no hace falta. Al cerrarla, salen todos y el código cambia.',
             accion: 'Abrir la sala',
         }))) return;
         setSession({ ...session, guestsEnabled: next });
@@ -365,7 +365,7 @@ export default function ClaseEnVivo() {
     const sacar = async (g: InvitadoEnSala) => {
         if (!(await confirmar({
             titulo: `¿Sacar a "${g.nombre}" de la sala?`,
-            mensaje: 'Deja de ver la clase y se borra lo que mandó (respuestas y emojis).',
+            mensaje: 'Deja de ver la clase, se borra lo que mandó y el código de la sala cambia: con el enlace o el QR viejo no vuelve a entrar. Si está en el aula y escanea el nuevo, puede volver: en ese caso, cerrá la sala.',
             accion: 'Sacar',
             peligro: true,
         }))) return;
@@ -982,7 +982,7 @@ export default function ClaseEnVivo() {
 }
 
 /* ── Resultados en vivo (compartido docente/estudiante) ── */
-export function LiveResultsView({ activity, results, isTeacher = false, onSacar }: {
+type PropsResultados = {
     /* Solo necesita la forma de la actividad: así la reusa también la
        pantalla de invitados, que recibe una versión recortada. */
     activity: Pick<LiveActivity, 'kind' | 'config' | 'status'>;
@@ -990,7 +990,25 @@ export function LiveResultsView({ activity, results, isTeacher = false, onSacar 
     isTeacher?: boolean;
     /** Solo el docente: sacar un texto o una palabra que no tiene que estar */
     onSacar?: (que: { id: string } | { palabra: string }) => void;
-}) {
+};
+
+export function LiveResultsView(props: PropsResultados) {
+    const retenidas = props.isTeacher ? props.results?.retenidas ?? 0 : 0;
+    return (
+        <>
+            {/* Sin quién ni qué: el panel puede estar proyectado (067) */}
+            {retenidas > 0 && (
+                <p className="cv-retenidas" role="status">
+                    {retenidas === 1 ? '1 respuesta retenida' : `${retenidas} respuestas retenidas`}: puede ser algo que preocupa.
+                    No se proyectó ni la ven sus compañeros. Está en Alertas.
+                </p>
+            )}
+            <ResultadosCuerpo {...props} />
+        </>
+    );
+}
+
+function ResultadosCuerpo({ activity, results, isTeacher = false, onSacar }: PropsResultados) {
     if (!results || results.responded === 0) {
         return <p className="cv-waiting">Esperando respuestas<span className="cv-ellipsis" />​</p>;
     }
@@ -1054,12 +1072,9 @@ export function LiveResultsView({ activity, results, isTeacher = false, onSacar 
     return (
         <div className="cv-texts">
             {results.texts.slice(-30).map(t => (
-                <div key={t.id} className={`cv-text-item ${t.oculta ? 'oculta' : ''}`}>
+                <div key={t.id} className="cv-text-item">
                     {isTeacher && t.name && <span className="cv-text-name">{t.name}</span>}
-                    {t.oculta
-                        // El texto no viene: el panel puede estar proyectado. Llega por la alerta.
-                        ? <p className="cv-text-oculta">No se muestra: puede ser algo que preocupa. Te llegó una alerta.</p>
-                        : <p>{t.text}</p>}
+                    <p>{t.text}</p>
                     {onSacar && (
                         <button type="button" className="cv-sacar" aria-label="Sacar esta respuesta" onClick={() => onSacar({ id: t.id })}>
                             <X size={12} aria-hidden="true" />

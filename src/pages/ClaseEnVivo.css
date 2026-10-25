@@ -836,5 +836,4 @@
 .cv-text-item { position: relative; }
 .cv-text-item:has(.cv-sacar) { padding-right: 34px; }
 .cv-text-item .cv-sacar { position: absolute; top: 4px; right: 4px; }
-.cv-text-item.oculta { border-style: dashed; }
-.cv-text-oculta { color: var(--danger-ink); font-size: 0.8125rem; font-style: italic; }
+.cv-retenidas { margin: 0 0 8px; padding: 8px 10px; border: 1px dashed var(--danger); border-radius: var(--radius-md); font-size: 0.8125rem; color: var(--danger-ink); }

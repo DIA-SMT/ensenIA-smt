@@ -171,7 +171,7 @@ export default function ClaseEnVivoInvitado() {
     if (state?.status === 'ended' || state?.status === 'cerrada' || state?.status === 'expulsado') {
         const [titulo, texto] = state.status === 'ended'
             ? ['Terminó la clase', `Gracias por participar, ${guest.displayName}.`]
-            : state.status === 'cerrada'
+            : state.status === 'cerrada' || (state.status === 'expulsado' && state.motivo === 'sala_cerrada')
                 ? ['La sala se cerró a invitados', 'El docente cerró la participación sin cuenta. Gracias por participar.']
                 : ['Ya no estás en la sala', 'El docente te sacó de la clase.'];
         return (

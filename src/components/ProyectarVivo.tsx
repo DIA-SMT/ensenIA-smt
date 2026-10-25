@@ -112,7 +112,8 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                         {live.config.question || LIVE_KIND_META[live.kind].label}
                     </h1>
 
-                    {results && results.responded > 0 ? (
+                    {/* Lo retenido no cuenta en la pared: "1 de N" con el tablero vacío delataba a quién */}
+                    {results && results.responded - (results.retenidas ?? 0) > 0 ? (
                         <Board activity={live} results={results} />
                     ) : (
                         <p className="pv-waiting">Esperando respuestas<span className="pv-dots" /></p>
@@ -121,7 +122,7 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                     <footer className="pv-bottom">
                         {results && (
                             <span className="pv-count">
-                                {results.responded}
+                                {results.responded - (results.retenidas ?? 0)}
                                 <span className="pv-count-total"> / {results.courseTotal}</span>
                             </span>
                         )}
@@ -245,8 +246,8 @@ function Board({ activity, results }: { activity: LiveActivity; results: LiveRes
     if (activity.kind === 'texto') {
         return (
             <div className="pv-texts">
-                {/* Los últimos 12, sin los ocultos (lo que preocupa no se proyecta) */}
-                {results.texts.filter(t => !t.oculta && t.text).slice(-12).map(t => (
+                {/* Los últimos 12 (lo que preocupa ni siquiera llega: 067) */}
+                {results.texts.slice(-12).map(t => (
                     <div key={t.id} className="pv-text-card">{t.text}</div>
                 ))}
             </div>

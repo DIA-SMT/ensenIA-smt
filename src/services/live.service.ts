@@ -72,9 +72,14 @@ export interface LiveResults {
   courseTotal: number;
   responded: number;
   counts: Record<string, number>;
-  /** oculta (067): sonaba a que la está pasando mal; no se proyecta y llega sin texto (el texto va por la alerta) */
-  texts: { id: string; name: string | null; text: string | null; oculta?: boolean }[];
+  texts: { id: string; name: string | null; text: string }[];
   words: { word: string; n: number }[];
+  /**
+   * Solo docente y dirección (067): cuántas respuestas se retuvieron porque
+   * sonaban a que alguien la está pasando mal. Sin quién ni qué (el panel
+   * puede estar proyectado): eso va por la alerta. Ya contadas en responded.
+   */
+  retenidas?: number;
 }
 
 /** Emojis de la botonera (el docente la prende y apaga). */
