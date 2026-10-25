@@ -468,3 +468,19 @@
 .pv-pregunta-kicker { margin: 0; font-size: 1.8vw; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.08em; }
 .pv-pregunta-votos { margin: 0; font-size: 2.4vw; font-weight: 700; color: var(--cyan-bright); }
 .pv-preguntas-pie { font-size: 1.5vw; color: var(--text-subtle); }
+
+/* Volver al material de la clase (una sola proyección, UX docente) */
+.pv-material {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5vw;
+    padding: 0.6vh 1vw;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-panel);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 1.2vw;
+    cursor: pointer;
+}
+.pv-material:hover { color: var(--text-primary); border-color: var(--acento); }

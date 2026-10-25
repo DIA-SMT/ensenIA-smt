@@ -248,8 +248,12 @@ usar" → "Insertar en clase", "Guardar como material" o "Publicar actividad".
    "Multi-selección", "Nube de palabras" o "Respuesta libre" → la pregunta y las opciones
    (en "Pregunta rápida", tocar el círculo de la correcta) → "Lanzar al curso". Después:
    "Revelar respuesta", "Premiar a los que acertaron", "Cerrar actividad".
-3. "Proyectar" la pone en pantalla completa. "Terminar" → "Terminar clase" abre el
-   "Resumen de la clase".
+3. "Proyectar" (arriba) muestra la pregunta, los resultados y el QR en pantalla completa.
+   "Proyectar" en "Material de la clase" muestra el material: si se lanza una pregunta
+   (también desde el celular) pasa sola a la pregunta, y al cerrarla vuelve al material en
+   la misma lámina. Se cambia a mano con "Pregunta y QR" y "Material".
+4. "Terminar" → "Terminar clase" abre el "Resumen de la clase". En "Qué sigue": "Pasar
+   asistencia de hoy", el repaso y "Marcar «tema» como dado" (lo tilda en la planificación).
 
 ### Libreta (notas)
 Elegir "Materia y curso" y "Trimestre". Pestañas:

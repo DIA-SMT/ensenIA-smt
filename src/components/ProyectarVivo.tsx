@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Users, WifiOff } from 'lucide-react';
+import { X, Users, WifiOff, FileText } from 'lucide-react';
 import QRCode from 'qrcode';
 import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults, type VistaCompetencia, type PreguntaPublico } from '../services/live.service';
 import { RelojCompetencia, Podio } from './CompetenciaEnVivo';
@@ -37,9 +37,11 @@ interface Props {
     /** Preguntas del público (074): la destacada va grande; sin actividad, la lista */
     preguntas?: { abiertas: boolean; lista: PreguntaPublico[] };
     onClose: () => void;
+    /** Hay un material proyectado: un botón para volver a él */
+    alVerMaterial?: () => void;
 }
 
-export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, competencia, preguntas, onClose }: Props) {
+export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, competencia, preguntas, onClose, alVerMaterial }: Props) {
     const [qr, setQr] = useState('');
     const shellRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +114,11 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                     {sinSenial && <span className="pv-senial" role="status"><WifiOff size={18} aria-hidden="true" /> Sin señal</span>}
                     {session.guestsEnabled && connected > 0 && (
                         <span className="pv-connected"><Users size={22} /> {connected} conectados</span>
+                    )}
+                    {alVerMaterial && (
+                        <button type="button" className="pv-material" onClick={alVerMaterial} title="Volver al material de la clase">
+                            <FileText size={18} aria-hidden="true" /> Material
+                        </button>
                     )}
                     <button className="pv-close" onClick={onClose} title="Salir (Esc)"><X size={22} /></button>
                 </div>

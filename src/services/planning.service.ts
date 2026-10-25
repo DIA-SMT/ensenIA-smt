@@ -145,6 +145,18 @@ export async function updateClass(id: string, updates: Partial<{
   if (error) throw error;
 }
 
+/**
+ * Tilda el tema como dado (desde el resumen de la clase en vivo). Devuelve la
+ * fila para saber que se guardó: si la RLS no deja, el update no da error,
+ * solo no toca nada, y el docente no tiene que ver un "listo" que no fue.
+ */
+export async function marcarTemaDado(id: string): Promise<void> {
+  const { data, error } = await supabase.from('planning_classes')
+    .update({ is_complete: true }).eq('id', id).select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('No se pudo marcar el tema: no es de tu planificación.');
+}
+
 export async function deleteUnit(id: string): Promise<void> {
   const { error } = await supabase.from('planning_units').delete().eq('id', id);
   if (error) throw error;

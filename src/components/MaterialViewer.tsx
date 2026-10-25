@@ -13,7 +13,7 @@
  * querían: que el chico no termine con veinte PDF sueltos en el celular.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useContextoMigue } from '../contexts/MigueContext';
 import { X, FileText, ExternalLink, Download } from 'lucide-react';
 import { getSignedUrl, wordAHtml } from '../services/documents.service';
@@ -41,13 +41,17 @@ interface MaterialViewerProps {
   onDescargar?: () => void;
   /** Pantalla completa y letra grande, para el proyector del aula. */
   proyectar?: boolean;
+  /** Botones de más en la barra (la clase en vivo: pasar a la pregunta y el QR) */
+  accionesExtra?: ReactNode;
+  /** Escondido sin cerrarse (se ve la pregunta): al volver sigue en la misma página */
+  oculto?: boolean;
   /** Solo para el docente: si el material son diapositivas, ofrecer sus notas. */
   verNotas?: boolean;
 }
 
 const ERROR_ABRIR = 'No se pudo abrir el material. Probá de nuevo en un rato.';
 
-export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false, verNotas = false }: MaterialViewerProps) {
+export default function MaterialViewer({ material, onClose, onDescargar, proyectar = false, verNotas = false, accionesExtra, oculto = false }: MaterialViewerProps) {
   // Mientras lo mira, Migue sabe cuál es (solo el docente tiene a Migue conectado)
   useContextoMigue(material.id ? { tipo: 'material', id: material.id, titulo: material.title, detalle: material.subjectName } : null);
   const conArchivo = Boolean(material.storagePath);
@@ -126,6 +130,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
     <Dialogo
       abierto
       alCerrar={onClose}
+      oculto={oculto}
       etiqueta={material.title}
       className={`dialogo-em ${proyectar ? 'mv-overlay-proyector' : ''}`}
     >
@@ -133,6 +138,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
         <div className="em-modal-header">
           <h3><FileText size={17} aria-hidden="true" /> {material.title}</h3>
           <div className="mv-acciones">
+            {accionesExtra}
             {onDescargar && conArchivo && (
               <button className="btn btn-ghost btn-sm" onClick={onDescargar} title="Bajar el archivo original">
                 <Download size={15} /> <span className="mv-solo-ancho">Descargar</span>

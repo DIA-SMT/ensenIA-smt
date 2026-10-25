@@ -42,6 +42,7 @@ import { getPlanningByTeacher } from '../services/planning.service';
 import { getScheduleByTeacher } from '../services/schedule.service';
 import PreguntasPreparadasVivo from '../components/PreguntasPreparadasVivo';
 import MaterialEnVivo from '../components/MaterialEnVivo';
+import MaterialViewer from '../components/MaterialViewer';
 import PremiarEnVivo from '../components/PremiarEnVivo';
 import ResumenClase from '../components/ResumenClase';
 import ElegirMaterial from '../components/ElegirMaterial';
@@ -55,7 +56,7 @@ import { esErrorDeRed } from '../lib/conexion';
 import { enlacePublico } from '../lib/direccion';
 import { avisar, confirmar } from '../components/ui/avisar';
 import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
-import { FEELING_META, AWARD_META, type Subject, type CheckinFeeling, type Student } from '../types';
+import { FEELING_META, AWARD_META, type Subject, type CheckinFeeling, type Student, type LibraryMaterial } from '../types';
 import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
@@ -108,7 +109,13 @@ export default function ClaseEnVivo() {
     const [correctId, setCorrectId] = useState<string>('');
     const [launching, setLaunching] = useState(false);
     const [showQr, setShowQr] = useState(false);
-    const [projecting, setProjecting] = useState(false);
+    // Una sola proyección (UX docente, etapa 4): el docente elige qué se ve —el
+    // material o la clase (pregunta, resultados, QR)—; con el material puesto,
+    // una pregunta activa se muestra sola y al cerrarla vuelve el material.
+    const [proyeccion, setProyeccion] = useState<'vivo' | 'material' | null>(null);
+    const [materialProyectado, setMaterialProyectado] = useState<LibraryMaterial | null>(null);
+    // La actividad durante la cual el docente pidió ver el material igual
+    const [materialPese, setMaterialPese] = useState<string | null>(null);
     const [connected, setConnected] = useState(0);
     // Los invitados que siguen en la sala (para poder sacar a uno)
     const [invitados, setInvitados] = useState<InvitadoEnSala[]>([]);
@@ -893,6 +900,10 @@ export default function ClaseEnVivo() {
 
     /** Hay algo en pantalla de los estudiantes ahora mismo. */
     const hayActiva = !!activity && activity.status !== 'closed';
+    // Con el material proyectado y una pregunta activa, se ve la pregunta (salvo que
+    // el docente haya pedido el material para esta); al cerrarla, vuelve el material
+    const modoProyeccion = proyeccion === 'material' && hayActiva && activity && materialPese !== activity.id
+        ? 'vivo' : proyeccion;
 
     const studentName = (id: string) => {
         const s = students.find(x => x.id === id);
@@ -943,7 +954,7 @@ export default function ClaseEnVivo() {
                     )}
                     <button
                         className="btn btn-outline btn-sm"
-                        onClick={() => setProjecting(true)}
+                        onClick={() => setProyeccion('vivo')}
                         title="Pantalla completa para el proyector"
                     >
                         <MonitorPlay size={13} /> Proyectar
@@ -1014,66 +1025,6 @@ export default function ClaseEnVivo() {
                 </div>
             )}
 
-            {/* Quiénes están: presencia real, no un contador. Tocás a un
-                conectado y le mandás una pregunta directa. */}
-            {session.courseId && (
-                <div className="card cv-people">
-                    <div className="cv-people-head">
-                        <h4><UsersRound size={15} /> En la sala</h4>
-                        <span className="cv-people-count">
-                            <span className="cv-online-dot" /> {onlineCount}/{students.length} conectados
-                        </span>
-                        <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
-                            👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
-                        </button>
-                        <button className="btn btn-outline btn-sm" disabled={students.length === 0}
-                            onClick={() => setPremiar({ titulo: 'Dar medalla', preseleccion: targetStudent ? [targetStudent.id] : [] })}>
-                            <Medal size={14} aria-hidden="true" /> Medalla
-                        </button>
-                    </div>
-                    <div className="cv-people-chips">
-                        {students.map(s => {
-                            const online = onlineIds.has(s.id);
-                            return (
-                                <button
-                                    key={s.id}
-                                    className={`cv-person ${online ? 'online' : ''} ${targetStudent?.id === s.id ? 'targeted' : ''}`}
-                                    disabled={!online}
-                                    title={online
-                                        ? `${s.firstName} está conectado — tocá para mandarle una pregunta directa`
-                                        : `${s.firstName} no está conectado ahora`}
-                                    onClick={() => setTargetStudent(t => (t?.id === s.id ? null : s))}
-                                >
-                                    <span className={`cv-person-dot ${online ? 'on' : ''}`} />
-                                    {s.firstName} {s.lastName[0]}.
-                                    {online && <Target size={12} className="cv-person-target" />}
-                                </button>
-                            );
-                        })}
-                        {students.length === 0 && (
-                            <Cargando texto="Cargando el curso…" />
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Reacciones entrantes */}
-            {session.reactionsEnabled && reactions.length > 0 && (
-                <div className="cv-reactions-strip card">
-                    <div className="cv-reactions-flow">
-                        {reactions.slice(0, 24).map((r, i) => (
-                            <span key={`${r.createdAt}-${i}`} className="cv-reaction-float">{r.emoji}</span>
-                        ))}
-                    </div>
-                    {(alertCounts['🐢'] || alertCounts['❓']) && (
-                        <div className="cv-reaction-alerts">
-                            {alertCounts['🐢'] > 0 && <span className="cv-alert-chip">🐢 {alertCounts['🐢']} piden ir más despacio</span>}
-                            {alertCounts['❓'] > 0 && <span className="cv-alert-chip">❓ {alertCounts['❓']} no están entendiendo</span>}
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* Competencia (073): cómo va la ronda y qué sigue */}
             {ronda && (
                 <section className="card cv-comp" aria-labelledby="cv-comp-titulo">
@@ -1139,7 +1090,7 @@ export default function ClaseEnVivo() {
                         </details>
                     )}
                     <div className="cv-comp-acciones">
-                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setProjecting(true)}>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setProyeccion('vivo')}>
                             <MonitorPlay size={14} aria-hidden="true" /> Proyectar el podio
                         </button>
                         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPodioFinal(null)}>Listo</button>
@@ -1200,14 +1151,77 @@ export default function ClaseEnVivo() {
                 </div>
             )}
 
-            {/* Lo preparado en "Preparar la clase": se lanza de un toque, sin escribir en el celular */}
-            <ModerarPreguntas session={session} preguntas={preguntas} onSession={setSession}
-                onPregunta={cambiarPregunta} refrescar={sondeo.ahora} />
+            {/* Reacciones entrantes */}
+            {session.reactionsEnabled && reactions.length > 0 && (
+                <div className="cv-reactions-strip card">
+                    <div className="cv-reactions-flow">
+                        {reactions.slice(0, 24).map((r, i) => (
+                            <span key={`${r.createdAt}-${i}`} className="cv-reaction-float">{r.emoji}</span>
+                        ))}
+                    </div>
+                    {(alertCounts['🐢'] || alertCounts['❓']) && (
+                        <div className="cv-reaction-alerts">
+                            {alertCounts['🐢'] > 0 && <span className="cv-alert-chip">🐢 {alertCounts['🐢']} piden ir más despacio</span>}
+                            {alertCounts['❓'] > 0 && <span className="cv-alert-chip">❓ {alertCounts['❓']} no están entendiendo</span>}
+                        </div>
+                    )}
+                </div>
+            )}
 
+            {/* Lo preparado en "Preparar la clase": se lanza de un toque, sin escribir en el celular */}
             <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching}
                 competir={ronda ? undefined : competirConPreparadas} />
 
-            {session.courseId && <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />}
+            {session.courseId && (
+                <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial}
+                    onProyectar={m => { setMaterialProyectado(m); setMaterialPese(null); setProyeccion('material'); }} />
+            )}
+
+            {/* Quiénes están: presencia real, no un contador. Tocás a un
+                conectado y le mandás una pregunta directa. */}
+            {session.courseId && (
+                <div className="card cv-people">
+                    <div className="cv-people-head">
+                        <h4><UsersRound size={15} /> En la sala</h4>
+                        <span className="cv-people-count">
+                            <span className="cv-online-dot" /> {onlineCount}/{students.length} conectados
+                        </span>
+                        <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
+                            👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
+                        </button>
+                        <button className="btn btn-outline btn-sm" disabled={students.length === 0}
+                            onClick={() => setPremiar({ titulo: 'Dar medalla', preseleccion: targetStudent ? [targetStudent.id] : [] })}>
+                            <Medal size={14} aria-hidden="true" /> Medalla
+                        </button>
+                    </div>
+                    <div className="cv-people-chips">
+                        {students.map(s => {
+                            const online = onlineIds.has(s.id);
+                            return (
+                                <button
+                                    key={s.id}
+                                    className={`cv-person ${online ? 'online' : ''} ${targetStudent?.id === s.id ? 'targeted' : ''}`}
+                                    disabled={!online}
+                                    title={online
+                                        ? `${s.firstName} está conectado — tocá para mandarle una pregunta directa`
+                                        : `${s.firstName} no está conectado ahora`}
+                                    onClick={() => setTargetStudent(t => (t?.id === s.id ? null : s))}
+                                >
+                                    <span className={`cv-person-dot ${online ? 'on' : ''}`} />
+                                    {s.firstName} {s.lastName[0]}.
+                                    {online && <Target size={12} className="cv-person-target" />}
+                                </button>
+                            );
+                        })}
+                        {students.length === 0 && (
+                            <Cargando texto="Cargando el curso…" />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <ModerarPreguntas session={session} preguntas={preguntas} onSession={setSession}
+                onPregunta={cambiarPregunta} refrescar={sondeo.ahora} />
 
             {/* Lanzador */}
             <div className="card cv-launcher">
@@ -1349,7 +1363,23 @@ export default function ClaseEnVivo() {
                 )}
             </div>
 
-            {projecting && (
+            {/* El material en la pared; con una pregunta en curso, pasa sola a la pregunta */}
+            {proyeccion && materialProyectado && (
+                <MaterialViewer
+                    material={materialProyectado}
+                    proyectar
+                    oculto={modoProyeccion !== 'material'}
+                    onClose={() => setProyeccion(null)}
+                    accionesExtra={(
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setMaterialPese(null); setProyeccion('vivo'); }}
+                            title="La pregunta en curso, los resultados o el QR para entrar">
+                            <MonitorPlay size={15} aria-hidden="true" /> Pregunta y QR
+                        </button>
+                    )}
+                />
+            )}
+
+            {modoProyeccion === 'vivo' && (
                 <ProyectarVivo
                     session={session}
                     activity={activity}
@@ -1359,7 +1389,10 @@ export default function ClaseEnVivo() {
                     sinSenial={sondeo.fallas >= 2}
                     competencia={{ quedan, vista: vistaComp, final: podioFinal }}
                     preguntas={{ abiertas: session.preguntasAbiertas, lista: preguntas.lista }}
-                    onClose={() => setProjecting(false)}
+                    onClose={() => setProyeccion(null)}
+                    alVerMaterial={materialProyectado
+                        ? () => { setMaterialPese(hayActiva && activity ? activity.id : null); setProyeccion('material'); }
+                        : undefined}
                 />
             )}
 

@@ -77,3 +77,6 @@
 .rc-pregunta-texto small { font-size: 12px; color: var(--text-subtle); }
 .rc-ver-autores { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .rc-sin-revisar summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); min-height: 36px; display: flex; align-items: center; }
+
+/* El tema recién marcado como dado (UX docente, etapa 4) */
+.rc-sigue-hecho > svg { color: var(--success); }

@@ -25,10 +25,16 @@ interface DialogoProps {
    * decide (por ejemplo, preguntar si se descartan cambios sin guardar).
    */
   alPedirCierre?: () => void;
+  /**
+   * Abierto pero escondido un rato (la proyección de la clase en vivo pasa a
+   * la pregunta): se cierra sin avisar y sin desmontar lo de adentro, así al
+   * volver sigue en la misma página.
+   */
+  oculto?: boolean;
   children: ReactNode;
 }
 
-export default function Dialogo({ abierto, alCerrar, etiqueta, etiquetadoPor, className = '', alPedirCierre, children }: DialogoProps) {
+export default function Dialogo({ abierto, alCerrar, etiqueta, etiquetadoPor, className = '', alPedirCierre, oculto = false, children }: DialogoProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const previo = useRef<HTMLElement | null>(null);
   const alCerrarRef = useRef(alCerrar);
@@ -41,19 +47,23 @@ export default function Dialogo({ abierto, alCerrar, etiqueta, etiquetadoPor, cl
   const abiertoRef = useRef(abierto);
   const cierrePedido = useRef(false);
   useEffect(() => { abiertoRef.current = abierto; }, [abierto]);
+  const ocultoRef = useRef(oculto);
+  useEffect(() => { ocultoRef.current = oculto; }, [oculto]);
 
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (abierto && !d.open) {
-      previo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const mostrar = abierto && !oculto;
+    if (mostrar && !d.open) {
+      // Al volver de escondido, el foco sigue volviendo a quien lo abrió primero
+      if (!previo.current) previo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       d.showModal();
       d.querySelector<HTMLElement>('[data-inicial]')?.focus();
-    } else if (!abierto && d.open) {
+    } else if (!mostrar && d.open) {
       cierrePedido.current = true;
       d.close();
     }
-  }, [abierto]);
+  }, [abierto, oculto]);
 
   useEffect(() => {
     const d = ref.current;
@@ -65,6 +75,10 @@ export default function Dialogo({ abierto, alCerrar, etiqueta, etiquetadoPor, cl
       if (d.open) return;
       const pedido = cierrePedido.current;
       cierrePedido.current = false;
+      // Escondido, no cerrado: la pantalla no se entera. Sin mirar `pedido`: con la
+      // pestaña en segundo plano los 'close' de varios escondidos llegan juntos, y
+      // el segundo ya no encuentra la marca (escondido, Escape no lo puede cerrar)
+      if (ocultoRef.current && abiertoRef.current) return;
       // Chrome no siempre deja frenar el 'cancel' de Escape (lo permite solo
       // tras una interacción reciente). Si la pantalla quería decidir y el
       // navegador cerró igual, se vuelve a abrir y se le pregunta.

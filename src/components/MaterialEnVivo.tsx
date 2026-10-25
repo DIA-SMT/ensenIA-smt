@@ -20,7 +20,6 @@ import {
 import { extractQuestions } from '../services/documents.service';
 import { mazoDe } from '../lib/mazoDe';
 import ElegirMaterial from './ElegirMaterial';
-import MaterialViewer from './MaterialViewer';
 import EstadoVacio from './ui/EstadoVacio';
 import { Cargando } from './ui/Esqueleto';
 import type { ActivityQuestion } from '../types';
@@ -29,14 +28,15 @@ import './MaterialEnVivo.css';
 /** Con menos que esto, la IA inventaría en vez de preguntar sobre el material. */
 const MIN_TEXTO = 120;
 
-export default function MaterialEnVivo({ session, onSession, lanzar }: {
+export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar }: {
   session: LiveSession;
   onSession: (s: LiveSession) => void;
   lanzar: (kind: LiveActivityKind, config: LiveActivityConfig) => Promise<void>;
+  /** El panel proyecta el material y pasa solo a la pregunta cuando se lanza una */
+  onProyectar: (m: ReturnType<typeof materialParaVisor>) => void;
 }) {
   const [material, setMaterial] = useState<MaterialDeClase | null | undefined>(undefined);
   const [eligiendo, setEligiendo] = useState(false);
-  const [proyectando, setProyectando] = useState(false);
   const [preguntas, setPreguntas] = useState<ActivityQuestion[] | null>(null);
   const [generando, setGenerando] = useState(false);
   const [lanzadas, setLanzadas] = useState<Set<string>>(new Set());
@@ -216,7 +216,8 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
           </div>
 
           <div className="mev-acciones">
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setProyectando(true)}>
+            <button type="button" className="btn btn-secondary btn-sm"
+              onClick={() => onProyectar(materialParaVisor(material))}>
               <MonitorPlay size={14} aria-hidden="true" /> Proyectar
             </button>
             <button type="button" className={`btn btn-sm ${session.materialVisible ? 'btn-primary' : 'btn-secondary'}`}
@@ -287,9 +288,6 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
         />
       )}
 
-      {proyectando && material && (
-        <MaterialViewer material={materialParaVisor(material)} onClose={() => setProyectando(false)} proyectar />
-      )}
     </section>
   );
 }
