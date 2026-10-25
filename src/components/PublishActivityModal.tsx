@@ -75,6 +75,8 @@ export default function PublishActivityModal(props: Props) {
         unitId: props.unitId,
         classId: props.classId,
         sourceTool: props.sourceTool,
+        // Lo que se armó como evaluación se publica como evaluación (antes salía como actividad)
+        tipo: props.sourceTool === 'eval' ? 'evaluacion' : 'actividad',
         dueDate: dueDate ? new Date(dueDate + 'T23:59:00').toISOString() : null,
         points: points ? Number(points) : null,
       });

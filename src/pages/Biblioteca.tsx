@@ -1394,6 +1394,8 @@ export default function Biblioteca() {
           subjectId: visualPara.mat.subjectId,
           subjectName: visualPara.mat.subjectName,
           courseId: visualPara.mat.courseId ?? null,
+          // En el mismo tema que el material del que sale
+          classId: visualPara.mat.classId ?? null,
           courseName: asignaciones.find(a => a.subjectId === visualPara.mat.subjectId && a.courseId === visualPara.mat.courseId)?.courseName,
           unitName: visualPara.mat.unitName,
         }}

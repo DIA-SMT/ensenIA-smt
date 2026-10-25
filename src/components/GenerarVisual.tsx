@@ -30,6 +30,8 @@ export interface FuenteVisual {
   courseId?: string | null;
   courseName?: string;
   unitName?: string;
+  /** El tema de la planificación: el diagrama o el juego queda en él */
+  classId?: string | null;
 }
 
 interface Props {
@@ -81,6 +83,7 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
     teacherId, schoolId,
     subjectId: fuente.subjectId, subjectName: fuente.subjectName || 'Materia',
     courseId: fuente.courseId ?? null, unitName: fuente.unitName,
+    classId: fuente.classId ?? null,
   };
 
   const armarJuego = (d: DatosJuego, tipo: TipoJuego) => {

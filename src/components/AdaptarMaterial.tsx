@@ -207,6 +207,8 @@ export default function AdaptarMaterial({ material, teacherId, courseName = '', 
         subjectId: material.subjectId,
         subjectName: material.subjectName,
         courseId: material.courseId ?? null,
+        // En el mismo tema que el original: aparece en "Preparar la clase"
+        classId: material.classId ?? null,
         unitName: material.unitName,
         teacherId,
         schoolId: material.schoolId,

@@ -53,6 +53,8 @@ interface Destino {
   subjectName: string;
   courseId?: string | null;
   unitName?: string;
+  /** El tema de la planificación: lo que se arma queda en él ("Preparar la clase") */
+  classId?: string | null;
 }
 
 /** PNG del diagrama → material de imagen, con el diagrama en visual y su texto para buscar. */
@@ -69,6 +71,7 @@ export async function guardarDiagrama(d: Diagrama, png: Blob, destino: Destino):
     subjectId: destino.subjectId,
     subjectName: destino.subjectName,
     courseId: destino.courseId ?? null,
+    classId: destino.classId ?? null,
     unitName: destino.unitName,
     teacherId: destino.teacherId,
     schoolId: destino.schoolId,
@@ -94,6 +97,7 @@ export async function guardarJuego(j: JuegoPalabras, destino: Destino): Promise<
     subjectId: destino.subjectId,
     subjectName: destino.subjectName,
     courseId: destino.courseId ?? null,
+    classId: destino.classId ?? null,
     unitName: destino.unitName,
     teacherId: destino.teacherId,
     schoolId: destino.schoolId,

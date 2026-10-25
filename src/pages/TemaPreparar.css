@@ -53,3 +53,23 @@ a.tp-item-titulo:hover, a.tp-item-titulo:focus-visible { text-decoration: underl
 }
 .tp-ia:hover, .tp-ia:focus-visible { color: var(--acento); }
 .tp-leyendo { display: block; color: var(--acento); font-weight: 600; }
+
+/* Al terminar, van a poder… (diseño inverso): editable */
+.tp-objetivos-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+.tp-objetivos-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tp-objetivos-cabecera h3 { margin: 0; font-size: 0.9375rem; }
+.tp-objetivos-bloque .tp-objetivos { color: var(--text-primary); }
+.tp-objetivos-form { display: flex; flex-direction: column; gap: 8px; }
+.tp-objetivos-form .tp-acciones { justify-content: flex-end; }
+
+/* Compartir con los chicos desde el tema */
+.tp-compartir { color: var(--text-subtle); }
+.tp-compartir.si { color: var(--success); }

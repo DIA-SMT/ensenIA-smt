@@ -329,6 +329,8 @@ export default function ArmarModulo() {
             subjectName,
             courseId: assignment.courseId,
             unitName: baseTema?.unitTitle,
+            // El diagrama y el juego quedan en el tema ("Preparar la clase")
+            classId: origen === 'tema' && baseTema ? baseTema.id : null,
         };
         switch (key) {
             case 'diapositivas':

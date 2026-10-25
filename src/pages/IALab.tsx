@@ -780,6 +780,15 @@ export default function IALab() {
 
     const tituloDeck = (deck: ParsedPresentation) => `Diapositivas: ${deck.title}`.slice(0, 120);
 
+    // El tema elegido, si es de la materia y el curso de arriba: lo que se
+    // arma acá (diapositivas, lo guardado, diagramas, juegos, actividades)
+    // queda en él y aparece en "Preparar la clase". La base exige que
+    // coincidan.
+    const unidadDelTema = selectedClass ? allUnits.find(u => u.id === selectedClass.unitId) : undefined;
+    const temaDeEsteCurso = selectedClass && currentAssignment && unidadDelTema
+        && unidadDelTema.subjectId === currentAssignment.subjectId && unidadDelTema.courseId === currentAssignment.courseId
+        ? selectedClass.id : null;
+
     /**
      * Crea el material de las diapositivas, ya en el formato nuevo y en un
      * solo paso (antes eran dos escrituras y si fallaba la segunda quedaba un
@@ -790,13 +799,8 @@ export default function IALab() {
         if (!limpio) throw new Error('Las diapositivas quedaron vacías.');
         if (!currentAssignment) throw new Error('Elegí una materia primero (arriba a la izquierda).');
         const unitTitle = selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined;
-        // Las diapositivas quedan en su tema (063): aparecen en "Preparar la
-        // clase". Armar la clase reconoce su propio apunte por la etiqueta
-        // 'módulo', así que ya no se tapan. Solo si el tema es de esta
-        // materia y curso (la base lo exige).
-        const unidadDelTema = selectedClass ? allUnits.find(u => u.id === selectedClass.unitId) : undefined;
-        const temaDeEsteCurso = unidadDelTema && unidadDelTema.subjectId === currentAssignment.subjectId
-            && unidadDelTema.courseId === currentAssignment.courseId ? selectedClass?.id ?? null : null;
+        // Las diapositivas quedan en su tema (063). Armar la clase reconoce su
+        // propio apunte por la etiqueta 'módulo', así que ya no se tapan.
         const mat = await createMaterial({
             classId: temaDeEsteCurso,
             title,
@@ -939,6 +943,7 @@ export default function IALab() {
             subjectId: currentAssignment.subjectId,
             subjectName: subjectName || 'Materia',
             courseId: currentAssignment.courseId,
+            classId: temaDeEsteCurso,
             unitName: selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined,
             teacherId: user.id,
             schoolId: user.schoolId,
@@ -1751,7 +1756,7 @@ export default function IALab() {
                     subjectName={subjectName || 'Materia'}
                     courseName={currentAssignment.courseName}
                     unitId={selectedUnitId}
-                    classId={selectedClass?.id ?? null}
+                    classId={temaDeEsteCurso}
                     defaultTitle={
                         publishSource.title
                             ?? (selectedClass
@@ -1808,6 +1813,7 @@ export default function IALab() {
                         courseId: currentAssignment.courseId,
                         courseName: currentAssignment.courseName,
                         unitName: selectedUnitId ? allUnits.find(u => u.id === selectedUnitId)?.title : undefined,
+                        classId: temaDeEsteCurso,
                     }}
                     alGuardar={mat => setMaterials(prev => [mat, ...prev])}
                 />

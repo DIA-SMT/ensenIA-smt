@@ -16,7 +16,7 @@ import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  FlaskConical, Layers, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload,
+  FlaskConical, Layers, Lock, Pencil, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload, Users,
 } from 'lucide-react';
 import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,7 +27,7 @@ import MaterialViewer from '../components/MaterialViewer';
 import { getTema, updateClass } from '../services/planning.service';
 import { getActivitiesByClass } from '../services/activities.service';
 import { asignarTema, getMaterialsByClass, getMaterialsByTeacher } from '../services/library.service';
-import { getSignedUrl } from '../services/documents.service';
+import { getSignedUrl, updateMaterial } from '../services/documents.service';
 import { getSubjects } from '../services/subjects.service';
 import { fechaCorta } from '../services/planificacion.service';
 import { TIPOS_ACTIVIDAD } from '../lib/actividades';
@@ -70,6 +70,8 @@ export default function TemaPreparar() {
   const [sumando, setSumando] = useState(false);
   const [biblioteca, setBiblioteca] = useState<LibraryMaterial[] | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  // "Al terminar, van a poder…" mientras se escribe (null: no se está editando)
+  const [borradorObjetivos, setBorradorObjetivos] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!id || !user) return;
@@ -128,6 +130,56 @@ export default function TemaPreparar() {
       console.error(err);
       setTema({ ...tema, isComplete: !nuevo });
       avisar.error('No se pudo guardar', 'Probá de nuevo.');
+    }
+  };
+
+  /** Los objetivos: uno por renglón, sin vacíos ni repetidos */
+  const guardarObjetivos = async () => {
+    if (borradorObjetivos === null || trabajando) return;
+    const vistos = new Set<string>();
+    const objetivos = borradorObjetivos.split('\n')
+      .map(o => o.replace(/^\s*[-•*\d.)]+\s*/, '').trim().slice(0, 200))
+      .filter(o => o && !vistos.has(o.toLowerCase()) && vistos.add(o.toLowerCase()))
+      .slice(0, 8);
+    const antes = tema.objectives ?? [];
+    setTrabajando(true);
+    setTema({ ...tema, objectives: objetivos });
+    try {
+      await updateClass(tema.id, { objectives: objetivos });
+      setBorradorObjetivos(null);
+    } catch (err) {
+      console.error(err);
+      setTema({ ...tema, objectives: antes });
+      avisar.error('No se pudo guardar', 'Probá de nuevo.');
+    } finally {
+      setTrabajando(false);
+    }
+  };
+
+  /** Compartir un material con los chicos (o dejar de compartirlo) sin salir del tema */
+  const alternarCompartido = async (m: LibraryMaterial) => {
+    if (trabajando) return;
+    const compartir = !m.isSharedWithStudents;
+    if (compartir) {
+      const quienes = m.courseId ? `los estudiantes de ${curso || 'este curso'}` : `los estudiantes de todos tus cursos de ${materiaNombre || 'esta materia'}`;
+      const ok = await confirmar({
+        titulo: `¿Compartir «${m.title}»?`,
+        mensaje: `Lo van a ver ${quienes}, en Mis materiales. Revisá que no tenga nombres ni trabajos de otros chicos.`,
+        accion: 'Compartir',
+      });
+      if (!ok) return;
+    }
+    setTrabajando(true);
+    setMateriales(prev => prev.map(x => (x.id === m.id ? { ...x, isSharedWithStudents: compartir } : x)));
+    try {
+      await updateMaterial(m.id, { isSharedWithStudents: compartir });
+      avisar.exito(compartir ? 'Ya lo ven los chicos' : 'Dejó de estar compartido', m.title);
+    } catch (err) {
+      console.error(err);
+      setMateriales(prev => prev.map(x => (x.id === m.id ? { ...x, isSharedWithStudents: !compartir } : x)));
+      avisar.error('No se pudo cambiar', 'Probá de nuevo.');
+    } finally {
+      setTrabajando(false);
     }
   };
 
@@ -208,11 +260,47 @@ export default function TemaPreparar() {
             {tema.isComplete ? 'Dada' : 'Marcar como dada'}
           </button>
         </div>
-        {(tema.objectives ?? []).length > 0 && (
-          <ul className="tp-objetivos">
-            {(tema.objectives ?? []).map((o, i) => <li key={i}>{o}</li>)}
-          </ul>
-        )}
+        {/* Diseño inverso: primero qué tienen que poder hacer los chicos al
+            terminar. La IA lo usa para armar todo lo del tema. */}
+        <div className="tp-objetivos-bloque">
+          <div className="tp-objetivos-cabecera">
+            <h3 id="tp-objetivos-titulo">Al terminar, van a poder…</h3>
+            {!borradorObjetivos && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBorradorObjetivos((tema.objectives ?? []).join('\n'))}>
+                <Pencil size={14} aria-hidden="true" /> {(tema.objectives ?? []).length ? 'Cambiar' : 'Escribirlo'}
+              </button>
+            )}
+          </div>
+          {borradorObjetivos !== null ? (
+            <form className="tp-objetivos-form" onSubmit={e => { e.preventDefault(); void guardarObjetivos(); }}>
+              <textarea
+                className="form-textarea"
+                rows={4}
+                value={borradorObjetivos}
+                onChange={e => setBorradorObjetivos(e.target.value)}
+                aria-labelledby="tp-objetivos-titulo"
+                aria-describedby="tp-objetivos-ayuda"
+                placeholder={'Reconocer recursos persuasivos en una publicidad\nDistinguir publicidad de propaganda'}
+                autoFocus
+              />
+              <p className="tp-ayuda" id="tp-objetivos-ayuda">
+                Uno por renglón, empezando con lo que van a hacer (reconocer, explicar, resolver…). La IA lo usa para armar la presentación, las tarjetas y las actividades de este tema.
+              </p>
+              <div className="tp-acciones">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setBorradorObjetivos(null)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={trabajando}>Guardar</button>
+              </div>
+            </form>
+          ) : (tema.objectives ?? []).length > 0 ? (
+            <ul className="tp-objetivos">
+              {(tema.objectives ?? []).map((o, i) => <li key={i}>{o}</li>)}
+            </ul>
+          ) : (
+            <p className="tp-vacio">
+              Todavía no está escrito. Conviene empezar por acá: la presentación, las tarjetas y las actividades se arman para eso.
+            </p>
+          )}
+        </div>
         {tema.content && (
           <>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setVerContenido(v => !v)} aria-expanded={verContenido}>
@@ -236,10 +324,21 @@ export default function TemaPreparar() {
               <li key={m.id} className="tp-item">
                 <span className="tp-item-texto">
                   <span className="tp-item-titulo">{m.title}</span>
-                  <small>{claseDeMaterial(m)}{m.isSharedWithStudents ? ' · lo ven los estudiantes' : ''}</small>
+                  <small>{claseDeMaterial(m)}{m.isSharedWithStudents ? ' · lo ven los chicos' : ' · solo vos'}</small>
                   {/* Recién subido: la IA todavía lo está leyendo (sigue aunque se cambie de pantalla) */}
                   {lecturas.has(m.id) && <small className="tp-leyendo" role="status">{lecturas.get(m.id)}</small>}
                 </span>
+                <button
+                  type="button"
+                  className={`btn-icon tp-compartir ${m.isSharedWithStudents ? 'si' : ''}`}
+                  onClick={() => void alternarCompartido(m)}
+                  aria-pressed={m.isSharedWithStudents}
+                  aria-label={m.isSharedWithStudents ? `Dejar de compartir ${m.title} con los chicos` : `Compartir ${m.title} con los chicos`}
+                  title={m.isSharedWithStudents ? 'Lo ven los chicos (tocá para dejar de compartir)' : 'Compartir con los chicos'}
+                  disabled={trabajando}
+                >
+                  {m.isSharedWithStudents ? <Users size={16} /> : <Lock size={15} />}
+                </button>
                 <button type="button" className="btn-icon" onClick={() => setViendo(m)} aria-label={`Ver ${m.title}`} title="Ver"><Eye size={16} /></button>
                 <button type="button" className="btn-icon" onClick={() => sacar(m)} aria-label={`Sacar ${m.title} del tema`} title="Sacar del tema" disabled={trabajando}><Unlink size={15} /></button>
               </li>
