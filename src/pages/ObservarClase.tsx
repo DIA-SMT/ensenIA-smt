@@ -63,15 +63,20 @@ export default function ObservarClase() {
   const [redactando, setRedactando] = useState(false);
   // Lo que había antes de que Migue redactara, para volver
   const [antesDeMigue, setAntesDeMigue] = useState<Pick<DatosObservacion, 'fortalezas' | 'sugerencias' | 'acuerdos'> | null>(null);
+  // Un acuerdo tildándose: los demás esperan (sin pedidos cruzados)
+  const [tildando, setTildando] = useState(false);
 
+  // Deps primitivas: el objeto user cambia cada vez que se vuelve a la pestaña
+  // (SIGNED_IN) y recargar acá borraba lo que se estaba escribiendo
+  const escuela = user?.schoolId;
   useEffect(() => {
-    if (!user) return;
+    if (!escuela) return;
     let vigente = true;
     setCargando(true);
     setError('');
     Promise.all([
-      getTeacherUsers(user.schoolId),
-      getSubjects(user.schoolId),
+      getTeacherUsers(escuela),
+      getSubjects(escuela),
       esNueva ? Promise.resolve(null) : getObservacion(obs),
     ]).then(([docentes, subs, o]) => {
       if (!vigente) return;
@@ -95,7 +100,7 @@ export default function ObservarClase() {
       if (vigente) setError(err instanceof Error && err.message ? err.message : 'No se pudo cargar.');
     }).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; };
-  }, [user, docenteId, obs, esNueva, intento]);
+  }, [escuela, docenteId, obs, esNueva, intento]);
 
   const cerrada = obsGuardada?.estado === 'cerrada';
   // Otra persona de la dirección la puede leer, no cambiar (la base lo hace cumplir)
@@ -162,7 +167,7 @@ export default function ObservarClase() {
   };
 
   const guardar = async (cerrar: boolean) => {
-    if (guardando) return;
+    if (guardando || redactando) return;
     if (cerrar) {
       if (marcadas === 0 && !datos.fortalezas.trim() && !datos.sugerencias.trim()) {
         avisar.error('Falta la devolución', 'Marcá la pauta o escribí fortalezas o sugerencias antes de compartirla.');
@@ -210,15 +215,18 @@ export default function ObservarClase() {
 
   // Cerrada: tildar un acuerdo se guarda enseguida
   const tildar = async (i: number) => {
-    if (!obsGuardada || !esMia) return;
-    const nuevos = datos.acuerdos.map((a, j) => (j === i ? { ...a, cumplido: !a.cumplido } : a));
+    if (!obsGuardada || !esMia || tildando) return;
+    const antes = datos.acuerdos[i].cumplido;
+    const nuevos = datos.acuerdos.map((a, j) => (j === i ? { ...a, cumplido: !antes } : a));
+    setTildando(true);
     setDatos(d => ({ ...d, acuerdos: nuevos }));
     try {
       await tildarAcuerdos(obsGuardada.id, nuevos);
-      setOriginal(JSON.stringify({ ...datos, acuerdos: nuevos }));
     } catch (err) {
-      setDatos(d => ({ ...d, acuerdos: datos.acuerdos }));
+      setDatos(d => ({ ...d, acuerdos: d.acuerdos.map((a, j) => (j === i ? { ...a, cumplido: antes } : a)) }));
       avisar.error('No se pudo guardar', err instanceof Error ? err.message : 'Probá de nuevo.');
+    } finally {
+      setTildando(false);
     }
   };
 
@@ -347,7 +355,7 @@ export default function ObservarClase() {
         <label className="obs-campo">
           <span>Fortalezas</span>
           {editable
-            ? <textarea className="form-textarea" rows={4} maxLength={4000} value={datos.fortalezas}
+            ? <textarea className="form-textarea" rows={4} maxLength={4000} value={datos.fortalezas} readOnly={redactando}
                 placeholder="Lo que salió bien en la clase, con ejemplos"
                 onChange={e => setDatos(d => ({ ...d, fortalezas: e.target.value }))} />
             : <p className="obs-texto">{datos.fortalezas || '—'}</p>}
@@ -355,7 +363,7 @@ export default function ObservarClase() {
         <label className="obs-campo">
           <span>Sugerencias</span>
           {editable
-            ? <textarea className="form-textarea" rows={4} maxLength={4000} value={datos.sugerencias}
+            ? <textarea className="form-textarea" rows={4} maxLength={4000} value={datos.sugerencias} readOnly={redactando}
                 placeholder="Propuestas concretas para probar en las próximas clases"
                 onChange={e => setDatos(d => ({ ...d, sugerencias: e.target.value }))} />
             : <p className="obs-texto">{datos.sugerencias || '—'}</p>}
@@ -375,17 +383,17 @@ export default function ObservarClase() {
             <p className="obs-ayuda">Próximos pasos concretos, que se puedan revisar en la próxima visita.</p>
             {datos.acuerdos.map((a, i) => (
               <div key={i} className="obs-acuerdo-edit">
-                <input className="form-input" maxLength={500} value={a.texto} aria-label={`Acuerdo ${i + 1}`}
+                <input className="form-input" maxLength={500} value={a.texto} aria-label={`Acuerdo ${i + 1}`} readOnly={redactando}
                   placeholder="Ej: cerrar cada clase con una pregunta para ver qué se entendió"
                   onChange={e => cambiarAcuerdo(i, { texto: e.target.value })} />
-                <button type="button" className="btn-icon" aria-label={`Quitar el acuerdo ${i + 1}`}
+                <button type="button" className="btn-icon" aria-label={`Quitar el acuerdo ${i + 1}`} disabled={redactando}
                   onClick={() => setDatos(d => ({ ...d, acuerdos: d.acuerdos.filter((_, j) => j !== i) }))}>
                   <Trash2 size={15} aria-hidden="true" />
                 </button>
               </div>
             ))}
             {datos.acuerdos.length < 6 && (
-              <button type="button" className="btn btn-ghost btn-sm obs-agregar"
+              <button type="button" className="btn btn-ghost btn-sm obs-agregar" disabled={redactando}
                 onClick={() => setDatos(d => ({ ...d, acuerdos: [...d.acuerdos, { texto: '', cumplido: false }] }))}>
                 <Plus size={14} aria-hidden="true" /> Agregar un acuerdo
               </button>
@@ -398,7 +406,7 @@ export default function ObservarClase() {
             {datos.acuerdos.map((a, i) => (
               <li key={i}>
                 <label className={`obs-acuerdo ${a.cumplido ? 'cumplido' : ''}`}>
-                  <input type="checkbox" checked={a.cumplido} disabled={!esMia} onChange={() => void tildar(i)} />
+                  <input type="checkbox" checked={a.cumplido} disabled={!esMia || tildando} onChange={() => void tildar(i)} />
                   <span>{a.texto}</span>
                   <small>{a.cumplido ? 'Cumplido' : 'Pendiente'}</small>
                 </label>
@@ -430,14 +438,14 @@ export default function ObservarClase() {
       {editable && (
         <div className="obs-barra">
           {obsGuardada && (
-            <button type="button" className="btn btn-ghost btn-sm obs-borrar" onClick={() => void borrar()} disabled={guardando}>
+            <button type="button" className="btn btn-ghost btn-sm obs-borrar" onClick={() => void borrar()} disabled={guardando || redactando}>
               <Trash2 size={15} aria-hidden="true" /> Borrar borrador
             </button>
           )}
-          <button type="button" className="btn btn-outline" onClick={() => void guardar(false)} disabled={guardando || (!sucio && Boolean(obsGuardada))}>
+          <button type="button" className="btn btn-outline" onClick={() => void guardar(false)} disabled={guardando || redactando || (!sucio && Boolean(obsGuardada))}>
             <Save size={16} aria-hidden="true" /> Guardar borrador
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => void guardar(true)} disabled={guardando}>
+          <button type="button" className="btn btn-primary" onClick={() => void guardar(true)} disabled={guardando || redactando}>
             {guardando ? <Loader2 size={16} className="spin" aria-hidden="true" /> : <Send size={16} aria-hidden="true" />} Cerrar y compartir
           </button>
         </div>

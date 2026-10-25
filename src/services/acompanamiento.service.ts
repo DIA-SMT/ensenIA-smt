@@ -153,9 +153,11 @@ function aFila(d: DatosObservacion) {
 /** Los mensajes de la base (el trigger) ya vienen redactados; los técnicos, no se muestran */
 function mensajeDe(err: unknown, porDefecto: string): string {
   if (esErrorDeRed(err)) return 'Se cortó la señal. Probá de nuevo cuando vuelva.';
-  const m = (err as { message?: string } | null)?.message ?? '';
-  if (/observaciones_docentes|relation|does not exist|PGRST20/i.test(m)) return 'Falta correr la migración 081_acompanamiento_docente.sql.';
-  return m && !/permission|violates|function|syntax|jwt|column|constraint|null value/i.test(m) ? m : porDefecto;
+  const e = err as { message?: string; code?: string } | null;
+  // Tabla o función que no existe: 42P01/42883 en la base, PGRST202/205 en PostgREST
+  if (e?.code && /^(42P01|42883|PGRST202|PGRST205)$/.test(e.code)) return 'Falta correr la migración 081_acompanamiento_docente.sql.';
+  const m = e?.message ?? '';
+  return m && !/permission|violates|function|syntax|jwt|column|constraint|null value|relation|observaciones_docentes/i.test(m) ? m : porDefecto;
 }
 
 // ── Dirección ──

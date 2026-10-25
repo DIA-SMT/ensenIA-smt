@@ -74,6 +74,7 @@ const TABLES_BY_ID: string[] = [
   'live_sessions', // live_activities/responses/reactions/guests caen por FK cascade
   'school_policies',
   'audit_log',
+  'observaciones_docentes', // 081: su trigger no deja tocar una cerrada salvo en cascada
   'courses',
   'subjects',
   // 'schools' se borra al final, después de los auth.users: profiles.school_id

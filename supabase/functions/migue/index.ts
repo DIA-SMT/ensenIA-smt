@@ -302,7 +302,9 @@ Deno.serve(async (req: Request) => {
       .select('user_id').eq('user_id', u.id).eq('school_id', escuela).eq('role', 'director').maybeSingle();
     if (!membresia) return jsonResp({ error: 'Solo la dirección de la escuela puede usar esto.' }, 403);
     // Los nombres de la escuela, tapados para el proveedor; vuelven en la respuesta
-    const seudoO = new Seudonimos(await padronDeEscuela(adminO, escuela));
+    const padronO = await padronDeEscuela(adminO, escuela);
+    if (padronO.size === 0) return jsonResp({ error: 'No se pudo preparar el borrador. Probá de nuevo en un rato.' }, 503);
+    const seudoO = new Seudonimos(padronO);
     const r = await redactarObservacion({
       apiKey: OPENROUTER_API_KEY,
       pauta: leerPautaEntrada(body.pauta),

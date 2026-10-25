@@ -46,18 +46,19 @@ CREATE INDEX IF NOT EXISTS idx_obs_escuela ON observaciones_docentes (school_id,
 
 ALTER TABLE observaciones_docentes ENABLE ROW LEVEL SECURITY;
 
--- La dirección de la escuela ve todas las de su escuela
+-- Solo la dirección de ESA escuela (no manages_school: también daría paso al
+-- superadmin de la plataforma, y esto es entre la escuela y su docente)
 DROP POLICY IF EXISTS "Acompañamiento: dirección lee" ON observaciones_docentes;
 CREATE POLICY "Acompañamiento: dirección lee"
   ON observaciones_docentes FOR SELECT TO authenticated
-  USING (manages_school(school_id));
+  USING (is_member_as(auth.uid(), school_id, 'director'));
 
 -- Crea solo para docentes de su escuela, a su nombre
 DROP POLICY IF EXISTS "Acompañamiento: dirección crea" ON observaciones_docentes;
 CREATE POLICY "Acompañamiento: dirección crea"
   ON observaciones_docentes FOR INSERT TO authenticated
   WITH CHECK (
-    manages_school(school_id)
+    is_member_as(auth.uid(), school_id, 'director')
     AND is_member_as(docente_id, school_id, 'docente')
     AND observador_id = auth.uid()
   );
@@ -66,14 +67,14 @@ CREATE POLICY "Acompañamiento: dirección crea"
 DROP POLICY IF EXISTS "Acompañamiento: dirección edita las suyas" ON observaciones_docentes;
 CREATE POLICY "Acompañamiento: dirección edita las suyas"
   ON observaciones_docentes FOR UPDATE TO authenticated
-  USING (manages_school(school_id) AND observador_id = auth.uid())
-  WITH CHECK (manages_school(school_id) AND observador_id = auth.uid());
+  USING (is_member_as(auth.uid(), school_id, 'director') AND observador_id = auth.uid())
+  WITH CHECK (is_member_as(auth.uid(), school_id, 'director') AND observador_id = auth.uid());
 
 -- Borra solo un borrador suyo
 DROP POLICY IF EXISTS "Acompañamiento: dirección borra borradores" ON observaciones_docentes;
 CREATE POLICY "Acompañamiento: dirección borra borradores"
   ON observaciones_docentes FOR DELETE TO authenticated
-  USING (manages_school(school_id) AND observador_id = auth.uid() AND estado = 'borrador');
+  USING (is_member_as(auth.uid(), school_id, 'director') AND observador_id = auth.uid() AND estado = 'borrador');
 
 -- El docente ve las suyas, cuando están cerradas
 DROP POLICY IF EXISTS "Acompañamiento: el docente ve las suyas cerradas" ON observaciones_docentes;
@@ -94,7 +95,21 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
+DECLARE
+  -- Un borrado en cascada (se borró la materia, el curso o quien observó) pone
+  -- en NULL desde adentro de otro trigger: eso sí se deja, aunque esté cerrada
+  v_cascada BOOLEAN := pg_trigger_depth() > 1;
 BEGIN
+  -- Cada acuerdo: un texto y si se cumplió (sí o no), nada más
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements(NEW.acuerdos) a(v)
+    WHERE jsonb_typeof(a.v) <> 'object'
+       OR jsonb_typeof(a.v->'texto') IS DISTINCT FROM 'string'
+       OR jsonb_typeof(a.v->'cumplido') IS DISTINCT FROM 'boolean'
+       OR (a.v - 'texto' - 'cumplido') <> '{}'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'Cada acuerdo tiene que tener su texto y si se cumplió.' USING ERRCODE = '22023';
+  END IF;
   IF TG_OP = 'INSERT' THEN
     NEW.cerrada_at := CASE WHEN NEW.estado = 'cerrada' THEN now() END;
     NEW.notificado_at := NULL; NEW.respuesta_docente := NULL; NEW.respondida_at := NULL;
@@ -102,25 +117,25 @@ BEGIN
   END IF;
   IF NEW.school_id IS DISTINCT FROM OLD.school_id
      OR NEW.docente_id IS DISTINCT FROM OLD.docente_id
-     OR NEW.observador_id IS DISTINCT FROM OLD.observador_id THEN
+     OR (NEW.observador_id IS DISTINCT FROM OLD.observador_id AND NOT (v_cascada AND NEW.observador_id IS NULL)) THEN
     RAISE EXCEPTION 'No se puede cambiar de quién es la observación.' USING ERRCODE = '42501';
   END IF;
   IF OLD.estado = 'cerrada' THEN
     IF NEW.estado <> 'cerrada'
        OR NEW.fecha IS DISTINCT FROM OLD.fecha
-       OR NEW.subject_id IS DISTINCT FROM OLD.subject_id
-       OR NEW.course_id IS DISTINCT FROM OLD.course_id
+       OR (NEW.subject_id IS DISTINCT FROM OLD.subject_id AND NOT (v_cascada AND NEW.subject_id IS NULL))
+       OR (NEW.course_id IS DISTINCT FROM OLD.course_id AND NOT (v_cascada AND NEW.course_id IS NULL))
        OR NEW.pauta IS DISTINCT FROM OLD.pauta
        OR NEW.fortalezas IS DISTINCT FROM OLD.fortalezas
        OR NEW.sugerencias IS DISTINCT FROM OLD.sugerencias THEN
       RAISE EXCEPTION 'La observación ya se compartió con el docente: solo se pueden tildar los acuerdos cumplidos.' USING ERRCODE = '22023';
     END IF;
-    -- Los acuerdos: los mismos textos, solo cambia si se cumplieron
+    -- Los acuerdos: los mismos, solo cambia si se cumplieron
     IF jsonb_array_length(NEW.acuerdos) <> jsonb_array_length(OLD.acuerdos)
        OR EXISTS (
          SELECT 1 FROM jsonb_array_elements(NEW.acuerdos) WITH ORDINALITY n(v, i)
          JOIN jsonb_array_elements(OLD.acuerdos) WITH ORDINALITY o(v, i) USING (i)
-         WHERE n.v->>'texto' IS DISTINCT FROM o.v->>'texto'
+         WHERE (n.v - 'cumplido') IS DISTINCT FROM (o.v - 'cumplido')
        ) THEN
       RAISE EXCEPTION 'La observación ya se compartió con el docente: los acuerdos no se cambian, solo se tildan.' USING ERRCODE = '22023';
     END IF;

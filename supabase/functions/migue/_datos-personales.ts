@@ -165,6 +165,21 @@ export async function padronDeEscuela(db: SupabaseClient, schoolId: string | nul
     console.error('padrón de la escuela:', String(e).slice(0, 200));
     return new Set();
   }
+  // Quien es de la escuela pero tiene otra como activa (profiles.school_id es una
+  // sola): también se tapa. Si esto falla, queda lo de arriba, que ya alcanza
+  try {
+    for (let desde = 0; desde < 10_000; desde += 1000) {
+      const { data, error } = await db.from('school_memberships').select('profiles(first_name, last_name)')
+        .eq('school_id', schoolId).order('user_id').range(desde, desde + 999);
+      if (error) throw new Error(error.message);
+      for (const f of (data ?? []) as { profiles?: { first_name?: string; last_name?: string } | null }[]) {
+        agregarNombres(nombres, f.profiles?.first_name, f.profiles?.last_name);
+      }
+      if (!data || data.length < 1000) break;
+    }
+  } catch (e) {
+    console.error('padrón por membresías:', String(e).slice(0, 200));
+  }
   cachePadron.set(schoolId, { hasta: Date.now() + CACHE_MS, nombres });
   return nombres;
 }
