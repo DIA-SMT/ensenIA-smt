@@ -308,3 +308,21 @@
   .rfa-sin-guardar { width: 100%; text-align: center; margin: 0; }
   .rfa-dialogo .adm-dialogo-contenido { padding: var(--space-4); }
 }
+
+/* ── Fichas para Migue (077) ── */
+.rfa-fichas { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-6); }
+.rfa-fichas-cabeza { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.rfa-fichas-cabeza h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.rfa-fichas-cabeza p { max-width: 70ch; }
+.rfa-fichas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rfa-ficha {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2);
+  min-height: var(--touch, 44px); padding: 8px 12px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-panel);
+}
+.rfa-ficha.sin-docs { background: transparent; border-style: dashed; }
+.rfa-ficha-nombre { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rfa-ficha-nombre small { font-size: 0.8125rem; color: var(--text-secondary); }
+.rfa-ficha.sin-docs .rfa-ficha-nombre small { color: var(--text-subtle); }
+.rfa-ficha-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+.rfa-fichas-nota { margin: 0; }

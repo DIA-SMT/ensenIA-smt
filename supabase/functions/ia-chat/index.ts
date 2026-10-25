@@ -100,14 +100,28 @@ async function registrarConsumo(
     user_id: string; school_id?: string | null; role?: string | null;
     feature: string; detail?: string | null; model?: string | null;
     tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+    tokens_cache_leidos?: number; tokens_cache_escritos?: number;
   },
 ): Promise<void> {
   try {
-    const { error } = await db.from('ia_events').insert(ev);
+    let { error } = await db.from('ia_events').insert(ev);
+    // Sin la 077 todavía: se anota igual, sin el caché
+    if (error && /tokens_cache/.test(error.message)) {
+      const { tokens_cache_leidos: _l, tokens_cache_escritos: _e, ...sinCache } = ev;
+      ({ error } = await db.from('ia_events').insert(sinCache));
+    }
     if (error) console.error('ia_events insert:', error.message);
   } catch (e) {
     console.error('ia_events insert:', String(e));
   }
+}
+
+/** Cuánto de la entrada se leyó del caché y cuánto se escribió (OpenRouter: usage.prompt_tokens_details) */
+function cacheDe(usage: unknown): { tokens_cache_leidos: number; tokens_cache_escritos: number } {
+  const d = (usage as { prompt_tokens_details?: { cached_tokens?: unknown; cache_write_tokens?: unknown } } | null | undefined)
+    ?.prompt_tokens_details;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+  return { tokens_cache_leidos: n(d?.cached_tokens), tokens_cache_escritos: n(d?.cache_write_tokens) };
 }
 
 /** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
@@ -374,7 +388,7 @@ Deno.serve(async (req: Request) => {
             admin: supabase, apiKey: OPENROUTER_API_KEY, teacherId: user.id, desde, materias, cursos, nombres,
             anotar: (modelo, u) => consumos.push({
               user_id: user.id, school_id: profile.school_id, role: 'docente', feature: 'memoria_docente', model: modelo,
-              tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+              tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u), ...cacheDe(u),
             }),
           });
           for (const c of consumos) await registrarConsumo(supabase, c);
@@ -395,7 +409,7 @@ Deno.serve(async (req: Request) => {
     const anotarCon = (feature: string): Anotar => (modelo, u) => {
       consumos.push({
         user_id: user.id, school_id: studentSchoolId, role: 'estudiante', feature, model: modelo,
-        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u), ...cacheDe(u),
       });
     };
 
@@ -656,6 +670,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
   let tokensIn = 0;
   let tokensOut = 0;
   let costUsd: number | null = null;
+  let enCache = { tokens_cache_leidos: 0, tokens_cache_escritos: 0 };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -700,6 +715,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
               tokensIn = event.usage.prompt_tokens || 0;
               tokensOut = event.usage.completion_tokens || 0;
               costUsd = costoDe(event.usage);
+              enCache = cacheDe(event.usage);
             }
           }
         }
@@ -742,7 +758,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         await registrarConsumo(supabase, {
           user_id: user.id, school_id: profile?.school_id ?? null, role: profile?.role ?? null,
           feature: 'chat', detail: effectiveTool ?? 'free', model: modelId,
-          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd,
+          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd, ...enCache,
         });
 
         // Send done event

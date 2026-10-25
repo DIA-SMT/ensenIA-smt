@@ -77,14 +77,28 @@ async function registrarConsumo(
     user_id: string; school_id?: string | null; role?: string | null;
     feature: string; detail?: string | null; model?: string | null;
     tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+    tokens_cache_leidos?: number; tokens_cache_escritos?: number;
   },
 ): Promise<void> {
   try {
-    const { error } = await db.from('ia_events').insert(ev);
+    let { error } = await db.from('ia_events').insert(ev);
+    // Sin la 077 todavía: se anota igual, sin el caché
+    if (error && /tokens_cache/.test(error.message)) {
+      const { tokens_cache_leidos: _l, tokens_cache_escritos: _e, ...sinCache } = ev;
+      ({ error } = await db.from('ia_events').insert(sinCache));
+    }
     if (error) console.error('ia_events insert:', error.message);
   } catch (e) {
     console.error('ia_events insert:', String(e));
   }
+}
+
+/** Cuánto de la entrada se leyó del caché y cuánto se escribió (OpenRouter: usage.prompt_tokens_details) */
+function cacheDe(usage: unknown): { tokens_cache_leidos: number; tokens_cache_escritos: number } {
+  const d = (usage as { prompt_tokens_details?: { cached_tokens?: unknown; cache_write_tokens?: unknown } } | null | undefined)
+    ?.prompt_tokens_details;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+  return { tokens_cache_leidos: n(d?.cached_tokens), tokens_cache_escritos: n(d?.cache_write_tokens) };
 }
 
 /** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
@@ -232,7 +246,7 @@ Deno.serve(async (req: Request) => {
     await registrarConsumo(db, {
       ...quien, feature: 'podcast', detail: 'guion', model: SCRIPT_MODEL,
       tokens_in: orJson.usage?.prompt_tokens ?? 0, tokens_out: orJson.usage?.completion_tokens ?? 0,
-      cost_usd: costoDe(orJson.usage),
+      cost_usd: costoDe(orJson.usage), ...cacheDe(orJson.usage),
     });
 
     // ── 2. Voz ──

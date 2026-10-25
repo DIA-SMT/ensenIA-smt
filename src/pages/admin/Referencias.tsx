@@ -31,6 +31,7 @@ import Dialogo from '../../components/shell/Dialogo';
 import { Campo } from './ui';
 import './Admin.css';
 import './Referencias.css';
+import FichasMigue from './FichasMigue';
 
 const ESTADO_BADGE: Record<EstadoReferencia, string> = {
   publicada: 'badge-success',
@@ -190,6 +191,9 @@ export default function Referencias() {
           </section>
         );
       })}
+
+      {/* 077: el currículum de cada materia y año, resumido para Migue */}
+      {!cargando && docs.length > 0 && <FichasMigue version={version} />}
 
       {editor && (
         <EditorReferencia key={editor.clave} id={editor.id} sugerenciasAreas={sugerenciasAreas}

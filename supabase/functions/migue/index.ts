@@ -28,6 +28,7 @@ import { pantallaActual } from './_guia.ts';
 import { leerPedido, resolverContexto, seccionContexto, type ContextoResuelto } from './_contexto.ts';
 import { accionesDe, GUIA_ACCIONES, sinMarcas } from './_acciones.ts';
 import { memoriaDocenteDesde, memoriaDocenteParaPrompt } from '../ia-chat/_memoria-docente.ts';
+import { bloqueFicha, fichaDelCurso, generarFicha, normalizarArea, programaDelCurso } from './_fichas.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -51,6 +52,10 @@ interface MigueRequest {
   /** Lo que el docente está mirando: solo { tipo, id }. Se lee con su RLS
    *  (_contexto.ts); si no es suyo, no llega nada. */
   contexto?: unknown;
+  /** 'ficha': el superadmin arma la ficha de una materia y un año (077) */
+  accion?: unknown;
+  materia?: unknown;
+  anio?: unknown;
 }
 
 function sseEvent(event: string, data: Record<string, unknown>): string {
@@ -190,14 +195,37 @@ async function registrarConsumo(
     user_id: string; school_id?: string | null; role?: string | null;
     feature: string; detail?: string | null; model?: string | null;
     tokens_in?: number; tokens_out?: number; cost_usd?: number | null; tts_chars?: number;
+    tokens_cache_leidos?: number; tokens_cache_escritos?: number;
   },
 ): Promise<void> {
   try {
-    const { error } = await db.from('ia_events').insert(ev);
+    let { error } = await db.from('ia_events').insert(ev);
+    // Sin la 077 todavía: se anota igual, sin el caché
+    if (error && /tokens_cache/.test(error.message)) {
+      const { tokens_cache_leidos: _l, tokens_cache_escritos: _e, ...sinCache } = ev;
+      ({ error } = await db.from('ia_events').insert(sinCache));
+    }
     if (error) console.error('ia_events insert:', error.message);
   } catch (e) {
     console.error('ia_events insert:', String(e));
   }
+}
+
+/** Cuánto de la entrada se leyó del caché y cuánto se escribió (OpenRouter: usage.prompt_tokens_details) */
+function cacheDe(usage: unknown): { tokens_cache_leidos: number; tokens_cache_escritos: number } {
+  const d = (usage as { prompt_tokens_details?: { cached_tokens?: unknown; cache_write_tokens?: unknown } } | null | undefined)
+    ?.prompt_tokens_details;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
+  return { tokens_cache_leidos: n(d?.cached_tokens), tokens_cache_escritos: n(d?.cache_write_tokens) };
+}
+
+/** Lo que escribe la persona no puede hacerse pasar por el bloque de la app */
+function sinEtiquetaDeApp(texto: string): string {
+  return texto.replace(/<\s*\/?\s*contexto_app/gi, m => m.replace('<', '‹'));
+}
+
+function jsonResp(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } });
 }
 
 /** Lo que cobró OpenRouter por la llamada (viene si se pide usage: { include: true }). */
@@ -226,6 +254,30 @@ Deno.serve(async (req: Request) => {
   } catch {
     return new Response('Invalid JSON', { status: 400, headers: corsHeaders() });
   }
+  if (body.accion === 'ficha') {
+    const auth = req.headers.get('Authorization');
+    if (!auth) return jsonResp({ error: 'Falta autenticación' }, 401);
+    const adminF = createClient(supabaseUrl, serviceKey);
+    const { data: { user: u }, error: errU } = await adminF.auth.getUser(auth.replace('Bearer ', ''));
+    if (errU || !u) return jsonResp({ error: 'Sesión inválida' }, 401);
+    const { data: perfil } = await adminF.from('profiles').select('role').eq('id', u.id).maybeSingle();
+    if (perfil?.role !== 'superadmin') return jsonResp({ error: 'Solo el superadmin arma las fichas.' }, 403);
+    const materia = typeof body.materia === 'string' ? body.materia.trim().slice(0, 80) : '';
+    const anio = typeof body.anio === 'number' && Number.isInteger(body.anio) ? body.anio : NaN;
+    if (!normalizarArea(materia) || !(anio >= 1 && anio <= 7)) return jsonResp({ error: 'Falta la materia o el año.' }, 400);
+    const r = await generarFicha({
+      admin: adminF, apiKey: OPENROUTER_API_KEY, materia, anio, userId: u.id,
+      anotar: (modelo, uso) => {
+        const us = uso as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+        void registrarConsumo(adminF, {
+          user_id: u.id, role: 'superadmin', feature: 'ficha_curso', detail: `${materia} ${anio}°`, model: modelo,
+          tokens_in: us?.prompt_tokens ?? 0, tokens_out: us?.completion_tokens ?? 0, cost_usd: costoDe(uso), ...cacheDe(uso),
+        });
+      },
+    });
+    return r.ok ? jsonResp({ texto: r.texto, fuentes: r.fuentes }) : jsonResp({ error: r.error }, 422);
+  }
+
   const { sessionId, messages } = body;
   if (!sessionId || !messages?.length) {
     return new Response('Missing required fields', { status: 400, headers: corsHeaders() });
@@ -394,8 +446,9 @@ Deno.serve(async (req: Request) => {
     anio = Number(((st as any)?.courses?.name ?? '').match(/\d/)?.[0]) || null;
   }
 
-  // Dos partes: la fija se cachea; la normativa de esta pregunta cambia
-  const { base: promptBase, contexto: promptNormativa } = buildSystemPromptPartes({
+  // Tres partes (077): la fija es igual para todos los de su rol (caché compartido);
+  // la de la persona va después; la normativa de esta pregunta, al final del mensaje
+  const { fijo: promptBase, persona: promptPersona, turno: promptNormativa } = buildSystemPromptPartes({
     audience, rol: profile.role, nombre, escuela, policyHits, refHits, anio, contextoEscuela,
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
@@ -412,10 +465,49 @@ Deno.serve(async (req: Request) => {
   }
   const seudo = new Seudonimos(padron);
 
+  // El historial sale de la base, no del cliente: así nadie puede
+  // fabricar turnos de Migue que no existieron (por ejemplo, uno donde
+  // "prometió" no avisarle a la escuela).
+  // Pregunta y respuesta se guardan juntas (mismo created_at): a igual hora,
+  // 'assistant' < 'user' en el orden descendente deja la pregunta primero.
+  // Se tapa ANTES que todo lo demás y en el orden de la charla: así cada
+  // nombre conserva su marca de un turno a otro y el historial llega igual,
+  // byte a byte, que es lo que necesita el caché (077).
+  const { data: guardados } = await admin
+    .from('migue_messages')
+    .select('role, content')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .order('role', { ascending: true })
+    .limit(HISTORY_LIMIT);
+
+  const historial = (guardados ?? [])
+    .reverse()
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      // Igual que como se mandó en su turno (ver sinEtiquetaDeApp más abajo)
+      content: m.role === 'user' ? sinEtiquetaDeApp(seudo.tapar(m.content)) : seudo.tapar(m.content),
+    }));
+  // Tiene que empezar por quien pregunta
+  while (historial[0]?.role === 'assistant') historial.shift();
+  const ultimoTapado = seudo.tapar(ultimo.content);
+
   // El docente: los botones que puede ofrecer (fijo, con caché), lo que está
   // mirando y lo que ya se sabe de cómo trabaja (memoria docente, 062: solo
   // si la tiene prendida; Migue la lee, no le agrega nada)
   let extraDocente = '';
+  // La ficha oficial de esa materia y año (compartida, con caché) y su programa (de la persona)
+  let ficha: Awaited<ReturnType<typeof fichaDelCurso>> = null;
+  let programa = '';
+  if (profile.role === 'docente' && ctx) {
+    try {
+      ficha = await fichaDelCurso(admin, ctx.materia, ctx.curso);
+      programa = seudo.tapar(await programaDelCurso(admin, user.id, ctx));
+    } catch (e) {
+      console.error('ficha o programa del curso:', String(e).slice(0, 200));
+    }
+  }
   if (profile.role === 'docente') {
     if (ctx) extraDocente += seudo.tapar(seccionContexto(ctx));
     try {
@@ -439,11 +531,11 @@ Deno.serve(async (req: Request) => {
   let derivada: 'seguimiento' | 'urgente' | null = null;
   if (audience === 'estudiante' && studentId) {
     const pasadas: Parameters<typeof registrarConsumo>[1][] = [];
-    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, seudo.tapar(ultimo.content), (modelo, u) => {
+    const clasif = await clasificarRiesgo(OPENROUTER_API_KEY, ultimoTapado, (modelo, u) => {
       pasadas.push({
         user_id: user.id, school_id: profile.school_id, role: profile.role,
         feature: 'migue_riesgo', model: modelo,
-        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u),
+        tokens_in: u?.prompt_tokens ?? 0, tokens_out: u?.completion_tokens ?? 0, cost_usd: costoDe(u), ...cacheDe(u),
       });
     });
     for (const p of pasadas) await registrarConsumo(admin, p);
@@ -510,29 +602,27 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
       }`
     : '';
 
-  // El historial sale de la base, no del cliente: así nadie puede
-  // fabricar turnos de Migue que no existieron (por ejemplo, uno donde
-  // "prometió" no avisarle a la escuela).
-  // Pregunta y respuesta se guardan juntas (mismo created_at): a igual hora,
-  // 'assistant' < 'user' en el orden descendente deja la pregunta primero.
-  const { data: guardados } = await admin
-    .from('migue_messages')
-    .select('role, content')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-    .order('role', { ascending: true })
-    .limit(HISTORY_LIMIT);
+  // Caché de prompts (077), lo que se lee del caché se cobra al 10%:
+  //  1. Lo fijo de su rol: igual para todos los docentes (o estudiantes, o
+  //     familias), así cualquiera de ellos mantiene el caché caliente.
+  //  2. La ficha oficial de la materia y el año, si la hay: compartida entre
+  //     los docentes de esa materia y año.
+  //  3. La charla hasta lo que escribió ahora: el turno que viene la lee.
+  // Lo de la persona va sin marca propia (lo cubre la 3) y lo que cambia en
+  // cada pregunta (normativa, pantalla, lo que mira, su memoria) va al final,
+  // después de la última marca, para no romper nada de lo anterior. El aviso
+  // de derivación va en el sistema (no se puede falsificar desde el chat):
+  // cuando aparece rompe el caché de la charla de ese turno, y es raro.
+  const cache = { type: 'ephemeral' as const };
+  const sistema: { type: 'text'; text: string; cache_control?: typeof cache }[] = [
+    { type: 'text', text: promptFijo, cache_control: cache },
+  ];
+  if (ficha) sistema.push({ type: 'text', text: bloqueFicha(ficha), cache_control: cache });
+  const persona = [promptPersona, programa].filter(Boolean).join('\n\n');
+  if (persona) sistema.push({ type: 'text', text: persona });
+  if (avisoDerivacion) sistema.push({ type: 'text', text: avisoDerivacion.trim() });
+  const delTurno = (promptNormativa + pantallaActual(profile.role, body.pantalla) + extraDocente).trim();
 
-  const historial = (guardados ?? [])
-    .reverse()
-    .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .map((m) => ({ role: m.role as 'user' | 'assistant', content: seudo.tapar(m.content) }));
-  // Tiene que empezar por quien pregunta
-  while (historial[0]?.role === 'assistant') historial.shift();
-
-  // Caché de prompts sobre la parte fija (identidad y reglas): lo que se
-  // repite en cada mensaje de la conversación se cobra al 10%. La normativa
-  // de esta pregunta y el aviso van después, sin caché.
   const orBody = {
     model: MODEL_CHAT,
     max_tokens: MAX_TOKENS,
@@ -547,15 +637,15 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     // un chico cuenta lo que le pasa.
     reasoning: { effort: 'medium' },
     messages: [
+      { role: 'system', content: sistema },
+      ...historial,
       {
-        role: 'system',
+        role: 'user',
         content: [
-          { type: 'text', text: promptFijo, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: promptNormativa + avisoDerivacion + pantallaActual(profile.role, body.pantalla) + extraDocente },
+          { type: 'text', text: sinEtiquetaDeApp(ultimoTapado), cache_control: cache },
+          ...(delTurno ? [{ type: 'text', text: `<contexto_app>\n${delTurno}\n</contexto_app>` }] : []),
         ],
       },
-      ...historial,
-      { role: 'user', content: seudo.tapar(ultimo.content) },
     ],
   };
 
@@ -594,6 +684,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
   let tokensIn = 0;
   let tokensOut = 0;
   let costUsd: number | null = null;
+  let enCache = { tokens_cache_leidos: 0, tokens_cache_escritos: 0 };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -631,6 +722,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
               tokensIn = ev.usage.prompt_tokens ?? 0;
               tokensOut = ev.usage.completion_tokens ?? 0;
               costUsd = costoDe(ev.usage);
+              enCache = cacheDe(ev.usage);
             }
           }
         }
@@ -679,7 +771,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         await registrarConsumo(admin, {
           user_id: user.id, school_id: profile.school_id, role: profile.role,
           feature: 'migue', detail: audience, model: MODEL_CHAT,
-          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd,
+          tokens_in: tokensIn, tokens_out: tokensOut, cost_usd: costUsd, ...enCache,
         });
 
         controller.enqueue(encoder.encode(sseEvent('done', {

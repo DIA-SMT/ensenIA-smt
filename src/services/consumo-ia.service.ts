@@ -28,6 +28,10 @@ export interface ConsumoIA {
     costo_hoy_usd: number | null;
     llamadas: number;
     caracteres_voz: number;
+    /** 077: tokens de entrada y cuántos de ellos se leyeron del caché (al 10%). Sin la 077, no vienen. */
+    tokens_entrada?: number;
+    cache_leidos?: number;
+    cache_escritos?: number;
     /** Desde cuándo hay costo registrado; null si todavía nada. */
     costo_desde: string | null;
   };
@@ -39,6 +43,8 @@ export interface ConsumoIA {
     modelo: string | null;
     llamadas: number;
     tokens: number;
+    tokens_entrada?: number | null;
+    cache_leidos?: number | null;
     costo_usd: number | null;
     caracteres_voz: number;
   }[];

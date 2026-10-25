@@ -26,7 +26,12 @@ const ROL: Record<string, string> = {
 const FUNCION: Record<string, string> = {
   chat: 'Preguntale a la IA (chat)', migue: 'Migue', migue_riesgo: 'Migue · detección de riesgo',
   documentos: 'Documentos (lectura, resúmenes, tarjetas)', podcast: 'Podcast',
+  memoria_docente: 'Memoria del docente', ficha_curso: 'Fichas por materia y año',
 };
+
+/** Qué parte de la entrada salió del caché (se cobra al 10%); null si no hay datos */
+const pctCache = (leidos: number | null | undefined, entrada: number | null | undefined) =>
+  leidos != null && entrada ? Math.round((100 * leidos) / entrada) : null;
 
 // Cada cuánto se renueva el tope de la clave en OpenRouter
 const REINICIO: Record<string, string> = { daily: 'por día', weekly: 'por semana', monthly: 'por mes' };
@@ -150,6 +155,13 @@ export default function ConsumoIA() {
               <strong className="cia-tile-valor">{num(t.tokens)}</strong>
               <span className="cia-tile-sub">entrada + salida</span>
             </div>
+            {pctCache(t.cache_leidos, t.tokens_entrada) != null && (
+              <div className="card cia-tile" title="Lo que se lee del caché se cobra al 10%. Cuanto más alto, más se ahorra.">
+                <span className="cia-tile-label">Desde el caché</span>
+                <strong className="cia-tile-valor">{pctCache(t.cache_leidos, t.tokens_entrada)}%</strong>
+                <span className="cia-tile-sub">de la entrada, al 10% del precio</span>
+              </div>
+            )}
           </section>
 
           {!hayCosto && (
@@ -210,7 +222,7 @@ export default function ConsumoIA() {
               <h3>Por función y modelo</h3>
               <div className="cia-tabla-wrap">
                 <table className="cia-tabla">
-                  <thead><tr><th>Función</th><th>Modelo</th><th>Llamadas</th><th>Tokens</th><th>Costo</th></tr></thead>
+                  <thead><tr><th>Función</th><th>Modelo</th><th>Llamadas</th><th>Tokens</th><th>Del caché</th><th>Costo</th></tr></thead>
                   <tbody>
                     {datos.por_funcion.map(f => (
                       <tr key={`${f.funcion}-${f.modelo}`}>
@@ -218,6 +230,7 @@ export default function ConsumoIA() {
                         <td className="cia-mono">{modeloCorto(f.modelo)}</td>
                         <td>{num(f.llamadas)}</td>
                         <td>{f.caracteres_voz ? `${num(f.caracteres_voz)} caracteres de voz` : num(f.tokens)}</td>
+                        <td>{pctCache(f.cache_leidos, f.tokens_entrada) != null ? `${pctCache(f.cache_leidos, f.tokens_entrada)}%` : '—'}</td>
                         <td>{f.caracteres_voz && f.costo_usd == null ? 'según plan de voz' : usd(f.costo_usd)}</td>
                       </tr>
                     ))}
