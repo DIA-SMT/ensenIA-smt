@@ -467,6 +467,8 @@ export async function launchActivity(
   kind: LiveActivityKind,
   config: LiveActivityConfig,
   targetStudentId?: string | null,
+  /** De qué tema es la pregunta (068): "temas para repasar" la cuenta en el suyo */
+  classId?: string | null,
 ): Promise<LiveActivity> {
   // Cierra la anterior: en el celular del estudiante desaparece sola (poll).
   await supabase
@@ -483,7 +485,8 @@ export async function launchActivity(
         kind,
         config: config as never,
         target_student_id: targetStudentId ?? null,
-      })
+        ...(classId ? { class_id: classId } : {}),
+      } as never)
       .select('*')
   );
   return mapActivity((data as any[])[0]);

@@ -6,6 +6,7 @@
  *  · Para los chicos: las actividades, los TP y las evaluaciones del tema,
  *    con sus borradores. Se hacen en el celular y sin señal, o en papel (se
  *    anota en la actividad).
+ *  · Para la clase en vivo: las preguntas que se lanzan con un toque (068).
  *
  * Se llega desde Planificación y desde Hoy.
  */
@@ -14,8 +15,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  FlaskConical, Layers, Plus, Presentation, ScanLine, Sparkles, Unlink, Upload,
+  FlaskConical, Layers, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload,
 } from 'lucide-react';
+import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -302,6 +304,15 @@ export default function TemaPreparar() {
           <Link to={nueva('evaluacion')} className="btn btn-outline btn-sm"><ClipboardList size={14} /> Evaluación</Link>
           <Link to={nueva('actividad')} className="btn btn-outline btn-sm"><Sparkles size={14} /> Actividad corta</Link>
         </div>
+      </section>
+
+      {/* ── Para la clase en vivo ── */}
+      <section className="card tp-seccion" aria-labelledby="tp-vivo">
+        <div className="tp-seccion-cabecera">
+          <h3 id="tp-vivo"><Radio size={17} aria-hidden="true" /> Para la clase en vivo</h3>
+          <p className="tp-ayuda">Preguntas para lanzar durante la clase: los chicos contestan desde el celular y ves las respuestas al instante.</p>
+        </div>
+        <PreguntasEnVivoEditor classId={tema.id} actividades={actividades} />
       </section>
 
       <Link to={`/ia-lab?clase=${tema.id}`} className="tp-ia">

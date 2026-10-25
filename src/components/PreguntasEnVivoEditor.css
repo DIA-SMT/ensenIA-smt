@@ -1,0 +1,65 @@
+/* Preguntas para la clase en vivo, en "Preparar la clase" (068) */
+.pev { display: flex; flex-direction: column; gap: var(--space-2); }
+.pev-lista, .pev-sugeridas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pev-lista li, .pev-sugeridas li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.pev-sugeridas li { border-style: dashed; }
+.pev-tipo { flex-shrink: 0; font-size: 1.1rem; }
+.pev-texto { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.pev-texto strong { font-size: 0.875rem; font-weight: 600; }
+.pev-texto small { font-size: 0.75rem; color: var(--text-secondary); }
+
+.pev-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+.pev-tipos { display: flex; flex-wrap: wrap; gap: 6px; }
+.pev-chip {
+  font-size: 0.8125rem;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.pev-chip.elegido { border-color: var(--acento); color: var(--acento); background: var(--cyan-glow); font-weight: 600; }
+.pev-campo { display: flex; flex-direction: column; gap: 4px; font-size: 0.8125rem; color: var(--text-secondary); }
+.pev-campo input, .pev-opcion input {
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+.pev-opciones { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pev-opciones legend { font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 4px; }
+.pev-opcion { display: flex; align-items: center; gap: 6px; }
+.pev-correcta {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-panel);
+  color: #fff;
+  cursor: pointer;
+}
+.pev-correcta.si { border-color: var(--success); background: var(--success); }
+.pev-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }

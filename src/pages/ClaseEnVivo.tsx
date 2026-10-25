@@ -30,8 +30,10 @@ import {
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
 } from '../services/live.service';
-import { getMaterialsByTeacher } from '../services/library.service';
+import { getMaterialsByClass, getMaterialsByTeacher } from '../services/library.service';
 import { getPlanningByTeacher } from '../services/planning.service';
+import { getScheduleByTeacher } from '../services/schedule.service';
+import PreguntasPreparadasVivo from '../components/PreguntasPreparadasVivo';
 import MaterialEnVivo from '../components/MaterialEnVivo';
 import PremiarEnVivo from '../components/PremiarEnVivo';
 import ResumenClase from '../components/ResumenClase';
@@ -120,6 +122,9 @@ export default function ClaseEnVivo() {
     // se cambia ahí mismo; si no, se preselecciona para arrancarla.
     const pedidoMaterial = searchParams.get('material');
     const pedidoTema = searchParams.get('tema');
+    // Desde Hoy, sin tema planificado: la materia y el curso de esa hora
+    const pedidoMateria = searchParams.get('materia');
+    const pedidoCurso = searchParams.get('curso');
     useEffect(() => {
         if (!user || session === undefined || (!pedidoMaterial && !pedidoTema)) return;
         let cancelado = false;
@@ -134,6 +139,12 @@ export default function ClaseEnVivo() {
                     if (c) { destino = { subjectId: u.subjectId, courseId: u.courseId, eleccion: { classId: c.id, titulo: c.title } }; break; }
                 }
             }
+            // El material del tema (lo que subió o armó para esa clase) también queda elegido
+            const delTema: EleccionMaterial[] = destino && 'classId' in destino.eleccion
+                ? (await getMaterialsByClass(destino.eleccion.classId).catch(() => []))
+                    .filter(m => m.teacherId === user.id)
+                    .map(m => ({ materialId: m.id, titulo: m.title }))
+                : [];
             if (cancelado) return;
             setSearchParams({}, { replace: true });
             if (!destino) return;
@@ -151,14 +162,44 @@ export default function ClaseEnVivo() {
             const idx = assignments.findIndex(a => a.subjectId === d.subjectId && (!d.courseId || a.courseId === d.courseId));
             if (idx >= 0) {
                 setAssignmentIdx(idx);
-                const id = 'materialId' in d.eleccion ? d.eleccion.materialId : d.eleccion.classId;
-                setMaterialesIniciales(prev => (prev.some(x => ('materialId' in x ? x.materialId : x.classId) === id) ? prev : [...prev, d.eleccion]));
+                const claveDe = (x: EleccionMaterial) => ('materialId' in x ? x.materialId : x.classId);
+                setMaterialesIniciales(prev => {
+                    const lista = [...prev];
+                    for (const e of [d.eleccion, ...delTema]) if (!lista.some(x => claveDe(x) === claveDe(e))) lista.push(e);
+                    return lista;
+                });
             }
         })().catch(console.error);
         return () => { cancelado = true; };
         // Corre una vez por pedido: session y assignments se leen en ese momento
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id, session === undefined, pedidoMaterial, pedidoTema]);
+
+    // Sin enlace: la materia y el curso de ?materia=&curso=, o los de la hora
+    // que toca ahora según el horario (o la que arranca en 15 minutos)
+    useEffect(() => {
+        if (!user || session !== null || pedidoMaterial || pedidoTema) return;
+        let vivo = true;
+        const elegir = (subjectId: string, courseId: string) => {
+            const idx = assignments.findIndex(a => a.subjectId === subjectId && a.courseId === courseId);
+            if (idx >= 0 && vivo) setAssignmentIdx(idx);
+        };
+        if (pedidoMateria && pedidoCurso) {
+            elegir(pedidoMateria, pedidoCurso);
+            setSearchParams({}, { replace: true });
+            return () => { vivo = false; };
+        }
+        getScheduleByTeacher(user.id).then(bloques => {
+            const ahora = new Date();
+            const dia = ahora.getDay() - 1;
+            const hora = ahora.getHours() + ahora.getMinutes() / 60;
+            const b = bloques.find(x => x.dayIndex === dia && x.startHour - 0.25 <= hora && hora < x.startHour + x.duration);
+            if (b) elegir(b.subjectId, b.courseId);
+        }).catch(() => undefined);
+        return () => { vivo = false; };
+        // Una vez, al llegar sin clase andando
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, session === null, pedidoMateria, pedidoCurso]);
 
     // Sin clase andando: las últimas que terminó, para volver a ver su resumen
     const sinClase = session === null || session?.status === 'ended';
@@ -376,7 +417,7 @@ export default function ClaseEnVivo() {
                     : { question: question.trim() };
             // Dirigida a uno o una respuesta por grupo: nunca las dos a la vez
             const config = groupMode && !targetStudent ? { ...base, groupMode: true } : base;
-            const act = await launchActivity(session.id, pickedKind, config, targetStudent?.id ?? null);
+            const act = await launchActivity(session.id, pickedKind, config, targetStudent?.id ?? null, session.classId);
             setActivity(act);
             setResults(null);
             resetLauncher();
@@ -391,9 +432,29 @@ export default function ClaseEnVivo() {
     /** Lanza una pregunta armada desde el material (va a todo el curso). */
     const lanzarDesdeMaterial = async (kind: LiveActivityKind, config: LiveActivityConfig) => {
         if (!session) return;
-        const act = await launchActivity(session.id, kind, config, null);
+        const act = await launchActivity(session.id, kind, config, null, session.classId);
         setActivity(act);
         setResults(null);
+    };
+
+    /**
+     * Una pregunta preparada (068), de un toque. Respeta lo elegido en el
+     * panel: si hay un destinatario va solo a él; si está "en grupos", a los grupos.
+     */
+    const lanzarPreparada = async (kind: LiveActivityKind, config: LiveActivityConfig, classId: string) => {
+        if (!session || launching) return;
+        setLaunching(true);
+        try {
+            const cfg = groupMode && !targetStudent ? { ...config, groupMode: true } : config;
+            const act = await launchActivity(session.id, kind, cfg, targetStudent?.id ?? null, classId);
+            setActivity(act);
+            setResults(null);
+            setTargetStudent(null);
+        } catch (err) {
+            avisar.error('No se pudo lanzar la pregunta.', err instanceof Error ? err.message : 'Probá de nuevo.');
+        } finally {
+            setLaunching(false);
+        }
     };
 
     /** Los que eligieron la correcta; en modo grupal, todo su grupo. */
@@ -742,6 +803,9 @@ export default function ClaseEnVivo() {
                     </p>
                 </div>
             )}
+
+            {/* Lo preparado en "Preparar la clase": se lanza de un toque, sin escribir en el celular */}
+            <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching} />
 
             <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />
 

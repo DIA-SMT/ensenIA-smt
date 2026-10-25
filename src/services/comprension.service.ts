@@ -164,6 +164,8 @@ interface FilaQuiz {
   id: string;
   session_id: string;
   config: { question?: string; options?: { id: string; label: string }[]; correctId?: string } | null;
+  /** El tema de la pregunta (068); si no, el que estaba en pantalla en la clase */
+  class_id?: string | null;
 }
 
 interface FilaRespuestaVivo {
@@ -221,7 +223,7 @@ async function leerQuizzes(sesiones: string[]): Promise<FilaQuiz[]> {
   const tandas = await Promise.all(trozos(sesiones, TANDA).map(async grupo => {
     const { data, error } = await supabase
       .from('live_activities')
-      .select('id, session_id, config')
+      .select('id, session_id, config, class_id')
       .in('session_id', grupo)
       .eq('kind', 'quiz')
       // Las dirigidas a un solo estudiante no dicen nada del curso
@@ -306,7 +308,8 @@ export async function getComprension(teacherId: string, opts: OpcionesRepaso = {
   const sesionPorId = new Map(sesiones.map(s => [s.id, s]));
   for (const q of quizzes) {
     const s = sesionPorId.get(q.session_id);
-    if (s?.class_id) claseIds.add(s.class_id);
+    const temaId = q.class_id ?? s?.class_id;
+    if (temaId) claseIds.add(temaId);
   }
 
   const [respuestasVivo, temas] = await Promise.all([
@@ -400,13 +403,14 @@ export async function getComprension(teacherId: string, opts: OpcionesRepaso = {
     const c = respuestasPorQuiz.get(q.id);
     const s = sesionPorId.get(q.session_id);
     if (!c || !s) continue;
-    const clase = s.class_id ? temas.clases.get(s.class_id) : undefined;
+    const temaId = q.class_id ?? s.class_id;
+    const clase = temaId ? temas.clases.get(temaId) : undefined;
     cerrar(c, {
       clave: `vivo:${s.id}:${q.id}`,
       fuente: 'vivo',
       pregunta: q.config?.question?.trim() || 'Pregunta rápida',
       tema: clase?.tema ?? s.title,
-      temaClave: clase ? `clase:${s.class_id}` : `vivo:${s.id}`,
+      temaClave: clase ? `clase:${temaId}` : `vivo:${s.id}`,
       unidad: clase?.unidad ?? null,
       origen: s.title,
       enlace: '/clase-en-vivo',
