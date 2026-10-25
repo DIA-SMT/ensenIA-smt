@@ -48,7 +48,7 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/students$/, docente: '"Estudiantes", en el menú, grupo "Aula"' },
   { ruta: /^\/biblioteca$/, docente: '"Mis materiales", en el menú, grupo "Aula"' },
   { ruta: /^\/clase-en-vivo$/, docente: '"Clase en vivo", en el menú, grupo "Aula"', director: '"Sala en vivo", en el menú, grupo "Comunidad"' },
-  { ruta: /^\/seguimiento$/, docente: '"Seguimiento" (consultas, entregas y quién viene atrasado), en el menú, grupo "Aula"' },
+  { ruta: /^\/seguimiento$/, docente: '"Seguimiento" (consultas, entregas, quién viene atrasado y "Qué van logrando": por cada NAP de sus temas, o por tema si no los vinculó, quién lo logró —60% o más—, quién está en proceso y quién todavía no), en el menú, grupo "Aula"' },
   { ruta: /^\/perfil$/, docente: '"Mi perfil" (título "Mi perfil docente"), en el menú, grupo "Cuenta"', director: '"Mi perfil", en el menú, grupo "Cuenta"' },
   { ruta: /^\/cursos\/[^/]+$/, docente: '"Ficha del curso"', director: '"Ficha del curso"' },
   { ruta: /^\/mensajes$/, docente: '"Mensajes", en el menú, grupo "Escuela"', director: '"Mensajes", en el menú, grupo "Comunidad"' },

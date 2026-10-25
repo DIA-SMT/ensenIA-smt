@@ -33,6 +33,7 @@ import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar } from '../components/ui/avisar';
 import type { Subject } from '../types';
+import ProgresoSaberes from '../components/ProgresoSaberes';
 import './Seguimiento.css';
 
 const DIAS_SIN_ACTIVIDAD = 7;
@@ -418,6 +419,9 @@ export default function Seguimiento() {
               </ul>
             )}
           </section>
+
+          {/* ── Qué van logrando, por saber (080) ── */}
+          {subjectId && courseId && <ProgresoSaberes subjectId={subjectId} courseId={courseId} />}
 
           {/* ── Actividades ── */}
           <section className="card seg-seccion" aria-labelledby="seg-act-t">
