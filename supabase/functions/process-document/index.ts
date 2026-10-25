@@ -53,6 +53,9 @@ interface ProcessRequest {
   variante?: string;
   /** slides y armar_actividad: lo que pidió el docente (cantidad, enfoque, extras). */
   pedido?: string;
+  /** extract_text de a tandas: el mismo id en todas las partes de un documento, y el número de parte (1, 2…) */
+  documento?: string;
+  parte?: number;
 }
 
 /**
@@ -1023,6 +1026,12 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Quota (compartida con el chat IA) ──
+  // Un escaneo largo se lee de a tandas de páginas: todo el documento cuenta
+  // UN uso (el de la parte 1). Las partes que siguen no gastan cupo ni se
+  // frenan por él a mitad de camino; su consumo igual se anota (Consumo de IA).
+  const parteSiguiente = mode === 'extract_text'
+    && typeof body.documento === 'string' && /^[0-9a-f-]{36}$/i.test(body.documento)
+    && Number.isInteger(body.parte) && (body.parte as number) > 1 && (body.parte as number) <= 40;
   const today = new Date().toISOString().split('T')[0];
   const { data: usage } = await supabase
     .from('ia_usage')
@@ -1031,7 +1040,7 @@ Deno.serve(async (req: Request) => {
     .eq('usage_date', today)
     .maybeSingle();
 
-  if (usage && usage.message_count >= cupoDiario(profile?.role)) {
+  if (!parteSiguiente && usage && usage.message_count >= cupoDiario(profile?.role)) {
     return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${cupoDiario(profile?.role)} usos de IA por hoy.` }, 429);
   }
 
@@ -1184,7 +1193,7 @@ Deno.serve(async (req: Request) => {
     {
       teacher_id: user.id,
       usage_date: today,
-      message_count: (usage?.message_count ?? 0) + 1,
+      message_count: (usage?.message_count ?? 0) + (parteSiguiente ? 0 : 1),
       token_count_in: (usage?.token_count_in ?? 0) + tokensIn,
       token_count_out: (usage?.token_count_out ?? 0) + tokensOut,
     },

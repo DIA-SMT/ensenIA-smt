@@ -9,7 +9,7 @@ export type AlertCategory = 'academic' | 'attendance' | 'conduct' | 'system';
 export type StudentStatus = 'excellent' | 'good' | 'warning' | 'critical';
 export type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes';
 export type NotificationPriority = 'high' | 'medium' | 'low';
-export type FileType = 'pdf' | 'doc' | 'image' | 'link' | 'video';
+export type FileType = 'pdf' | 'doc' | 'pptx' | 'image' | 'link' | 'video';
 
 // ── IA Chat ──
 export type ChatRole = 'user' | 'assistant' | 'system';

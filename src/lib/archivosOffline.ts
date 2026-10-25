@@ -9,12 +9,17 @@
  */
 
 import { getSignedUrl, urlSinFirma } from '../services/documents.service';
+import { LIMITE_SUBIDA } from './comprimir';
 import { haySenial } from './conexion';
 import { mazoDe } from './mazoDe';
 import type { LibraryMaterial } from '../types';
 
-/** Un PDF más grande que esto no se baja "por las dudas": ocupa el celular. */
-export const PDF_MAXIMO = 8 * 1024 * 1024;
+/**
+ * Un PDF más grande que esto no se baja "por las dudas": ocupa el celular.
+ * Es lo mismo que se puede subir (antes era 8 MB y un escaneo de 9 o 10 MB
+ * se subía bien pero no quedaba para usar sin señal).
+ */
+export const PDF_MAXIMO = LIMITE_SUBIDA;
 
 /**
  * Las rutas de los archivos que hacen falta para mostrar estos materiales.

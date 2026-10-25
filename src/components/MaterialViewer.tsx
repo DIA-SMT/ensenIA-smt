@@ -52,6 +52,8 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
   const esPdf = conArchivo && material.fileType === 'pdf';
   const esWord = conArchivo && material.fileType === 'doc';
   const esLink = material.fileType === 'link';
+  // PowerPoint (069): no se muestra acá adentro; se abre con PowerPoint o Slides y se lee su texto
+  const esPpt = conArchivo && material.fileType === 'pptx';
   const videoId = material.videoUrl ? parseYouTubeId(material.videoUrl) : null;
   const necesitaArchivo = esImagen || esPdf || esWord;
 
@@ -180,6 +182,18 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
             </div>
           )}
 
+          {esPpt && (
+            <div className="mv-externo">
+              <p className="text-secondary text-sm">
+                Es una presentación de PowerPoint: se abre con PowerPoint o Google Slides.
+                {texto ? ' Abajo está el texto de cada diapositiva.' : ''}
+              </p>
+              <button className="btn btn-primary btn-sm" onClick={onDescargar ?? abrirAparte}>
+                <Download size={14} /> Abrir la presentación
+              </button>
+            </div>
+          )}
+
           {juego && <JuegoPalabrasVista juego={juego} />}
 
           {/* Material que es solo texto (un tema del temario, un módulo armado
@@ -205,7 +219,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
             </details>
           )}
 
-          {sinVistaPrevia && !texto && (
+          {sinVistaPrevia && !texto && !esPpt && (
             <div className="mv-externo">
               <p className="text-secondary text-sm">
                 Este material no se puede mostrar acá adentro. Podés abrirlo en otra

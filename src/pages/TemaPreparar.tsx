@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  FlaskConical, Layers, Plus, Presentation, Sparkles, Unlink,
+  FlaskConical, Layers, Plus, Presentation, ScanLine, Sparkles, Unlink, Upload,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -38,7 +38,7 @@ function claseDeMaterial(m: LibraryMaterial): string {
   if (m.slides) return 'Presentación';
   if (m.visual) return 'Diagrama o juego';
   if (m.videoUrl) return 'Video';
-  return { pdf: 'PDF', doc: 'Documento', image: 'Imagen', link: 'Enlace', video: 'Video' }[m.fileType] ?? 'Archivo';
+  return { pdf: 'PDF', doc: 'Documento', pptx: 'PowerPoint', image: 'Imagen', link: 'Enlace', video: 'Video' }[m.fileType] ?? 'Archivo';
 }
 
 /** El día en Argentina de un timestamp (la entrega vence a las 23:59 de ese día) */
@@ -181,6 +181,9 @@ export default function TemaPreparar() {
   };
 
   const nueva = (tipo: TipoActividad) => `/actividades/nueva?tema=${tema.id}&tipo=${tipo}`;
+  // Subir o escanear derecho a este tema; al terminar vuelve acá
+  const subirAlTema = (como: 'archivo' | 'escanear') =>
+    `/biblioteca?subir=${como}&tema=${tema.id}&volver=${encodeURIComponent(`/tema/${tema.id}`)}`;
   const delPlan = `/planificacion?materia=${unidad.subjectId}&curso=${unidad.courseId}&clase=${tema.id}`;
 
   return (
@@ -236,8 +239,13 @@ export default function TemaPreparar() {
             ))}
           </ul>
         )}
+        {/* Lo que el docente ya tiene: se sube o se escanea derecho a este tema */}
         <div className="tp-acciones">
-          <Link to={`/modulo?tema=${tema.id}`} className="btn btn-primary btn-sm"><Layers size={14} /> Armar la clase completa</Link>
+          <Link to={subirAlTema('archivo')} className="btn btn-primary btn-sm"><Upload size={14} /> Subir un archivo</Link>
+          <Link to={subirAlTema('escanear')} className="btn btn-outline btn-sm"><ScanLine size={14} /> Escanear hojas</Link>
+        </div>
+        <div className="tp-acciones">
+          <Link to={`/modulo?tema=${tema.id}`} className="btn btn-outline btn-sm"><Layers size={14} /> Armar la clase completa</Link>
           <Link to={`/ia-lab?clase=${tema.id}&herramienta=pres`} className="btn btn-outline btn-sm"><Presentation size={14} /> Presentación con IA</Link>
           <button type="button" className="btn btn-outline btn-sm" onClick={abrirSumar}><Plus size={14} /> Sumar de la biblioteca</button>
         </div>

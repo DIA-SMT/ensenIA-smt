@@ -227,7 +227,7 @@ export interface MaterialEnLista {
 const idDe = (e: EleccionMaterial) => ('materialId' in e ? e.materialId : e.classId);
 export const idEnLista = (m: MaterialEnLista) => m.materialId ?? m.classId ?? '';
 
-const DETALLE_ARCHIVO: Record<string, string> = { pdf: 'PDF', doc: 'Word', image: 'Imagen', link: 'Enlace' };
+const DETALLE_ARCHIVO: Record<string, string> = { pdf: 'PDF', doc: 'Word', pptx: 'PowerPoint', image: 'Imagen', link: 'Enlace' };
 
 /** La lista de materiales de la clase, en orden. Vacía si todavía no se corrió la 049. */
 export async function getMaterialesDeClase(sessionId: string): Promise<MaterialEnLista[]> {

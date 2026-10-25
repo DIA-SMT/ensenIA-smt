@@ -135,3 +135,24 @@
 
 html[data-contraste="alto"] .crear-opcion,
 html[data-contraste="alto"] .crear-herramienta { border-width: 2px; border-color: var(--border-strong); }
+
+/* Tu material: subir o escanear, lo primero que hace un docente */
+.crear-material { margin-bottom: var(--space-5); }
+.crear-material-botones { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.crear-material-boton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  min-height: 64px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.crear-material-boton svg { flex-shrink: 0; color: var(--acento); }
+.crear-material-boton span { display: flex; flex-direction: column; min-width: 0; }
+.crear-material-boton strong { font-size: 0.9375rem; }
+.crear-material-boton small { font-size: 0.8125rem; color: var(--text-secondary); }
+.crear-material-boton:hover, .crear-material-boton:focus-visible { background: var(--cyan-glow); }

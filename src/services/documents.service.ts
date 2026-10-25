@@ -137,7 +137,19 @@ const MIN_LETRAS_POR_PAGINA = 200;
  * quedar abierta mientras tanto). Si falla, el error trae un mensaje para
  * mostrarle al docente.
  */
-export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc', title?: string): Promise<string> {
+/** De a cuántas páginas se transcribe un escaneo (cada pedido, menos de medio minuto) */
+const PAGINAS_POR_TANDA = 5;
+
+export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc' | 'pptx', title?: string, alAvanzar?: (mensaje: string) => void): Promise<string> {
+  // PowerPoint: el texto de cada diapositiva y sus notas, en el equipo (069)
+  if (tipo === 'pptx') {
+    const { textoDePowerPoint } = await import('../lib/powerpoint');
+    const text = await textoDePowerPoint(file).catch(() => {
+      throw new Error('No se pudo abrir el PowerPoint. Probá abrirlo y guardarlo de nuevo como .pptx, o exportalo como PDF.');
+    });
+    if (!text) throw new Error('Esta presentación no tiene texto (son imágenes). Exportala como PDF (Archivo → Exportar → PDF) y subí el PDF: la IA lo lee igual.');
+    return text;
+  }
   if (tipo === 'doc') {
     const text = await extractDocxText(file).catch(() => {
       throw new Error('No se pudo abrir el Word. Si es un .doc viejo, guardalo como .docx o PDF y subilo de nuevo.');
@@ -155,10 +167,22 @@ export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc', title?
     console.warn('pdf.js no pudo leer el PDF:', err);
   }
 
-  // PDF escaneado: lo transcribe la IA
+  // PDF escaneado: lo transcribe la IA, de a tandas de páginas. Uno largo,
+  // de una sola vez, salía cortado (la respuesta tiene un tope) y podía
+  // pasar el minuto; así se lee entero y cada pedido es corto. Toda la
+  // lectura cuenta como un solo uso de IA (documento + parte).
   let text: string;
   try {
-    text = await extractPdfText(await fileToBase64(file), title);
+    const { tandasDePdf } = await import('../lib/comprimir');
+    const documento = crypto.randomUUID();
+    const partes: string[] = [];
+    for await (const t of tandasDePdf(file, PAGINAS_POR_TANDA)) {
+      const varias = t.total > PAGINAS_POR_TANDA;
+      alAvanzar?.(varias ? `Leyendo las páginas ${t.desde} a ${t.hasta} de ${t.total}…` : 'Leyendo el escaneo…');
+      partes.push(await extractPdfText(await fileToBase64(t.pdf), varias ? `${title ?? 'Documento'} (páginas ${t.desde} a ${t.hasta})` : title,
+        { documento, parte: t.indice }));
+    }
+    text = partes.map(p => p.trim()).filter(Boolean).join('\n\n');
   } catch (err) {
     const msg = err instanceof Error ? err.message : '';
     // Sin conexión o la función cortó por tiempo: el mensaje del navegador
@@ -226,11 +250,17 @@ export async function transcribeYouTube(videoUrl: string): Promise<string> {
   return text;
 }
 
-export async function extractPdfText(pdfBase64: string, title?: string): Promise<string> {
+/**
+ * Transcribe un PDF (escaneado) con IA. `lectura` junta las partes de un
+ * mismo documento leído de a tandas: la función cuenta un solo uso de IA
+ * por documento (la parte 1), aunque anota el consumo de cada una.
+ */
+export async function extractPdfText(pdfBase64: string, title?: string, lectura?: { documento: string; parte: number }): Promise<string> {
   const { text } = await callProcessDocument<{ text: string }>({
     mode: 'extract_text',
     pdfBase64,
     title,
+    ...(lectura ? { documento: lectura.documento, parte: lectura.parte } : {}),
   });
   return text;
 }

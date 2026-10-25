@@ -29,6 +29,7 @@ interface Destino {
 
 const DESTINOS: Record<string, Destino[]> = {
   docente: [
+    { emoji: '📤', title: 'Subir o escanear tu material', desc: 'PDF, Word, PowerPoint o tus hojas con la cámara; lo ordenás por tema', to: '/biblioteca?subir=archivo' },
     { emoji: '📖', title: 'Preparar una clase', desc: 'Tus módulos y temas, con la IA como asistente', to: '/ia-lab' },
     { emoji: '🧱', title: 'Armar la clase de un tema', desc: 'Diapositivas, juego, diagrama y tarea, y la mandás al curso', to: '/modulo' },
     { emoji: '📡', title: 'Dar la clase en vivo', desc: 'Los celulares se vuelven la forma de participar', to: '/clase-en-vivo' },

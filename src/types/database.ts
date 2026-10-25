@@ -3639,7 +3639,7 @@ export type Database = {
       alert_level: "danger" | "warning" | "info" | "success"
       chat_role: "user" | "assistant" | "system"
       day_of_week: "lunes" | "martes" | "miercoles" | "jueves" | "viernes"
-      file_type: "pdf" | "doc" | "image" | "link" | "video"
+      file_type: "pdf" | "doc" | "image" | "link" | "video" | "pptx"
       ia_model: "haiku" | "sonnet"
       ia_tool_type:
         | "act"
@@ -3797,7 +3797,7 @@ export const Constants = {
       alert_level: ["danger", "warning", "info", "success"],
       chat_role: ["user", "assistant", "system"],
       day_of_week: ["lunes", "martes", "miercoles", "jueves", "viernes"],
-      file_type: ["pdf", "doc", "image", "link", "video"],
+      file_type: ["pdf", "doc", "image", "link", "video", "pptx"],
       ia_model: ["haiku", "sonnet"],
       ia_tool_type: [
         "act",

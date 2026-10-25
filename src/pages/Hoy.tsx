@@ -199,12 +199,12 @@ export default function Hoy() {
                         Tres pasos y ya estás andando. No hace falta saber nada de IA: la app te guía.
                     </p>
                     <div className="hoy-onb-steps">
-                        <Link to="/biblioteca" className="hoy-onb-step">
+                        <Link to="/biblioteca?subir=archivo" className="hoy-onb-step">
                             <span className="hoy-onb-num">1</span>
                             <span className="hoy-onb-icon"><Upload size={17} /></span>
                             <div>
-                                <strong>Subí un material</strong>
-                                <span>Un PDF o Word que ya uses en clase</span>
+                                <strong>Subí o escaneá tu material</strong>
+                                <span>Lo que ya usás en clase: PDF, Word, PowerPoint o tus hojas con la cámara</span>
                             </div>
                         </Link>
                         <Link to="/modulo" className="hoy-onb-step">
@@ -360,7 +360,8 @@ export default function Hoy() {
                                     </button>
                                     <button
                                         className="hoy-action hoy-action-live"
-                                        onClick={() => navigate('/clase-en-vivo')}
+                                        // Con el tema de hoy (y su material y sus preguntas) ya elegido
+                                        onClick={() => navigate(tema ? `/clase-en-vivo?tema=${tema.id}` : `/clase-en-vivo?materia=${cls.subjectId}&curso=${cls.courseId}`)}
                                         title="Que participen desde el celular durante la clase"
                                     >
                                         <Radio size={15} /> Dar en vivo

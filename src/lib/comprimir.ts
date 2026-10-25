@@ -4,7 +4,7 @@
  *   PDF tenía texto (uno exportado de Word, de una web), ese texto se lee
  *   ANTES de achicarlo y se guarda: la IA lo usa sin gastar en leerlo.
  * - Foto: más chica y en JPEG (WebP y otros formatos el depósito no los acepta).
- * - Word: las imágenes de adentro, más chicas. El texto no se toca.
+ * - Word y PowerPoint: las imágenes de adentro, más chicas. El texto no se toca.
  *
  * El límite lo pone la lectura con IA de un escaneo (process-document, ~11 MB).
  */
@@ -23,6 +23,7 @@ export const LIMITE_SUBIDA = 11_000_000;
 // Formatos de foto que acepta el depósito (bucket "library")
 const FOTOS_ACEPTADAS = ['image/jpeg', 'image/png'];
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 // Una página de texto real tiene cientos de letras; un escaneo, ninguna
 const LETRAS_POR_PAGINA = 200;
 
@@ -52,7 +53,8 @@ export async function achicar(f: File, alAvanzarDe: AlAvanzar = () => {}): Promi
   const alAvanzar = (mensaje: string) => { if (alAvanzarDe(mensaje) === false) throw new AchicadoCancelado(); };
   if (f.type === 'application/pdf') return achicarPdf(f, alAvanzar);
   if (f.type.startsWith('image/')) return { archivo: await achicarFoto(f) };
-  if (f.type === DOCX) return { archivo: await achicarWord(f, alAvanzar) };
+  if (f.type === DOCX) return { archivo: await achicarOffice(f, OFFICE.word, alAvanzar) };
+  if (f.type === PPTX) return { archivo: await achicarOffice(f, OFFICE.powerpoint, alAvanzar) };
   throw new NoSePudoAchicar('Este formato no se puede achicar acá.');
 }
 
@@ -160,6 +162,45 @@ async function achicarPdf(f: File, alAvanzar: (mensaje: string) => void): Promis
 
 type DocPdf = Awaited<ReturnType<Awaited<ReturnType<typeof import('../services/documents.service').cargarPdfjs>>['getDocument']>['promise']>;
 
+/** Una tanda de páginas de un PDF, como PDF aparte (para leerlo con IA de a partes) */
+export interface TandaPdf { desde: number; hasta: number; total: number; indice: number; pdf: Blob }
+
+/**
+ * Corta un PDF en tandas de `porTanda` páginas, cada una como un PDF chico
+ * (las páginas pasan a imagen: es lo que mira la IA al transcribir un
+ * escaneo). Así un escaneo largo se lee entero y cada pedido es corto, en
+ * vez de uno solo que se corta por tiempo o por largo. Si entra en una
+ * tanda, sale el mismo archivo, sin tocarlo.
+ */
+export async function* tandasDePdf(f: Blob, porTanda: number): AsyncGenerator<TandaPdf> {
+  const [{ cargarPdfjs }, { jsPDF }] = await Promise.all([import('../services/documents.service'), import('jspdf')]);
+  const pdfjs = await cargarPdfjs();
+  const doc: DocPdf = await pdfjs.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+  try {
+    const n = doc.numPages;
+    if (n <= porTanda) {
+      yield { desde: 1, hasta: n, total: n, indice: 1, pdf: f };
+      return;
+    }
+    let indice = 0;
+    for (let desde = 1; desde <= n; desde += porTanda) {
+      const hasta = Math.min(n, desde + porTanda - 1);
+      let salida: InstanceType<typeof jsPDF> | null = null;
+      for (let i = desde; i <= hasta; i++) {
+        // 150 ppp: se lee bien la letra chica de una fotocopia
+        const { jpeg, ancho, alto } = await paginaComoJpeg(doc, i, { ppp: 150, calidad: 0.8 });
+        const orientacion = ancho > alto ? 'landscape' : 'portrait';
+        if (!salida) salida = new jsPDF({ unit: 'pt', format: [ancho, alto], orientation: orientacion, compress: true });
+        else salida.addPage([ancho, alto], orientacion);
+        salida.addImage(jpeg, 'JPEG', 0, 0, ancho, alto, undefined, 'NONE');
+      }
+      yield { desde, hasta, total: n, indice: ++indice, pdf: salida!.output('blob') };
+    }
+  } finally {
+    void doc.destroy();
+  }
+}
+
 /** Una página dibujada a `ppp` puntos por pulgada, en JPEG; ancho y alto en puntos (los del PDF) */
 async function paginaComoJpeg(doc: DocPdf, i: number, paso: { ppp: number; calidad: number }) {
   const pagina = await doc.getPage(i);
@@ -186,22 +227,27 @@ async function paginaComoJpeg(doc: DocPdf, i: number, paso: { ppp: number; calid
   return { jpeg: new Uint8Array(await blob.arrayBuffer()), ancho: base.width, alto: base.height };
 }
 
-// ── Word ──
+// ── Word y PowerPoint: zips con las imágenes en una carpeta "media" ──
 
-async function achicarWord(f: File, alAvanzar: (mensaje: string) => void): Promise<File> {
+const OFFICE = {
+  word: { nombre: 'Word', el: 'este Word', media: /^word\/media\/.+\.(jpe?g|png)$/i, tipo: DOCX, comoPdf: 'Archivo → Guardar como → PDF' },
+  powerpoint: { nombre: 'PowerPoint', el: 'este PowerPoint', media: /^ppt\/media\/.+\.(jpe?g|png)$/i, tipo: PPTX, comoPdf: 'Archivo → Exportar → PDF' },
+};
+
+async function achicarOffice(f: File, o: typeof OFFICE.word, alAvanzar: (mensaje: string) => void): Promise<File> {
   const { default: JSZip } = await import('jszip');
-  alAvanzar('Abriendo el Word…');
+  alAvanzar(`Abriendo el ${o.nombre}…`);
   let zip: InstanceType<typeof JSZip>;
-  try { zip = await JSZip.loadAsync(await f.arrayBuffer()); } catch { throw new NoSePudoAchicar('No se pudo abrir este Word: puede estar dañado. Probá abrirlo y guardarlo de nuevo.'); }
+  try { zip = await JSZip.loadAsync(await f.arrayBuffer()); } catch { throw new NoSePudoAchicar(`No se pudo abrir ${o.el}: puede estar dañado. Probá abrirlo y guardarlo de nuevo.`); }
   const { abrirImagen, soltarLienzo } = await navegador();
-  const imagenes = Object.values(zip.files).filter(e => !e.dir && /^word\/media\/.+\.(jpe?g|png)$/i.test(e.name));
+  const imagenes = Object.values(zip.files).filter(e => !e.dir && o.media.test(e.name));
   let hechas = 0;
   for (const entrada of imagenes) {
     alAvanzar(`Achicando las imágenes (${++hechas} de ${imagenes.length})…`);
     const original = await entrada.async('arraybuffer');
     if (original.byteLength < 150 * 1024) continue;
     const png = /\.png$/i.test(entrada.name);
-    // Mismo nombre y mismo tipo: el Word no se entera del cambio
+    // Mismo nombre y mismo tipo: el Word (o el PowerPoint) no se entera del cambio
     const tipo = png ? 'image/png' : 'image/jpeg';
     let img: HTMLImageElement;
     try { img = await abrirImagen(new Blob([original], { type: tipo })); } catch { continue; }
@@ -216,10 +262,10 @@ async function achicarWord(f: File, alAvanzar: (mensaje: string) => void): Promi
     soltarLienzo(c);
     if (nueva && nueva.size < original.byteLength) zip.file(entrada.name, await nueva.arrayBuffer());
   }
-  alAvanzar('Armando el Word…');
-  const blob = await zip.generateAsync({ type: 'blob', mimeType: DOCX, compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  alAvanzar(`Armando el ${o.nombre}…`);
+  const blob = await zip.generateAsync({ type: 'blob', mimeType: o.tipo, compression: 'DEFLATE', compressionOptions: { level: 6 } });
   if (blob.size > LIMITE_SUBIDA) {
-    throw new NoSePudoAchicar(`Achicado sigue pesando ${mb(blob.size)}. Guardalo como PDF (Archivo → Guardar como → PDF) y subí el PDF: ese sí se puede achicar más.`);
+    throw new NoSePudoAchicar(`Achicado sigue pesando ${mb(blob.size)}. Guardalo como PDF (${o.comoPdf}) y subí el PDF: ese sí se puede achicar más.`);
   }
-  return new File([blob], f.name, { type: DOCX });
+  return new File([blob], f.name, { type: o.tipo });
 }

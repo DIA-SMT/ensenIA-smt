@@ -10,7 +10,7 @@
 import { Link } from 'react-router-dom';
 import {
     Zap, Boxes, Radio, ListChecks, FileInput, Presentation, Mic, MessagesSquare,
-    ArrowRight, CalendarRange, type LucideIcon,
+    ArrowRight, CalendarRange, Upload, ScanLine, type LucideIcon,
 } from 'lucide-react';
 import UsosIA from '../components/ui/UsosIA';
 import './Crear.css';
@@ -74,6 +74,21 @@ export default function Crear() {
                 <p className="crear-bajada">Elegí qué necesitás. La IA arma un borrador y vos lo revisás antes de que llegue a tus estudiantes.</p>
                 <UsosIA />
             </div>
+
+            {/* Lo primero: el material que el docente ya tiene */}
+            <section className="crear-material" aria-labelledby="crear-material-titulo">
+                <h2 id="crear-material-titulo" className="crear-seccion">Tu material</h2>
+                <div className="crear-material-botones">
+                    <Link to="/biblioteca?subir=archivo" className="crear-material-boton">
+                        <Upload size={22} aria-hidden="true" />
+                        <span><strong>Subir un archivo</strong><small>PDF, Word, PowerPoint o fotos</small></span>
+                    </Link>
+                    <Link to="/biblioteca?subir=escanear" className="crear-material-boton">
+                        <ScanLine size={22} aria-hidden="true" />
+                        <span><strong>Escanear hojas</strong><small>Con la cámara: queda un PDF derecho y limpio</small></span>
+                    </Link>
+                </div>
+            </section>
 
             <ul className="crear-principales">
                 {PRINCIPALES.map(o => (
