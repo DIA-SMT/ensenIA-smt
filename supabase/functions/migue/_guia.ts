@@ -33,20 +33,20 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/planificacion$/, docente: '"Planificación" (título "Mi planificación"), en el menú, grupo "Mi día"' },
   { ruta: /^\/mis-clases$/, docente: '"Mis clases", en el menú, grupo "Mi día"' },
   { ruta: /^\/agenda$/, docente: '"Mi horario" (se llega desde "Mis clases" o el buscador: "Mi horario de la semana")' },
-  { ruta: /^\/crear$/, docente: '"Crear" (título "¿Qué querés crear?"), en el menú, grupo "Aula"' },
+  { ruta: /^\/crear$/, docente: '"Crear" (título "¿Qué querés crear?": primero "¿Para qué tema?", abajo "Algo suelto, sin tema"), en el menú, grupo "Aula"' },
   { ruta: /^\/actividades$/, docente: '"Actividades" (la lista de sus actividades), en el menú, grupo "Aula"' },
   { ruta: /^\/actividades\/nueva$/, docente: '"Armar actividad, TP o evaluación" (armando una actividad nueva)' },
   { ruta: /^\/actividades\/[^/]+\/editar$/, docente: '"Editar la actividad" (editando una actividad que ya existe)' },
   { ruta: /^\/actividades\/[^/]+$/, docente: '"Resultados de la actividad" (una actividad puntual, con las entregas)' },
   { ruta: /^\/actividad-rapida$/, docente: '"Actividad rápida" (se llega desde "Crear" o el buscador)' },
-  { ruta: /^\/modulo$/, docente: '"Armar la clase" (diapositivas, juego y tarea)' },
+  { ruta: /^\/modulo$/, docente: '"Armar la clase completa" (diapositivas, juego y tarea)' },
   { ruta: /^\/ia-lab$/, docente: '"Preparar con la IA" (en el buscador: "Preparar con la IA")' },
   { ruta: /^\/tema\/[^/]+$/, docente: '"Preparar la clase" (un tema de su planificación)' },
   { ruta: /^\/libreta$/, docente: '"Libreta" (notas), en el menú, grupo "Aula"' },
   { ruta: /^\/asistencia$/, docente: '"Asistencia de hoy" (pasar lista; se llega desde "Hoy" → "Pasar lista")' },
   { ruta: /^\/corregir$/, docente: '"Para corregir" (todas las entregas sin nota; se llega desde "Hoy")' },
   { ruta: /^\/students$/, docente: '"Estudiantes", en el menú, grupo "Aula"' },
-  { ruta: /^\/biblioteca$/, docente: '"Mis materiales" (título "Biblioteca docente"), en el menú, grupo "Aula"' },
+  { ruta: /^\/biblioteca$/, docente: '"Mis materiales", en el menú, grupo "Aula"' },
   { ruta: /^\/clase-en-vivo$/, docente: '"Clase en vivo", en el menú, grupo "Aula"', director: '"Sala en vivo", en el menú, grupo "Comunidad"' },
   { ruta: /^\/seguimiento$/, docente: '"Seguimiento" (consultas, entregas y quién viene atrasado), en el menú, grupo "Aula"' },
   { ruta: /^\/perfil$/, docente: '"Mi perfil" (título "Mi perfil docente"), en el menú, grupo "Cuenta"', director: '"Mi perfil", en el menú, grupo "Cuenta"' },
@@ -146,16 +146,16 @@ Menú: grupo "Mi día": "Hoy" (el inicio), "Planificación", "Mis clases"; grupo
 "Crear", "Actividades", "Libreta", "Estudiantes", "Mis materiales", "Clase en vivo";
 grupo "Escuela": "Mensajes", "Citaciones", "Alertas", "Comunicados", "Normativa"; grupo
 "Cuenta": "Ajustes". No están en el menú (se llega con el buscador o desde otra pantalla):
-"Nueva actividad rápida", "Armar la clase (diapositivas, juego y tarea)", "Preguntale a
-la IA" (abre "Preparar con la IA"), "Mi horario de la semana", la asistencia (desde "Hoy"
+"Nueva actividad rápida", "Armar la clase completa (diapositivas, juego y tarea)",
+"Preparar con la IA", "Migue, tu asistente", "Mi horario de la semana", la asistencia (desde "Hoy"
 → "Pasar lista") y "Para corregir" (desde "Hoy").
 Sin materias asignadas, la app dice "Todavía no tenés cursos asignados": se las asigna la
 dirección. Lo que se arma con IA (presentaciones, actividades, resúmenes, tarjetas, juegos)
 tiene 15 usos por día ("Te quedan N usos de IA hoy"); las charlas con Migue van aparte.
 
 ### Armar un TP, una evaluación o una actividad con preguntas (opción múltiple o desarrollo)
-Se entra por "Crear" → "Trabajo práctico o evaluación", por "Actividades" → "Trabajo
-práctico o evaluación", o desde la planificación: en un tema, "Preparar ▾" → "Trabajo
+Lo mejor es desde el tema (así queda con él): "Crear" → "¿Para qué tema?" → "Prepararlo",
+o desde la planificación: en un tema, "Preparar ▾" → "Trabajo
 práctico" o "Evaluación" (así ya queda con su tema).
 1. "Para": materia y curso (aparece solo si tiene más de un curso).
 2. "Tema de la planificación" (opcional) y "Qué es": "💻 Actividad", "📂 TP" o
@@ -219,11 +219,11 @@ publica directo, sin borrador. Después: "Mostrar QR para el aula", "Ver resulta
 ### Preparar la clase de un tema
 "Preparar ▾" → "Todo lo del tema": "Para dar la clase" (sus materiales, "Armar la clase
 completa", "Presentación con IA", "Sumar de la biblioteca") y "Para los chicos"
-("Trabajo práctico", "Evaluación", "Actividad corta").
+("Trabajo práctico", "Evaluación", "Actividad") y "Dar esta clase en vivo".
 
-### Armar la clase (diapositivas, juego y tarea)
+### Armar la clase completa (diapositivas, juego y tarea)
 "¿Para qué curso?" → "¿De dónde sale el contenido?" (un tema de la planificación, un
-material de la biblioteca o "De un tema nuevo") → "Armar la clase" → elegir las piezas
+material de la biblioteca o "De un tema nuevo") → "Armar la clase completa" → elegir las piezas
 (Diapositivas, Tarea, Crucigrama, Diagrama, Tarjetas de repaso, Podcast, "Pregunta para la
 clase en vivo") → "Generar N cosas" → "Revisá tu clase" (cada parte con su casilla
 "Enviar") → "Enviar al curso" o "Dejarla guardada sin enviar". Los chicos la ven en "Mis

@@ -189,6 +189,8 @@ export default function ActividadRapida() {
         teacherId: user.id,
         schoolId: user.schoolId,
         sourceTool: 'act',
+        // Si el tema es uno del programa, la actividad queda en ese tema (y se ve en él)
+        classId: listaTemas.find(t => t.clase === topic.trim())?.id ?? null,
         dueDate: dueDateIso(),
         points: points ? Number(points) : null,
       });

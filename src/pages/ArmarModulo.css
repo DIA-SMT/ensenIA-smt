@@ -462,3 +462,7 @@
   .mod-tarea-fila { grid-template-columns: 1fr 1fr; }
   .mod-envio .mod-final { flex-direction: column-reverse; align-items: stretch; }
 }
+
+/* Llegado desde un tema: volver a él (UX docente) */
+.mod-volver { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 40px; margin-bottom: var(--space-2); font-size: 0.875rem; color: var(--text-secondary); }
+.mod-volver:hover, .mod-volver:focus-visible { color: var(--acento); }

@@ -475,7 +475,9 @@ export default function ActividadDetalle() {
 
   return (
     <div className="acts-container animate-in">
-      <Link to="/actividades" className="acts-back"><ArrowLeft size={15} /> Actividades</Link>
+      {activity.classId
+        ? <Link to={`/tema/${activity.classId}`} className="acts-back"><ArrowLeft size={15} /> Volver al tema</Link>
+        : <Link to="/actividades" className="acts-back"><ArrowLeft size={15} /> Actividades</Link>}
 
       <div className="card acts-detail-header">
         <div className="flex items-center justify-between gap-4" style={{ flexWrap: 'wrap' }}>

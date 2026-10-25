@@ -55,7 +55,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/seguimiento', etiqueta: 'Seguimiento', icono: Activity, grupo: 'Aula', claves: 'consultas dudas preguntas devoluciones atrasados entregas quién no entregó cómo vienen responder aclaraciones' },
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
-  { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Biblioteca docente', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
+  { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Mis materiales', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
   { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Aula', claves: 'qr proyectar sala preguntas presencia' },
   { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Escuela', claves: 'mensajes conversaciones escribir responder chat comunicados citaciones' },
   { ruta: '/familias', etiqueta: 'Citaciones', titulo: 'Citaciones a familias', icono: HeartHandshake, grupo: 'Escuela', claves: 'familias padres citar citación tutores reunión' },
@@ -123,7 +123,7 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   // Siguen a mano desde el buscador aunque ya no estén sueltas en el menú
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
-    { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase completa clase armada material planificar armar placas tarjetas diapositivas juego crucigrama diagrama tarea enviar' },
+    { ruta: '/modulo', etiqueta: 'Armar la clase completa (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase completa clase armada material planificar armar placas tarjetas diapositivas juego crucigrama diagrama tarea enviar' },
     { ruta: '/migue', etiqueta: 'Migue, tu asistente', icono: Sparkles, claves: 'preguntale a la ia asistente ayuda ideas consulta chat adaptar rúbrica' },
     { ruta: '/ia-lab', etiqueta: 'Preparar con la IA (presentación, evaluación, resumen)', icono: FlaskConical, claves: 'laboratorio ia generar evaluación resumen presentación diapositivas oral rúbrica' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
@@ -163,7 +163,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   const item = items.find(i => i.ruta === pathname);
   if (item) return item.titulo ?? item.etiqueta;
   if (pathname === '/actividad-rapida') return 'Actividad rápida';
-  if (pathname === '/modulo') return 'Armar la clase';
+  if (pathname === '/modulo') return 'Armar la clase completa';
   if (pathname === '/ia-lab') return 'Preparar con la IA';
   if (pathname === '/agenda') return 'Mi horario';
   if (pathname === '/migue') return 'Migue';

@@ -85,8 +85,14 @@ export default function Planificacion() {
     if (!m && !clase) return;
     const i = asignaciones.findIndex(a => a.subjectId === m && a.courseId === c);
     if (i >= 0) setElegida(i);
-    if (clase) { enfocar.current = clase; setAbierto(clase); }
-    setSearchParams({}, { replace: true });
+    if (clase) {
+      enfocar.current = clase;
+      setAbierto(clase);
+      // El curso queda en la dirección; el tema, ya abierto, no hace falta
+      const p = new URLSearchParams(searchParams);
+      p.delete('clase');
+      setSearchParams(p, { replace: true });
+    }
   }, [asignaciones, searchParams, setSearchParams]);
 
   useEffect(() => {
@@ -248,7 +254,15 @@ export default function Planificacion() {
         <div className="pl-controles">
           <label className="sr-only" htmlFor="pl-materia">Materia y curso</label>
           <select id="pl-materia" className="form-select" value={elegida}
-            onChange={e => { setElegida(Number(e.target.value)); setUnidades(null); setAbierto(null); }}>
+            onChange={e => {
+              const i = Number(e.target.value);
+              setElegida(i);
+              setUnidades(null);
+              setAbierto(null);
+              // En la dirección: volver desde un tema trae el mismo curso
+              const a = asignaciones[i];
+              if (a) setSearchParams({ materia: a.subjectId, curso: a.courseId }, { replace: true });
+            }}>
             {asignaciones.map((a, i) => (
               <option key={`${a.subjectId}-${a.courseId}`} value={i}>
                 {materias[a.subjectId]?.name ?? 'Materia'} · {a.courseName}
@@ -428,7 +442,7 @@ function FilaTema({ tema, hoy, encuentros, abierto, alAbrir, alCambiarFecha, alM
   // Desde cada tema, lo que hay para preparar (antes eran pantallas sueltas)
   const preparar = [
     { a: `/tema/${t.id}`, icono: FolderOpen, etiqueta: 'Todo lo del tema', detalle: 'El material de la clase y lo de los chicos, en un lugar' },
-    { a: `/modulo?tema=${t.id}`, icono: Boxes, etiqueta: 'La clase completa', detalle: 'Apunte, diapositivas, juego y tarea, para mandar juntos' },
+    { a: `/modulo?tema=${t.id}`, icono: Boxes, etiqueta: 'Clase completa', detalle: 'Apunte, diapositivas, juego y tarea, para mandar juntos' },
     { a: `/ia-lab?clase=${t.id}&herramienta=pres`, icono: Presentation, etiqueta: 'Presentación', detalle: 'Diapositivas que podés corregir y proyectar' },
     { a: `/actividades/nueva?tema=${t.id}&tipo=tp`, icono: ClipboardList, etiqueta: 'Trabajo práctico', detalle: 'Por partes y con puntos; en el celular o en papel' },
     { a: `/actividades/nueva?tema=${t.id}&tipo=evaluacion`, icono: FileCheck2, etiqueta: 'Evaluación', detalle: 'Por partes y con puntos; se corrige sola la opción múltiple' },

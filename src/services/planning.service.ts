@@ -190,6 +190,8 @@ function mapClass(row: any): PlanningClass {
 }
 
 export interface TemaDelPrograma {
+  /** El id del tema: la actividad que se arma con él queda en ese tema */
+  id: string;
   unidad: string;
   clase: string;
   dada: boolean;
@@ -208,15 +210,15 @@ export async function getTemasDelPrograma(
   const data = unwrap(
     await supabase
       .from('planning_units')
-      .select('title, sort_order, planning_classes(title, sort_order, is_complete)')
+      .select('title, sort_order, planning_classes(id, title, sort_order, is_complete)')
       .eq('subject_id', subjectId)
       .eq('course_id', courseId)
       .eq('teacher_id', teacherId)
       .order('sort_order')
   );
-  return data.flatMap((u: { title: string; planning_classes: { title: string; sort_order: number; is_complete: boolean }[] | null }) =>
+  return data.flatMap((u: { title: string; planning_classes: { id: string; title: string; sort_order: number; is_complete: boolean }[] | null }) =>
     [...(u.planning_classes ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map(c => ({ unidad: u.title, clase: c.title, dada: !!c.is_complete })),
+      .map(c => ({ id: c.id, unidad: u.title, clase: c.title, dada: !!c.is_complete })),
   );
 }

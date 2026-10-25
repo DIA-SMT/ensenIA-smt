@@ -13,10 +13,10 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     Boxes, Sparkles, Layers, Headphones, ClipboardList, Radio,
-    Check, Loader2, ArrowRight, Eye, AlertCircle, Square,
+    Check, Loader2, ArrowRight, ArrowLeft, Eye, AlertCircle, Square,
     BookOpen, PenLine, FolderTree, Pencil, RefreshCw, Presentation,
     Puzzle, Network, Send, FileText, X, Trash2,
 } from 'lucide-react';
@@ -32,6 +32,7 @@ import {
 import { generarDiagrama, generarDatosJuego, guardarDiagrama, guardarJuego } from '../services/visuales.service';
 import { enviarClase, type TareaDeClase } from '../services/clases.service';
 import { startLiveSession, launchActivity, getMyLiveSession } from '../services/live.service';
+import { crearPregunta, getPreguntasDeTemas } from '../services/preguntas-en-vivo.service';
 import { armarCrucigrama } from '../lib/armarJuegos';
 import { dibujarDiagrama, svgAPng } from '../lib/dibujarDiagrama';
 import { VARIANTES, type VarianteDiagrama } from '../lib/diagramas';
@@ -125,6 +126,8 @@ export default function ArmarModulo() {
         diagrama?: { png: Blob; titulo: string; descripcion: string };
     }>({});
     const [preguntaVivo, setPreguntaVivo] = useState<ActivityQuestion | null>(null);
+    // Con un tema, la pregunta en vivo queda entre sus preguntas preparadas
+    const [vivoGuardada, setVivoGuardada] = useState(false);
     const [liveReady, setLiveReady] = useState(false);
     const [lanzando, setLanzando] = useState(false);
 
@@ -524,7 +527,28 @@ export default function ArmarModulo() {
         else await generarPieza(key, apunte);
     };
 
-    // La pregunta en vivo se lanza cuando el docente está en el aula, no al prepararla
+    /** Con un tema: la pregunta queda en el tema y se lanza en el aula con un toque */
+    const guardarVivoEnTema = async () => {
+        if (!temaId || !preguntaVivo || lanzando) return;
+        setLanzando(true);
+        try {
+            const ya = await getPreguntasDeTemas([temaId]).catch(() => []);
+            const options = (preguntaVivo.options ?? []).map((label, i) => ({ id: String.fromCharCode(97 + i), label }));
+            await crearPregunta(temaId, 'quiz', {
+                question: preguntaVivo.prompt,
+                options,
+                correctId: options[preguntaVivo.correct_index ?? 0]?.id,
+            }, ya.length + 1);
+            setVivoGuardada(true);
+        } catch (err) {
+            console.error('pregunta en vivo:', err);
+            avisar.error('No se pudo guardar la pregunta en el tema', 'Probá de nuevo.');
+        } finally {
+            setLanzando(false);
+        }
+    };
+
+    // Sin tema: la pregunta en vivo se lanza cuando el docente está en el aula
     const lanzarVivo = async () => {
         if (!assignment || !preguntaVivo || lanzando) return;
         setLanzando(true);
@@ -614,6 +638,10 @@ export default function ArmarModulo() {
 
     return (
         <div className="mod-container animate-in">
+            {/* Llegado desde un tema: se vuelve a él */}
+            {temaId && origen === 'tema' && (
+                <Link to={`/tema/${temaId}`} className="mod-volver"><ArrowLeft size={15} aria-hidden="true" /> Volver al tema</Link>
+            )}
             {/* Pasos */}
             <div className="mod-steps">
                 {['De dónde sale', 'El contenido', 'Revisar y enviar'].map((label, i) => (
@@ -769,7 +797,7 @@ export default function ArmarModulo() {
                             onClick={handleGenerate}
                             disabled={!canGenerate}
                         >
-                            <Sparkles size={17} /> {existing ? 'Armar la clase igual' : 'Armar la clase'}
+                            <Sparkles size={17} /> {existing ? 'Armar la clase completa igual' : 'Armar la clase completa'}
                         </button>
                     </div>
                 </section>
@@ -918,7 +946,7 @@ export default function ArmarModulo() {
                                         bloqueada={!!enviada}
                                     >
                                         <button className="btn btn-outline btn-sm" onClick={() => setPresentando(mazoDe(mazoMat))}>
-                                            <Presentation size={14} /> Presentar
+                                            <Presentation size={14} /> Proyectar
                                         </button>
                                         <button className="btn btn-ghost btn-sm" onClick={() => setEditandoMazo(mazoDe(mazoMat))}>
                                             <Pencil size={14} /> Editar
@@ -1002,8 +1030,23 @@ export default function ArmarModulo() {
                                 )}
                             </div>
 
-                            {/* La pregunta en vivo no se manda: se lanza en el aula */}
-                            {preguntaVivo && (
+                            {/* La pregunta en vivo no se manda: con un tema queda entre sus
+                                preguntas preparadas; sin tema, se lanza en el aula */}
+                            {preguntaVivo && temaId && (
+                                <div className="mod-results">
+                                    {vivoGuardada ? (
+                                        <button className="mod-result mod-result-live" onClick={() => navigate(`/tema/${temaId}`)}>
+                                            <Check size={16} /> Guardada en el tema: la lanzás desde la clase en vivo con un toque
+                                        </button>
+                                    ) : (
+                                        <button className="mod-result" onClick={guardarVivoEnTema} disabled={lanzando}>
+                                            {lanzando ? <Loader2 size={16} className="girando" /> : <Radio size={16} />}
+                                            Guardar en el tema la pregunta para la clase en vivo: “{preguntaVivo.prompt.slice(0, 70)}{preguntaVivo.prompt.length > 70 ? '…' : ''}”
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            {preguntaVivo && !temaId && (
                                 <div className="mod-results">
                                     {liveReady ? (
                                         <button className="mod-result mod-result-live" onClick={() => navigate('/clase-en-vivo')}>
@@ -1027,6 +1070,11 @@ export default function ArmarModulo() {
                                             <span>Los chicos la ven en Mis materiales, todo junto. Si la bajan con conexión, la tienen aunque después no haya señal.</span>
                                         </div>
                                         <div className="mod-final">
+                                            {temaId && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/tema/${temaId}`)}>
+                                                    <ArrowRight size={14} /> Volver al tema
+                                                </button>
+                                            )}
                                             <button className="btn btn-outline btn-sm" onClick={() => navigate('/biblioteca')}>
                                                 <BookOpen size={14} /> Mis materiales
                                             </button>

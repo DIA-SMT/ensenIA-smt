@@ -967,7 +967,7 @@ export default function Biblioteca() {
                 title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
                 onClick={() => setPresentando({ mazo: deck, mat })}
               >
-                <Play size={14} /> Presentar
+                <Play size={14} /> Proyectar
               </button>
             )}
             {deck && (

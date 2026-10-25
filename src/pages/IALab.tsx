@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useMigue } from '../contexts/MigueContext';
 import {
     Sparkles, FileText, ListChecks, FileInput, Presentation, Mic,
     Send, Bot, User, Settings2, SlidersHorizontal, BookOpen, Users,
     ChevronRight, Plus, Folder, GripVertical, CheckCircle, FileUp,
     MessageSquare, PenLine, Copy, Trash2, Square,
-    Paperclip, X, Play, Boxes, BookmarkPlus, Loader2
-} from 'lucide-react';
+    Paperclip, X, Play, Boxes, BookmarkPlus, Loader2, ArrowLeft } from 'lucide-react';
 import { haySenial } from '../lib/conexion';
 import { LIMITE_DIARIO_IA } from '../lib/usoIA';
 import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
@@ -126,6 +125,8 @@ function getToolPrompt(toolId: IAToolType, classTitle?: string): string {
 export default function IALab() {
     // Las dudas sueltas van a Migue, el único asistente del docente (UX docente)
     const migue = useMigue();
+    // Llegado desde un tema (?clase=): un enlace para volver a él
+    const [temaVuelta, setTemaVuelta] = useState<string | null>(null);
     const { user } = useAuth();
     const navigate = useNavigate();
 
@@ -284,6 +285,7 @@ export default function IALab() {
         const unidad = allUnits.find(u => u.classes.some(c => c.id === claseId));
         const cls = unidad?.classes.find(c => c.id === claseId);
         if (unidad && cls) {
+            setTemaVuelta(cls.id);
             const idx = assignments.findIndex(a => a.subjectId === unidad.subjectId && a.courseId === unidad.courseId);
             if (idx >= 0) setSelectedAssignmentIdx(idx);
             // La materia y el curso del tema (el selector se actualiza recién en el próximo render)
@@ -1165,6 +1167,11 @@ export default function IALab() {
                         </button>
                     </div>
                     <div className="header-right">
+                        {temaVuelta && (
+                            <Link to={`/tema/${temaVuelta}`} className="btn btn-ghost btn-sm">
+                                <ArrowLeft size={14} aria-hidden="true" /> Volver al tema
+                            </Link>
+                        )}
                         <span
                             className={`quota-badge ${usesLeft <= 5 ? 'quota-low' : ''}`}
                             title={`Cada día tenés ${DAILY_QUOTA} generaciones con IA. Hoy usaste ${usageCount}.`}
@@ -1252,7 +1259,7 @@ export default function IALab() {
                                                             onClick={() => handlePresent(msg)}
                                                             title="Ver como diapositivas y descargar PowerPoint"
                                                         >
-                                                            <Play size={13} /> Presentar
+                                                            <Play size={13} /> Proyectar
                                                         </button>
                                                     )}
                                                     {decks.has(msg.id) && currentAssignment && (

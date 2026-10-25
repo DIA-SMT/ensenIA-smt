@@ -16,7 +16,7 @@ import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  Layers, Lock, Pencil, Plus, Presentation, Radio, ScanLine, Sparkles, Unlink, Upload, Users,
+  Layers, Lock, Pencil, PenLine, Plus, Presentation, Radio, ScanLine, Unlink, Upload, Users,
 } from 'lucide-react';
 import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
@@ -415,7 +415,7 @@ export default function TemaPreparar() {
         <div className="tp-acciones">
           <Link to={nueva('tp')} className="btn btn-primary btn-sm"><FileText size={14} /> Trabajo práctico</Link>
           <Link to={nueva('evaluacion')} className="btn btn-outline btn-sm"><ClipboardList size={14} /> Evaluación</Link>
-          <Link to={nueva('actividad')} className="btn btn-outline btn-sm"><Sparkles size={14} /> Actividad corta</Link>
+          <Link to={nueva('actividad')} className="btn btn-outline btn-sm"><PenLine size={14} aria-hidden="true" /> Actividad</Link>
         </div>
       </section>
 
