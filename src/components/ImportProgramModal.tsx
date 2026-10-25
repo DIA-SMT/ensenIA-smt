@@ -16,6 +16,10 @@ import { createMaterial } from '../services/library.service';
 import { updateMaterial } from '../services/documents.service';
 import { importarPrograma, fechaCorta, type ResultadoImportar } from '../services/planificacion.service';
 import type { ImportedProgram } from '../types';
+import Dialogo from './shell/Dialogo';
+import { esErrorDeRed } from '../lib/conexion';
+import { confirmar } from './ui/avisar';
+import { achicar, AchicadoCancelado } from '../lib/comprimir';
 import './Modals.css';
 
 interface Props {
@@ -47,19 +51,37 @@ export default function ImportProgramModal(props: Props) {
   const [error, setError] = useState('');
   const [resultado, setResultado] = useState<ResultadoImportar | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [achicando, setAchicando] = useState('');
 
-  const handleFile = (f: File | null) => {
+  const handleFile = async (f: File | null) => {
     setError('');
     if (!f) return;
-    if (f.type !== 'application/pdf' && f.type !== DOCX_MIME) {
+    // Algunos celulares no informan el tipo del Word: se mira la extensión (como en Mis materiales)
+    const esWord = f.type === DOCX_MIME || (!f.type && /\.docx$/i.test(f.name));
+    const esPdf = f.type === 'application/pdf' || (!f.type && /\.pdf$/i.test(f.name));
+    if (!esPdf && !esWord) {
       setError('Formato no soportado. Subí un PDF o un Word (.docx).');
       return;
     }
-    if (f.size > 11 * 1024 * 1024) {
-      setError('El archivo supera los 11 MB.');
+    const conTipo = esWord && !f.type ? new File([f], f.name, { type: DOCX_MIME }) : f;
+    if (conTipo.size > 11 * 1024 * 1024) {
+      if (esWord) {
+        setError('El Word supera los 11 MB. Guardalo como PDF y subilo de nuevo.');
+        return;
+      }
+      // Un PDF pesado (un escaneo largo) se achica acá, en el equipo
+      try {
+        setAchicando('Achicando el PDF…');
+        const { archivo } = await achicar(conTipo, m => { setAchicando(m); });
+        setFile(archivo);
+      } catch (err) {
+        if (!(err instanceof AchicadoCancelado)) setError('El PDF es muy pesado y no se pudo achicar. Probá con una versión más liviana.');
+      } finally {
+        setAchicando('');
+      }
       return;
     }
-    setFile(f);
+    setFile(conTipo);
   };
 
   const analyze = async () => {
@@ -90,7 +112,9 @@ export default function ImportProgramModal(props: Props) {
       setSelectedUnits(new Set(result.units.map((_, i) => i)));
       setStep('preview');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error procesando el documento.');
+      setError(esErrorDeRed(err)
+        ? 'Se cortó la conexión mientras la IA leía el programa. Probá de nuevo cuando vuelva la señal.'
+        : err instanceof Error && err.message ? err.message : 'No se pudo leer el programa. Probá de nuevo.');
       setStep('pick');
     }
   };
@@ -145,7 +169,11 @@ export default function ImportProgramModal(props: Props) {
       setResultado(res);
       setStep('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error creando la planificación.');
+      // Lo que armó la IA sigue en pantalla: se puede reintentar sin volver a leer
+      setError(esErrorDeRed(err)
+        ? 'Se cortó la conexión y no se terminó de crear. Probá de nuevo: lo que armó la IA sigue acá.'
+        : 'No se pudo crear la planificación. Probá de nuevo: lo que armó la IA sigue acá.');
+      console.error('crear planificación:', err);
       setStep('preview');
     }
   };
@@ -155,17 +183,28 @@ export default function ImportProgramModal(props: Props) {
     if (step === 'done') props.onImported();
     props.onClose();
   };
+  // Tocar afuera o Escape: nunca a mitad de camino, y lo que armó la IA se confirma
+  const pedirCerrar = async () => {
+    if (step === 'processing' || step === 'creating' || achicando) return;
+    if (step === 'preview' && !(await confirmar({
+      titulo: '¿Descartar lo que armó la IA?',
+      mensaje: 'Todavía no se creó la planificación. Si cerrás, hay que volver a leer el programa.',
+      accion: 'Descartar',
+      peligro: true,
+    }))) return;
+    cerrar();
+  };
 
   const selectedClassCount = program
     ? program.units.reduce((acc, u, i) => acc + (selectedUnits.has(i) ? u.classes.length : 0), 0)
     : 0;
 
   return (
-    <div className="em-modal-overlay" onClick={e => { if (e.target === e.currentTarget && step !== 'processing' && step !== 'creating') cerrar(); }}>
+    <Dialogo abierto alCerrar={cerrar} alPedirCierre={() => void pedirCerrar()} etiquetadoPor="imp-titulo" className="dialogo-em">
       <div className="em-modal em-modal-lg">
         <div className="em-modal-header">
-          <h3><Sparkles size={18} className="text-ia-accent" /> Importar programa anual</h3>
-          <button className="btn-icon" onClick={cerrar} disabled={step === 'processing' || step === 'creating'} aria-label="Cerrar">
+          <h3 id="imp-titulo"><Sparkles size={18} className="text-ia-accent" /> Subir el programa</h3>
+          <button className="btn-icon" onClick={() => void pedirCerrar()} disabled={step === 'processing' || step === 'creating' || Boolean(achicando)} aria-label="Cerrar">
             <X size={18} />
           </button>
         </div>
@@ -182,20 +221,27 @@ export default function ImportProgramModal(props: Props) {
               </p>
               <div
                 className="em-dropzone"
-                onClick={() => inputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                aria-label="Elegir el programa"
+                aria-busy={Boolean(achicando)}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !achicando) { e.preventDefault(); inputRef.current?.click(); } }}
+                onClick={() => { if (!achicando) inputRef.current?.click(); }}
                 onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0] ?? null); }}
+                onDrop={e => { e.preventDefault(); void handleFile(e.dataTransfer.files[0] ?? null); }}
               >
                 <FileUp size={28} />
-                {file
-                  ? <span className="em-file-name">{file.name} · {formatFileSize(file.size)}</span>
-                  : <span>Arrastrá el programa acá o hacé clic para elegirlo</span>}
+                {achicando
+                  ? <span role="status">{achicando}</span>
+                  : file
+                    ? <span className="em-file-name">{file.name} · {formatFileSize(file.size)}</span>
+                    : <span>Arrastrá el programa acá o tocá para elegirlo</span>}
                 <input
                   ref={inputRef}
                   type="file"
                   accept="application/pdf,.docx"
                   hidden
-                  onChange={e => handleFile(e.target.files?.[0] ?? null)}
+                  onChange={e => void handleFile(e.target.files?.[0] ?? null)}
                 />
               </div>
               <label className="em-checkbox-row">
@@ -231,7 +277,7 @@ export default function ImportProgramModal(props: Props) {
                     <input type="checkbox" checked={selectedUnits.has(i)} onChange={() => toggleUnit(i)} />
                     <Folder size={15} className="text-cyan" />
                     <span style={{ color: 'var(--text-primary)' }}>{u.title}</span>
-                    <span className="text-xs text-subtle" style={{ marginLeft: 'auto' }}>{u.classes.length} clases</span>
+                    <span className="text-xs text-subtle" style={{ marginLeft: 'auto' }}>{u.classes.length} {u.classes.length === 1 ? 'tema' : 'temas'}</span>
                   </label>
                   {selectedUnits.has(i) && u.classes.map((c, j) => (
                     <div key={j} className="em-preview-class">
@@ -295,7 +341,7 @@ export default function ImportProgramModal(props: Props) {
             <>
               <button className="btn btn-outline btn-sm" onClick={() => { setStep('pick'); }}>Volver</button>
               <button className="btn btn-primary btn-sm" onClick={createPlanning} disabled={selectedUnits.size === 0}>
-                Crear {selectedUnits.size} unidades · {selectedClassCount} clases
+                Crear {selectedUnits.size} {selectedUnits.size === 1 ? 'unidad' : 'unidades'} · {selectedClassCount} {selectedClassCount === 1 ? 'tema' : 'temas'}
               </button>
             </>
           )}
@@ -306,6 +352,6 @@ export default function ImportProgramModal(props: Props) {
           )}
         </div>
       </div>
-    </div>
+    </Dialogo>
   );
 }

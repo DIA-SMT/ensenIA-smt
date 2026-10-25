@@ -280,7 +280,8 @@ export default function Seguimiento() {
               <strong>{sinResponder.length}</strong>
               <span>consulta{sinResponder.length !== 1 ? 's' : ''} sin responder</span>
             </a>
-            <Link to="/corregir" className={`seg-numero ${paraCorregir ? 'alerta' : ''}`}>
+            <Link to={asignacion ? `/corregir?curso=${encodeURIComponent(asignacion.courseName)}&materia=${encodeURIComponent(nombreMateria(asignacion.subjectId))}` : '/corregir'}
+              className={`seg-numero ${paraCorregir ? 'alerta' : ''}`}>
               <ClipboardCheck size={18} aria-hidden="true" />
               <strong>{paraCorregir}</strong>
               <span>para corregir</span>

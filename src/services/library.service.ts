@@ -32,7 +32,7 @@ export async function searchMaterials(query: string, teacherId?: string): Promis
   let q = supabase
     .from('library_materials')
     .select('*')
-    .or(`title.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,subject_name.ilike.%${safeQuery}%`);
+    .or(`title.ilike.%${safeQuery}%,description.ilike.%${safeQuery}%,subject_name.ilike.%${safeQuery}%,extracted_text.ilike.%${safeQuery}%`);
 
   if (teacherId) q = q.eq('teacher_id', teacherId);
 

@@ -1044,7 +1044,7 @@ export default function IALab() {
                             icono={Folder}
                             titulo="Todavía no tenés unidades"
                             texto="Subí tu programa y la IA arma las unidades, o creá una a mano."
-                            accion={currentAssignment ? { etiqueta: 'Importar programa', alTocar: () => setShowImportModal(true), icono: FileUp } : undefined}
+                            accion={currentAssignment ? { etiqueta: 'Subir el programa', alTocar: () => setShowImportModal(true), icono: FileUp } : undefined}
                         />
                     )}
                     {filteredUnits.map(unit => {
@@ -1139,7 +1139,7 @@ export default function IALab() {
                         disabled={!currentAssignment}
                         title="Subí tu programa anual y la IA crea la planificación"
                     >
-                        <FileUp size={15} /> Importar programa
+                        <FileUp size={15} /> Subir el programa
                     </button>
                 </div>
             </div>
@@ -1831,7 +1831,11 @@ export default function IALab() {
             )}
 
             {mazo && (
-                <Dialogo abierto alCerrar={() => setMazo(null)} etiqueta="Diapositivas" className="dialogo-ancho">
+                <Dialogo abierto alCerrar={() => setMazo(null)} etiqueta="Diapositivas" className="dialogo-ancho"
+                    alPedirCierre={async () => {
+                        // Un minuto de IA y lo que se corrigió: un toque afuera no lo tira
+                        if (await confirmar({ titulo: '¿Cerrar las diapositivas?', mensaje: 'Si no las guardaste, se pierden.', accion: 'Cerrar', peligro: true })) setMazo(null);
+                    }}>
                     <div className="lab-mazo">
                         <div className="lab-mazo-head">
                             <h3>Diapositivas — corregí lo que quieras</h3>

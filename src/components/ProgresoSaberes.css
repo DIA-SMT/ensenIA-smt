@@ -18,17 +18,20 @@
 .sab-barra > span { display: block; height: 100%; background: var(--nivel); }
 .sab-cuentas { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--text-secondary); }
 
-.sab-estudiantes { list-style: none; margin: 0; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.sab-grupos { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; }
+.sab-grupo-t { margin: 0 0 6px; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.sab-grupo-t::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--nivel); }
+.sab-estudiantes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .sab-estudiantes li {
   padding: 4px 10px; border-radius: 999px; font-size: 0.8125rem;
   background: var(--nivel-claro); color: var(--text-primary); border: 1px solid var(--nivel);
 }
 
 /* Los niveles: color y su versión clara */
-.sab-leyenda .logrado, .sab-barra .logrado, .sab-estudiantes .logrado { --nivel: var(--success); --nivel-claro: var(--success-light); }
-.sab-leyenda .proceso, .sab-barra .proceso, .sab-estudiantes .proceso { --nivel: var(--warning); --nivel-claro: var(--warning-light); }
-.sab-leyenda .todavia, .sab-barra .todavia, .sab-estudiantes .todavia { --nivel: var(--danger); --nivel-claro: var(--danger-light); }
-.sab-leyenda .sin, .sab-barra .sin, .sab-estudiantes .sin { --nivel: var(--border-strong); --nivel-claro: transparent; }
+.sab-leyenda .logrado, .sab-barra .logrado, .sab-estudiantes .logrado, .sab-grupo-t.logrado { --nivel: var(--success); --nivel-claro: var(--success-light); }
+.sab-leyenda .proceso, .sab-barra .proceso, .sab-estudiantes .proceso, .sab-grupo-t.proceso { --nivel: var(--warning); --nivel-claro: var(--warning-light); }
+.sab-leyenda .todavia, .sab-barra .todavia, .sab-estudiantes .todavia, .sab-grupo-t.todavia { --nivel: var(--danger); --nivel-claro: var(--danger-light); }
+.sab-leyenda .sin, .sab-barra .sin, .sab-estudiantes .sin, .sab-grupo-t.sin { --nivel: var(--border-strong); --nivel-claro: transparent; }
 
 @media (max-width: 560px) {
   .sab-item > summary { grid-template-columns: 1fr; }

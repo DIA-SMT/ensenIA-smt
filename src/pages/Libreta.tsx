@@ -70,10 +70,12 @@ const keyOf = (studentId: string, term: number) => `${studentId}:${term}`;
 
 /** Boletín por trimestre (1-3 + diciembre/febrero): grilla con teclado, conducta, observación,
  *  inasistencias, libreta del curso e informes de actividad en PDF. Guarda en report_grades. */
-function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
+// El curso elegido es el mismo que en "Notas" (antes volvía al primero al cambiar de pestaña)
+function BoletinTeclado({ exigeTercero, assignmentIdx, setAssignmentIdx }: {
+    exigeTercero: boolean; assignmentIdx: number; setAssignmentIdx: (i: number) => void;
+}) {
     const { user } = useAuth();
     const [subjectsMap, setSubjectsMap] = useState<Record<string, Subject>>({});
-    const [assignmentIdx, setAssignmentIdx] = useState(0);
     const [term, setTerm] = useState(1);
     const [students, setStudents] = useState<Student[]>([]);
     const [grades, setGrades] = useState<ReportGrade[]>([]);
@@ -903,7 +905,7 @@ export default function Libreta() {
             </button>
           </div>
 
-          {tab === 'boletin' && <BoletinTeclado exigeTercero={thresholds?.decemberRule === 'anual'} />}
+          {tab === 'boletin' && <BoletinTeclado exigeTercero={thresholds?.decemberRule === 'anual'} assignmentIdx={assignmentIdx} setAssignmentIdx={setAssignmentIdx} />}
 
           {tab === 'temario' && assignment && term && (
             <TemarioEditor
@@ -926,7 +928,8 @@ export default function Libreta() {
 
           {tab === 'notas' && loading && <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando libreta…" />}
 
-          {tab === 'notas' && !loading && rows.length === 0 && (
+          {/* Sin estudiantes de verdad: no mientras falla la carga ni si faltan los trimestres */}
+          {tab === 'notas' && !loading && !error && terms.length > 0 && rows.length === 0 && (
             <EstadoVacio
               icono={Users}
               titulo="Este curso todavía no tiene estudiantes"

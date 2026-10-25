@@ -70,7 +70,9 @@ export default function MainLayout() {
   // La guía rápida se abre sola la primera vez (salvo que pidan que no).
   useEffect(() => {
     // La guía es de uso en el aula: el superadmin no tiene destinos ahí
-    if (user && user.role !== 'superadmin' && shouldAutoOpenGuide(user.role)) setGuiaAbierta(true);
+    // Ni al docente: el primer día tiene "Para arrancar" en Hoy, con los pasos en orden
+    // (antes se abrían a la vez la guía de 13 opciones y la lista)
+    if (user && user.role !== 'superadmin' && user.role !== 'docente' && shouldAutoOpenGuide(user.role)) setGuiaAbierta(true);
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // El color del rol, antes de pintar.

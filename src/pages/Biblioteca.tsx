@@ -108,6 +108,8 @@ export default function Biblioteca() {
   const [filtro, setFiltro] = useState<string | null>(null);
   const [allMaterials, setAllMaterials] = useState<LibraryMaterial[]>([]);
   const [searchResults, setSearchResults] = useState<LibraryMaterial[] | null>(null);
+  // Si la búsqueda falla no se muestra todo como si coincidiera
+  const [errorBusqueda, setErrorBusqueda] = useState(false);
   const [subjectsList, setSubjectsList] = useState<Subject[]>([]);
   // Hasta que llega la primera lista no se dice "no hay materiales"
   const [cargado, setCargado] = useState(false);
@@ -202,7 +204,9 @@ export default function Biblioteca() {
       return;
     }
     const timeout = setTimeout(() => {
-      searchMaterials(query, user.id).then(setSearchResults).catch(console.error);
+      searchMaterials(query, user.id)
+        .then(r => { setSearchResults(r); setErrorBusqueda(false); })
+        .catch(err => { console.error(err); setSearchResults([]); setErrorBusqueda(true); });
     }, 300);
     return () => clearTimeout(timeout);
   }, [query, user]);
@@ -332,6 +336,8 @@ export default function Biblioteca() {
   };
 
   // Con un curso elegido se ven sus materiales y los de "todos mis cursos" de esa materia
+  // Cargó y no hay ningún material: sin buscador ni filtros (no hay nada que buscar)
+  const vacia = cargado && allMaterials.length === 0 && !query.trim();
   let filtered = searchResults ?? allMaterials;
   if (asignacionFiltro) {
     filtered = filtered.filter(m => m.subjectId === asignacionFiltro.subjectId
@@ -506,9 +512,14 @@ export default function Biblioteca() {
     // Se cerró para abrir el escáner: lo del enlace sigue (al volver se usa)
     if (cerrandoParaEscanear.current) { cerrandoParaEscanear.current = false; return; }
     presetSubida.current = null;
+    const volver = volverA.current;
     volverA.current = null;
+    // Vino del tema (o de Crear) y canceló: vuelve ahí, no queda en Mis materiales
+    if (volver) navigate(volver);
   };
   const pedirCerrarSubir = async () => {
+    // Subiendo no se cierra: si falla, el error tiene que verse
+    if (uploading) return;
     if (uplEsEscaneo && uplFile && !uploading) {
       const ok = await confirmar({
         titulo: '¿Descartar el escaneo?',
@@ -566,11 +577,16 @@ export default function Biblioteca() {
         schoolId: user.schoolId,
         tags: uplTags.split(',').map(t => t.trim()).filter(Boolean),
       });
-      await updateMaterial(material.id, {
-        storagePath,
-        fileSizeBytes,
-        isSharedWithStudents: uplShare,
-      });
+      try {
+        await updateMaterial(material.id, {
+          storagePath,
+          fileSizeBytes,
+          isSharedWithStudents: uplShare,
+        });
+      } catch (err) {
+        await deleteMaterial(material.id).catch(() => { /* se reintenta igual */ });
+        throw err;
+      }
 
       // Ya está en la Biblioteca: las fotos guardadas para no perder el escaneo no hacen falta más
       if (uplEsEscaneo) void borrarEscaneo();
@@ -591,11 +607,15 @@ export default function Biblioteca() {
       if (volver) navigate(volver);
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : '';
-      if (esErrorDeRed(err) || /fetch|network|load failed/i.test(mensaje)) {
+      if (esErrorDeRed(err) || /fetch|network|load failed|señal/i.test(mensaje)) {
         setUplSinRed(true);
         setUplError('Se cortó la conexión y no se pudo subir. Queda acá: probá de nuevo cuando vuelva la señal.');
       } else {
-        setUplError(mensaje || 'Error subiendo el material.');
+        // Sin el mensaje técnico del almacenamiento
+        console.error('subir material:', mensaje);
+        setUplError(/payload|too large|413|exceed|size|pesado/i.test(mensaje)
+          ? 'El archivo es muy pesado para subir. Probá escanearlo de nuevo o achicarlo.'
+          : 'No se pudo subir el material. Probá de nuevo en un momento.');
       }
     } finally {
       setUploading(false);
@@ -870,6 +890,8 @@ export default function Biblioteca() {
     const processing = lecturas.has(mat.id);
     // Word o PDF subido que quedó sin texto: se puede volver a leer
     const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc' || mat.fileType === 'pptx');
+    // Una foto suelta: la IA no lee su texto (para eso, el escáner arma un PDF)
+    const fotoSinTexto = !mat.extractedText && mat.fileType === 'image' && !mat.visual;
     const textError = textErrors[mat.id];
     // Crucigrama o criptograma: se juega; su texto son las pistas, no da para resumir ni hacer placas
     const juegoMat = esJuego(mat.visual);
@@ -913,6 +935,11 @@ export default function Biblioteca() {
               <span className={`badge ${textError ? 'badge-danger' : 'badge-neutral'}`}
                 title="Sin texto, la IA no puede hacer tarjetas ni podcast, ni usarlo para preparar con la IA">
                 {textError ? 'No se pudo leer' : 'Sin texto'}
+              </span>
+            )}
+            {fotoSinTexto && (
+              <span className="badge badge-neutral" title="La IA no lee las fotos sueltas: pasala por «Escanear» y queda un PDF con texto">
+                Sin texto · pasala por el escáner
               </span>
             )}
             {mat.isSharedWithStudents && (
@@ -1040,7 +1067,7 @@ export default function Biblioteca() {
                   <MessagesSquare size={16} /> Preguntale a Migue
                 </button>
               )}
-              {!juegoMat && (
+              {!juegoMat && !fotoSinTexto && (
                 <button
                   className="mat-action-btn"
                   title="Resumen pedagógico con IA"
@@ -1189,12 +1216,12 @@ export default function Biblioteca() {
       {/* Main: Grid */}
       <main className="biblioteca-main">
         <div className="biblioteca-main-header">
-          <div className="search-bar biblioteca-search">
+          <div className="search-bar biblioteca-search" hidden={vacia}>
             <Search size={16} className="search-icon" />
             <input
               className="search-input"
               aria-label="Buscar en tus materiales"
-              placeholder="Buscar por título, tag o contenido..."
+              placeholder="Buscar por título, materia o contenido…"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -1208,7 +1235,7 @@ export default function Biblioteca() {
             <button className="btn btn-secondary btn-sm" onClick={openVideo}><Youtube size={15} /> Video</button>
           </div>
         </div>
-        {asignaciones.length > 0 && (
+        {asignaciones.length > 0 && !vacia && (
           <div className="bib-filtros-celu" role="group" aria-label="Materia y curso">
             <button className={`filter-chip ${!asignacionFiltro ? 'active' : ''}`} aria-pressed={!asignacionFiltro} onClick={() => setFiltro(null)}>
               Todo
@@ -1226,8 +1253,11 @@ export default function Biblioteca() {
           </div>
         )}
 
+        {errorBusqueda && (
+          <p className="text-sm text-danger" role="alert">No se pudo buscar (puede ser la señal). Probá de nuevo en un momento.</p>
+        )}
         {/* Por secciones, cada una dice cuántos tiene */}
-        <div className="biblioteca-count" hidden={!asignacionFiltro && !searchResults && allMaterials.length > 0}>
+        <div className="biblioteca-count" hidden={vacia || (!asignacionFiltro && !searchResults && allMaterials.length > 0)}>
           <span className="text-secondary text-sm">
             {filtered.length} material{filtered.length !== 1 ? 'es' : ''}
             {asignacionFiltro && <> de {asignacionFiltro.etiqueta} (con los de todos tus cursos de {asignacionFiltro.subjectName})</>}
@@ -1264,7 +1294,7 @@ export default function Biblioteca() {
           ) : (
             <EstadoVacio
               icono={BookOpen}
-              titulo="Tu biblioteca está vacía"
+              titulo="Todavía no subiste materiales"
               texto="Subí o escaneá lo que ya usás: apuntes, guías, presentaciones, fotocopias. La IA lee el texto y arma tarjetas de repaso, podcast y actividades."
               accion={{ etiqueta: 'Subir material', alTocar: () => openUpload(), icono: Upload }}
               accionSecundaria={{ etiqueta: 'Escanear hojas', alTocar: () => void abrirEscaner(), icono: ScanLine }}
@@ -1458,8 +1488,9 @@ export default function Biblioteca() {
           <div className="em-modal-body">
             {videoError && <div className="em-error"><AlertCircle size={15} /> {videoError}</div>}
             <div className="em-field">
-              <label>Link del video</label>
+              <label htmlFor="bib-video-link">Link del video</label>
               <input
+                id="bib-video-link"
                 type="text"
                 placeholder="https://www.youtube.com/watch?v=..."
                 value={videoUrl}
@@ -1475,8 +1506,9 @@ export default function Biblioteca() {
               />
             )}
             <div className="em-field">
-              <label>Título (cómo lo van a ver tus estudiantes)</label>
+              <label htmlFor="bib-video-titulo">Título (cómo lo van a ver tus estudiantes)</label>
               <input
+                id="bib-video-titulo"
                 type="text"
                 placeholder="Ej: ¿Qué es un vector? (5 min)"
                 value={videoTitle}
@@ -1485,8 +1517,9 @@ export default function Biblioteca() {
               />
             </div>
             <div className="em-field">
-              <label>Consigna o descripción (opcional)</label>
+              <label htmlFor="bib-video-desc">Consigna o descripción (opcional)</label>
               <textarea
+                id="bib-video-desc"
                 rows={2}
                 placeholder="Ej: Miralo antes de la clase del jueves y anotá dos preguntas."
                 value={videoDesc}
@@ -1523,8 +1556,9 @@ export default function Biblioteca() {
           <div className="em-modal-body">
             {editError && <div className="em-error" role="alert"><AlertCircle size={15} /> {editError}</div>}
             <div className="em-field">
-              <label>Nombre</label>
+              <label htmlFor="bib-renombrar">Nombre</label>
               <input
+                id="bib-renombrar"
                 type="text"
                 value={editTitle}
                 maxLength={120}
@@ -1534,8 +1568,9 @@ export default function Biblioteca() {
               />
             </div>
             <div className="em-field">
-              <label>Descripción (opcional)</label>
+              <label htmlFor="bib-renombrar-desc">Descripción (opcional)</label>
               <textarea
+                id="bib-renombrar-desc"
                 rows={2}
                 value={editDesc}
                 maxLength={300}
@@ -1566,14 +1601,16 @@ export default function Biblioteca() {
       </Dialogo>
 
       {/* ── Modal: subir material ── */}
-      <Dialogo abierto={showUpload} alCerrar={cerrarSubir} alPedirCierre={uplEsEscaneo && uplFile ? () => void pedirCerrarSubir() : undefined} etiquetadoPor="bib-subir-titulo" className="dialogo-em">
+      <Dialogo abierto={showUpload} alCerrar={cerrarSubir}
+        alPedirCierre={uploading ? () => { /* subiendo: no se cierra */ } : uplEsEscaneo && uplFile ? () => void pedirCerrarSubir() : undefined}
+        etiquetadoPor="bib-subir-titulo" className="dialogo-em">
         <div className="em-modal">
           <div className="em-modal-header">
             <h3 id="bib-subir-titulo"><Upload size={17} className="text-cyan" /> Subir material</h3>
-            <button className="btn-icon" aria-label="Cerrar" onClick={() => void pedirCerrarSubir()}><X size={18} /></button>
+            <button className="btn-icon" aria-label="Cerrar" onClick={() => void pedirCerrarSubir()} disabled={uploading}><X size={18} /></button>
           </div>
           <div className="em-modal-body">
-            {uplError && <div className="em-error"><AlertCircle size={15} /> {uplError}</div>}
+            {uplError && <div className="em-error" role="alert"><AlertCircle size={15} /> {uplError}</div>}
             {uplSinRed && uplEsEscaneo && uplFile && (
               <button type="button" className="btn btn-outline btn-sm" onClick={guardarEnEquipo}>
                 <Download size={14} /> Guardar el escaneo en el equipo
@@ -1581,6 +1618,10 @@ export default function Biblioteca() {
             )}
             <div
               className="em-dropzone"
+              role="button"
+              tabIndex={0}
+              aria-label="Elegir el archivo"
+              onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !achicando) { e.preventDefault(); fileInputRef.current?.click(); } }}
               onClick={() => { if (!achicando) fileInputRef.current?.click(); }}
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); handlePickFile(e.dataTransfer.files[0] ?? null); }}
@@ -1629,8 +1670,8 @@ export default function Biblioteca() {
               </button>
             )}
             <div className="em-field">
-              <label>Título</label>
-              <input type="text" value={uplTitle} onChange={e => setUplTitle(e.target.value)} placeholder="Ej: Guía de vectores — Unidad 2" />
+              <label htmlFor="bib-subir-titulo-campo">Título</label>
+              <input id="bib-subir-titulo-campo" type="text" value={uplTitle} onChange={e => setUplTitle(e.target.value)} placeholder="Ej: Guía de vectores — Unidad 2" />
             </div>
             <div className="em-row">
               <div className="em-field">
@@ -1641,8 +1682,8 @@ export default function Biblioteca() {
                 </select>
               </div>
               <div className="em-field">
-                <label>Tags (separados por coma)</label>
-                <input type="text" value={uplTags} onChange={e => setUplTags(e.target.value)} placeholder="guía, práctica..." />
+                <label htmlFor="bib-subir-tags">Tags (separados por coma)</label>
+                <input id="bib-subir-tags" type="text" value={uplTags} onChange={e => setUplTags(e.target.value)} placeholder="guía, práctica..." />
               </div>
             </div>
             {(() => {

@@ -18,7 +18,7 @@ import {
     Boxes, Sparkles, Layers, Headphones, ClipboardList, Radio,
     Check, Loader2, ArrowRight, ArrowLeft, Eye, AlertCircle, Square,
     BookOpen, PenLine, FolderTree, Pencil, RefreshCw, Presentation,
-    Puzzle, Network, Send, FileText, X, Trash2,
+    Puzzle, Network, Send, FileText, X, Trash2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -820,7 +820,22 @@ export default function ArmarModulo() {
                         <div className="mod-content">
                             {content
                                 ? <MarkdownRenderer content={content} />
-                                : <p className="mod-writing">Escribiendo el contenido<span className="mod-dots" /></p>}
+                                : generating
+                                    ? <p className="mod-writing">Escribiendo el contenido<span className="mod-dots" /></p>
+                                    : (
+                                        // Falló o se detuvo antes de escribir nada: no queda trabado
+                                        <div className="mod-fallo" role="alert">
+                                            <p>No se pudo escribir el contenido (puede ser la señal o un corte de la IA).</p>
+                                            <div className="mod-fallo-acciones">
+                                                <button type="button" className="btn btn-primary btn-sm" onClick={() => void handleGenerate()}>
+                                                    <RefreshCw size={14} aria-hidden="true" /> Reintentar
+                                                </button>
+                                                <button type="button" className="btn btn-outline btn-sm" onClick={() => setStep(1)}>
+                                                    <ArrowLeft size={14} aria-hidden="true" /> Volver
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                         </div>
                     </section>
 

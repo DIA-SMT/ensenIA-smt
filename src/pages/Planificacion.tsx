@@ -20,6 +20,7 @@ import {
   FileCheck2, MessageSquare, Boxes, Trash2, Pencil, AlertTriangle, CalendarClock, Brain, ChevronDown, FolderOpen,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { esErrorDeRed } from '../lib/conexion';
 import ImportProgramModal from '../components/ImportProgramModal';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -184,7 +185,15 @@ export default function Planificacion() {
 
   const correr = async (fn: () => Promise<void>) => {
     setTrabajando(true);
-    try { await fn(); await cargar(); } catch (err) { avisar.error((err as Error).message); } finally { setTrabajando(false); }
+    try { await fn(); await cargar(); } catch (err) {
+      console.error(err);
+      // Los mensajes redactados para el docente (reacomodar: "No hay encuentros…") se
+      // muestran; los técnicos de la base, no
+      const m = err instanceof Error ? err.message : '';
+      if (esErrorDeRed(err)) avisar.error('Se cortó la señal', 'No se guardó. Probá de nuevo cuando vuelva.');
+      else if (m && !/permission|violates|function|syntax|relation|duplicate|null value|jwt|pgrst|column|constraint/i.test(m)) avisar.error(m);
+      else avisar.error('No se pudo guardar el cambio', 'Probá de nuevo en un momento.');
+    } finally { setTrabajando(false); }
   };
 
   const reacomodarFechas = async () => {

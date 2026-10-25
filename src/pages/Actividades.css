@@ -435,3 +435,8 @@
 .acts-papel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 0.8125rem; color: var(--text-secondary); }
 .acts-papel-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
 .acts-grade-box .npp { margin-bottom: 8px; }
+
+/* Con el dedo: reacciones y categorías de observación a 44 px */
+@media (pointer: coarse) {
+  .acts-reaction-btn, .acts-obs-cat { min-height: var(--touch, 44px); }
+}

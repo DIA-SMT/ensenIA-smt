@@ -148,6 +148,9 @@ html[data-contraste="alto"] .topbar { background: #FFFFFF; backdrop-filter: none
    entra, en dos renglones. */
 @media (max-width: 480px) {
   .topbar-logo { display: none; }
+  /* La guía también queda fuera: "Buscar o ir a…" lista los mismos destinos, y
+     con cinco botones el título se cortaba a la mitad ("Mi planificac…") */
+  .topbar-help { display: none; }
   .page-title {
     font-size: 1.0625rem;
     white-space: normal;

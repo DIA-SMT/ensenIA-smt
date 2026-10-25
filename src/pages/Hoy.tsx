@@ -28,8 +28,7 @@ import { getAlertsByTeacher } from '../services/alerts.service';
 import { getRecentAttendance, todayISO } from '../services/attendance.service';
 import { getMyLiveSession, getMyPastSessions, type LiveSession } from '../services/live.service';
 import BotonMigue from '../components/BotonMigue';
-import { getActivitiesByTeacher } from '../services/activities.service';
-import { getMaterialsByTeacher } from '../services/library.service';
+import { arranqueDelDocente } from '../services/activities.service';
 import { pendientesDe } from '../services/offline-queue.service';
 import { consultasSinResponder } from '../services/seguimiento.service';
 import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
@@ -155,12 +154,11 @@ export default function Hoy() {
             getAlertsByTeacher(user.id).catch(() => [] as AlertType[]),
             getRecentAttendance(user.id, 20).catch(() => []),
             getMyLiveSession(user.id).catch(() => null),
-            getActivitiesByTeacher(user.id).catch(() => []),
-            getMaterialsByTeacher(user.id).catch(() => []),
+            arranqueDelDocente(user.id).catch(() => null),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
             getCommunicationsBySchool(user.schoolId).catch(() => [] as Communication[]),
             getMyPastSessions(user.id, 1).catch(() => [] as LiveSession[]),
-        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail, comunicados, pasadas]) => {
+        ]).then(([horarioLeido, st, al, attendance, live, arranqueLeido, trail, comunicados, pasadas]) => {
             const horario = horarioLeido ?? [];
             setHorarioFallo(horarioLeido === null);
             setSemana(horario);
@@ -178,8 +176,8 @@ export default function Hoy() {
                 ...pendientesDe('asistencia').filter(op => op.fecha === today).map(op => `${op.courseId}|${op.subjectId}`),
             ]));
             setArranque({
-                temaPreparado: materials.some(m => m.classId) || activities.some(x => x.classId),
-                actividadPublicada: activities.some(x => x.status === 'published'),
+                temaPreparado: arranqueLeido?.temaPreparado ?? false,
+                actividadPublicada: arranqueLeido?.actividadPublicada ?? false,
                 dioEnVivo: pasadas.length > 0 || Boolean(live),
             });
             setTimeline(trail);
@@ -225,7 +223,7 @@ export default function Hoy() {
         { hecho: semana.length > 0, a: '/agenda?volver=/hoy', icono: CalendarDays, titulo: 'Cargá tu horario', detalle: 'Tus días y horas, una sola vez: de ahí sale todo lo de esta pantalla' },
         { hecho: planificacion.length > 0, a: '/planificacion', icono: CalendarRange, titulo: 'Subí tu programa', detalle: 'La IA arma las unidades y los temas, con fecha en tus días de clase' },
         { hecho: arranque.temaPreparado, a: temaSiguiente ? `/tema/${temaSiguiente.id}` : '/planificacion', icono: FolderOpen, titulo: 'Prepará un tema', detalle: 'Material, presentación y preguntas para la clase, todo en el tema' },
-        { hecho: arranque.actividadPublicada, a: temaSiguiente ? `/actividades/nueva?tema=${temaSiguiente.id}` : '/actividades/nueva', icono: ClipboardList, titulo: 'Dejales una actividad', detalle: 'La hacen en el celular, aunque no tengan señal' },
+        { hecho: arranque.actividadPublicada, a: temaSiguiente ? `/actividades/nueva?tipo=actividad&tema=${temaSiguiente.id}` : '/actividades/nueva?tipo=actividad', icono: ClipboardList, titulo: 'Dejales una actividad', detalle: 'La hacen en el celular, aunque no tengan señal' },
         { hecho: arranque.dioEnVivo, a: temaSiguiente ? `/clase-en-vivo?tema=${temaSiguiente.id}` : '/clase-en-vivo', icono: Radio, titulo: 'Probá una clase en vivo', detalle: 'Participan desde el celular: preguntas, nube de palabras, competencia' },
     ];
     const hechos = pasos.filter(p => p.hecho).length;
@@ -292,6 +290,9 @@ export default function Hoy() {
                             titulo="Sin conexión"
                             texto="Tu horario no está guardado en este equipo. Con señal, tocá «Preparar para el aula» y queda para usar sin conexión."
                         />
+                    ) : semana.length === 0 && mostrarArranque ? (
+                        // "Para arrancar" ya lo pide como primer paso: acá no se repite el botón
+                        <p className="text-sm text-secondary">Cuando cargues tu horario, acá aparece tu próxima clase.</p>
                     ) : semana.length === 0 ? (
                         <EstadoVacio
                             compacto

@@ -466,3 +466,8 @@
 /* Llegado desde un tema: volver a él (UX docente) */
 .mod-volver { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 40px; margin-bottom: var(--space-2); font-size: 0.875rem; color: var(--text-secondary); }
 .mod-volver:hover, .mod-volver:focus-visible { color: var(--acento); }
+
+/* El contenido no llegó: reintentar o volver (antes quedaba "Escribiendo…" para siempre) */
+.mod-fallo { display: flex; flex-direction: column; gap: 10px; color: var(--text-secondary); }
+.mod-fallo p { margin: 0; }
+.mod-fallo-acciones { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -32,23 +32,23 @@ export default function ProgresoSaberes({ subjectId, courseId }: { subjectId: st
   return (
     <section id="seg-saberes" className="card seg-seccion" aria-labelledby="seg-sab-t">
       <h3 id="seg-sab-t"><Target size={17} aria-hidden="true" /> Qué van logrando</h3>
-      <p className="seg-vacio">
-        Por cada saber (los NAP de tus temas o, si todavía no los vinculaste, el tema), el promedio de lo
-        que entregó cada uno en las actividades corregidas.
-      </p>
 
       {error && <p className="seg-vacio" role="alert">{error}</p>}
-      {!datos && !error && <Esqueleto tipo="filas" cantidad={3} etiqueta="Calculando…" />}
+      {!datos && !error && <Esqueleto tipo="filas" cantidad={2} etiqueta="Calculando…" />}
 
+      {/* Sin nada corregido: una línea, no una sección entera vacía */}
       {datos && conEvidencia.length === 0 && (
         <p className="seg-vacio">
-          Cuando publiques actividades de los temas de tu planificación y las corrijas, acá vas a ver qué
-          logró cada uno.
+          Cuando corrijas actividades de los temas de tu planificación, acá vas a ver qué va logrando cada uno.
         </p>
       )}
 
       {datos && conEvidencia.length > 0 && (
         <>
+          <p className="seg-vacio">
+            Por cada saber (los NAP de tus temas o, si todavía no los vinculaste, el tema), el promedio de lo
+            que entregó cada uno en las actividades corregidas.
+          </p>
           <ul className="sab-leyenda" aria-label="Qué quiere decir cada color">
             <li className="logrado">Logrado (60% o más)</li>
             <li className="proceso">En proceso (40 a 59%)</li>
@@ -81,13 +81,21 @@ export default function ProgresoSaberes({ subjectId, courseId }: { subjectId: st
                         {ORDEN.filter(n => porNivel[n].length > 0).map(n => `${porNivel[n].length} ${NIVEL[n].toLowerCase()}`).join(' · ')}
                       </span>
                     </summary>
-                    <ul className="sab-estudiantes">
-                      {ORDEN.flatMap(n => porNivel[n].map(e => (
-                        <li key={e.id} className={n} title={e.valores[s.id] ? `${e.valores[s.id].n} evidencia${e.valores[s.id].n !== 1 ? 's' : ''}` : 'Sin entregas corregidas'}>
-                          {e.apellido}, {e.nombre}{e.valores[s.id] ? ` · ${e.valores[s.id].pct}%` : ''}
-                        </li>
-                      )))}
-                    </ul>
+                    {/* Agrupados por nivel con su nombre: el color solo no alcanza (daltonismo, impresión) */}
+                    <div className="sab-grupos">
+                      {ORDEN.filter(n => porNivel[n].length > 0).map(n => (
+                        <div key={n} className="sab-grupo">
+                          <p className={`sab-grupo-t ${n}`}>{NIVEL[n]} ({porNivel[n].length})</p>
+                          <ul className="sab-estudiantes">
+                            {porNivel[n].map(e => (
+                              <li key={e.id} className={n} title={e.valores[s.id] ? `${e.valores[s.id].n} evidencia${e.valores[s.id].n !== 1 ? 's' : ''}` : 'Sin entregas corregidas'}>
+                                {e.apellido}, {e.nombre}{e.valores[s.id] ? ` · ${e.valores[s.id].pct}%` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
                   </details>
                 </li>
               );

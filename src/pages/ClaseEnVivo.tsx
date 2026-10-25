@@ -1295,6 +1295,7 @@ export default function ClaseEnVivo() {
                                 className="cv-input"
                                 autoFocus
                                 placeholder={pickedKind === 'nube' ? 'Ej: ¿Con qué palabra resumís lo de hoy?' : 'Escribí la pregunta...'}
+                                aria-label="La pregunta"
                                 value={question}
                                 maxLength={200}
                                 onChange={e => setQuestion(e.target.value)}
@@ -1307,8 +1308,11 @@ export default function ClaseEnVivo() {
                                     <div key={opt.id} className="cv-option-row">
                                         {pickedKind === 'quiz' && (
                                             <button
+                                                type="button"
                                                 className={`cv-correct-pick ${correctId === opt.id ? 'on' : ''}`}
                                                 title="Marcar como correcta"
+                                                aria-label={`La opción ${String.fromCharCode(65 + i)} es la correcta`}
+                                                aria-pressed={correctId === opt.id}
                                                 onClick={() => setCorrectId(opt.id)}
                                             >
                                                 <CheckCircle size={15} />
@@ -1317,13 +1321,19 @@ export default function ClaseEnVivo() {
                                         <input
                                             className="cv-input"
                                             placeholder={`Opción ${String.fromCharCode(65 + i)}`}
+                                            aria-label={`Opción ${String.fromCharCode(65 + i)}`}
                                             value={opt.label}
                                             maxLength={80}
                                             onChange={e => setOptions(prev => prev.map(o => o.id === opt.id ? { ...o, label: e.target.value } : o))}
                                         />
                                         {options.length > 2 && (
-                                            <button className="btn-icon" onClick={() => setOptions(prev => prev.filter(o => o.id !== opt.id))}>
-                                                <Trash2 size={14} />
+                                            <button type="button" className="btn-icon" aria-label={`Quitar la opción ${String.fromCharCode(65 + i)}`}
+                                                onClick={() => {
+                                                    setOptions(prev => prev.filter(o => o.id !== opt.id));
+                                                    // Si era la correcta, hay que volver a elegir
+                                                    if (correctId === opt.id) setCorrectId('');
+                                                }}>
+                                                <Trash2 size={14} aria-hidden="true" />
                                             </button>
                                         )}
                                     </div>
@@ -1336,9 +1346,14 @@ export default function ClaseEnVivo() {
                                         <Plus size={13} /> Agregar opción
                                     </button>
                                 )}
-                                {pickedKind === 'quiz' && !correctId && (
-                                    <p className="text-xs text-subtle">Tocá el círculo de la opción correcta.</p>
-                                )}
+                                {pickedKind === 'quiz' && (() => {
+                                    const i = options.findIndex(o => o.id === correctId);
+                                    return (
+                                        <p className="text-xs text-subtle" aria-live="polite">
+                                            {i < 0 ? 'Tocá el círculo de la opción correcta.' : `Correcta: la opción ${String.fromCharCode(65 + i)}.`}
+                                        </p>
+                                    );
+                                })()}
                             </div>
                         )}
 

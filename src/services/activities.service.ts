@@ -239,6 +239,26 @@ export async function setSubmissionReaction(submissionId: string, reaction: stri
   if (error) throw error;
 }
 
+/**
+ * Lo que mira "Para arrancar" en Hoy: si ya preparó algo en un tema y si ya
+ * publicó una actividad. Tres consultas de una fila (antes bajaba todos sus
+ * materiales con su texto y todas sus actividades: pesado con datos móviles).
+ */
+export async function arranqueDelDocente(teacherId: string): Promise<{ temaPreparado: boolean; actividadPublicada: boolean }> {
+  const [mat, act, pub] = await Promise.all([
+    supabase.from('library_materials').select('id').eq('teacher_id', teacherId).not('class_id', 'is', null).limit(1),
+    supabase.from('activities').select('id').eq('teacher_id', teacherId).not('class_id', 'is', null).limit(1),
+    supabase.from('activities').select('id').eq('teacher_id', teacherId).eq('status', 'published').limit(1),
+  ]);
+  if (mat.error) throw mat.error;
+  if (act.error) throw act.error;
+  if (pub.error) throw pub.error;
+  return {
+    temaPreparado: (mat.data?.length ?? 0) > 0 || (act.data?.length ?? 0) > 0,
+    actividadPublicada: (pub.data?.length ?? 0) > 0,
+  };
+}
+
 /** Se corrigió algo: la campanita vuelve a contar (NotificationDropdown) */
 export const EVENTO_CORRECCIONES = 'estudia:correcciones';
 

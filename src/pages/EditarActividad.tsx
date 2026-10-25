@@ -104,6 +104,9 @@ export default function EditarActividad() {
   const [consigna, setConsigna] = useState('');
   const [partes, setPartes] = useState<ActivityQuestion[]>([]);
   const [conPuntos, setConPuntos] = useState(true);
+  // Puntos por parte solo si hay partes: con solo la consigna, se pone el total
+  // (antes, publicar sin partes pedía "agregá al menos una parte")
+  const porPartes = conPuntos && partes.length > 0;
   const [textosPuntos, setTextosPuntos] = useState<Record<string, string>>({});
   const [textoTotal, setTextoTotal] = useState('10');
   const [vence, setVence] = useState('');
@@ -261,7 +264,7 @@ export default function EditarActividad() {
   // ── Guardar ──
   const guardar = async (accion: 'borrador' | 'publicar' | 'cambios') => {
     if (!user || !asig || guardando) return;
-    const problema = problemaDe(titulo, partes, conPuntos, textoTotal, tipo);
+    const problema = problemaDe(titulo, partes, porPartes, textoTotal, tipo);
     if (problema) { setError(problema); return; }
     const preguntas: ActivityQuestion[] = partes.map(q => {
       const base: ActivityQuestion = {
@@ -269,9 +272,9 @@ export default function EditarActividad() {
         options: q.type === 'multiple_choice' ? (q.options ?? []).map(o => o.trim()) : [],
         correct_index: q.type === 'multiple_choice' ? q.correct_index ?? 0 : 0,
       };
-      return conPuntos ? { ...base, points: q.points as number } : base;
+      return porPartes ? { ...base, points: q.points as number } : base;
     });
-    const total = conPuntos ? sumaDePuntos(preguntas) : (leerPuntos(textoTotal) ?? null);
+    const total = porPartes ? sumaDePuntos(preguntas) : (leerPuntos(textoTotal) ?? null);
     const dueDate = vence ? new Date(`${vence}T23:59:00`).toISOString() : null;
     setGuardando(true);
     setError('');
@@ -353,7 +356,7 @@ export default function EditarActividad() {
         classId: classId || null,
         sourceTool: original.sourceTool ?? null,
         dueDate: vence ? new Date(`${vence}T23:59:00`).toISOString() : null,
-        points: conPuntos ? sumaDePuntos(partes) : (leerPuntos(textoTotal) ?? null),
+        points: porPartes ? sumaDePuntos(partes) : (leerPuntos(textoTotal) ?? null),
         tipo,
         estado: 'draft',
         iaPermitida: nivelIA,
@@ -530,7 +533,7 @@ export default function EditarActividad() {
         />
 
         <div className="em-row">
-          {!conPuntos && (
+          {!porPartes && (
             <div className="em-field">
               <label htmlFor="ea-total">Puntaje total (opcional)</label>
               <input id="ea-total" type="text" inputMode="numeric" maxLength={3} value={textoTotal}

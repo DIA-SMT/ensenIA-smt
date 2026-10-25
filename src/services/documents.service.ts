@@ -30,7 +30,15 @@ export async function uploadFile(teacherId: string, file: File): Promise<UploadR
     contentType: file.type || undefined,
     upsert: false,
   });
-  if (error) throw new Error(`Error subiendo archivo: ${error.message}`);
+  if (error) {
+    // El mensaje del almacenamiento queda en la consola; al docente, uno que entienda
+    console.error('subir archivo:', error.message);
+    throw new Error(esErrorDeRed(error)
+      ? 'No se pudo subir el archivo: se cortó la señal. Probá de nuevo cuando vuelva.'
+      : /payload|too large|413|exceed|size/i.test(error.message)
+        ? 'El archivo es muy pesado para subirlo. Probá con una versión más liviana.'
+        : 'No se pudo subir el archivo. Probá de nuevo en un momento.');
+  }
   return { storagePath, fileSizeBytes: file.size };
 }
 

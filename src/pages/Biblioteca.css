@@ -390,3 +390,8 @@
     .biblioteca-card { gap: var(--space-3); padding: var(--space-4); }
     .biblioteca-card > .mat-icon-wrap { width: 40px; height: 40px; }
 }
+
+/* En pantallas táctiles: 44 px y letra de 16 px (con menos, el iPhone hace zoom) */
+@media (pointer: coarse) {
+  .mat-tema select { min-height: var(--touch, 44px); font-size: 16px; }
+}

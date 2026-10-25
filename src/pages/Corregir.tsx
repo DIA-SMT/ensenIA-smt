@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     ClipboardCheck, Check, ChevronDown, ChevronUp, Loader2, ArrowLeft,
     Sparkles, PartyPopper, X, WifiOff, RotateCcw
@@ -46,6 +46,10 @@ function pedirPara(p: PendingGrading, teacherId: string, signal: AbortSignal): P
 export default function Corregir() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    // Desde Seguimiento: solo las de ese curso (y materia)
+    const [searchParams] = useSearchParams();
+    const filtroCurso = searchParams.get('curso');
+    const filtroMateria = searchParams.get('materia');
 
     const [pending, setPending] = useState<PendingGrading[]>([]);
     const [loading, setLoading] = useState(true);
@@ -185,7 +189,10 @@ export default function Corregir() {
         }
     };
 
-    const sinDevolucion = pending.filter(p => !p.enPapel && !feedbacks[p.submissionId]?.trim());
+    const visibles = filtroCurso
+        ? pending.filter(p => p.courseName === filtroCurso && (!filtroMateria || p.subjectName === filtroMateria))
+        : pending;
+    const sinDevolucion = visibles.filter(p => !p.enPapel && !feedbacks[p.submissionId]?.trim());
 
     const handleSugerirLote = async () => {
         if (sugiriendoId || lote) return;
@@ -250,9 +257,9 @@ export default function Corregir() {
                         <p className="text-sm text-secondary">
                             {loading
                                 ? 'Buscando entregas...'
-                                : pending.length === 0
+                                : visibles.length === 0
                                     ? 'No tenés nada pendiente'
-                                    : `${pending.length} entrega${pending.length !== 1 ? 's' : ''} esperando tu nota`}
+                                    : `${visibles.length} entrega${visibles.length !== 1 ? 's' : ''} esperando tu nota`}
                         </p>
                     </div>
                 </div>
@@ -306,7 +313,14 @@ export default function Corregir() {
                 />
             )}
 
-            {!loading && !errorCarga && pending.length === 0 && (
+            {filtroCurso && (
+                <p className="corr-filtro">
+                    Solo {filtroMateria ? `${filtroMateria} · ` : ''}{filtroCurso}
+                    {pending.length > visibles.length && <> · <Link to="/corregir">Ver las de todos tus cursos ({pending.length})</Link></>}
+                </p>
+            )}
+
+            {!loading && !errorCarga && visibles.length === 0 && (
                 <EstadoVacio
                     icono={PartyPopper}
                     titulo={doneCount > 0 ? '¡Terminaste!' : 'Estás al día'}
@@ -318,7 +332,7 @@ export default function Corregir() {
             )}
 
             <div className="corr-list">
-                {pending.map(p => {
+                {visibles.map(p => {
                     const open = expanded === p.submissionId;
                     const saving = savingId === p.submissionId;
                     return (

@@ -5,7 +5,7 @@ import { useContextoMigue } from '../contexts/MigueContext';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
-  PencilLine, Undo2, Ban, WifiOff
+  PencilLine, Undo2, Ban, WifiOff, Loader2
 } from 'lucide-react';
 import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,6 +82,7 @@ export default function ActividadDetalle() {
   const [anotando, setAnotando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorCarga, setErrorCarga] = useState(false);
+  const [guardandoNota, setGuardandoNota] = useState(false);
   const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
   const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
   const [obsNote, setObsNote] = useState('');
@@ -242,6 +243,10 @@ export default function ActividadDetalle() {
   const openStudent = (st: EnrolledStudent) => {
     cortarSugerencia();
     setSelected(st);
+    // En el celular el panel queda debajo de la lista: se lleva a la vista
+    if (window.matchMedia('(max-width: 1100px)').matches) {
+      requestAnimationFrame(() => document.querySelector('.acts-side-panel')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    }
     const sub = subByStudent.get(st.id);
     setFeedbackInput(sub?.feedback ?? '');
     setAnotandoPapel(false);
@@ -344,11 +349,23 @@ export default function ActividadDetalle() {
     return { score, puntajes };
   };
 
+  // Después de corregir o anotar: solo las entregas (antes recargaba toda la
+  // pantalla, con esqueleto, y se perdía la posición en la lista)
+  const recargarEntregas = async () => {
+    if (!activity) return;
+    try {
+      setSubmissions(await getSubmissionsByActivity(activity.id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleGrade = async () => {
     const sub = selected ? subByStudent.get(selected.id) : null;
-    if (!sub || !activity || gradeInput === '') return;
+    if (!sub || !activity || gradeInput === '' || guardandoNota) return;
     const c = leerCorreccion();
     if (!c || c.score === null) return;
+    setGuardandoNota(true);
     try {
       if (sub.registro === 'papel') {
         await registrarEntregaDocente(activity.id, sub.studentId, 'papel', { score: c.score, puntajes: c.puntajes, feedback: feedbackInput });
@@ -358,10 +375,12 @@ export default function ActividadDetalle() {
     } catch (err) {
       console.error(err);
       avisar.error('No se pudo guardar la nota', err instanceof Error && err.message ? err.message : 'Probá de nuevo.');
+      setGuardandoNota(false);
       return;
     }
     avisar.exito(selected ? `Nota de ${selected.firstName} guardada` : 'Nota guardada');
-    await load();
+    await recargarEntregas();
+    setGuardandoNota(false);
     closeStudent();
   };
 
@@ -403,7 +422,7 @@ export default function ActividadDetalle() {
           : 'Se borró lo anotado',
       registro === 'no_entrego' ? 'Si después lo entrega en la app, queda como entregado.' : undefined,
     );
-    await load();
+    await recargarEntregas();
     closeStudent();
   };
 
@@ -613,7 +632,9 @@ export default function ActividadDetalle() {
                 const evs = eventsByStudent.get(st.id) ?? [];
                 const s = statusOf(st);
                 return (
-                  <tr key={st.id} onClick={() => openStudent(st)} className={selected?.id === st.id ? 'selected-row' : ''}>
+                  <tr key={st.id} onClick={() => openStudent(st)} className={selected?.id === st.id ? 'selected-row' : ''}
+                    tabIndex={0} aria-label={`Abrir la entrega de ${st.firstName} ${st.lastName}`}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStudent(st); } }}>
                     <td>
                       <div className="student-cell">
                         <div className="student-avatar">{st.avatarInitials}</div>
@@ -771,8 +792,8 @@ export default function ActividadDetalle() {
                           alCancelar={cortarSugerencia}
                         />
                       )}
-                      <button className="btn btn-primary btn-sm w-full mt-2" onClick={handleGrade} disabled={gradeInput === ''}>
-                        <CheckCircle size={14} /> Guardar calificación
+                      <button className="btn btn-primary btn-sm w-full mt-2" onClick={handleGrade} disabled={gradeInput === '' || guardandoNota}>
+                        {guardandoNota ? <><Loader2 size={14} className="spin" /> Guardando…</> : <><CheckCircle size={14} /> Guardar calificación</>}
                       </button>
                     </div>
                   )}

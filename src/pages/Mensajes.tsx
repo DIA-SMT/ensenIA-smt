@@ -234,8 +234,9 @@ function NuevoMensaje({ inicial, alCerrar, alCrear }: {
           <button className="btn-icon" onClick={alCerrar} aria-label="Cerrar"><X size={18} /></button>
         </div>
 
-        <label className="msj-campo">
-          <span>Para</span>
+        {/* div y no label: tocar "Para" quitaba al primer destinatario (activaba su botón) */}
+        <div className="msj-campo" role="group" aria-labelledby="msj-para">
+          <span id="msj-para">Para</span>
           {elegidos.length > 0 && (
             <span className="msj-elegidos">
               {elegidos.map(c => (
@@ -251,7 +252,7 @@ function NuevoMensaje({ inicial, alCerrar, alCrear }: {
             <input className="search-input" value={buscar} onChange={e => setBuscar(e.target.value)}
               placeholder="Buscá por nombre, materia o curso…" aria-label="Buscar a quién escribirle" />
           </span>
-        </label>
+        </div>
         {contactos === null ? <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando contactos…" /> : (
           <ul className="msj-contactos" aria-label="Personas a las que les podés escribir">
             {sugeridos.length === 0 && (
