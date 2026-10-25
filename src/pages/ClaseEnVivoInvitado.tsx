@@ -14,10 +14,12 @@ import { useParams } from 'react-router-dom';
 import { Radio, Send, Loader2, LogIn, CloudUpload } from 'lucide-react';
 import {
     joinLiveSession, getGuestState, submitGuestResponse, sendGuestReaction,
-    loadGuestSession, saveGuestSession, clearGuestSession, GuestError,
+    loadGuestSession, saveGuestSession, clearGuestSession, GuestError, getCompetenciaInvitado,
     type GuestSession, type GuestState, type GuestPayload,
 } from '../services/live-guest.service';
-import { LIVE_KIND_META, LIVE_REACTIONS } from '../services/live.service';
+import { LIVE_KIND_META, LIVE_REACTIONS, type VistaCompetencia } from '../services/live.service';
+import { useDesfaseServidor, useCuentaRegresiva, finDePregunta } from '../lib/competencia';
+import { RelojCompetencia, MiResultado } from '../components/CompetenciaEnVivo';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type CheckinFeeling } from '../types';
 import { Cargando } from '../components/ui/Esqueleto';
@@ -81,6 +83,12 @@ export default function ClaseEnVivoInvitado() {
     const versionRef = useRef(0);
     const elegidaRef = useRef<{ activityId: string; payload: GuestPayload } | null>(null);
 
+    // Competencia (073): el reloj va con la hora del servidor; revelada cada
+    // pregunta, cómo le fue (se pide una vez por pregunta)
+    const { desfase, medir } = useDesfaseServidor();
+    const [miComp, setMiComp] = useState<{ actividad: string; ronda: string; vista: VistaCompetencia | null } | null>(null);
+    const miCompPedidaRef = useRef<string | null>(null);
+
     // ── Una vuelta: un solo llamado, sin encimarse (lib/sondeo) ──
     const vuelta = useCallback(async (senal: AbortSignal) => {
         if (!guest) return;
@@ -99,6 +107,19 @@ export default function ClaseEnVivoInvitado() {
             }
             throw err;
         }
+        if (s.status === 'active' || s.status === 'idle') medir(s.ahora);
+        if (s.status === 'active') {
+            const act = s.activity;
+            const comp = act.config.competencia;
+            if (comp && act.status === 'revealed' && miCompPedidaRef.current !== act.id) {
+                miCompPedidaRef.current = act.id;
+                getCompetenciaInvitado(guest.token, comp.ronda)
+                    .then(vista => setMiComp({ actividad: act.id, ronda: comp.ronda, vista }))
+                    .catch(() => { miCompPedidaRef.current = null; });
+            }
+            // Otra actividad que no es de esa ronda: lo de la competencia ya pasó
+            setMiComp(prev => (prev && comp?.ronda !== prev.ronda ? null : prev));
+        }
         // Actividad nueva → limpiamos los borradores de la anterior
         const actId = s.status === 'active' ? s.activity.id : null;
         if (actId !== lastActivityId.current) {
@@ -107,6 +128,8 @@ export default function ClaseEnVivoInvitado() {
             setWordDraft('');
             setSendError('');
         }
+        // Lo que el servidor tiene de verdad (antes de mostrar lo recién elegido)
+        const delServidor = s.status === 'active' ? s.myAnswer : null;
         // Eligió algo mientras viajaba esta vuelta: se ve lo que eligió
         const elegida = elegidaRef.current;
         if (versionRef.current !== version && elegida && s.status === 'active' && s.activity.id === elegida.activityId) {
@@ -118,7 +141,10 @@ export default function ClaseEnVivoInvitado() {
         if (p) {
             if (s.status !== 'active' || s.activity.id !== p.activityId || s.activity.status !== 'active') {
                 ponerPendiente(null);
-                setSendError('Tu respuesta no llegó a salir: la actividad se cerró mientras no había señal.');
+                // Si el servidor ya la tiene, llegó (se había perdido solo la confirmación)
+                if (!(s.status === 'active' && s.activity.id === p.activityId && delServidor)) {
+                    setSendError('Tu respuesta no llegó a salir: la actividad se cerró mientras no había señal.');
+                }
             } else {
                 setSending(true);
                 try {
@@ -128,16 +154,21 @@ export default function ClaseEnVivoInvitado() {
                 } catch (err) {
                     if (err instanceof GuestError && err.code === 'SIN_SENIAL') throw err;
                     if (pendienteRef.current === p) ponerPendiente(null);
-                    setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
+                    // Ya había llegado (en la competencia vale la primera): no es un error
+                    if (!(err instanceof GuestError && err.code === 'RESPUESTA_YA_ENVIADA')) {
+                        setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
+                    }
                 } finally {
                     setSending(false);
                 }
             }
         }
         setState(s);
-    }, [guest, code, ponerPendiente]);
+    }, [guest, code, ponerPendiente, medir]);
 
     const sondeo = useSondeo(vuelta, POLL_MS, Boolean(guest));
+    const actividadEnPantalla = state?.status === 'active' ? state.activity : null;
+    const quedan = useCuentaRegresiva(finDePregunta(actividadEnPantalla, actividadEnPantalla?.creada), desfase);
 
     // ── Entrar ──
     const handleJoin = async () => {
@@ -174,7 +205,13 @@ export default function ClaseEnVivoInvitado() {
             if (err instanceof GuestError && err.code === 'SIN_SENIAL') {
                 // Queda guardada y sale sola cuando vuelva la señal
                 ponerPendiente({ activityId, payload });
+            } else if (err instanceof GuestError && err.code === 'RESPUESTA_YA_ENVIADA') {
+                // Ya había llegado (un reintento): en la competencia vale la primera
+                ponerPendiente(null);
+                sondeo.ahora();
             } else {
+                // La rechazó el servidor: no se muestra como elegida
+                if (elegidaRef.current?.activityId === activityId) elegidaRef.current = null;
                 setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
             }
         } finally {
@@ -262,7 +299,10 @@ export default function ClaseEnVivoInvitado() {
         ? state.reactionsEnabled : false;
     const title = state?.status === 'active' || state?.status === 'idle' ? state.title : '';
     const answered = myAnswer !== null && myAnswer !== undefined;
-    const canChange = activity?.status === 'active';
+    // Competencia: una sola respuesta, y con tiempo
+    const comp = activity?.config.competencia ?? null;
+    const sinTiempo = Boolean(comp) && quedan !== null && quedan <= 0;
+    const canChange = activity?.status === 'active' && !(comp && (answered || sinTiempo));
 
     return (
         <div className="inv-live cv-container animate-in">
@@ -284,7 +324,7 @@ export default function ClaseEnVivoInvitado() {
                 <div className="card cv-activity">
                     <div className="cv-activity-head">
                         <span className="badge badge-ia">
-                            {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
+                            {comp ? '🏆 Competencia' : `${LIVE_KIND_META[activity.kind].emoji} ${LIVE_KIND_META[activity.kind].label}`}
                         </span>
                         {esperandoSenial
                             ? <span className="badge badge-warning">Esperando señal</span>
@@ -296,6 +336,7 @@ export default function ClaseEnVivoInvitado() {
                         </p>
                     )}
                     {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
+                    {comp && activity.status === 'active' && <RelojCompetencia quedan={quedan} total={comp.segundos} />}
 
                     {activity.kind === 'checkin' && (
                         <div className="cv-feelings">
@@ -338,6 +379,13 @@ export default function ClaseEnVivoInvitado() {
                             })}
                             {canChange && answered && (
                                 <p className="text-xs text-subtle">Podés cambiar tu respuesta hasta que se cierre.</p>
+                            )}
+                            {comp && activity.status === 'active' && (answered || sinTiempo) && (
+                                <p className="text-xs text-subtle">
+                                    {!answered ? 'Se terminó el tiempo.'
+                                        : esperandoSenial ? 'Tu respuesta espera señal: si llega cuando ya terminó el tiempo, no cuenta.'
+                                        : 'Listo: vale la primera. Esperá a que termine el tiempo.'}
+                                </p>
                             )}
                         </div>
                     )}
@@ -404,10 +452,21 @@ export default function ClaseEnVivoInvitado() {
 
                     {sendError && <p className="inv-error">{sendError}</p>}
 
-                    {answered && (
+                    {answered && !comp && (
                         <div className="cv-student-results">
                             <p className="cv-results-label">Así viene la sala:</p>
                             <LiveResultsView activity={activity} results={results} />
+                        </div>
+                    )}
+
+                    {/* Competencia: revelada, cómo le fue y en qué puesto va (solo el suyo) */}
+                    {comp && activity.status === 'revealed' && (
+                        <div className="cv-comp-mio">
+                            <MiResultado
+                                vista={miComp?.actividad === activity.id ? miComp.vista : null}
+                                acerto={Boolean(activity.config.correctId) && myAnswer?.opcion === activity.config.correctId}
+                                respondio={answered}
+                            />
                         </div>
                     )}
                 </div>
@@ -417,6 +476,11 @@ export default function ClaseEnVivoInvitado() {
                     <p className="text-secondary">
                         Listo, ya estás adentro. Cuando lancen una actividad, aparece sola acá.
                     </p>
+                    {miComp?.vista && (
+                        <div className="cv-comp-mio">
+                            <MiResultado vista={miComp.vista} acerto={false} respondio={false} final />
+                        </div>
+                    )}
                 </div>
             )}
 

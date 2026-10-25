@@ -16,7 +16,9 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
-import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults } from '../services/live.service';
+import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults, type VistaCompetencia } from '../services/live.service';
+import { RelojCompetencia, Podio } from './CompetenciaEnVivo';
+import { puntos } from '../lib/competencia';
 import { FEELING_META, type CheckinFeeling } from '../types';
 import { enlacePublico } from '../lib/direccion';
 import './ProyectarVivo.css';
@@ -30,10 +32,12 @@ interface Props {
     reactions: { emoji: string; createdAt: string }[];
     /** No llegan datos (poca señal): lo proyectado puede estar atrasado */
     sinSenial?: boolean;
+    /** Competencia (073): el reloj, el podio entre preguntas y el final */
+    competencia?: { quedan: number | null; vista: VistaCompetencia | null; final: VistaCompetencia | null };
     onClose: () => void;
 }
 
-export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, onClose }: Props) {
+export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, competencia, onClose }: Props) {
     const [qr, setQr] = useState('');
     const shellRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +87,8 @@ export default function ProyectarVivo({ session, activity, results, connected, r
     }, []);
 
     const live = activity && activity.status !== 'closed' ? activity : null;
+    const comp = live?.config.competencia ?? null;
+    const final = competencia?.final ?? null;
 
     /**
      * Va en un portal al body, no donde está el componente: la página de
@@ -107,7 +113,13 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                 </div>
             </header>
 
-            {!live ? (
+            {final ? (
+                <main className="pv-main pv-center pv-final">
+                    <h1 className="pv-question">🏆 ¡Terminó la competencia!</h1>
+                    <Podio podio={final.podio} grande />
+                    <p className="pv-final-pie">Cada uno ve en su celular en qué puesto quedó</p>
+                </main>
+            ) : !live ? (
                 // El QR solo con la sala abierta a invitados: si no, invita a cualquiera a entrar
                 <JoinBoard code={session.guestsEnabled ? session.joinCode : null} qr={qr} url={joinUrl} />
             ) : (
@@ -116,11 +128,30 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                         {live.config.question || LIVE_KIND_META[live.kind].label}
                     </h1>
 
-                    {/* Lo retenido no cuenta en la pared: "1 de N" con el tablero vacío delataba a quién */}
-                    {results && results.responded - (results.retenidas ?? 0) > 0 ? (
+                    {/* Competencia: mientras corre el tiempo, el reloj y las opciones (sin cuántos eligieron cada una) */}
+                    {comp && live.status === 'active' ? (
+                        <>
+                            <RelojCompetencia quedan={competencia?.quedan ?? null} total={comp.segundos} grande />
+                            <ol className="pv-opciones">
+                                {(live.config.options ?? []).map((o, i) => (
+                                    <li key={o.id}><span className="pv-opcion-letra">{String.fromCharCode(65 + i)}</span>{o.label}</li>
+                                ))}
+                            </ol>
+                        </>
+                    ) : /* Lo retenido no cuenta en la pared: "1 de N" con el tablero vacío delataba a quién */
+                    results && results.responded - (results.retenidas ?? 0) > 0 ? (
                         <Board activity={live} results={results} />
                     ) : (
                         <p className="pv-waiting">Esperando respuestas<span className="pv-dots" /></p>
+                    )}
+
+                    {/* Entre preguntas: los tres primeros, en una línea */}
+                    {comp && live.status === 'revealed' && competencia?.vista && competencia.vista.podio.length > 0 && (
+                        <p className="pv-podio-linea">
+                            {competencia.vista.podio.map((p, i) => (
+                                <span key={`${p.nombre}-${i}`}>{p.posicion === 1 ? '🥇' : p.posicion === 2 ? '🥈' : '🥉'} {p.nombre} <small>{puntos(p.puntos)}</small></span>
+                            ))}
+                        </p>
                     )}
 
                     <footer className="pv-bottom">

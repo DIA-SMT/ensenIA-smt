@@ -31,6 +31,11 @@ export interface LiveActivityConfig {
   placeholder?: string;
   /** Una respuesta por grupo (pocos celulares, o consigna grupal). */
   groupMode?: boolean;
+  /**
+   * Competencia (073): con tiempo y puntos por rapidez. Las preguntas de
+   * una misma ronda suman para el mismo podio. Solo en preguntas rápidas.
+   */
+  competencia?: { segundos: number; ronda: string };
 }
 
 export interface LiveSession {
@@ -502,10 +507,12 @@ type Fila = Record<string, unknown>;
 interface FilaEstadoAlumno {
   estado?: string; sessionId?: string; titulo?: string;
   session?: Fila; activity?: Fila | null; myAnswer?: Fila | null; results?: LiveResults | null; medalla?: Fila | null;
+  ahora?: string;
 }
 interface FilaEstadoDocente {
   session: Fila; activity: Fila | null; results: LiveResults | null; olvidada?: boolean;
   reacciones?: { emoji: string; createdAt: string }[]; invitados?: InvitadoEnSala[]; conectados?: string[];
+  ahora?: string;
 }
 
 export type EstadoAlumno =
@@ -518,6 +525,8 @@ export type EstadoAlumno =
     results: LiveResults | null;
     /** Una medalla que le dieron desde `medallasDesde` */
     medalla: StudentAward | null;
+    /** La hora del servidor (073): la cuenta regresiva no depende del reloj del celular */
+    ahora: string | null;
   }
   | { estado: 'terminada'; sessionId: string; titulo: string }
   | { estado: 'sin_clase' };
@@ -545,6 +554,7 @@ export async function getEstadoAlumno(sessionId: string | null, medallasDesde: s
     myAnswer: d.myAnswer ?? null,
     results: d.results ?? null,
     medalla: d.medalla ? mapStudentAward(d.medalla) : null,
+    ahora: d.ahora ?? null,
   };
 }
 
@@ -559,6 +569,8 @@ export interface EstadoDocente {
   invitados: InvitadoEnSala[];
   /** Estudiantes vistos en los últimos 90 s */
   conectados: Set<string>;
+  /** La hora del servidor (073), para la cuenta regresiva */
+  ahora: string | null;
 }
 
 /**
@@ -586,7 +598,32 @@ export async function getEstadoDocente(sessionId: string, senal?: AbortSignal): 
     reacciones: d.reacciones ?? [],
     invitados: d.invitados ?? [],
     conectados: new Set<string>(d.conectados ?? []),
+    ahora: d.ahora ?? null,
   };
+}
+
+// ── Competencia (073) ──
+
+export interface PuestoCompetencia { nombre: string; puntos: number; posicion: number }
+
+export interface VistaCompetencia {
+  ronda: string;
+  /** Cuántas preguntas de la ronda ya se revelaron (solo esas suman) */
+  reveladas: number;
+  participantes: number;
+  /** Los tres primeros (con puntos). Solo le llega al docente: a los celulares no viaja ningún nombre */
+  podio: PuestoCompetencia[];
+  /** El que pregunta, si jugó: su lugar y lo que sumó en la última revelada */
+  yo: { puntos: number; posicion: number; aciertos: number; respondidas: number; ultima: number } | null;
+  /** Solo el docente: todos */
+  todos?: (PuestoCompetencia & { aciertos: number; respondidas: number; esInvitado: boolean })[] | null;
+}
+
+/** Las posiciones de una ronda: el docente ve todas; el estudiante, el podio y la suya */
+export async function getCompetencia(sessionId: string, ronda: string): Promise<VistaCompetencia | null> {
+  const { data, error } = await supabase.rpc('live_competencia' as never, { p_session: sessionId, p_ronda: ronda } as never);
+  if (error) throw error;
+  return (data as unknown as VistaCompetencia | null) ?? null;
 }
 
 // ── Actividades ──
@@ -621,6 +658,17 @@ export async function launchActivity(
   return mapActivity((data as any[])[0]);
 }
 
+/**
+ * Revela una pregunta, solo si sigue activa: si justo se cerró (a mano, o
+ * desde otro equipo), no la reabre. Devuelve si la reveló.
+ */
+export async function revelarActividad(id: string): Promise<boolean> {
+  const { data, error } = await supabase.from('live_activities')
+    .update({ status: 'revealed' }).eq('id', id).eq('status', 'active').select('id');
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
 export async function setActivityStatus(id: string, status: LiveActivityStatus): Promise<void> {
   const { error } = await supabase.from('live_activities').update({ status }).eq('id', id);
   if (error) throw error;
@@ -649,6 +697,24 @@ export async function upsertLiveResponse(
       { onConflict: 'activity_id,student_id' },
     );
   if (error) throw error;
+}
+
+/** El servidor la rechazó por las reglas de la competencia (073) o porque se cerró */
+export function codigoRespuestaRechazada(err: unknown): 'TIEMPO_TERMINADO' | 'RESPUESTA_YA_ENVIADA' | 'ACTIVIDAD_CERRADA' | null {
+  const m = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : '';
+  return m.includes('TIEMPO_TERMINADO') ? 'TIEMPO_TERMINADO'
+    : m.includes('RESPUESTA_YA_ENVIADA') ? 'RESPUESTA_YA_ENVIADA'
+    : m.includes('ACTIVIDAD_CERRADA') ? 'ACTIVIDAD_CERRADA' : null;
+}
+
+/** Por qué no entró una respuesta, para leer en el celular */
+export function motivoRespuestaRechazada(err: unknown): string {
+  switch (codigoRespuestaRechazada(err)) {
+    case 'TIEMPO_TERMINADO': return 'Se terminó el tiempo para esta pregunta.';
+    case 'RESPUESTA_YA_ENVIADA': return 'Ya habías respondido: en la competencia vale la primera.';
+    case 'ACTIVIDAD_CERRADA': return 'La pregunta ya se cerró.';
+    default: return err instanceof Error && err.message ? err.message : 'Probá de nuevo.';
+  }
 }
 
 export async function getMyLiveResponse(

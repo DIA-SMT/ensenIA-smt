@@ -857,3 +857,30 @@
   font-size: 12.5px;
   color: var(--warning-ink);
 }
+
+/* Competencia (073): la ronda en el panel del docente */
+.cv-comp { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.cv-comp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cv-comp-head h4 { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; }
+.cv-comp-final { border-color: var(--cyan-bright); }
+.cv-comp-todos summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); min-height: 36px; display: flex; align-items: center; }
+.cv-comp-todos p { margin: 0 0 4px; }
+.cv-comp-tiempo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cv-chip-seg {
+  min-height: 36px;
+  min-width: 52px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cv-chip-seg.on { border-color: var(--cyan-bright); background: var(--cyan-glow); color: var(--cyan-bright); }
+.cv-comp-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.cv-comp-opcion { display: flex; flex-direction: column; gap: 6px; }
+.cv-comp-opcion .cv-groupmode { margin-bottom: 0; }
+.cv-activity .cmp-reloj { margin: 2px 0 8px; }
+.cv-comp-mio { margin-top: 10px; }

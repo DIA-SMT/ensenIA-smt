@@ -6,13 +6,14 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ListChecks, Send, Check } from 'lucide-react';
+import { ListChecks, Send, Check, Trophy } from 'lucide-react';
 import {
   getPreguntasDeTemas, marcarLanzada, sugerenciasDeActividades,
   type PreguntaEnVivo, type PreguntaSugerida,
 } from '../services/preguntas-en-vivo.service';
 import { getMaterialesDeClase, LIVE_KIND_META, type LiveActivityConfig, type LiveActivityKind, type LiveSession } from '../services/live.service';
 import { getActivitiesByClass } from '../services/activities.service';
+import type { PreguntaEnCola } from '../lib/competencia';
 import './PreguntasPreparadasVivo.css';
 
 interface Props {
@@ -20,9 +21,11 @@ interface Props {
   /** Lanza la pregunta (con el destinatario o los grupos que estén elegidos en el panel) */
   lanzar: (kind: LiveActivityKind, config: LiveActivityConfig, classId: string) => Promise<void>;
   ocupado: boolean;
+  /** Competencia (073): las preguntas rápidas con correcta, una atrás de otra. Sin esto (ya hay una en curso), no se ofrece */
+  competir?: (lista: PreguntaEnCola[]) => void;
 }
 
-export default function PreguntasPreparadasVivo({ session, lanzar, ocupado }: Props) {
+export default function PreguntasPreparadasVivo({ session, lanzar, ocupado, competir }: Props) {
   const [temas, setTemas] = useState<string[]>([]);
   const [preguntas, setPreguntas] = useState<PreguntaEnVivo[]>([]);
   const [sugeridas, setSugeridas] = useState<PreguntaSugerida[]>([]);
@@ -56,6 +59,13 @@ export default function PreguntasPreparadasVivo({ session, lanzar, ocupado }: Pr
   // Las sugeridas que ya están guardadas como preparadas no se repiten
   const guardadas = new Set(preguntas.map(p => (p.config.question ?? '').trim().toLowerCase()));
   const otras = sugeridas.filter(s => !guardadas.has((s.config.question ?? '').trim().toLowerCase()));
+
+  // Para la competencia: las que tienen una correcta (primero las preparadas, en su orden)
+  const sirve = (kind: LiveActivityKind, c: LiveActivityConfig) => kind === 'quiz' && !!c.correctId && (c.options?.length ?? 0) >= 2;
+  const paraCompetir: PreguntaEnCola[] = [
+    ...preguntas.filter(p => sirve(p.kind, p.config)).map(p => ({ kind: p.kind, config: p.config, classId: p.classId, preguntaId: p.id })),
+    ...otras.filter(s => sirve(s.kind, s.config)).map(s => ({ kind: s.kind, config: s.config, classId: s.classId })),
+  ].slice(0, 20);
 
   const disparar = async (clave: string, kind: LiveActivityKind, config: LiveActivityConfig, classId: string, pregunta?: PreguntaEnVivo) => {
     if (lanzando || ocupado) return;
@@ -91,6 +101,12 @@ export default function PreguntasPreparadasVivo({ session, lanzar, ocupado }: Pr
   return (
     <section className="card ppv" aria-labelledby="ppv-titulo">
       <h4 id="ppv-titulo"><ListChecks size={15} aria-hidden="true" /> Preguntas preparadas</h4>
+      {competir && paraCompetir.length >= 2 && (
+        <button type="button" className="btn btn-outline btn-sm ppv-competir" disabled={ocupado || lanzando !== null}
+          onClick={() => competir(paraCompetir)}>
+          <Trophy size={14} aria-hidden="true" /> Jugar {paraCompetir.length} como competencia
+        </button>
+      )}
       {preguntas.length > 0 && (
         <ol className="ppv-lista">
           {preguntas.map(p => fila(p.id, p.kind, p.config, p.classId, { lanzada: yaEnEstaClase(p), pregunta: p }))}

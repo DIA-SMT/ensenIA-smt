@@ -127,7 +127,8 @@ function borrarDatosOffline() {
   // pestaña) se deja, como la cola: es un camino de cuidado.
   try {
     for (const k of Object.keys(sessionStorage)) {
-      if (k.startsWith('estudia_vivo_pendiente')) sessionStorage.removeItem(k);
+      // La ronda de la competencia (073) tampoco queda para el que sigue
+      if (k.startsWith('estudia_vivo_pendiente') || k.startsWith('estudia_competencia:')) sessionStorage.removeItem(k);
     }
   } catch { /* sin storage */ }
 }

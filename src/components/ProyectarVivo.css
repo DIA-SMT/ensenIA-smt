@@ -379,3 +379,56 @@
     border-radius: 999px;
     padding: 0.3vw 0.9vw;
 }
+
+/* ── Competencia (073) ── */
+.pv-main > .cmp-reloj { flex-shrink: 0; margin: 0 0 3vh; }
+.pv-opciones {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2vh 2vw;
+    align-content: center;
+    flex: 1;
+    min-height: 0;
+}
+.pv-opciones li {
+    display: flex;
+    align-items: center;
+    gap: 1.4vw;
+    padding: 2.4vh 1.8vw;
+    border-radius: 1.4vh;
+    border: 2px solid var(--border-color);
+    background: var(--bg-panel);
+    font-size: 2.3vw;
+    font-weight: 600;
+    line-height: 1.2;
+}
+.pv-opcion-letra {
+    flex-shrink: 0;
+    width: 4.4vw;
+    height: 4.4vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--cyan-glow);
+    color: var(--cyan-bright);
+    font-weight: 800;
+}
+.pv-podio-linea {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1vh 3vw;
+    margin: 2vh 0 0;
+    font-size: 2.1vw;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.pv-podio-linea small { font-weight: 500; color: var(--text-secondary); font-size: 0.75em; }
+.pv-final { gap: 4vh; }
+.pv-final .pv-question { margin-bottom: 0; }
+.pv-final .cmp-podio { width: 80vw; }
+.pv-final-pie { margin: 0; font-size: 1.6vw; color: var(--text-subtle); }

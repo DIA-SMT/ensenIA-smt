@@ -13,7 +13,7 @@
 
 import { supabase } from './_helpers';
 import { esErrorDeRed } from '../lib/conexion';
-import type { LiveActivityKind, LiveActivityConfig, LiveActivityStatus, LiveResults } from './live.service';
+import type { LiveActivityKind, LiveActivityConfig, LiveActivityStatus, LiveResults, VistaCompetencia } from './live.service';
 
 // ── Tipos ──
 
@@ -30,6 +30,8 @@ export interface GuestActivity {
   kind: LiveActivityKind;
   config: LiveActivityConfig;
   status: LiveActivityStatus;
+  /** Cuándo se lanzó (073): para la cuenta regresiva de la competencia */
+  creada?: string;
 }
 
 export type GuestState =
@@ -40,7 +42,7 @@ export type GuestState =
   /** El docente sacó a este invitado (067). */
   | { status: 'expulsado'; motivo?: 'sacado' | 'sala_cerrada' }
   /** Hay clase, pero ninguna actividad lanzada: el celular queda en pausa. */
-  | { status: 'idle'; title: string; reactionsEnabled: boolean }
+  | { status: 'idle'; title: string; reactionsEnabled: boolean; ahora?: string }
   | {
       status: 'active';
       title: string;
@@ -48,6 +50,8 @@ export type GuestState =
       activity: GuestActivity;
       myAnswer: Record<string, unknown> | null;
       results: LiveResults | null;
+      /** La hora del servidor (073) */
+      ahora?: string;
     };
 
 /** Lo que el invitado manda según el tipo de actividad. */
@@ -72,6 +76,9 @@ const MENSAJES: Record<string, string> = {
   ACTIVIDAD_NO_DISPONIBLE: 'Esa actividad ya no está disponible.',
   ACTIVIDAD_CERRADA: 'El docente cerró la actividad. Tu respuesta anterior quedó guardada.',
   RESPUESTA_VACIA: 'Te falta elegir o escribir algo antes de enviar.',
+  // Competencia (073)
+  TIEMPO_TERMINADO: 'Se terminó el tiempo para esta pregunta.',
+  RESPUESTA_YA_ENVIADA: 'Ya habías respondido: en la competencia vale la primera.',
   REACCIONES_CERRADAS: 'El docente apagó las reacciones.',
   EMOJI_NO_PERMITIDO: 'Ese emoji no está habilitado.',
   // No llegó al servidor (071): no es un rechazo, se puede reintentar
@@ -128,6 +135,13 @@ export async function submitGuestResponse(
     p_payload: payload as never,
   });
   if (error) fail(error);
+}
+
+/** Competencia (073): el podio y el lugar del invitado */
+export async function getCompetenciaInvitado(token: string, ronda: string): Promise<VistaCompetencia | null> {
+  const { data, error } = await supabase.rpc('live_competencia_invitado' as never, { p_token: token, p_ronda: ronda } as never);
+  if (error) fail(error);
+  return (data as unknown as VistaCompetencia | null) ?? null;
 }
 
 export async function sendGuestReaction(token: string, emoji: string): Promise<void> {

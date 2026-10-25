@@ -8,12 +8,12 @@
  * (no siempre suma). Todo responsive: mismo panel en cualquier pantalla.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
     Smile, Trash2, ChevronLeft, Loader2, QrCode, UserPlus, MonitorPlay,
-    UsersRound, Target, X, BookOpen, Medal,
+    UsersRound, Target, X, BookOpen, Medal, Trophy, SkipForward,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -22,14 +22,19 @@ import { getGroupsByCourse, type CourseGroup } from '../services/groups.service'
 import GruposModal from '../components/GruposModal';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
-    getEstadoDocente, cerrarMiClaseOlvidada, launchActivity, setActivityStatus, getLiveResults,
+    getEstadoDocente, cerrarMiClaseOlvidada, launchActivity, setActivityStatus, revelarActividad, getLiveResults,
     setGuestsEnabled, sacarInvitado, deleteLiveResponse, sacarPalabraEnVivo,
     setLiveMaterial, type InvitadoEnSala,
     getCorrectResponders, getMyPastSessions, sincronizarMaterialesDeClase,
-    LIVE_KIND_META, type EleccionMaterial,
+    LIVE_KIND_META, type EleccionMaterial, getCompetencia, type VistaCompetencia,
     type LiveSession, type LiveActivity, type LiveActivityKind,
     type LiveResults, type LiveOption, type LiveActivityConfig,
 } from '../services/live.service';
+import { marcarLanzada } from '../services/preguntas-en-vivo.service';
+import {
+    SEGUNDOS_COMPETENCIA, useDesfaseServidor, useCuentaRegresiva, finDePregunta, type PreguntaEnCola,
+} from '../lib/competencia';
+import { RelojCompetencia, Podio, TablaPosiciones } from '../components/CompetenciaEnVivo';
 import { getMaterialsByClass, getMaterialsByTeacher } from '../services/library.service';
 import { getPlanningByTeacher } from '../services/planning.service';
 import { getScheduleByTeacher } from '../services/schedule.service';
@@ -52,6 +57,22 @@ import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
 
+/**
+ * Competencia (073): las preguntas de una ronda suman para el mismo podio.
+ * `cola`: las que faltan, si se armó con las preguntas preparadas.
+ * Queda en sessionStorage: si se recarga la página, sigue la misma ronda.
+ */
+interface Ronda { id: string; cola: PreguntaEnCola[]; hechas: number }
+const claveRonda = (sessionId: string) => `estudia_competencia:${sessionId}`;
+function leerRonda(sessionId: string): Ronda | null {
+    try { const v = sessionStorage.getItem(claveRonda(sessionId)); return v ? JSON.parse(v) as Ronda : null; } catch { return null; }
+}
+function guardarRonda(sessionId: string, r: Ronda | null) {
+    try {
+        if (r) sessionStorage.setItem(claveRonda(sessionId), JSON.stringify(r));
+        else sessionStorage.removeItem(claveRonda(sessionId));
+    } catch { /* sin almacenamiento: queda en memoria */ }
+}
 
 export default function ClaseEnVivo() {
     const { user } = useAuth();
@@ -97,6 +118,20 @@ export default function ClaseEnVivo() {
     const [groupMode, setGroupMode] = useState(false);
     // Medallas: el diálogo (con quiénes vienen marcados)
     const [premiar, setPremiar] = useState<{ titulo: string; preseleccion: string[] } | null>(null);
+
+    // Competencia (073): la ronda en curso, las posiciones después de cada
+    // pregunta y el podio al terminar
+    const [ronda, setRonda] = useState<Ronda | null>(null);
+    const [vistaComp, setVistaComp] = useState<VistaCompetencia | null>(null);
+    const [podioFinal, setPodioFinal] = useState<VistaCompetencia | null>(null);
+    const [competir, setCompetir] = useState(false);
+    const [segundosComp, setSegundosComp] = useState(20);
+    const { desfase, medir } = useDesfaseServidor();
+    // De qué pregunta son las posiciones que se ven, y cuál ya se reveló sola
+    const vistaDeRef = useRef<string | null>(null);
+    const reveladaRef = useRef<string | null>(null);
+    // Las que se terminaron: una vuelta que salió antes no las revive
+    const terminadasRef = useRef(new Set<string>());
 
     // Resumen: el de la clase que se acaba de terminar, o una anterior
     const [resumenId, setResumenId] = useState<string | null>(null);
@@ -234,9 +269,29 @@ export default function ClaseEnVivo() {
         getGroupsByCourse(session.courseId).then(setGroups).catch(console.error);
     }, [session?.id, session?.status]);
 
+    /** La clase terminó: la competencia se va con ella */
+    const dejarLaCompetencia = useCallback((id: string) => {
+        guardarRonda(id, null);
+        setRonda(null);
+        setVistaComp(null);
+        setPodioFinal(null);
+        setCompetir(false);
+    }, []);
+
     // ── Una vuelta: estado, resultados, emojis, invitados y presencia en un
     // solo pedido (071; antes eran seis, que con poca señal se encimaban) ──
     const sessionId = session?.id ?? null;
+
+    /** Las posiciones después de una pregunta; si no llegan, la próxima vuelta las vuelve a pedir */
+    const traerPosiciones = useCallback((act: LiveActivity) => {
+        const r = act.config.competencia?.ronda;
+        if (!r || !sessionId) return;
+        vistaDeRef.current = act.id;
+        getCompetencia(sessionId, r).then(setVistaComp).catch(() => {
+            if (vistaDeRef.current === act.id) vistaDeRef.current = null;
+        });
+    }, [sessionId]);
+
     const vuelta = useCallback(async (senal: AbortSignal) => {
         if (!sessionId) return;
         const e = await getEstadoDocente(sessionId, senal);
@@ -248,6 +303,7 @@ export default function ClaseEnVivo() {
             setSession(null);
             setActivity(null);
             setResults(null);
+            dejarLaCompetencia(sessionId);
             avisar.info('La clase terminó', 'Se cerró desde otro equipo o por estar más de 2 horas sin uso. Acá está su resumen.');
             return;
         }
@@ -259,22 +315,64 @@ export default function ClaseEnVivo() {
                 setSession(null);
                 setActivity(null);
                 setResults(null);
+                dejarLaCompetencia(sessionId);
                 avisar.info('Esta clase había quedado abierta', 'Tenía más de 2 horas sin uso y la cerramos. Acá está su resumen; si querés seguir, arrancá una nueva.');
                 return;
             }
         }
         setSession(e.session);
         setActivity(e.activity);
+        medir(e.ahora);
+        // Competencia: si se recargó la página en el medio, la ronda sigue
+        const c = e.activity?.config.competencia;
+        if (c && e.activity && e.activity.status !== 'closed' && !terminadasRef.current.has(c.ronda)) {
+            const guardada = leerRonda(sessionId);
+            if (e.activity.status === 'active' || guardada?.id === c.ronda) {
+                setRonda(prev => (prev?.id === c.ronda ? prev : guardada?.id === c.ronda ? guardada : { id: c.ronda, cola: [], hechas: 1 }));
+            }
+            // Las posiciones, una vez por pregunta revelada (aunque la haya revelado otro equipo)
+            if (e.activity.status === 'revealed' && vistaDeRef.current !== e.activity.id) traerPosiciones(e.activity);
+        }
         // Una actividad cerrada deja a la vista los últimos resultados que tuvo
         if (e.activity && e.activity.status !== 'closed') setResults(e.results);
         setReactions(e.reacciones);
         setInvitados(e.invitados);
         // Invitados conectados: los que dieron señal en los últimos 2 minutos
-        const desde = Date.now() - 120_000;
+        // (con la hora del servidor: si la notebook tiene la hora corrida, igual cuenta bien)
+        const desde = (e.ahora ? Date.parse(e.ahora) : Date.now()) - 120_000;
         setConnected(e.invitados.filter(g => new Date(g.vistoAt).getTime() > desde).length);
         setOnlineIds(e.conectados);
-    }, [sessionId]);
+    }, [sessionId, medir, dejarLaCompetencia, traerPosiciones]);
     const sondeo = useSondeo(vuelta, POLL_MS, Boolean(session && session.status === 'live'));
+
+    // ── Competencia: el reloj de la pregunta y el revelado solo ──
+    const quedan = useCuentaRegresiva(finDePregunta(activity, activity?.createdAt), desfase);
+
+    /**
+     * Revela la pregunta (solo si sigue activa: si justo se cerró, no la
+     * reabre; la vuelta trae cómo quedó) y, si es de competencia, trae las posiciones
+     */
+    const revelar = useCallback(async (act: LiveActivity) => {
+        if (!(await revelarActividad(act.id))) return;
+        setActivity(a => (a && a.id === act.id ? { ...a, status: 'revealed' } : a));
+        traerPosiciones(act);
+    }, [traerPosiciones]);
+
+    // Al terminar el tiempo (con un segundo y medio para lo que viene en
+    // camino) o cuando ya respondieron todos los que están, se revela sola
+    const esperados = students.filter(s => onlineIds.has(s.id)).length + connected;
+    const respondieron = results?.responded ?? 0;
+    useEffect(() => {
+        if (!activity?.config.competencia || activity.status !== 'active' || reveladaRef.current === activity.id) return;
+        const todos = esperados > 0 && respondieron >= esperados;
+        if (!todos && (quedan === null || quedan > -1.5)) return;
+        const act = activity;
+        reveladaRef.current = act.id;
+        revelar(act).catch(() => {
+            // Sin señal: se vuelve a probar en unos segundos
+            window.setTimeout(() => { if (reveladaRef.current === act.id) reveladaRef.current = null; }, 3000);
+        });
+    }, [activity, quedan, esperados, respondieron, revelar]);
 
     // El QR vive en el panel, no en un modal: con la notebook espejada al
     // proyector, esta pantalla es la que ve la sala. Un modal que hay que
@@ -338,6 +436,7 @@ export default function ClaseEnVivo() {
         try {
             await endLiveSession(session.id);
             setResumenId(session.id);
+            dejarLaCompetencia(session.id);
             setSession(null);
             setActivity(null);
             setResults(null);
@@ -396,6 +495,9 @@ export default function ClaseEnVivo() {
             await sacarInvitado(g.id);
             setInvitados(prev => prev.filter(x => x.id !== g.id));
             if (activity) getLiveResults(activity.id).then(setResults).catch(console.error);
+            // Se borró lo que mandó: si estaba en el podio, sale también de ahí (y del proyector)
+            if (vistaComp && sessionId) getCompetencia(sessionId, vistaComp.ronda).then(setVistaComp).catch(console.error);
+            if (podioFinal && sessionId) getCompetencia(sessionId, podioFinal.ronda).then(setPodioFinal).catch(console.error);
         } catch (err) {
             console.error(err);
             avisar.error('No se pudo sacar al invitado. Probá de nuevo.');
@@ -424,10 +526,33 @@ export default function ClaseEnVivo() {
 
     const needsOptions = pickedKind === 'quiz' || pickedKind === 'encuesta' || pickedKind === 'chips';
     const validOptions = options.filter(o => o.label.trim());
+    /** La pregunta rápida que se lanza va con tiempo y puntos (no si es dirigida a uno) */
+    const conCompetencia = pickedKind === 'quiz' && competir && !targetStudent;
     const canLaunch = pickedKind === 'checkin'
         || (pickedKind === 'nube' && question.trim())
         || (pickedKind === 'texto' && question.trim())
         || (needsOptions && question.trim() && validOptions.length >= 2 && (pickedKind !== 'quiz' || correctId));
+
+    /**
+     * Se lanzó algo: el podio final deja la pantalla (y el proyector). Si es
+     * de competencia, arranca (o sigue) la ronda con esta pregunta.
+     */
+    const sumarALaRonda = (act: LiveActivity, cola?: PreguntaEnCola[]) => {
+        setPodioFinal(null);
+        const c = act.config.competencia;
+        if (!c || !session) return;
+        const misma = ronda?.id === c.ronda ? ronda : null;
+        const r: Ronda = { id: c.ronda, cola: cola ?? misma?.cola ?? [], hechas: (misma?.hechas ?? 0) + 1 };
+        setRonda(r);
+        guardarRonda(session.id, r);
+        setCompetir(true);
+    };
+
+    /** Con una ronda en curso, la pregunta rápida (con correcta, para todos) suma a la competencia */
+    const enLaRonda = (kind: LiveActivityKind, config: LiveActivityConfig): LiveActivityConfig =>
+        ronda && kind === 'quiz' && config.correctId && !targetStudent
+            ? { ...config, groupMode: undefined, competencia: { segundos: segundosComp, ronda: ronda.id } }
+            : config;
 
     const handleLaunch = async () => {
         if (!session || !pickedKind || !canLaunch || launching) return;
@@ -438,11 +563,15 @@ export default function ClaseEnVivo() {
                 : needsOptions
                     ? { question: question.trim(), options: validOptions, ...(pickedKind === 'quiz' ? { correctId } : {}) }
                     : { question: question.trim() };
-            // Dirigida a uno o una respuesta por grupo: nunca las dos a la vez
-            const config = groupMode && !targetStudent ? { ...base, groupMode: true } : base;
+            // Competencia: con tiempo y para todos (sin ronda, la arma el servidor).
+            // Si no, dirigida a uno o una respuesta por grupo: nunca las dos a la vez.
+            const config: LiveActivityConfig = conCompetencia
+                ? { ...base, competencia: { segundos: segundosComp, ronda: ronda?.id ?? '' } }
+                : groupMode && !targetStudent ? { ...base, groupMode: true } : base;
             const act = await launchActivity(session.id, pickedKind, config, targetStudent?.id ?? null, session.classId);
             setActivity(act);
             setResults(null);
+            sumarALaRonda(act);
             resetLauncher();
             setTargetStudent(null);
         } catch (err) {
@@ -455,9 +584,10 @@ export default function ClaseEnVivo() {
     /** Lanza una pregunta armada desde el material (va a todo el curso). */
     const lanzarDesdeMaterial = async (kind: LiveActivityKind, config: LiveActivityConfig) => {
         if (!session) return;
-        const act = await launchActivity(session.id, kind, config, null, session.classId);
+        const act = await launchActivity(session.id, kind, enLaRonda(kind, config), null, session.classId);
         setActivity(act);
         setResults(null);
+        sumarALaRonda(act);
     };
 
     /**
@@ -468,16 +598,72 @@ export default function ClaseEnVivo() {
         if (!session || launching) return;
         setLaunching(true);
         try {
-            const cfg = groupMode && !targetStudent ? { ...config, groupMode: true } : config;
+            const cfg = enLaRonda(kind, groupMode && !targetStudent ? { ...config, groupMode: true } : config);
             const act = await launchActivity(session.id, kind, cfg, targetStudent?.id ?? null, classId);
             setActivity(act);
             setResults(null);
+            sumarALaRonda(act);
             setTargetStudent(null);
         } catch (err) {
             avisar.error('No se pudo lanzar la pregunta.', err instanceof Error ? err.message : 'Probá de nuevo.');
         } finally {
             setLaunching(false);
         }
+    };
+
+    /** Una pregunta de la cola de la competencia; `resto`: las que quedan después */
+    const lanzarEnCompetencia = async (p: PreguntaEnCola, resto: PreguntaEnCola[]) => {
+        if (!session || launching) return;
+        setLaunching(true);
+        try {
+            const config: LiveActivityConfig = {
+                ...p.config, groupMode: undefined,
+                competencia: { segundos: segundosComp, ronda: ronda?.id ?? '' },
+            };
+            const act = await launchActivity(session.id, 'quiz', config, null, p.classId);
+            setActivity(act);
+            setResults(null);
+            sumarALaRonda(act, resto);
+            if (p.preguntaId) void marcarLanzada(p.preguntaId);
+        } catch (err) {
+            avisar.error('No se pudo lanzar la pregunta.', err instanceof Error ? err.message : 'Probá de nuevo.');
+        } finally {
+            setLaunching(false);
+        }
+    };
+
+    /** Las preguntas preparadas, una atrás de otra, con tiempo y puntos */
+    const competirConPreparadas = (lista: PreguntaEnCola[]) => {
+        const [primera, ...resto] = lista;
+        if (primera) void lanzarEnCompetencia(primera, resto);
+    };
+
+    const siguientePregunta = () => {
+        if (!ronda || ronda.cola.length === 0) return;
+        const [p, ...resto] = ronda.cola;
+        void lanzarEnCompetencia(p, resto);
+    };
+
+    /** Termina la ronda: la que está en pantalla se revela (si no, no suma) y queda el podio */
+    const terminarCompetencia = async () => {
+        if (!session || !ronda) return;
+        const id = ronda.id;
+        terminadasRef.current.add(id);
+        try {
+            if (activity?.config.competencia?.ronda === id && activity.status === 'active') {
+                reveladaRef.current = activity.id;
+                await revelar(activity);
+            }
+            setPodioFinal(await getCompetencia(session.id, id));
+        } catch (err) {
+            terminadasRef.current.delete(id);
+            avisar.error('No se pudo traer el podio.', esErrorDeRed(err) ? 'Sin señal: probá de nuevo en un ratito.' : 'Probá de nuevo.');
+            return;
+        }
+        guardarRonda(session.id, null);
+        setRonda(null);
+        setVistaComp(null);
+        setCompetir(false);
     };
 
     /** Los que eligieron la correcta; en modo grupal, todo su grupo. */
@@ -500,8 +686,14 @@ export default function ClaseEnVivo() {
 
     const handleReveal = async () => {
         if (!activity) return;
-        await setActivityStatus(activity.id, 'revealed').catch(console.error);
-        setActivity({ ...activity, status: 'revealed' });
+        const act = activity;
+        reveladaRef.current = act.id;
+        await revelar(act).catch(err => {
+            console.error(err);
+            // Que el reloj la pueda revelar sola si no se vuelve a tocar
+            if (reveladaRef.current === act.id) reveladaRef.current = null;
+            avisar.error('No se pudo revelar la respuesta. Probá de nuevo.');
+        });
     };
 
     const handleCloseActivity = async () => {
@@ -791,6 +983,79 @@ export default function ClaseEnVivo() {
                 </div>
             )}
 
+            {/* Competencia (073): cómo va la ronda y qué sigue */}
+            {ronda && (
+                <section className="card cv-comp" aria-labelledby="cv-comp-titulo">
+                    <div className="cv-comp-head">
+                        <h4 id="cv-comp-titulo"><Trophy size={15} aria-hidden="true" /> Competencia</h4>
+                        <span className="text-xs text-subtle">
+                            {ronda.cola.length > 0
+                                ? `Pregunta ${ronda.hechas} de ${ronda.hechas + ronda.cola.length}`
+                                : `${ronda.hechas} ${ronda.hechas === 1 ? 'pregunta' : 'preguntas'}`}
+                            {vistaComp && vistaComp.participantes > 0 ? ` · ${vistaComp.participantes} participantes` : ''}
+                        </span>
+                    </div>
+                    {/* Mientras corre el tiempo, el podio no: la sala mira la pregunta */}
+                    {vistaComp && activity?.status !== 'active' && (
+                        <>
+                            <Podio podio={vistaComp.podio} />
+                            {vistaComp.todos && vistaComp.todos.length > 0 && (
+                                <details className="cv-comp-todos">
+                                    <summary>Todas las posiciones</summary>
+                                    <p className="text-xs text-subtle">Los chicos solo ven el podio y su propio puesto. Si tu pantalla está espejada en el proyector, esta lista también se ve.</p>
+                                    <TablaPosiciones todos={vistaComp.todos} />
+                                </details>
+                            )}
+                        </>
+                    )}
+                    <div className="cv-comp-tiempo" role="group" aria-label="Tiempo para responder cada pregunta">
+                        <span className="text-xs text-subtle">Tiempo por pregunta:</span>
+                        {SEGUNDOS_COMPETENCIA.map(s => (
+                            <button key={s} type="button" className={`cv-chip-seg ${segundosComp === s ? 'on' : ''}`}
+                                aria-pressed={segundosComp === s} onClick={() => setSegundosComp(s)}>{s} s</button>
+                        ))}
+                    </div>
+                    <div className="cv-comp-acciones">
+                        {ronda.cola.length > 0 && activity?.status !== 'active' && (
+                            <button type="button" className="btn btn-primary btn-sm" onClick={siguientePregunta} disabled={launching}>
+                                {launching ? <Loader2 size={14} className="spin" /> : <SkipForward size={14} aria-hidden="true" />} Siguiente pregunta
+                            </button>
+                        )}
+                        <button type="button" className="btn btn-outline btn-sm" onClick={terminarCompetencia}>
+                            <Trophy size={14} aria-hidden="true" /> Terminar y mostrar el podio
+                        </button>
+                    </div>
+                    {ronda.cola.length === 0 && activity?.status !== 'active' && (
+                        <p className="text-xs text-subtle">Las preguntas rápidas con una correcta que lances ahora suman a esta competencia.</p>
+                    )}
+                </section>
+            )}
+
+            {podioFinal && (
+                <section className="card cv-comp cv-comp-final" aria-labelledby="cv-podio-titulo">
+                    <div className="cv-comp-head">
+                        <h4 id="cv-podio-titulo"><Trophy size={15} aria-hidden="true" /> Podio de la competencia</h4>
+                        <span className="text-xs text-subtle">
+                            {podioFinal.reveladas} {podioFinal.reveladas === 1 ? 'pregunta' : 'preguntas'} · {podioFinal.participantes} participantes
+                        </span>
+                    </div>
+                    <Podio podio={podioFinal.podio} />
+                    <p className="text-xs text-subtle">Cada uno ve en su celular en qué puesto quedó.</p>
+                    {podioFinal.todos && podioFinal.todos.length > 0 && (
+                        <details className="cv-comp-todos">
+                            <summary>Todas las posiciones</summary>
+                            <TablaPosiciones todos={podioFinal.todos} />
+                        </details>
+                    )}
+                    <div className="cv-comp-acciones">
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setProjecting(true)}>
+                            <MonitorPlay size={14} aria-hidden="true" /> Proyectar el podio
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPodioFinal(null)}>Listo</button>
+                    </div>
+                </section>
+            )}
+
             {/* Actividad activa + resultados */}
             {activity && activity.status !== 'closed' ? (
                 <div className="card cv-activity">
@@ -813,13 +1078,16 @@ export default function ClaseEnVivo() {
                         )}
                     </div>
                     {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
+                    {activity.config.competencia && activity.status === 'active' && (
+                        <RelojCompetencia quedan={quedan} total={activity.config.competencia.segundos} />
+                    )}
 
                     <LiveResultsView activity={activity} results={results} isTeacher onSacar={sacarRespuesta} />
 
                     <div className="cv-activity-actions">
                         {activity.kind === 'quiz' && activity.status === 'active' && (
                             <button className="btn btn-primary btn-sm" onClick={handleReveal}>
-                                <Eye size={14} /> Revelar respuesta
+                                <Eye size={14} /> {activity.config.competencia ? 'Revelar ya' : 'Revelar respuesta'}
                             </button>
                         )}
                         {activity.kind === 'quiz' && activity.status === 'revealed' && (
@@ -842,7 +1110,8 @@ export default function ClaseEnVivo() {
             )}
 
             {/* Lo preparado en "Preparar la clase": se lanza de un toque, sin escribir en el celular */}
-            <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching} />
+            <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching}
+                competir={ronda ? undefined : competirConPreparadas} />
 
             <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />
 
@@ -949,7 +1218,25 @@ export default function ClaseEnVivo() {
                             </div>
                         )}
 
-                        {groups.length > 0 && !targetStudent && (
+                        {/* Competencia (073): con tiempo, puntos por rapidez y podio */}
+                        {pickedKind === 'quiz' && !targetStudent && (
+                            <div className="cv-comp-opcion">
+                                <label className="cv-groupmode" title="Cada uno responde una sola vez, con tiempo. Suma más el que acierta más rápido.">
+                                    <input type="checkbox" checked={competir} onChange={e => setCompetir(e.target.checked)} />
+                                    🏆 Competencia: con tiempo y puntos por rapidez{ronda ? ' (suma a la que está en curso)' : ''}
+                                </label>
+                                {competir && (
+                                    <div className="cv-comp-tiempo" role="group" aria-label="Tiempo para responder">
+                                        {SEGUNDOS_COMPETENCIA.map(s => (
+                                            <button key={s} type="button" className={`cv-chip-seg ${segundosComp === s ? 'on' : ''}`}
+                                                aria-pressed={segundosComp === s} onClick={() => setSegundosComp(s)}>{s} s</button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {groups.length > 0 && !targetStudent && !conCompetencia && (
                             <label className="cv-groupmode" title="Para cuando no alcanzan los celulares o la consigna es grupal">
                                 <input type="checkbox" checked={groupMode} onChange={e => setGroupMode(e.target.checked)} />
                                 👥 Una respuesta por grupo ({groups.length} grupos)
@@ -957,9 +1244,10 @@ export default function ClaseEnVivo() {
                         )}
 
                         <button className="btn btn-primary w-full" onClick={handleLaunch} disabled={!canLaunch || launching}>
-                            {launching ? <Loader2 size={15} className="spin" /> : targetStudent ? <Target size={15} /> : <Radio size={15} />}
+                            {launching ? <Loader2 size={15} className="spin" /> : targetStudent ? <Target size={15} /> : conCompetencia ? <Trophy size={15} /> : <Radio size={15} />}
                             {launching ? 'Lanzando...'
                                 : targetStudent ? `Mandársela a ${targetStudent.firstName}`
+                                : conCompetencia ? `Lanzar con ${segundosComp} segundos`
                                 : groupMode ? 'Lanzar a los grupos'
                                 : 'Lanzar al curso'}
                         </button>
@@ -975,6 +1263,7 @@ export default function ClaseEnVivo() {
                     connected={connected}
                     reactions={session.reactionsEnabled ? reactions : []}
                     sinSenial={sondeo.fallas >= 2}
+                    competencia={{ quedan, vista: vistaComp, final: podioFinal }}
                     onClose={() => setProjecting(false)}
                 />
             )}
@@ -1047,6 +1336,12 @@ export function LiveResultsView(props: PropsResultados) {
 }
 
 function ResultadosCuerpo({ activity, results, isTeacher = false, onSacar }: PropsResultados) {
+    // Competencia: mientras corre el tiempo no se ve qué eligieron (se
+    // proyecta y se pasa de banco en banco); solo cuántos respondieron
+    if (activity.config.competencia && activity.status === 'active') {
+        const n = results?.responded ?? 0;
+        return <p className="cv-waiting">{n === 0 ? 'Esperando respuestas' : n === 1 ? '1 respondió' : `${n} respondieron`}<span className="cv-ellipsis" /></p>;
+    }
     if (!results || results.responded === 0) {
         return <p className="cv-waiting">Esperando respuestas<span className="cv-ellipsis" />​</p>;
     }
