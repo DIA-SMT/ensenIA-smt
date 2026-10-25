@@ -40,7 +40,7 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/actividades\/[^/]+$/, docente: '"Resultados de la actividad" (una actividad puntual, con las entregas)' },
   { ruta: /^\/actividad-rapida$/, docente: '"Actividad rápida" (se llega desde "Crear" o el buscador)' },
   { ruta: /^\/modulo$/, docente: '"Armar la clase" (diapositivas, juego y tarea)' },
-  { ruta: /^\/ia-lab$/, docente: '"Preparar con la IA" (en el buscador: "Preguntale a la IA")' },
+  { ruta: /^\/ia-lab$/, docente: '"Preparar con la IA" (en el buscador: "Preparar con la IA")' },
   { ruta: /^\/tema\/[^/]+$/, docente: '"Preparar la clase" (un tema de su planificación)' },
   { ruta: /^\/libreta$/, docente: '"Libreta" (notas), en el menú, grupo "Aula"' },
   { ruta: /^\/asistencia$/, docente: '"Asistencia de hoy" (pasar lista; se llega desde "Hoy" → "Pasar lista")' },
@@ -213,7 +213,7 @@ publica directo, sin borrador. Después: "Mostrar QR para el aula", "Ver resulta
 3. Las fechas salen del horario: si no está cargado, "Cargar mi horario". "Reacomodar
    fechas" o "Repartir fechas" reparte los temas que faltan dar.
 4. En cada tema: "Preparar ▾" ("Todo lo del tema", "La clase completa", "Presentación",
-   "Trabajo práctico", "Evaluación", "Preguntale a la IA", "Arranca el", "Cambiar el
+   "Trabajo práctico", "Evaluación", "Preguntale a Migue", "Arranca el", "Cambiar el
    nombre") y el ✓ "Marcar como dada".
 
 ### Preparar la clase de un tema
@@ -280,7 +280,7 @@ la familia") y "Avisar a dirección".
 "Subir" → el archivo (PDF, Word o imagen), "Título", "Materia y curso" y la casilla
 "Compartir con los estudiantes de …" → "Subir a la biblioteca". "Video" suma un link de
 YouTube. Cada material tiene, según el tipo: "Resumen IA", "Crear tarjetas", "Crear
-podcast", "Usar en IA Lab", "Adaptar", "Diagrama", "Crucigrama", "Juegos", "En vivo", "Compartir".
+podcast", "Preguntale a Migue", "Adaptar", "Diagrama", "Crucigrama", "Juegos", "En vivo", "Compartir".
 
 ### Citaciones, alertas y comunicados
 - Citar a una familia: "Citaciones" → "Familia de" (el estudiante) → "Título", "Mensaje"

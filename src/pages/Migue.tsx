@@ -24,7 +24,7 @@ import {
 } from '../services/migue.service';
 import type { ContextoMigue } from '../contexts/MigueContext';
 import { createMaterial } from '../services/library.service';
-import { getTema, updateClass } from '../services/planning.service';
+import { agregarAlTema } from '../services/planning.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import RefineResultModal from '../components/RefineResultModal';
 import PublishActivityModal from '../components/PublishActivityModal';
@@ -198,7 +198,8 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
 
   const enc = ENCUADRE[audience];
   const esEquipo = audience === 'equipo';
-  const contextoActivo = esEquipo && usarContexto ? contexto : null;
+  // Lo que está mirando lo usa el servidor solo con un docente: a la dirección no se le muestra
+  const contextoActivo = user.role === 'docente' && usarContexto ? contexto : null;
   const sugerencias = contextoActivo ? sugerenciasDe(contextoActivo) : enc.sugerencias;
 
   const enviar = async (pregunta?: string) => {
@@ -474,9 +475,7 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
           onInsertInClass={async (content) => {
             const temaId = usando.contexto.temaId;
             if (!temaId) return;
-            const r = await getTema(temaId);
-            if (!r) throw new Error('No encontramos el tema.');
-            await updateClass(temaId, { content: r.tema.content ? `${r.tema.content}\n\n${content}` : content });
+            await agregarAlTema(temaId, content);
           }}
           onSaveAsMaterial={async (content, title) => {
             const c = usando.contexto;

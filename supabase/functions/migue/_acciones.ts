@@ -52,13 +52,19 @@ const ACCIONES: Record<string, Accion> = {
 };
 
 /** Para el prompt (parte fija, con caché): qué marcas existen y cuándo usarlas */
-export const GUIA_ACCIONES = `## Botones que podés ofrecer
+export const GUIA_ACCIONES = `## Lo que escribís se usa tal cual
+Sos el único asistente del docente en la app: debajo de tu respuesta tiene "Usar esto"
+(guardarla en el tema, como material o publicarla como actividad). Cuando armes algo,
+escribilo listo para usar.
+
+## Botones que podés ofrecer
 Si lo que respondiste se hace en la app, terminá con una o dos marcas (nunca más), cada
 una sola en su línea, al final de todo. La app las muestra como botones; no las expliques
 ni las nombres en el texto.
 - [[accion:armar_actividad|pedido]]: armar una actividad, TP o tarea del tema. Después de
   la barra, en menos de 200 caracteres, lo que tiene que pedir (por ejemplo "5 preguntas
-  de opción múltiple sobre fracciones equivalentes, con una de desarrollo").
+  de opción múltiple sobre fracciones equivalentes, con una de desarrollo"). Sin nombres
+  de personas: el pedido viaja en un enlace.
 - [[accion:armar_evaluacion|pedido]]: lo mismo, pero una evaluación.
 - [[accion:presentacion]]: armar la presentación del tema.
 - [[accion:clase_en_vivo]]: dar el tema en la clase en vivo (con sus preguntas preparadas).
@@ -69,17 +75,22 @@ ni las nombres en el texto.
 Las que dicen "del tema" solo si en "Lo que está mirando ahora" hay un tema (o algo de un
 tema). Si la respuesta es una charla o una idea, no pongas ninguna.`;
 
-const MARCA = /\[\[accion:([a-z_]+)(?:\|([^\]]{0,300}))?\]\]/g;
+// Con o sin tilde, en mayúscula o con espacios: el modelo no siempre la escribe igual
+// (el pedido puede traer nombres tapados como [N1], con sus propios corchetes)
+const MARCA = /\[\[\s*acci[oó]n\s*:\s*([a-z_]+)\s*(?:\|((?:\[N\d+\]|[^\]]){0,300}))?\]\]/gi;
 
 /** Las marcas de la respuesta, convertidas en botones (como mucho dos, sin repetir) */
 export function accionesDe(texto: string, c: ContextoResuelto | null): { clave: string; etiqueta: string; ruta: string }[] {
   const salida: { clave: string; etiqueta: string; ruta: string }[] = [];
   for (const m of texto.matchAll(MARCA)) {
-    const clave = m[1];
+    const clave = m[1].toLowerCase();
+    // Solo las de la lista (nada de "constructor" ni "__proto__")
+    if (!Object.hasOwn(ACCIONES, clave)) continue;
     const a = ACCIONES[clave];
     if (!a || salida.some(x => x.clave === clave)) continue;
     if (a.conTema && !c?.temaId) continue;
-    const pedido = (m[2] ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    // El texto viene con los nombres tapados ([N1]…): en el pedido no va ninguno
+    const pedido = (m[2] ?? '').replace(/(\[N\d+\]\s*)+/g, 'un estudiante ').replace(/\s+/g, ' ').trim().slice(0, 300);
     salida.push({ clave, etiqueta: a.etiqueta, ruta: a.ruta(c, pedido) });
     if (salida.length === 2) break;
   }
@@ -88,5 +99,9 @@ export function accionesDe(texto: string, c: ContextoResuelto | null): { clave: 
 
 /** El texto sin las marcas (lo que se guarda en la conversación) */
 export function sinMarcas(texto: string): string {
-  return texto.replace(/\[\[accion:[^\]]*\]\]\s*/g, '').replace(/\[\[[^\]]*$/, '').trimEnd();
+  return texto
+    .replace(/\[\[\s*acci[oó]n\s*:[^\]]*\]\]\s*/gi, '')
+    // Una que quedó cortada al final (mientras llega, o si el modelo no la cerró)
+    .replace(/\[\[\s*(?:a(?:c(?:c(?:i(?:[oó](?:n(?:\s*:[^\]]*\]?)?)?)?)?)?)?)?$/i, '')
+    .trimEnd();
 }

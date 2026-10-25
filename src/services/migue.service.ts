@@ -108,7 +108,10 @@ export interface ContextoResueltoMigue {
 
 /** Las marcas de acción que Migue deja al final: no se muestran como texto */
 export function sinMarcas(texto: string): string {
-  return texto.replace(/\[\[accion:[^\]]*\]\]\s*/g, '').replace(/\[\[[^\]]*$/, '').trimEnd();
+  return texto
+    .replace(/\[\[\s*acci[oó]n\s*:[^\]]*\]\]\s*/gi, '')
+    .replace(/\[\[\s*(?:a(?:c(?:c(?:i(?:[oó](?:n(?:\s*:[^\]]*\]?)?)?)?)?)?)?)?$/i, '')
+    .trimEnd();
 }
 
 export interface MigueCallbacks {

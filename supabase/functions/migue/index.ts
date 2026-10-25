@@ -279,12 +279,32 @@ Deno.serve(async (req: Request) => {
 
   // ── Cuota diaria ── (076: su propio contador; el de los botones con IA es otro)
   const hoy = new Date().toISOString().split('T')[0];
-  const { data: usage } = await admin
-    .from('ia_usage')
-    .select('migue_mensajes, token_count_in, token_count_out')
-    .eq('teacher_id', user.id)
-    .eq('usage_date', hoy)
-    .maybeSingle();
+  let usage: { migue_mensajes: number; token_count_in: number; token_count_out: number } | null = null;
+  // Sin la 076 (la columna no existe todavía) se usa el contador de antes:
+  // nunca sin tope por no haber podido leerlo
+  let sinColumnaPropia = false;
+  {
+    const { data, error } = await admin
+      .from('ia_usage')
+      .select('migue_mensajes, token_count_in, token_count_out')
+      .eq('teacher_id', user.id)
+      .eq('usage_date', hoy)
+      .maybeSingle();
+    if (!error) {
+      usage = data;
+    } else {
+      console.error('ia_usage (migue_mensajes):', error.message);
+      sinColumnaPropia = true;
+      const viejo = await admin
+        .from('ia_usage')
+        .select('message_count, token_count_in, token_count_out')
+        .eq('teacher_id', user.id)
+        .eq('usage_date', hoy)
+        .maybeSingle();
+      if (viejo.error) return sseError('API_ERROR', 'No se pudo revisar tu cupo de hoy. Probá de nuevo en un rato.');
+      usage = viejo.data ? { ...viejo.data, migue_mensajes: viejo.data.message_count } : null;
+    }
+  }
 
   // A un estudiante el tope le llega mucho más tarde: si le cortamos Migue
   // antes, lo que cuente ya no pasa por la alerta emocional.
@@ -325,11 +345,9 @@ Deno.serve(async (req: Request) => {
   // usuario: a un estudiante o una familia solo le llega lo de 'comunidad'.
   let refHits: RefHit[] = [];
   try {
-    // Con un tema o un material de por medio, filtradas por su materia y su año
-    const anioCtx = Number((ctx?.curso ?? '').match(/\d/)?.[0]) || null;
-    const { data } = await asUser.rpc('buscar_referencias', ctx?.materia
-      ? { q: `${ctx.titulo}\n${ultimo.content}`, p_area: ctx.materia, p_anio: anioCtx, max_results: 4 }
-      : { q: ultimo.content, max_results: 4 });
+    const { data } = await asUser.rpc('buscar_referencias', {
+      q: ultimo.content, max_results: 4,
+    });
     refHits = (data ?? []) as RefHit[];
   } catch (_e) {
     refHits = [];
@@ -382,8 +400,17 @@ Deno.serve(async (req: Request) => {
     puedeDerivar: audience !== 'estudiante' || Boolean(studentId),
   });
 
-  // Nombres del padrón y datos de contacto: tapados para el proveedor
-  const seudo = new Seudonimos(await padronDeEscuela(admin, profile.school_id));
+  // Nombres del padrón y datos de contacto: tapados para el proveedor. El
+  // docente puede dar en más de una escuela: lo que está mirando puede ser de
+  // la otra, así que van los padrones de todas
+  const padron = new Set(await padronDeEscuela(admin, profile.school_id));
+  if (profile.role === 'docente') {
+    const { data: suyas } = await admin.from('teacher_assignments').select('courses(school_id)').eq('teacher_id', user.id);
+    const otras = [...new Set(((suyas ?? []) as { courses: { school_id?: string } | null }[])
+      .map(a => a.courses?.school_id).filter((s): s is string => Boolean(s) && s !== profile.school_id))];
+    for (const s of otras) (await padronDeEscuela(admin, s)).forEach(n => padron.add(n));
+  }
+  const seudo = new Seudonimos(padron);
 
   // El docente: los botones que puede ofrecer (fijo, con caché), lo que está
   // mirando y lo que ya se sabe de cómo trabaja (memoria docente, 062: solo
@@ -572,6 +599,8 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     async start(controller) {
       const encoder = new TextEncoder();
       let buffer = '';
+      // Lo que mandó el proveedor, con los nombres tapados: de acá salen los botones
+      let crudo = '';
       // Las marcas [N1]… vuelven a ser nombres antes de llegar al usuario
       const nombresDeVuelta = seudo.flujo();
       try {
@@ -591,6 +620,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
 
             const delta = ev?.choices?.[0]?.delta?.content;
             if (delta) {
+              crudo += delta;
               const texto = nombresDeVuelta.empujar(delta);
               if (texto) {
                 fullContent += texto;
@@ -611,7 +641,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         }
 
         // Los botones salen de las marcas; lo que se guarda va sin ellas
-        const acciones = profile.role === 'docente' ? accionesDe(fullContent, ctx) : [];
+        const acciones = profile.role === 'docente' ? accionesDe(crudo, ctx) : [];
         const respuesta = sinMarcas(fullContent);
 
         // ── Persistencia: el par pregunta/respuesta y las normas citadas ──
@@ -635,13 +665,16 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
           .eq('id', sessionId);
         if (errSes) console.error('migue_sessions update:', JSON.stringify(errSes));
 
-        await admin.from('ia_usage').upsert({
+        const { error: errUso } = await admin.from('ia_usage').upsert({
           teacher_id: user.id,
           usage_date: hoy,
-          migue_mensajes: (usage?.migue_mensajes ?? 0) + 1,
+          ...(sinColumnaPropia
+            ? { message_count: (usage?.migue_mensajes ?? 0) + 1 }
+            : { migue_mensajes: (usage?.migue_mensajes ?? 0) + 1 }),
           token_count_in: (usage?.token_count_in ?? 0) + tokensIn,
           token_count_out: (usage?.token_count_out ?? 0) + tokensOut,
         }, { onConflict: 'teacher_id,usage_date' });
+        if (errUso) console.error('ia_usage upsert:', errUso.message);
 
         await registrarConsumo(admin, {
           user_id: user.id, school_id: profile.school_id, role: profile.role,

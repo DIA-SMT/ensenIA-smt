@@ -21,6 +21,7 @@
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { padronDeEscuela, Seudonimos } from '../migue/_datos-personales.ts';
 import { acomodarPlacas, mezclarOpciones } from './_ordenar.ts';
 import { bancoAlcanza, limpiarBanco } from './_juegos.ts';
 
@@ -705,7 +706,7 @@ Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) 
 
 Reglas:
 - Basate SOLO en los datos provistos; no inventes.
-- El estudiante figura como [E]: nombralo así (la app pone el nombre después).
+- El estudiante figura con marcas como [E1] (su nombre) o [A1] (su apellido): usalas tal cual, la app pone el nombre después.
 - Tono constructivo y respetuoso: es material para hablar con la familia o el equipo.
 - Español rioplatense. Nada de tecnicismos psicológicos ni diagnósticos.`,
 
@@ -1249,9 +1250,13 @@ Deno.serve(async (req: Request) => {
   if (context?.subjectName) hints.push(`Materia esperada: ${context.subjectName}`);
   if (context?.courseName) hints.push(`Curso esperado: ${context.courseName}`);
 
-  const textInput = text
+  // La ficha de un chico: él ya viene como [E]; los demás nombres de la escuela
+  // (compañeros, familias, docentes) también se tapan, y vuelven en la respuesta
+  const seudo = mode === 'student_summary' ? new Seudonimos(await padronDeEscuela(supabase, profile?.school_id)) : null;
+  const textoCrudo = text
     ? (text.length > MAX_TEXT_INPUT ? text.substring(0, MAX_TEXT_INPUT) + '\n[...truncado...]' : text)
     : '';
+  const textInput = seudo ? seudo.tapar(textoCrudo) : textoCrudo;
 
   userContent.push({
     type: 'text',
@@ -1379,7 +1384,9 @@ Deno.serve(async (req: Request) => {
 
   // ── Shape response by mode ──
   if (mode === 'extract_text') return json({ text: outputText, truncated });
-  if (mode === 'summarize' || mode === 'student_summary' || mode === 'class_report') return json({ summary: outputText, truncated });
+  if (mode === 'summarize' || mode === 'student_summary' || mode === 'class_report') {
+    return json({ summary: seudo ? seudo.destapar(outputText) : outputText, truncated });
+  }
 
   // ── Guía de estudio: validar y cachear (anti-race: solo si sigue NULL) ──
   if (mode === 'study_guide') {

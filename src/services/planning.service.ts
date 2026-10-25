@@ -111,6 +111,22 @@ export async function createClass(cls: {
   return mapClass(row);
 }
 
+/**
+ * Suma un texto al final de las notas del tema: lee lo que hay en ese momento
+ * (no una copia vieja de la pantalla) y avisa si no se guardó (por ejemplo,
+ * un tema de un curso que ya no tiene asignado).
+ */
+export async function agregarAlTema(id: string, texto: string): Promise<string> {
+  const { data: actual, error: errLeer } = await supabase.from('planning_classes').select('content').eq('id', id).maybeSingle();
+  if (errLeer) throw errLeer;
+  if (!actual) throw new Error('No encontramos el tema.');
+  const nuevo = actual.content ? `${actual.content}\n\n${texto}` : texto;
+  const { data, error } = await supabase.from('planning_classes').update({ content: nuevo }).eq('id', id).select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('No se pudo guardar en el tema: puede ser de un curso que ya no tenés asignado.');
+  return nuevo;
+}
+
 export async function updateClass(id: string, updates: Partial<{
   title: string;
   objectives: string[];

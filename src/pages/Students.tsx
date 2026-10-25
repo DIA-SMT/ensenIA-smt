@@ -509,18 +509,23 @@ export default function Students() {
         try {
             const s = selectedStudent;
             const notas = notasFicha ?? await getPublishedGradesByStudent(s.id);
-            // El nombre del chico no viaja a la IA: va como [E] (también si aparece en
-            // un comentario o una observación) y se vuelve a poner en la respuesta.
-            // Los nombres de los docentes tampoco hacen falta.
-            const nombres = [s.firstName, s.lastName].map(x => x?.trim() ?? '').filter(x => x.length >= 2);
+            // El nombre del chico no viaja a la IA (tampoco si aparece en un comentario o
+            // una observación) y se vuelve a poner en la respuesta. Los nombres de los
+            // docentes tampoco hacen falta; el resto del padrón lo tapa el servidor.
+            // Cada palabra con su marca ([E1] María, [E2] José, [A1] Gómez, [A2] Paz): así
+            // vuelve cada una a su lugar, y si es una palabra común ("paz") no la pisa el nombre.
+            const partes = [
+              ...(s.firstName ?? '').trim().split(/[\s-]+/).filter(p => p.length >= 2).map((p, i) => ({ p, marca: `[E${i + 1}]` })),
+              ...(s.lastName ?? '').trim().split(/[\s-]+/).filter(p => p.length >= 2).map((p, i) => ({ p, marca: `[A${i + 1}]` })),
+            ];
             // Con o sin tilde: "Benítez" y "benitez" son el mismo chico
             const VARIANTES: Record<string, string> = { a: 'aáàâä', e: 'eéèêë', i: 'iíìîï', o: 'oóòôö', u: 'uúùûü', n: 'nñ' };
             const patron = (n: string) => [...n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()]
                 .map(c => (VARIANTES[c] ? `[${VARIANTES[c]}]` : c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('');
-            const tapar = (t: string) => nombres.reduce(
-                (acc, n) => acc.replace(new RegExp(`(?<!\\p{L})${patron(n)}(?!\\p{L})`, 'giu'), '[E]'), t);
+            const tapar = (t: string) => partes.reduce(
+                (acc, x) => acc.normalize('NFC').replace(new RegExp(`(?<!\\p{L})${patron(x.p)}(?!\\p{L})`, 'giu'), x.marca), t);
             const lines: string[] = [
-                `ESTUDIANTE: [E] — ${s.courseName}.`,
+                `ESTUDIANTE: ${tapar(`${s.firstName} ${s.lastName}`)} — ${s.courseName}.`,
                 '',
                 'NOTAS PUBLICADAS EN LA LIBRETA:',
                 ...(notas.length
@@ -542,7 +547,7 @@ export default function Students() {
                     : ['(sin observaciones registradas)']),
             ];
             const summary = await summarizeStudent(lines.join('\n'), 'Estudiante');
-            setSummaryText(summary.replace(/\[E\]/g, s.firstName));
+            setSummaryText(partes.reduce((acc, x) => acc.split(x.marca).join(x.p), summary));
         } catch (err) {
             setSummaryError(err instanceof Error ? err.message : 'No se pudo generar el resumen.');
         } finally {

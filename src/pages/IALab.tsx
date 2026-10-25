@@ -13,7 +13,7 @@ import { LIMITE_DIARIO_IA } from '../lib/usoIA';
 import { useSeguirAlFinal, useTextoSuave } from '../lib/useChat';
 import IrAlFinal from '../components/ui/IrAlFinal';
 import { useAuth } from '../contexts/AuthContext';
-import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit } from '../services/planning.service';
+import { getPlanningByTeacher, updateClass, createUnit, createClass, deleteUnit, agregarAlTema } from '../services/planning.service';
 import { getSubjects } from '../services/subjects.service';
 import { getMaterialsByTeacher, createMaterial } from '../services/library.service';
 import MazoEditor from '../components/MazoEditor';
@@ -915,10 +915,8 @@ export default function IALab() {
     // ── Consolidar: insertar contenido (revisado) en la clase ──
     const handleInsertContent = async (content: string) => {
         if (!selectedClass) return;
-        const newContent = selectedClass.content
-            ? selectedClass.content + '\n\n' + content
-            : content;
-        await updateClass(selectedClass.id, { content: newContent });
+        // Lo que hay ahora en el tema (Migue pudo haberle sumado algo mientras tanto)
+        const newContent = await agregarAlTema(selectedClass.id, content);
         setSelectedClass({ ...selectedClass, content: newContent });
         const units = await getPlanningByTeacher(user.id);
         setAllUnits(units);
