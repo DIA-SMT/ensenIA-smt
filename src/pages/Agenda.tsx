@@ -10,8 +10,8 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { X, Users, MapPin, Wand2, CheckSquare, Plus, Pencil, Trash2, CalendarDays, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { X, Users, MapPin, Wand2, CheckSquare, Plus, Pencil, Trash2, CalendarDays, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getScheduleByTeacher, crearBloques, actualizarBloque, borrarBloque, type BloqueNuevo } from '../services/schedule.service';
 import { getSubjects } from '../services/subjects.service';
@@ -53,6 +53,10 @@ export default function Agenda() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [bloques, setBloques] = useState<ScheduleBlock[]>([]);
+    // Llegado desde "Para arrancar" (Hoy): con el horario cargado, un botón para volver
+    const [params] = useSearchParams();
+    const volverCrudo = params.get('volver');
+    const volver = volverCrudo && volverCrudo.startsWith('/') && !volverCrudo.startsWith('//') ? volverCrudo : null;
     const [cargando, setCargando] = useState(true);
     const [materias, setMaterias] = useState<Record<string, Subject>>({});
     const [elegido, setElegido] = useState<ScheduleBlock | null>(null);
@@ -186,6 +190,15 @@ export default function Agenda() {
 
     return (
         <div className="agenda-container">
+            {volver && bloques.length > 0 && (
+                <div className="card agenda-listo" role="status">
+                    <CheckCircle2 size={18} aria-hidden="true" />
+                    <span>Tu horario quedó guardado. Podés sumar más clases o seguir.</span>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate(volver)}>
+                        Seguir <ArrowRight size={14} aria-hidden="true" />
+                    </button>
+                </div>
+            )}
             <div className="agenda-header card">
                 <div>
                     <h2 className="sr-only">Mi horario</h2>
@@ -340,7 +353,8 @@ export default function Agenda() {
                             <button className="btn btn-primary w-full" onClick={() => navigate(`/asistencia?curso=${elegido.courseId}&materia=${elegido.subjectId}`)}>
                                 <CheckSquare size={18} aria-hidden="true" /> Pasar lista
                             </button>
-                            <button className="btn btn-outline w-full" onClick={() => navigate('/crear')}>
+                            {/* Los temas de ese curso, para preparar el que toca */}
+                            <button className="btn btn-outline w-full" onClick={() => navigate(`/planificacion?materia=${elegido.subjectId}&curso=${elegido.courseId}`)}>
                                 <Wand2 size={18} aria-hidden="true" /> Preparar la clase
                             </button>
                             <div className="agenda-acciones-bloque">

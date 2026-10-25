@@ -387,3 +387,8 @@
 .agenda-acciones-bloque { display: flex; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-1); }
 .agenda-sacar { color: var(--danger-ink); }
 .agenda-sacar:hover { background: var(--danger-light); color: var(--danger-ink); }
+
+/* Llegado desde "Para arrancar": horario guardado, seguir (UX docente) */
+.agenda-listo { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: var(--space-3); border-color: var(--success); }
+.agenda-listo > svg { flex-shrink: 0; color: var(--success); }
+.agenda-listo > span { flex: 1; font-size: 0.875rem; }

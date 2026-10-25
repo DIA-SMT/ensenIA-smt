@@ -12,7 +12,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Sparkles, Radio, CheckSquare, BarChart3, Clock, Sun, AlertTriangle,
     Users, ClipboardCheck, ChevronRight, HelpCircle, Check, Upload, Rocket, Boxes,
-    History, ClipboardList, Wand2, CalendarDays, Target, WifiOff, Megaphone,
+    History, ClipboardList, CalendarDays, CalendarRange, FolderOpen, CheckCircle2, Target, WifiOff, Megaphone,
 } from 'lucide-react';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import PrepararAula from '../components/PrepararAula';
@@ -26,7 +26,8 @@ import { useResumenRepaso } from '../services/comprension.service';
 import { getTeacherStats, getTeacherTimeline, type TimelineItem, type TimelineKind } from '../services/stats.service';
 import { getAlertsByTeacher } from '../services/alerts.service';
 import { getRecentAttendance, todayISO } from '../services/attendance.service';
-import { getMyLiveSession, type LiveSession } from '../services/live.service';
+import { getMyLiveSession, getMyPastSessions, type LiveSession } from '../services/live.service';
+import BotonMigue from '../components/BotonMigue';
 import { getActivitiesByTeacher } from '../services/activities.service';
 import { getMaterialsByTeacher } from '../services/library.service';
 import { pendientesDe } from '../services/offline-queue.service';
@@ -69,11 +70,23 @@ function agruparRastro(items: TimelineItem[]): GrupoRastro[] {
     return grupos;
 }
 
-function greeting(): string {
-    const h = new Date().getHours();
-    if (h < 13) return 'Buen día';
-    if (h < 20) return 'Buenas tardes';
-    return 'Buenas noches';
+const CLAVE_ARRANQUE = 'estudia_arranque_oculto';
+
+const fechaISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** El próximo día de semana con clases (desde mañana), con sus clases en orden */
+function proximoDiaConClases(semana: ScheduleBlock[]): { fecha: string; etiqueta: string; bloques: ScheduleBlock[] } | null {
+    for (let i = 1; i <= 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const indice = d.getDay() - 1;
+        if (indice < 0 || indice > 4) continue;
+        const bloques = semana.filter(b => b.dayIndex === indice).sort((x, y) => x.startHour - y.startHour);
+        if (bloques.length > 0) {
+            return { fecha: fechaISO(d), etiqueta: i === 1 ? 'mañana' : d.toLocaleDateString('es-AR', { weekday: 'long' }), bloques };
+        }
+    }
+    return null;
 }
 
 export default function Hoy() {
@@ -92,7 +105,11 @@ export default function Hoy() {
     const [comunicadosSinLeer, setComunicadosSinLeer] = useState(0);
     const [liveSession, setLiveSession] = useState<LiveSession | null>(null);
     const [attendanceDone, setAttendanceDone] = useState<Set<string>>(new Set());
-    const [isNew, setIsNew] = useState(false);
+    // Para arrancar (UX docente): qué ya hizo, con lo que esta pantalla lee igual
+    const [arranque, setArranque] = useState({ temaPreparado: false, actividadPublicada: false, dioEnVivo: false });
+    const [arranqueOculto, setArranqueOculto] = useState(() => {
+        try { return localStorage.getItem(CLAVE_ARRANQUE) === '1'; } catch { return false; }
+    });
     const [timeline, setTimeline] = useState<TimelineItem[]>([]);
     // Temas donde el curso viene flojo (de actividades y clases en vivo)
     const { temas: temasRepaso } = useResumenRepaso(user?.id);
@@ -116,16 +133,13 @@ export default function Hoy() {
             .catch(() => setSinClaseHoy(null));
     }, [user]);
 
-    /** El último tema de este año que ya arrancó en esa materia y curso */
-    const temaDeHoy = (b: ScheduleBlock): PlanningClass | null => {
-        if (sinClaseHoy) return null;
-        const hoy = hoyISO();
-        return planificacion
-            .filter(u => u.subjectId === b.subjectId && u.courseId === b.courseId)
-            .flatMap(u => u.classes)
-            .filter(c => c.fecha && c.fecha <= hoy && c.fecha.slice(0, 4) === hoy.slice(0, 4))
-            .reduce<PlanningClass | null>((a, c) => (!a || (c.fecha ?? '') >= (a.fecha ?? '') ? c : a), null);
-    };
+    /** El último tema de ese año que ya arrancó para esa fecha, en esa materia y curso */
+    const temaPara = (b: ScheduleBlock, fecha: string): PlanningClass | null => planificacion
+        .filter(u => u.subjectId === b.subjectId && u.courseId === b.courseId)
+        .flatMap(u => u.classes)
+        .filter(c => c.fecha && c.fecha <= fecha && c.fecha.slice(0, 4) === fecha.slice(0, 4))
+        .reduce<PlanningClass | null>((x, c) => (!x || (c.fecha ?? '') >= (x.fecha ?? '') ? c : x), null);
+    const temaDeHoy = (b: ScheduleBlock): PlanningClass | null => (sinClaseHoy ? null : temaPara(b, hoyISO()));
 
     useEffect(() => {
         if (!user) return;
@@ -145,7 +159,8 @@ export default function Hoy() {
             getMaterialsByTeacher(user.id).catch(() => []),
             getTeacherTimeline(user.id, 10).catch(() => [] as TimelineItem[]),
             getCommunicationsBySchool(user.schoolId).catch(() => [] as Communication[]),
-        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail, comunicados]) => {
+            getMyPastSessions(user.id, 1).catch(() => [] as LiveSession[]),
+        ]).then(([horarioLeido, st, al, attendance, live, activities, materials, trail, comunicados, pasadas]) => {
             const horario = horarioLeido ?? [];
             setHorarioFallo(horarioLeido === null);
             setSemana(horario);
@@ -162,8 +177,11 @@ export default function Hoy() {
                 ...attendance.filter(a => a.takenOn === today).map(a => `${a.courseId}|${a.subjectId}`),
                 ...pendientesDe('asistencia').filter(op => op.fecha === today).map(op => `${op.courseId}|${op.subjectId}`),
             ]));
-            // Primera vez: sin material y sin actividades
-            setIsNew(materials.length === 0 && activities.length === 0);
+            setArranque({
+                temaPreparado: materials.some(m => m.classId) || activities.some(x => x.classId),
+                actividadPublicada: activities.some(x => x.status === 'published'),
+                dioEnVivo: pasadas.length > 0 || Boolean(live),
+            });
             setTimeline(trail);
         }).catch(console.error).finally(() => setLoading(false));
     }, [user]);
@@ -172,66 +190,54 @@ export default function Hoy() {
 
     const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
     const finDeSemana = [0, 6].includes(new Date().getDay());
-    const lunes = semana.filter(b => b.dayIndex === 0).length;
     const nextIdx = todayClasses.findIndex(c => c.startHour + c.duration > nowHour);
+    // Si hoy ya no queda ninguna (o no hay), la del próximo día con clases
+    const proxima = !loading && nextIdx === -1 ? proximoDiaConClases(semana) : null;
+
+    // ── Lo de hoy, en la tarjeta de Migue ──
+    const claseAhora = nextIdx >= 0 ? todayClasses[nextIdx] : null;
+    const temaAhora = claseAhora ? temaDeHoy(claseAhora) : null;
+    const temaProximo = proxima ? proxima.bloques.map(b => temaPara(b, proxima.fecha)).find(Boolean) ?? null : null;
+    // El tema del que más probablemente quiera hablar: el de ahora, o el que sigue
+    const temaParaMigue = temaAhora ?? temaProximo;
+    const titulo = loading ? 'Mirando tu día…'
+        : sinClaseHoy ? `Hoy no hay clases: ${sinClaseHoy.motivo}`
+        : todayClasses.length > 0 ? `Hoy tenés ${todayClasses.length} clase${todayClasses.length !== 1 ? 's' : ''}`
+        : semana.length === 0 && !horarioFallo ? 'Empecemos por tu horario'
+        : finDeSemana ? 'Es fin de semana' : 'Hoy no tenés clases';
+    const bajada = loading ? '' : claseAhora
+        ? `${claseAhora.startHour <= nowHour ? 'Ahora' : `A las ${horaATexto(claseAhora.startHour)}`}: ${claseAhora.subjectName} · ${claseAhora.courseName}${temaAhora ? `, toca «${temaAhora.title}»` : ''}.`
+        : proxima ? `${proxima.etiqueta.charAt(0).toUpperCase()}${proxima.etiqueta.slice(1)}: ${proxima.bloques.length} clase${proxima.bloques.length !== 1 ? 's' : ''}${temaProximo ? `, la primera con «${temaProximo.title}»` : ''}.`
+        : '';
+    const pendientes = [
+        consultas > 0 && { a: '/seguimiento', icono: HelpCircle, texto: `${consultas} consulta${consultas !== 1 ? 's' : ''} sin responder` },
+        stats.pendingEvaluations > 0 && { a: '/corregir', icono: ClipboardCheck, texto: `${stats.pendingEvaluations} para corregir` },
+        temasRepaso !== null && temasRepaso > 0 && { a: '/mis-clases?tab=repasar', icono: Target, texto: `${temasRepaso} tema${temasRepaso !== 1 ? 's' : ''} para repasar` },
+        comunicadosSinLeer > 0 && { a: '/comunicados', icono: Megaphone, texto: `${comunicadosSinLeer} comunicado${comunicadosSinLeer !== 1 ? 's' : ''} de dirección` },
+    ].filter((p): p is { a: string; icono: typeof HelpCircle; texto: string } => Boolean(p));
+
+    // ── Para arrancar: lo que falta, según lo que ya hay (no según pasos tildados) ──
+    const primerTemaSinPreparar = planificacion.flatMap(u => u.classes)
+        .filter(c => !c.isComplete)
+        .sort((x, y) => (x.fecha ?? '9999').localeCompare(y.fecha ?? '9999'))[0] ?? null;
+    const temaSiguiente = temaParaMigue ?? primerTemaSinPreparar;
+    const pasos = [
+        { hecho: semana.length > 0, a: '/agenda?volver=/hoy', icono: CalendarDays, titulo: 'Cargá tu horario', detalle: 'Tus días y horas, una sola vez: de ahí sale todo lo de esta pantalla' },
+        { hecho: planificacion.length > 0, a: '/planificacion', icono: CalendarRange, titulo: 'Subí tu programa', detalle: 'La IA arma las unidades y los temas, con fecha en tus días de clase' },
+        { hecho: arranque.temaPreparado, a: temaSiguiente ? `/tema/${temaSiguiente.id}` : '/planificacion', icono: FolderOpen, titulo: 'Prepará un tema', detalle: 'Material, presentación y preguntas para la clase, todo en el tema' },
+        { hecho: arranque.actividadPublicada, a: temaSiguiente ? `/actividades/nueva?tema=${temaSiguiente.id}` : '/actividades/nueva', icono: ClipboardList, titulo: 'Dejales una actividad', detalle: 'La hacen en el celular, aunque no tengan señal' },
+        { hecho: arranque.dioEnVivo, a: temaSiguiente ? `/clase-en-vivo?tema=${temaSiguiente.id}` : '/clase-en-vivo', icono: Radio, titulo: 'Probá una clase en vivo', detalle: 'Participan desde el celular: preguntas, nube de palabras, competencia' },
+    ];
+    const hechos = pasos.filter(p => p.hecho).length;
+    const mostrarArranque = !loading && !horarioFallo && !arranqueOculto && hechos < pasos.length;
+    const ocultarArranque = () => {
+        setArranqueOculto(true);
+        try { localStorage.setItem(CLAVE_ARRANQUE, '1'); } catch { /* queda oculto hasta recargar */ }
+    };
 
     return (
         <div className="hoy-container animate-in">
-            {/* Saludo. El <h1> de la pantalla ("Mi día") lo pone la barra superior. */}
-            <header className="hoy-greeting">
-                <div>
-                    <h2 className="hoy-saludo">{greeting()}, {user.firstName}</h2>
-                    <p className="text-secondary">
-                        {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                        {todayClasses.length > 0 && ` · ${todayClasses.length} clase${todayClasses.length !== 1 ? 's' : ''} hoy`}
-                    </p>
-                </div>
-                {/* Crear está en la barra superior, en todas las pantallas */}
-            </header>
-
-            {/* Instalarla en el teléfono (solo celular; se puede cerrar) */}
-            <InstalarApp variante="tarjeta" />
-
-            {/* Primer uso */}
-            {isNew && !loading && (
-                <section className="card hoy-onboarding">
-                    <div className="hoy-onb-head">
-                        <Rocket size={20} className="text-ia-accent" />
-                        <h3>Bienvenido a SMT EstudIA</h3>
-                    </div>
-                    <p className="text-secondary text-sm">
-                        Tres pasos y ya estás andando. No hace falta saber nada de IA: la app te guía.
-                    </p>
-                    <div className="hoy-onb-steps">
-                        <Link to="/biblioteca?subir=archivo" className="hoy-onb-step">
-                            <span className="hoy-onb-num">1</span>
-                            <span className="hoy-onb-icon"><Upload size={17} /></span>
-                            <div>
-                                <strong>Subí o escaneá tu material</strong>
-                                <span>Lo que ya usás en clase: PDF, Word, PowerPoint o tus hojas con la cámara</span>
-                            </div>
-                        </Link>
-                        <Link to="/modulo" className="hoy-onb-step">
-                            <span className="hoy-onb-num">2</span>
-                            <span className="hoy-onb-icon"><Boxes size={17} /></span>
-                            <div>
-                                <strong>Armá tu primera clase</strong>
-                                <span>Un tema, y salen diapositivas, juego y tarea</span>
-                            </div>
-                        </Link>
-                        <Link to="/clase-en-vivo" className="hoy-onb-step">
-                            <span className="hoy-onb-num">3</span>
-                            <span className="hoy-onb-icon"><Radio size={17} /></span>
-                            <div>
-                                <strong>Probá una clase en vivo</strong>
-                                <span>Tus estudiantes participan desde el celular</span>
-                            </div>
-                        </Link>
-                    </div>
-                </section>
-            )}
-
-            {/* Clase en vivo activa */}
+            {/* Clase en vivo abierta: lo primero */}
             {liveSession && (
                 <Link to="/clase-en-vivo" className="card hoy-live-banner">
                     <span className="hoy-live-dot" />
@@ -243,53 +249,36 @@ export default function Hoy() {
                 </Link>
             )}
 
-            {/* Estudiantes que preguntaron algo de una actividad */}
-            {consultas > 0 && (
-                <Link to="/seguimiento" className="card hoy-pending-banner">
-                    <span className="hoy-pending-icon"><HelpCircle size={18} /></span>
+            {/* Lo de hoy, con Migue: qué toca, qué espera y una puerta para preguntarle.
+                El saludo y la fecha los pone la barra superior. */}
+            <section className="card hoy-migue" aria-labelledby="hoy-migue-titulo">
+                <div className="hoy-migue-cabecera">
+                    <span className="hoy-migue-cara" aria-hidden="true"><img src="/migue-docente.jpeg" alt="" /></span>
                     <div>
-                        <h4>
-                            {consultas} consulta{consultas !== 1 ? 's' : ''} de estudiantes sin responder
-                        </h4>
-                        <p className="text-sm text-secondary">
-                            Respondé ahí mismo, a quien preguntó o para todo el curso.
-                        </p>
+                        <h2 id="hoy-migue-titulo">{titulo}</h2>
+                        {bajada && <p className="text-secondary text-sm">{bajada}</p>}
                     </div>
-                    <ChevronRight size={18} className="text-subtle" />
-                </Link>
-            )}
+                </div>
+                {pendientes.length > 0 && (
+                    <ul className="hoy-pendientes" aria-label="Lo que te espera">
+                        {pendientes.map(p => (
+                            <li key={p.a}>
+                                <Link to={p.a} className="hoy-pendiente"><p.icono size={14} aria-hidden="true" /> {p.texto}</Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {!loading && (
+                    <BotonMigue
+                        contexto={temaParaMigue ? { tipo: 'tema', id: temaParaMigue.id, titulo: temaParaMigue.title } : null}
+                        texto={temaParaMigue ? `Ideas para «${temaParaMigue.title.length > 34 ? `${temaParaMigue.title.slice(0, 33)}…` : temaParaMigue.title}»` : 'Preguntale a Migue'}
+                    />
+                )}
+            </section>
 
-            {/* Hay entregas esperando nota */}
-            {stats.pendingEvaluations > 0 && (
-                <Link to="/corregir" className="card hoy-pending-banner">
-                    <span className="hoy-pending-icon"><ClipboardCheck size={18} /></span>
-                    <div>
-                        <h4>
-                            {stats.pendingEvaluations} entrega{stats.pendingEvaluations !== 1 ? 's' : ''} esperando tu nota
-                        </h4>
-                        <p className="text-sm text-secondary">
-                            Corregilas todas de una, con las respuestas a la vista.
-                        </p>
-                    </div>
-                    <ChevronRight size={18} className="text-subtle" />
-                </Link>
-            )}
-
-            {/* Hay temas que el curso no entendió */}
-            {temasRepaso !== null && temasRepaso > 0 && (
-                <Link to="/mis-clases?tab=repasar" className="card hoy-pending-banner hoy-repaso-banner">
-                    <span className="hoy-pending-icon"><Target size={18} aria-hidden="true" /></span>
-                    <div>
-                        <h4>{temasRepaso === 1 ? 'Hay un tema para repasar' : `Hay ${temasRepaso} temas para repasar`}</h4>
-                        <p className="text-sm text-secondary">
-                            Menos de 6 de cada 10 acertaron en actividades o en la clase en vivo.
-                        </p>
-                    </div>
-                    <ChevronRight size={18} className="text-subtle" aria-hidden="true" />
-                </Link>
-            )}
-
-            {/* Clases de hoy */}
+            {/* Clases de hoy. Sin clases hoy (y con el horario cargado) no hace falta:
+                lo dice la tarjeta de arriba y abajo está lo que viene */}
+            {(loading || horarioFallo || semana.length === 0 || todayClasses.length > 0) && (
             <section className="hoy-classes">
                 <h2 className="hoy-section-title"><Sun size={17} /> Tus clases de hoy</h2>
 
@@ -309,20 +298,9 @@ export default function Hoy() {
                             icono={CalendarDays}
                             titulo="Cargá tu horario"
                             texto="Una sola vez: con tu horario, acá te aparece la próxima clase con pasar lista y preparar a un toque."
-                            accion={{ etiqueta: 'Cargar mi horario', a: '/mis-clases', icono: CalendarDays }}
+                            accion={{ etiqueta: 'Cargar mi horario', a: '/agenda?volver=/hoy', icono: CalendarDays }}
                         />
-                    ) : (
-                        <EstadoVacio
-                            compacto
-                            icono={CalendarDays}
-                            titulo={finDeSemana ? 'Es fin de semana' : 'Hoy no tenés clases'}
-                            texto={finDeSemana
-                                ? (lunes > 0 ? `El lunes tenés ${lunes} clase${lunes !== 1 ? 's' : ''}. Si querés, dejá algo preparado.` : 'Buen momento para preparar material.')
-                                : 'Buen momento para preparar material o ver cómo viene tu curso.'}
-                            accion={{ etiqueta: 'Crear', a: '/crear', icono: Wand2 }}
-                            accionSecundaria={{ etiqueta: 'Ver mi horario', a: '/mis-clases' }}
-                        />
-                    )
+                    ) : null
                 )}
 
                 {sinClaseHoy && todayClasses.length > 0 && (
@@ -379,7 +357,7 @@ export default function Hoy() {
                                     </button>
                                     <button
                                         className="hoy-action"
-                                        onClick={() => navigate(stats.pendingEvaluations > 0 ? '/corregir' : '/actividades')}
+                                        onClick={() => navigate(`/seguimiento?materia=${cls.subjectId}&curso=${cls.courseId}`)}
                                         title="Entregas, notas y cómo trabajaron"
                                     >
                                         <BarChart3 size={15} /> Cómo les fue
@@ -390,17 +368,54 @@ export default function Hoy() {
                     );
                 })}
             </section>
+            )}
 
-            {/* Comunicados de dirección sin leer (051) */}
-            {comunicadosSinLeer > 0 && (
-                <Link to="/comunicados" className="card hoy-comunicados">
-                    <Megaphone size={18} aria-hidden="true" />
-                    <span>
-                        <strong>Dirección te mandó {comunicadosSinLeer === 1 ? 'un comunicado' : `${comunicadosSinLeer} comunicados`}</strong>
-                        <small>Tocá para leer{comunicadosSinLeer === 1 ? 'lo' : 'los'}</small>
-                    </span>
-                    <ChevronRight size={16} className="text-subtle" aria-hidden="true" />
-                </Link>
+            {/* La próxima clase: cuando hoy ya no queda ninguna, para dejarla preparada */}
+            {proxima && (
+                <section className="hoy-proxima" aria-labelledby="hoy-proxima-titulo">
+                    <h2 id="hoy-proxima-titulo" className="hoy-section-title"><CalendarDays size={17} aria-hidden="true" /> {proxima.etiqueta.charAt(0).toUpperCase() + proxima.etiqueta.slice(1)}</h2>
+                    <ul className="hoy-proxima-lista">
+                        {proxima.bloques.map(b => {
+                            const tema = temaPara(b, proxima.fecha);
+                            return (
+                                <li key={b.id} className="card hoy-proxima-item">
+                                    <span className="hoy-hour">{horaATexto(b.startHour)}</span>
+                                    <span className="hoy-proxima-texto">
+                                        <strong><EmojiMateria nombre={b.subjectName} /> {b.subjectName} · {b.courseName}</strong>
+                                        <small>{tema ? <>Toca: «{tema.title}»</> : 'Todavía sin tema en tu planificación'}</small>
+                                    </span>
+                                    <Link className="btn btn-outline btn-sm"
+                                        to={tema ? `/tema/${tema.id}` : `/planificacion?materia=${b.subjectId}&curso=${b.courseId}`}>
+                                        <Sparkles size={14} aria-hidden="true" /> Preparar
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
+            )}
+
+            {/* Para arrancar: los pasos se tildan solos con lo que ya hay */}
+            {mostrarArranque && (
+                <section className="card hoy-arranque" aria-labelledby="hoy-arranque-titulo">
+                    <div className="hoy-arranque-cabecera">
+                        <h2 id="hoy-arranque-titulo"><Rocket size={18} aria-hidden="true" /> Para arrancar</h2>
+                        <span className="text-xs text-subtle">{hechos} de {pasos.length}</span>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={ocultarArranque}>Ocultar</button>
+                    </div>
+                    <ol className="hoy-arranque-pasos">
+                        {pasos.map(p => (
+                            <li key={p.titulo} className={p.hecho ? 'hecho' : ''}>
+                                <Link to={p.a} className="hoy-arranque-paso" aria-label={`${p.titulo}${p.hecho ? ' (listo)' : ''}`}>
+                                    {p.hecho
+                                        ? <CheckCircle2 size={18} className="hoy-arranque-check" aria-hidden="true" />
+                                        : <p.icono size={18} aria-hidden="true" />}
+                                    <span><strong>{p.titulo}</strong><small>{p.detalle}</small></span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
             )}
 
             {/* Lo que necesita atención */}
@@ -420,6 +435,9 @@ export default function Hoy() {
                     ))}
                 </section>
             )}
+
+            {/* Instalarla en el teléfono (solo celular; se puede cerrar): después de lo del día */}
+            <InstalarApp variante="tarjeta" />
 
             {/* Tu rastro: lo que hiciste vos, con dato real */}
             {timeline.length > 0 && (
