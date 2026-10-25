@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Rocket, Flame, Sparkles, Trophy, CalendarDays, Clock, BookOpen, Layers,
+  Rocket, Flame, Sparkles, Trophy, CalendarDays, Clock, BookOpen,
   GraduationCap, Play, StickyNote, Plus, Pin, Trash2, ChevronRight, Lightbulb, Medal,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,7 @@ import { generatePracticeQuiz, generateStudyGuide } from '../services/documents.
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PracticarMaterial from '../components/juegos/PracticarMaterial';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import { avisar } from '../components/ui/avisar';
@@ -69,6 +70,8 @@ export default function Estudiar() {
   const [quizFor, setQuizFor] = useState<{ material: LibraryMaterial; questions: PracticeQuestion[] } | null>(null);
   const [guideFor, setGuideFor] = useState<{ title: string; guide: string } | null>(null);
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  // Practicar un material: el quiz, los juegos y las tarjetas en un solo lugar (072)
+  const [practicando, setPracticando] = useState<LibraryMaterial | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
 
@@ -465,9 +468,9 @@ export default function Estudiar() {
               <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                 <button
                   className="btn btn-primary btn-sm"
-                  onClick={() => openQuiz(mat)}
+                  onClick={() => setPracticando(mat)}
                   disabled={!hasSource || generating !== null}
-                  title="Quiz de práctica con explicaciones"
+                  title="Preguntas, juegos y tarjetas para repasar"
                 >
                   <Play size={14} /> {generating === mat.id ? 'Preparando…' : 'Practicar'}
                 </button>
@@ -479,11 +482,6 @@ export default function Estudiar() {
                 >
                   <GraduationCap size={14} /> Guía
                 </button>
-                {mat.studyCards && mat.studyCards.length > 0 && (
-                  <button className="btn btn-outline btn-sm" onClick={() => setCardsFor(mat)}>
-                    <Layers size={14} /> Placas
-                  </button>
-                )}
               </div>
             </div>
           );
@@ -547,6 +545,15 @@ export default function Estudiar() {
       )}
       {guideFor && (
         <StudyGuideModal title={guideFor.title} guide={guideFor.guide} onClose={() => setGuideFor(null)} />
+      )}
+      {practicando && (
+        <PracticarMaterial
+          material={practicando}
+          studentId={student.id}
+          onClose={() => { setPracticando(null); refreshProgress(student.id); }}
+          onQuiz={() => { const m = practicando; setPracticando(null); void openQuiz(m); }}
+          onTarjetas={practicando.studyCards?.length ? () => { const m = practicando; setPracticando(null); setCardsFor(m); } : undefined}
+        />
       )}
       {cardsFor?.studyCards && (
         <StudyCardsViewer

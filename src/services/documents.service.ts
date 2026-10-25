@@ -11,6 +11,7 @@ import { normalizarMazo, desdeLegado, aTextoPlano, type Mazo, type MazoLegado } 
 import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard, TipoActividad } from '../types';
 import { usoIAGastado } from '../lib/usoIA';
 import { esErrorDeRed } from '../lib/conexion';
+import { leerBanco, type BancoJuegos } from '../lib/juegosRepaso';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -396,6 +397,18 @@ export async function generatePracticeQuiz(materialId: string): Promise<{ questi
   return { questions: questions ?? [], cached: cached ?? false };
 }
 
+/**
+ * El banco de los juegos para repasar (072): se arma una sola vez por
+ * material y queda para todo el curso. null si no alcanzó para jugar.
+ */
+export async function generarJuegos(materialId: string): Promise<{ banco: BancoJuegos | null; cached: boolean }> {
+  const { juegos, cached } = await callProcessDocument<{ juegos: unknown; cached: boolean }>({
+    mode: 'juegos',
+    materialId,
+  });
+  return { banco: leerBanco(juegos), cached: cached ?? false };
+}
+
 /** Guía de estudio dirigida al estudiante. Cacheada igual que el quiz. */
 export async function generateStudyGuide(materialId: string): Promise<{ guide: string; cached: boolean }> {
   const { guide, cached } = await callProcessDocument<{ guide: string; cached: boolean }>({
@@ -469,9 +482,10 @@ export async function updateMaterial(
   const dbUpdates: Record<string, any> = {};
   if (updates.extractedText !== undefined) {
     dbUpdates.extracted_text = updates.extractedText;
-    // El texto cambió: invalidamos el quiz y la guía cacheados para que se regeneren
+    // El texto cambió: invalidamos el quiz, la guía y los juegos cacheados para que se regeneren
     dbUpdates.practice_quiz = null;
     dbUpdates.study_guide = null;
+    dbUpdates.juegos = null;
   }
   if (updates.aiSummary !== undefined) dbUpdates.ai_summary = updates.aiSummary;
   if (updates.isSharedWithStudents !== undefined) dbUpdates.is_shared_with_students = updates.isSharedWithStudents;

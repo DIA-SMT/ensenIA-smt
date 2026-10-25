@@ -38,6 +38,7 @@ import {
 } from './activities.service';
 import { saveCheckin, addObservation } from './wellbeing.service';
 import { recordPracticeAttempt } from './practice.service';
+import type { ModoPractica } from '../lib/juegosRepaso';
 import { saveAttendance, type AttendanceEntry } from './attendance.service';
 import { saveGrades } from './gradebook.service';
 import { upsertGrade } from './libreta.service';
@@ -82,7 +83,7 @@ type OpEstudiante =
   | { kind: 'consulta'; id?: string; activityId: string; texto: string }
   | { kind: 'event'; activityId: string; studentId: string; eventType: ActivityEventType; metadata: Record<string, unknown> }
   | { kind: 'checkin'; studentId: string; activityId: string | null; moment: CheckinMoment; feeling: CheckinFeeling; comment?: string }
-  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number }
+  | { kind: 'practice'; studentId: string; materialId: string; score: number; total: number; modo?: ModoPractica }
   | { kind: 'hablar'; teacherId: string | null; motivo: string; descripcion: string };
 
 type OpDocente =
@@ -183,6 +184,7 @@ async function run(op: QueuedOp): Promise<void> {
         materialId: op.materialId,
         score: op.score,
         total: op.total,
+        modo: op.modo,
       });
       return;
     case 'event':
@@ -550,6 +552,8 @@ export async function recordPracticeAttemptResilient(input: {
   materialId: string;
   score: number;
   total: number;
+  /** Qué juego fue (072); sin esto, el quiz */
+  modo?: ModoPractica;
 }): Promise<PracticeAttempt | null> {
   if (!haySenial()) {
     enqueue({ kind: 'practice', ...input });

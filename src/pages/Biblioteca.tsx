@@ -32,8 +32,9 @@ import { type Mazo } from '../lib/diapositivas';
 import { mazoDe } from '../lib/mazoDe';
 import AdaptarMaterial from '../components/AdaptarMaterial';
 import GenerarVisual from '../components/GenerarVisual';
+import PracticarMaterial from '../components/juegos/PracticarMaterial';
 import { esJuego } from '../lib/juegos';
-import { Network, Puzzle } from 'lucide-react';
+import { Network, Puzzle, Gamepad2 } from 'lucide-react';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -234,6 +235,8 @@ export default function Biblioteca() {
   const [adaptando, setAdaptando] = useState<LibraryMaterial | null>(null);
   // Diagrama o juego de palabras a partir de un material
   const [visualPara, setVisualPara] = useState<{ mat: LibraryMaterial; tipo: 'diagrama' | 'juego' } | null>(null);
+  // Probar los juegos para repasar de un material (072)
+  const [probandoJuegos, setProbandoJuegos] = useState<LibraryMaterial | null>(null);
 
   // Qué materiales son diapositivas (se calcula una vez por lista, no en cada tecla).
   // mazoDe: el formato nuevo si está; si no, el viejo convertido. El mismo
@@ -1073,10 +1076,20 @@ export default function Biblioteca() {
             {mat.extractedText && !mat.visual && (
               <button
                 className="mat-action-btn"
-                title="Crucigrama o criptograma con los conceptos clave, para jugar en el celular o imprimir"
+                title="Crucigrama con los conceptos clave, para imprimir (en el celular, los chicos tienen los juegos de Practicar)"
                 onClick={() => setVisualPara({ mat, tipo: 'juego' })}
               >
-                <Puzzle size={14} /> Juego
+                <Puzzle size={14} /> Crucigrama
+              </button>
+            )}
+            {/* Los juegos que los chicos tienen en "Practicar" (072): el docente los prueba y quedan armados */}
+            {mat.extractedText && !mat.visual && (
+              <button
+                className="mat-action-btn"
+                title="Probá los juegos para repasar que tus estudiantes tienen en «Practicar». Se arman una vez y quedan para todo el curso"
+                onClick={() => setProbandoJuegos(mat)}
+              >
+                <Gamepad2 size={14} /> Juegos
               </button>
             )}
             {/* La clase en vivo todavía no muestra los juegos: proyectaría solo las pistas */}
@@ -1379,6 +1392,10 @@ export default function Biblioteca() {
             }
           }}
         />
+      )}
+
+      {probandoJuegos && (
+        <PracticarMaterial material={probandoJuegos} onClose={() => setProbandoJuegos(null)} />
       )}
 
       {/* ── Diagrama o juego de palabras a partir de un material ── */}

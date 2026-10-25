@@ -9,6 +9,7 @@
 
 import { supabase, unwrap } from './_helpers';
 import type { PracticeAttempt, StudentBadge, StudentProgress } from '../types';
+import type { ModoPractica } from '../lib/juegosRepaso';
 
 // ── Mappers ──
 
@@ -48,6 +49,8 @@ export async function recordPracticeAttempt(input: {
   materialId: string;
   score: number;
   total: number;
+  /** Qué juego fue (072); sin esto, el quiz */
+  modo?: ModoPractica;
 }): Promise<PracticeAttempt> {
   const row = unwrap(
     await supabase
@@ -57,7 +60,9 @@ export async function recordPracticeAttempt(input: {
         material_id: input.materialId,
         score: input.score,
         total: input.total,
-      })
+        // Sin la 072 la columna no existe: el quiz no la manda
+        ...(input.modo && input.modo !== 'quiz' ? { modo: input.modo } : {}),
+      } as never)
       .select()
       .single()
   );

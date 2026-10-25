@@ -1200,8 +1200,8 @@ export default function IALab() {
                                         </button>
                                         <button className="welcome-card" onClick={() => setVisualTipo('juego')} disabled={!currentAssignment}>
                                             <Puzzle size={18} className="text-ia-accent" />
-                                            <span className="welcome-card-title">Armar un juego</span>
-                                            <span className="welcome-card-desc">Crucigrama o criptograma para repasar</span>
+                                            <span className="welcome-card-title">Armar un crucigrama</span>
+                                            <span className="welcome-card-desc">Para imprimir y repasar en papel</span>
                                         </button>
                                         <button className="welcome-card" onClick={() => handleToolClick('free')}>
                                             <MessageSquare size={18} className="text-ia-accent" />
@@ -1598,8 +1598,8 @@ export default function IALab() {
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVisualTipo(t); } }}>
                             {t === 'diagrama' ? <Network size={16} className="text-secondary" /> : <Puzzle size={16} className="text-secondary" />}
                             <span className="tool-item-text">
-                                <span>{t === 'diagrama' ? 'Hacer un diagrama' : 'Armar un juego'}</span>
-                                <span className="tool-item-desc">{t === 'diagrama' ? 'Flujograma, ciclo, mapa mental, línea de tiempo' : 'Crucigrama o criptograma para repasar'}</span>
+                                <span>{t === 'diagrama' ? 'Hacer un diagrama' : 'Armar un crucigrama'}</span>
+                                <span className="tool-item-desc">{t === 'diagrama' ? 'Flujograma, ciclo, mapa mental, línea de tiempo' : 'Para imprimir y repasar en papel'}</span>
                             </span>
                         </div>
                     ))}

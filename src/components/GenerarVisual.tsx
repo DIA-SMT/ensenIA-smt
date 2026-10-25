@@ -13,7 +13,7 @@ import JuegoPalabrasVista from './JuegoPalabrasVista';
 import { avisar } from './ui/avisar';
 import { VARIANTES, type Diagrama, type VarianteDiagrama } from '../lib/diagramas';
 import { type JuegoPalabras, type PalabraPista } from '../lib/juegos';
-import { armarCrucigrama, armarCriptograma } from '../lib/armarJuegos';
+import { armarCrucigrama } from '../lib/armarJuegos';
 import { generarDiagrama, generarDatosJuego, guardarDiagrama, guardarJuego, type DatosJuego } from '../services/visuales.service';
 import type { LibraryMaterial } from '../types';
 // Cada pantalla baja solo el CSS que importa: el del diálogo y el del spinner van acá
@@ -45,12 +45,10 @@ interface Props {
 }
 
 type Clase = 'diagrama' | 'juego';
-type TipoJuego = 'crucigrama' | 'criptograma';
 
 export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, schoolId, inicial = 'diagrama', alGuardar }: Props) {
   const [clase, setClase] = useState<Clase>(inicial);
   const [variante, setVariante] = useState<VarianteDiagrama>('mapa_mental');
-  const [tipoJuego, setTipoJuego] = useState<TipoJuego>('crucigrama');
   const [tema, setTema] = useState('');
   const [generando, setGenerando] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -86,11 +84,12 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
     classId: fuente.classId ?? null,
   };
 
-  const armarJuego = (d: DatosJuego, tipo: TipoJuego) => {
+  // Solo crucigrama, para imprimir (072): en el celular, los chicos tienen
+  // los juegos de "Practicar". El criptograma se sacó: ejercitaba descifrar
+  // letras, no el tema.
+  const armarJuego = (d: DatosJuego) => {
     try {
-      const j = tipo === 'crucigrama'
-        ? armarCrucigrama(d.titulo, d.palabras)
-        : armarCriptograma(d.titulo, d.frase, d.pista);
+      const j = armarCrucigrama(d.titulo, d.palabras);
       setJuego(j);
       setVuelta(v => v + 1);
       setError('');
@@ -110,7 +109,7 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
       } else {
         const d = await generarDatosJuego(textoBase, titulo, contexto);
         setDatos(d);
-        armarJuego(d, tipoJuego);
+        armarJuego(d);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo generar. Probá de nuevo.');
@@ -140,7 +139,7 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
                 <Network size={15} /> Diagrama
               </button>
               <button className={clase === 'juego' ? 'activo' : ''} aria-pressed={clase === 'juego'} onClick={() => setClase('juego')} disabled={generando}>
-                <Puzzle size={15} /> Juego
+                <Puzzle size={15} /> Crucigrama
               </button>
             </div>
 
@@ -153,23 +152,11 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="gv-chips" role="group" aria-label="Tipo de juego">
-                {(['crucigrama', 'criptograma'] as const).map(t => (
-                  <button key={t} className={`gv-chip ${tipoJuego === t ? 'activo' : ''}`} aria-pressed={tipoJuego === t}
-                    disabled={generando}
-                    onClick={() => { setTipoJuego(t); if (datos) armarJuego(datos, t); }}>
-                    {t === 'crucigrama' ? 'Crucigrama' : 'Criptograma'}
-                  </button>
-                ))}
-              </div>
-            )}
+            ) : null}
             <p className="gv-ayuda">
               {clase === 'diagrama'
                 ? VARIANTES.find(v => v.id === variante)?.para
-                : tipoJuego === 'crucigrama'
-                  ? 'Palabras clave del tema que se cruzan, con sus pistas.'
-                  : 'Una idea central escondida: cada número es una letra.'}
+                : 'Las palabras clave del tema que se cruzan, con sus pistas. Es para imprimir y hacer en papel: en el celular, los chicos tienen los juegos de «Practicar».'}
             </p>
 
             {sinTexto && (
@@ -221,14 +208,14 @@ export default function GenerarVisual({ abierto, alCerrar, fuente, teacherId, sc
               generando={generando}
               guardando={guardando}
               alRegenerar={generar}
-              alCorregir={d => { setDatos(d); armarJuego(d, tipoJuego); }}
-              alRearmar={() => armarJuego(datos, tipoJuego)}
+              alCorregir={d => { setDatos(d); armarJuego(d); }}
+              alRearmar={() => armarJuego(datos)}
               alGuardar={async () => {
                 if (!juego) return;
                 setGuardando(true);
                 try {
                   const mat = await guardarJuego(juego, destino);
-                  avisar.exito(`${juego.tipo === 'crucigrama' ? 'Crucigrama' : 'Criptograma'} guardado en Mis materiales`, 'Compartilo con el curso y lo juegan desde el celular.');
+                  avisar.exito('Crucigrama guardado en Mis materiales', 'Desde ahí lo imprimís, con o sin la solución.');
                   alGuardar?.(mat);
                   alCerrar();
                 } catch (e) {
@@ -438,7 +425,7 @@ function ResultadoJuego({ datos, juego, vuelta, materia, generando, guardando, a
       {juego && (
         <div className="gv-juego">
           <h4 className="gv-juego-titulo">{juego.tipo === 'crucigrama' ? 'Crucigrama' : 'Criptograma'}: {juego.titulo}</h4>
-          <p className="gv-ayuda">Probalo como lo van a ver tus estudiantes.</p>
+          <p className="gv-ayuda">Así queda. Imprimilo con los botones de abajo (con o sin la solución).</p>
           <JuegoPalabrasVista key={vuelta} juego={juego} />
         </div>
       )}

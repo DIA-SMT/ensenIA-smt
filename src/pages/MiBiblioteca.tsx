@@ -12,6 +12,7 @@ import ListoSinSenial from '../components/ListoSinSenial';
 import { coincideBusqueda } from '../services/busqueda.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import StudyCardsViewer from '../components/StudyCardsViewer';
+import PracticarMaterial from '../components/juegos/PracticarMaterial';
 import PracticeQuizPlayer from '../components/PracticeQuizPlayer';
 import StudyGuideModal from '../components/StudyGuideModal';
 import MaterialViewer from '../components/MaterialViewer';
@@ -38,6 +39,8 @@ export default function MiBiblioteca() {
   const [loading, setLoading] = useState(true);
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
   const [cardsFor, setCardsFor] = useState<LibraryMaterial | null>(null);
+  // Practicar: el quiz, los juegos y las tarjetas en un solo lugar (072)
+  const [practicando, setPracticando] = useState<LibraryMaterial | null>(null);
   const [reactions, setReactions] = useState<Record<string, MaterialReactionType>>({});
   const [podcastFor, setPodcastFor] = useState<LibraryMaterial | null>(null);
   const [videoFor, setVideoFor] = useState<LibraryMaterial | null>(null);
@@ -236,9 +239,9 @@ export default function MiBiblioteca() {
                 {student && hasSource && (
                   <button
                     className="btn btn-primary btn-sm"
-                    onClick={() => openQuiz(mat)}
+                    onClick={() => setPracticando(mat)}
                     disabled={generating !== null}
-                    title="Quiz de práctica con explicaciones"
+                    title="Preguntas, juegos y tarjetas para repasar"
                   >
                     <Play size={14} /> {generating === mat.id ? 'Preparando…' : 'Practicar'}
                   </button>
@@ -253,9 +256,10 @@ export default function MiBiblioteca() {
                     <GraduationCap size={14} /> Guía
                   </button>
                 )}
-                {mat.studyCards && mat.studyCards.length > 0 && (
+                {/* Con "Practicar", las tarjetas están adentro */}
+                {mat.studyCards && mat.studyCards.length > 0 && !(student && hasSource) && (
                   <button className="btn btn-secondary btn-sm" onClick={() => setCardsFor(mat)} title="Repasá con tarjetas visuales">
-                    <Layers size={14} /> Placas
+                    <Layers size={14} /> Tarjetas
                   </button>
                 )}
                 {mat.aiSummary && (
@@ -327,6 +331,15 @@ export default function MiBiblioteca() {
         <StudyGuideModal title={guideFor.title} guide={guideFor.guide} onClose={() => setGuideFor(null)} />
       )}
 
+      {practicando && student && (
+        <PracticarMaterial
+          material={practicando}
+          studentId={student.id}
+          onClose={() => setPracticando(null)}
+          onQuiz={() => { const m = practicando; setPracticando(null); void openQuiz(m); }}
+          onTarjetas={practicando.studyCards?.length ? () => { const m = practicando; setPracticando(null); setCardsFor(m); } : undefined}
+        />
+      )}
       {cardsFor?.studyCards && (
         <StudyCardsViewer
           cards={cardsFor.studyCards}

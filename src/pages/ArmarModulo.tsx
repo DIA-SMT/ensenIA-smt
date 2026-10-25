@@ -32,7 +32,7 @@ import {
 import { generarDiagrama, generarDatosJuego, guardarDiagrama, guardarJuego } from '../services/visuales.service';
 import { enviarClase, type TareaDeClase } from '../services/clases.service';
 import { startLiveSession, launchActivity, getMyLiveSession } from '../services/live.service';
-import { armarCrucigrama, armarCriptograma } from '../lib/armarJuegos';
+import { armarCrucigrama } from '../lib/armarJuegos';
 import { dibujarDiagrama, svgAPng } from '../lib/dibujarDiagrama';
 import { VARIANTES, type VarianteDiagrama } from '../lib/diagramas';
 import { aTextoPlano, normalizarMazo, type Mazo } from '../lib/diapositivas';
@@ -58,7 +58,7 @@ type PieceState = 'idle' | 'working' | 'done' | 'error';
 const PIECES: { key: PieceKey; emoji: string; icon: typeof Layers; label: string; desc: string }[] = [
     { key: 'diapositivas', emoji: '🖼️', icon: Presentation, label: 'Diapositivas', desc: 'Para proyectar en el aula. Los chicos también las ven en el celular' },
     { key: 'actividad', emoji: '📝', icon: ClipboardList, label: 'Tarea', desc: 'Con preguntas que se corrigen solas. Se publica recién cuando la enviás' },
-    { key: 'juego', emoji: '🧩', icon: Puzzle, label: 'Crucigrama', desc: 'Las palabras clave del tema, para repasar jugando' },
+    { key: 'juego', emoji: '🧩', icon: Puzzle, label: 'Crucigrama para imprimir', desc: 'Las palabras clave con sus pistas, para hacer en papel' },
     { key: 'diagrama', emoji: '🗺️', icon: Network, label: 'Diagrama', desc: 'El tema de un vistazo' },
     { key: 'placas', emoji: '🃏', icon: Layers, label: 'Tarjetas de repaso', desc: 'Para repasar desde el celular: ideas clave, preguntas y quiz' },
     { key: 'podcast', emoji: '🎧', icon: Headphones, label: 'Podcast', desc: 'Un audio de 2-3 minutos para escuchar en el colectivo' },
@@ -364,13 +364,10 @@ export default function ArmarModulo() {
                 return pieza(key, async () => {
                     const datos = await generarDatosJuego(content, moduleName, contexto);
                     paraElMazo.current.palabras = datos.palabras;
-                    // Si las palabras no se cruzan, la frase clave igual sirve de criptograma
-                    let juego;
-                    try {
-                        juego = armarCrucigrama(datos.titulo, datos.palabras);
-                    } catch {
-                        juego = armarCriptograma(datos.titulo, datos.frase, datos.pista);
-                    }
+                    // Crucigrama para imprimir (072). Si las palabras no se cruzan,
+                    // se avisa: ya no se arma el criptograma (ejercitaba descifrar
+                    // letras, no el tema)
+                    const juego = armarCrucigrama(datos.titulo, datos.palabras);
                     setJuegoMat(await guardarJuego(juego, destinoVisual));
                 });
             case 'diagrama':
@@ -974,7 +971,7 @@ export default function ArmarModulo() {
                                         </button>
                                         {cards && cards.length > 0 && (
                                             <button className="btn btn-ghost btn-sm" onClick={() => setShowCards(true)}>
-                                                <Layers size={14} /> Placas
+                                                <Layers size={14} /> Tarjetas
                                             </button>
                                         )}
                                         {podcastPath && (

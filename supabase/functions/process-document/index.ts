@@ -11,6 +11,7 @@
  *  - armar_actividad:   tema de la planificación → { titulo, consigna, partes[] con puntos } (063)
  *  - practice_quiz:     materialId → quiz pedagógico para estudiantes, CACHEADO en el material (1 sola generación)
  *  - study_guide:       materialId → guía de estudio para estudiantes, CACHEADA en el material
+ *  - juegos:            materialId → banco de los juegos para repasar (072), CACHEADO en el material
  *  - slides / study_cards: material (o solo el tema) → mazo de diapositivas / placas de repaso
  *
  * Las opciones de toda pregunta generada se mezclan de este lado (_ordenar.ts).
@@ -21,6 +22,7 @@
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { acomodarPlacas, mezclarOpciones } from './_ordenar.ts';
+import { bancoAlcanza, limpiarBanco } from './_juegos.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_SONNET = 'anthropic/claude-sonnet-5';
@@ -38,12 +40,12 @@ const MAX_TEXT_INPUT = 60_000; // chars
 
 type Mode = 'extract_text' | 'summarize' | 'import_program' | 'extract_questions' | 'student_summary' | 'study_cards' | 'youtube_transcript'
   | 'practice_quiz' | 'study_guide' | 'class_report' | 'slides' | 'slide_image' | 'diagram' | 'word_game'
-  | 'armar_actividad';
+  | 'armar_actividad' | 'juegos';
 
 /** Modos habilitados para el rol estudiante (siempre cacheados por material). */
-const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide'];
+const STUDENT_MODES: Mode[] = ['practice_quiz', 'study_guide', 'juegos'];
 /** Modos que se cachean en library_materials y reciben materialId. */
-const CACHED_MODES: Mode[] = ['practice_quiz', 'study_guide'];
+const CACHED_MODES: Mode[] = ['practice_quiz', 'study_guide', 'juegos'];
 
 interface ProcessRequest {
   mode: Mode;
@@ -242,6 +244,81 @@ const STUDY_CARDS_SCHEMA = {
           options: { type: 'array', items: { type: 'string' }, description: 'quiz: exactamente 4 opciones plausibles, del mismo largo. Otros: []' },
           correct_index: { type: 'integer', description: 'quiz: índice 0-3 de la correcta. Otros: 0' },
           explanation: { type: 'string', description: "quiz: por qué es la correcta y qué confunde de la incorrecta más tentadora, sin nombrar letras ni posiciones. Otros: ''" },
+        },
+      },
+    },
+  },
+};
+
+/** El banco de los juegos para repasar (072). Cada lista puede ir vacía si el material no da para ese juego. */
+const JUEGOS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['pares', 'secuencias', 'clasificaciones', 'completar', 'verdadero_falso'],
+  properties: {
+    pares: {
+      type: 'array',
+      description: 'Unir: 6 a 8 pares.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['termino', 'definicion'],
+        properties: {
+          termino: { type: 'string', description: 'Hasta 4 palabras, o una fórmula corta.' },
+          definicion: { type: 'string', description: 'Hasta 90 caracteres. No repite el término.' },
+        },
+      },
+    },
+    secuencias: {
+      type: 'array',
+      description: 'Ordenar: 0 a 2. Vacío si el material no tiene un orden real.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['titulo', 'pasos'],
+        properties: {
+          titulo: { type: 'string', description: 'Qué se ordena ("Los pasos para…").' },
+          pasos: { type: 'array', items: { type: 'string' }, description: '4 a 6, en el orden correcto, hasta 70 caracteres cada uno.' },
+        },
+      },
+    },
+    clasificaciones: {
+      type: 'array',
+      description: 'Clasificar: 0 a 2. Vacío si el material no tiene categorías claras.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['titulo', 'grupos'],
+        properties: {
+          titulo: { type: 'string', description: 'La consigna ("¿Publicidad o propaganda?").' },
+          grupos: {
+            type: 'array', description: '2 o 3 grupos.',
+            items: {
+              type: 'object', additionalProperties: false, required: ['nombre', 'elementos'],
+              properties: {
+                nombre: { type: 'string' },
+                elementos: { type: 'array', items: { type: 'string' }, description: '3 a 5, hasta 50 caracteres.' },
+              },
+            },
+          },
+        },
+      },
+    },
+    completar: {
+      type: 'array',
+      description: 'Completar: 5 o 6 frases.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['frase', 'respuesta', 'distractores'],
+        properties: {
+          frase: { type: 'string', description: 'Con ___ donde va la respuesta. Hasta 140 caracteres.' },
+          respuesta: { type: 'string', description: '1 a 3 palabras.' },
+          distractores: { type: 'array', items: { type: 'string' }, description: 'Exactamente 3, del mismo tipo y largo que la respuesta.' },
+        },
+      },
+    },
+    verdadero_falso: {
+      type: 'array',
+      description: 'Contrarreloj: 10 a 12, la mitad verdaderas.',
+      items: {
+        type: 'object', additionalProperties: false, required: ['afirmacion', 'verdadera', 'explicacion'],
+        properties: {
+          afirmacion: { type: 'string', description: 'Hasta 120 caracteres.' },
+          verdadera: { type: 'boolean' },
+          explicacion: { type: 'string', description: 'Una oración: por qué es verdadera o falsa.' },
         },
       },
     },
@@ -641,6 +718,21 @@ Reglas:
 - Voseo, lenguaje claro de secundaria, español rioplatense.
 - Fiel al material: no inventes contenido que no esté.`,
 
+  juegos: `Sos EstudIA. Armás el banco de cinco juegos cortos con los que estudiantes de secundaria argentina repasan un material desde el celular: Unir (término con definición), Ordenar, Clasificar, Completar la frase y Contrarreloj (verdadero o falso). Sirve para cualquier materia: en Matemática, Física o Química un término puede ser una fórmula o una magnitud ("v = d / t" con "velocidad media").
+
+QUÉ ENTRA
+- Lo que hay que saber del tema: conceptos, relaciones, procedimientos, ejemplos. Nada de la organización del curso (números de clase, fechas, criterios de evaluación, consignas para el docente).
+- Fiel al material: no agregues hechos que no estén (cifras, fechas, nombres, autores, citas). Casos y ejemplos hipotéticos, sí.
+
+CADA JUEGO
+- pares: la definición en palabras de chico, sin repetir el término ni delatarlo con su raíz. Que ninguna definición encaje con dos términos.
+- secuencias: solo si el material tiene un orden real (los pasos de un procedimiento, las etapas de un proceso, hechos en el tiempo). Los pasos no se pueden ordenar por el texto: nada de "primero", "luego" ni números. Si no hay orden real, vacío.
+- clasificaciones: cada elemento va en un solo grupo, sin dudas. Si el material no tiene categorías claras, vacío.
+- completar: los distractores son errores que un chico comete de verdad con este tema, del mismo tipo que la respuesta; ninguno sirve también.
+- verdadero_falso: la mitad verdaderas. Las falsas son confusiones típicas, no absurdos; sin "nunca" o "siempre" como pista y sin dobles negaciones. La explicación enseña por qué.
+
+Textos cortos (se leen en un celular). Español rioplatense, de vos, al nivel del curso.`,
+
   study_guide: `Sos EstudIA, un tutor que ayuda a estudiantes de secundaria argentina a ESTUDIAR un material (no solo leerlo). Escribí una guía de estudio en Markdown dirigida al estudiante (voseo):
 
 **¿De qué se trata?** — 2-3 oraciones que sitúan el tema.
@@ -956,13 +1048,13 @@ Deno.serve(async (req: Request) => {
     teacher_id: string; school_id: string; is_shared_with_students: boolean; course_id: string | null;
     extracted_text: string | null; ai_summary: string | null;
     study_cards: { title: string; body: string }[] | null;
-    practice_quiz: unknown | null; study_guide: string | null;
+    practice_quiz: unknown | null; study_guide: string | null; juegos: unknown | null;
   } | null = null;
 
   if (isCached) {
     const { data: mat } = await supabase
       .from('library_materials')
-      .select('id, title, subject_name, subject_id, course_id, teacher_id, school_id, is_shared_with_students, extracted_text, ai_summary, study_cards, practice_quiz, study_guide')
+      .select('id, title, subject_name, subject_id, course_id, teacher_id, school_id, is_shared_with_students, extracted_text, ai_summary, study_cards, practice_quiz, study_guide, juegos')
       .eq('id', materialId)
       .maybeSingle();
 
@@ -1017,6 +1109,9 @@ Deno.serve(async (req: Request) => {
     }
     if (mode === 'study_guide' && mat.study_guide) {
       return json({ guide: mat.study_guide, cached: true });
+    }
+    if (mode === 'juegos' && mat.juegos) {
+      return json({ juegos: mat.juegos, cached: true });
     }
 
     // Fuente de texto: extracted_text, o resumen + placas como fallback
@@ -1095,7 +1190,7 @@ Deno.serve(async (req: Request) => {
 
   // ── Build OpenRouter request ──
   const isStructured = mode === 'import_program' || mode === 'extract_questions' || mode === 'study_cards' || mode === 'practice_quiz' || mode === 'slides'
-    || mode === 'diagram' || mode === 'word_game' || mode === 'armar_actividad';
+    || mode === 'diagram' || mode === 'word_game' || mode === 'armar_actividad' || mode === 'juegos';
   const model = (isStructured || mode === 'student_summary') ? MODEL_SONNET : MODEL_HAIKU;
   // Los modos estructurados devuelven JSON: si el techo de tokens corta la
   // respuesta, el JSON queda partido al medio y JSON.parse revienta — el
@@ -1110,6 +1205,8 @@ Deno.serve(async (req: Request) => {
     slides: 12000,
     diagram: 6000,
     word_game: 6000,
+    // Cinco listas cortas: menos que las tarjetas
+    juegos: 7000,
     extract_questions: 8000,
     // Hasta 10 partes con sus opciones: alcanza con holgura
     armar_actividad: 5000,
@@ -1174,6 +1271,7 @@ Deno.serve(async (req: Request) => {
         : mode === 'armar_actividad' ? `Armá: ${['actividad', 'tp', 'evaluacion'].includes(body.variante ?? '') ? body.variante : 'tp'}.`
         : mode === 'study_cards' ? 'Generá las placas de estudio.'
         : mode === 'practice_quiz' ? 'Generá el quiz de práctica.'
+        : mode === 'juegos' ? 'Armá el banco de los juegos.'
         : mode === 'study_guide' ? 'Escribí la guía de estudio.'
         : 'Extraé las preguntas del cuestionario.',
     ].filter(Boolean).join('\n\n'),
@@ -1203,6 +1301,7 @@ Deno.serve(async (req: Request) => {
       word_game: { name: 'juegos', schema: WORD_GAME_SCHEMA },
       armar_actividad: { name: 'actividad', schema: ACTIVIDAD_SCHEMA },
       practice_quiz: { name: 'quiz_practica', schema: PRACTICE_QUIZ_SCHEMA },
+      juegos: { name: 'juegos', schema: JUEGOS_SCHEMA },
     };
     orBody.response_format = {
       type: 'json_schema',
@@ -1322,6 +1421,27 @@ Deno.serve(async (req: Request) => {
       return json({ titulo: parsed.titulo ?? '', consigna: parsed.consigna ?? '', partes });
     }
     if (mode === 'study_cards') return json({ cards: Array.isArray(parsed.cards) ? acomodarPlacas(parsed.cards) : [], truncated });
+
+    // ── Juegos para repasar: limpiar y validar antes de cachear (072) ──
+    if (mode === 'juegos') {
+      const banco = limpiarBanco(parsed);
+      if (truncated || !bancoAlcanza(banco)) {
+        return json({ error: 'API_ERROR', message: 'No salieron suficientes juegos con este material. Probá de nuevo.' }, 502);
+      }
+      const { data: won } = await supabase
+        .from('library_materials')
+        .update({ juegos: banco })
+        .eq('id', cacheMaterial!.id)
+        .is('juegos', null)
+        .select('id');
+      if (!won || won.length === 0) {
+        // Otro pedido lo armó primero: todos juegan con el mismo
+        const { data: fresh } = await supabase
+          .from('library_materials').select('juegos').eq('id', cacheMaterial!.id).single();
+        if (fresh?.juegos) return json({ juegos: fresh.juegos, cached: true });
+      }
+      return json({ juegos: banco, cached: false });
+    }
 
     // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──
     if (mode === 'practice_quiz') {
