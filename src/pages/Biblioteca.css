@@ -342,7 +342,6 @@
   min-width: 0;
   min-height: 32px;
   font: inherit;
-  font-size: 0.8125rem;
   padding: 4px 8px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);

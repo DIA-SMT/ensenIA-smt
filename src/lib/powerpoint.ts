@@ -15,12 +15,22 @@ type Zip = { file: (nombre: string) => { async: (tipo: 'string') => Promise<stri
 
 const parser = () => new DOMParser();
 
-/** Los párrafos con texto de un XML de diapositiva (o de notas) */
+/**
+ * Los párrafos con texto de un XML de diapositiva (o de notas). Un salto
+ * dentro del párrafo (<a:br/>) es un espacio: si no, se pegan las palabras.
+ */
 function parrafos(xml: string): string[] {
   const doc = parser().parseFromString(xml, 'application/xml');
   return [...doc.getElementsByTagNameNS('*', 'p')]
-    .map(p => [...p.getElementsByTagNameNS('*', 't')].map(t => t.textContent ?? '').join('').trim())
+    .map(p => [...p.getElementsByTagNameNS('*', '*')]
+      .map(e => (e.localName === 't' ? e.textContent ?? '' : e.localName === 'br' ? ' ' : ''))
+      .join('').replace(/\s+/g, ' ').trim())
     .filter(Boolean);
+}
+
+/** Una diapositiva oculta (show="0") no se presenta: tampoco se lee */
+function oculta(xml: string): boolean {
+  return parser().parseFromString(xml, 'application/xml').documentElement?.getAttribute('show') === '0';
 }
 
 /** id → destino de un archivo .rels */
@@ -37,6 +47,8 @@ function relaciones(xml: string): Map<string, string> {
 
 /** "slides/slide3.xml" o "../notesSlides/notesSlide2.xml", relativo a una carpeta → ruta dentro del zip */
 function resolver(carpeta: string, destino: string): string {
+  // Una ruta absoluta ("/ppt/notesSlides/…") es desde la raíz del zip
+  if (destino.startsWith('/')) return destino.slice(1);
   const partes = [...carpeta.split('/').filter(Boolean)];
   for (const p of destino.split('/')) {
     if (p === '..') partes.pop();
@@ -96,8 +108,11 @@ export async function textoDePowerPoint(archivo: Blob): Promise<string> {
   const diapositivas = await ordenDeDiapositivas(zip);
   const partes: string[] = [];
   let conTexto = false;
-  for (const [i, nombre] of diapositivas.entries()) {
+  let n = 0;
+  for (const nombre of diapositivas) {
     const xml = await zip.file(nombre)?.async('string');
+    if (xml && oculta(xml)) continue;
+    const i = n++;
     const texto = xml ? parrafos(xml) : [];
     const notas = await notasDe(zip, nombre).catch(() => []);
     if (texto.length || notas.length) conTexto = true;

@@ -1029,9 +1029,35 @@ Deno.serve(async (req: Request) => {
   // Un escaneo largo se lee de a tandas de páginas: todo el documento cuenta
   // UN uso (el de la parte 1). Las partes que siguen no gastan cupo ni se
   // frenan por él a mitad de camino; su consumo igual se anota (Consumo de IA).
-  const parteSiguiente = mode === 'extract_text'
+  // La parte 1 queda anotada (069) y las siguientes solo valen para esa misma
+  // lectura: del mismo docente, dentro de la hora y hasta 40 partes. Si no,
+  // mandar "parte 2" con cualquier id salteaba el cupo.
+  const lectura = mode === 'extract_text'
     && typeof body.documento === 'string' && /^[0-9a-f-]{36}$/i.test(body.documento)
-    && Number.isInteger(body.parte) && (body.parte as number) > 1 && (body.parte as number) <= 40;
+    && Number.isInteger(body.parte) && (body.parte as number) >= 1
+    ? { documento: body.documento, parte: body.parte as number } : null;
+  let parteSiguiente = false;
+  if (lectura && lectura.parte > 1) {
+    const { data: reg, error: regError } = await supabase
+      .from('lecturas_por_partes')
+      .select('user_id, partes, created_at')
+      .eq('documento', lectura.documento)
+      .maybeSingle();
+    if (!regError) {
+      const vale = reg && reg.user_id === user.id && reg.partes < 40
+        && Date.now() - new Date(reg.created_at).getTime() < 3_600_000;
+      if (!vale) {
+        return json({ error: 'LECTURA_VENCIDA', message: 'Esa lectura por partes ya no vale. Volvé a tocar "Leer texto".' }, 400);
+      }
+      // Una tanda son 5 páginas: más que esto no es una tanda
+      if (pdfBase64 && pdfBase64.length > 8_000_000) {
+        return json({ error: 'FILE_TOO_LARGE', message: 'Esa parte es demasiado grande.' }, 400);
+      }
+      await supabase.from('lecturas_por_partes').update({ partes: reg.partes + 1 }).eq('documento', lectura.documento);
+      parteSiguiente = true;
+    }
+    // Sin la tabla (falta la 069): cada parte cuenta como un uso, como antes
+  }
   const today = new Date().toISOString().split('T')[0];
   const { data: usage } = await supabase
     .from('ia_usage')
@@ -1042,6 +1068,11 @@ Deno.serve(async (req: Request) => {
 
   if (!parteSiguiente && usage && usage.message_count >= cupoDiario(profile?.role)) {
     return json({ error: 'QUOTA_EXCEEDED', message: `Alcanzaste el límite de ${cupoDiario(profile?.role)} usos de IA por hoy.` }, 429);
+  }
+  // La parte 1 de una lectura de a tandas: se anota para validar las que siguen
+  if (lectura && lectura.parte === 1) {
+    await supabase.from('lecturas_por_partes')
+      .upsert({ documento: lectura.documento, user_id: user.id }, { onConflict: 'documento', ignoreDuplicates: true });
   }
 
   // ── Build OpenRouter request ──

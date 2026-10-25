@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════
--- 069 — Subir PowerPoint (.pptx) a Mis materiales
+-- 069 — Material del docente: PowerPoint (.pptx) y escaneos leídos de a tandas
 --
 -- Lo primero que hace un docente en la app es subir lo que ya tiene, y
 -- buena parte son presentaciones. Hasta acá el depósito solo aceptaba PDF,
@@ -31,3 +31,20 @@ SELECT
           WHERE t.typname = 'file_type' AND e.enumlabel = 'pptx') AS tipo_pptx,
   (SELECT 'application/vnd.openxmlformats-officedocument.presentationml.presentation' = ANY (allowed_mime_types)
      FROM storage.buckets WHERE id = 'library') AS deposito_acepta_pptx;
+
+-- ── Escaneos leídos de a tandas: un solo uso de IA por documento ──
+-- La parte 1 de una lectura se anota acá (cuenta el uso). Las que siguen
+-- solo valen para ESA lectura: del mismo docente, dentro de la hora y hasta
+-- 40 partes. Sin esto, mandar "parte 2" con cualquier id salteaba el cupo.
+-- Solo la usa process-document (con la clave de servicio): nadie más la lee.
+CREATE TABLE IF NOT EXISTS lecturas_por_partes (
+  documento  UUID PRIMARY KEY,
+  user_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  partes     INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE lecturas_por_partes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON lecturas_por_partes FROM PUBLIC, anon, authenticated;
+
+-- Comprobación de esta parte
+SELECT NOT has_table_privilege('authenticated', 'lecturas_por_partes', 'SELECT') AS lecturas_cerrada;

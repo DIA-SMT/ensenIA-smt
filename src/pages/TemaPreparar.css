@@ -52,3 +52,4 @@ a.tp-item-titulo:hover, a.tp-item-titulo:focus-visible { text-decoration: underl
   min-height: 40px;
 }
 .tp-ia:hover, .tp-ia:focus-visible { color: var(--acento); }
+.tp-leyendo { display: block; color: var(--acento); font-weight: 600; }

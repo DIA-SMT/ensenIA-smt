@@ -11,7 +11,8 @@
  * Se llega desde Planificación y desde Hoy.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
@@ -57,6 +58,8 @@ export default function TemaPreparar() {
   const { user } = useAuth();
   const [cargando, setCargando] = useState(true);
   const [tema, setTema] = useState<PlanningClass | null>(null);
+  // Lecturas de texto en curso (lib/lecturasEnCurso): el escaneo que se acaba de subir
+  const lecturas = useSyncExternalStore(suscribirLecturas, lecturasActuales);
   const [unidad, setUnidad] = useState<PlanningUnit | null>(null);
   const [materiales, setMateriales] = useState<LibraryMaterial[]>([]);
   const [actividades, setActividades] = useState<Activity[]>([]);
@@ -234,6 +237,8 @@ export default function TemaPreparar() {
                 <span className="tp-item-texto">
                   <span className="tp-item-titulo">{m.title}</span>
                   <small>{claseDeMaterial(m)}{m.isSharedWithStudents ? ' · lo ven los estudiantes' : ''}</small>
+                  {/* Recién subido: la IA todavía lo está leyendo (sigue aunque se cambie de pantalla) */}
+                  {lecturas.has(m.id) && <small className="tp-leyendo" role="status">{lecturas.get(m.id)}</small>}
                 </span>
                 <button type="button" className="btn-icon" onClick={() => setViendo(m)} aria-label={`Ver ${m.title}`} title="Ver"><Eye size={16} /></button>
                 <button type="button" className="btn-icon" onClick={() => sacar(m)} aria-label={`Sacar ${m.title} del tema`} title="Sacar del tema" disabled={trabajando}><Unlink size={15} /></button>

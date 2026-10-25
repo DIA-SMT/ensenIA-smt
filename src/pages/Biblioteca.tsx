@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, type ComponentType } from 'react';
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore, type ComponentType } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Upload, FileText, Link2, Image, BookOpen, X, Sparkles,
@@ -7,11 +7,12 @@ import {
 } from 'lucide-react';
 import { hayQueAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
 import { borrarEscaneo } from '../lib/escaneoGuardado';
+import { empezarLectura, avanceDeLectura, terminarLectura, suscribirLecturas, lecturasActuales } from '../lib/lecturasEnCurso';
 import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial, asignarTema } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
-import { getPlanningByTeacher } from '../services/planning.service';
+import { getTemasConFecha } from '../services/planning.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
   summarizeDocument, updateMaterial, formatFileSize,
@@ -60,14 +61,31 @@ const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.
  * soportado" seco. Por extensión: muchos navegadores no dan el tipo de un
  * .doc o un .ppt.
  */
+/**
+ * Una pantalla de la app, o null. Se arma la dirección contra este mismo
+ * sitio: "/\\otro.sitio" o "/%09/otro.sitio" empiezan con "/" y el navegador
+ * igual los lleva afuera.
+ */
+function rutaPropia(v: string | null): string | null {
+  if (!v || !v.startsWith('/')) return null;
+  try {
+    const u = new URL(v, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search : null;
+  } catch {
+    return null;
+  }
+}
+
 function formatoNoAceptado(f: File): string | null {
   const ext = f.name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? '';
-  if (ext === 'pptx' && !f.type) return null;
   if (ext === 'doc' || f.type === 'application/msword') {
     return 'Es un Word del formato viejo (.doc). Abrilo en Word y guardalo como .docx o PDF (Archivo → Guardar como), y subí ese.';
   }
-  if (ext === 'ppt' || ext === 'pps' || ext === 'ppsx' || f.type === 'application/vnd.ms-powerpoint') {
+  if (ext === 'ppt' || ext === 'pps' || f.type === 'application/vnd.ms-powerpoint') {
     return 'Es un PowerPoint del formato viejo. Abrilo en PowerPoint y guardalo como .pptx o exportalo como PDF (Archivo → Exportar), y subí ese.';
+  }
+  if (ext === 'ppsx') {
+    return 'Es una presentación guardada para pasar sola (.ppsx). Abrila en PowerPoint y guardala como presentación (.pptx) o exportala como PDF, y subí esa.';
   }
   if (['xls', 'xlsx', 'odt', 'ods', 'odp', 'rtf', 'txt', 'key', 'pages'].includes(ext)) {
     return 'Ese formato no se puede subir. Guardalo como PDF (en el programa donde lo abrís: Archivo → Guardar como o Exportar) y subí el PDF.';
@@ -121,27 +139,25 @@ export default function Biblioteca() {
   const [params, setParams] = useSearchParams();
   const presetSubida = useRef<{ destino: string; tema: string } | null>(null);
   const volverA = useRef<string | null>(null);
+  // El diálogo se cierra para abrir el escáner (no es que el docente canceló)
+  const cerrandoParaEscanear = useRef(false);
 
   // La planificación: para ordenar el material por unidad y tema
   const [plan, setPlan] = useState<PlanningUnit[] | null>(null);
+  const [planFallo, setPlanFallo] = useState(false);
 
   // Escáner: se baja recién al usarlo (pesa, y no todos los docentes lo usan)
   const [escaner, setEscaner] = useState<{ Componente: EscanerComponente; fotos?: File[]; desdeSubir: boolean } | null>(null);
   const [abriendoEscaner, setAbriendoEscaner] = useState(false);
 
-  // Procesamiento de texto en curso (por material) y por qué falló
-  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  // Por dónde va la lectura de un escaneo largo ("páginas 6 a 10 de 32")
-  const [progresoLectura, setProgresoLectura] = useState<Record<string, string>>({});
+  // Lecturas de texto en curso y por dónde van ("páginas 6 a 10 de 32"):
+  // viven fuera de la pantalla (lib/lecturasEnCurso), así siguen si se vuelve
+  // al tema, y cerrar la pestaña pide confirmación mientras haya alguna
+  const lecturas = useSyncExternalStore(suscribirLecturas, lecturasActuales);
+  // Selector de tema con el teclado: el valor elegido, hasta salir del selector
+  const [temaPendiente, setTemaPendiente] = useState<Record<string, string>>({});
+  const porTeclado = useRef(false);
   const [textErrors, setTextErrors] = useState<Record<string, string>>({});
-
-  // La lectura de un escaneo corre en esta pestaña: si se va, se corta
-  useEffect(() => {
-    if (processingIds.size === 0) return;
-    const frenar = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', frenar);
-    return () => window.removeEventListener('beforeunload', frenar);
-  }, [processingIds]);
 
   // Resumen IA
   const [summaryFor, setSummaryFor] = useState<LibraryMaterial | null>(null);
@@ -174,7 +190,7 @@ export default function Biblioteca() {
       setSubjectsList(subjects);
     }).catch(console.error);
     // Sin planificación (o sin señal) se ordena solo por materia y curso
-    getPlanningByTeacher(user.id).then(setPlan).catch(() => setPlan([]));
+    getTemasConFecha(user.id).then(setPlan).catch(() => { setPlanFallo(true); setPlan([]); });
   }, [user]);
 
   useEffect(() => {
@@ -244,15 +260,15 @@ export default function Biblioteca() {
     const unidad = tema ? plan.find(u => u.classes.some(c => c.id === tema)) : undefined;
     if (unidad) { subjectId = unidad.subjectId; courseId = unidad.courseId; }
     const volver = params.get('volver');
-    // Solo una pantalla de la app (nada de "//otro-sitio")
-    volverA.current = volver && volver.startsWith('/') && !volver.startsWith('//') ? volver : null;
+    volverA.current = rutaPropia(volver);
     setParams({}, { replace: true });
     const propio = !!subjectId && !!courseId && (user.subjects ?? []).some(a => a.subjectId === subjectId && a.courseId === courseId);
     const destino = propio ? claveAsignacion(subjectId!, courseId) : '';
-    presetSubida.current = { destino, tema: destino && unidad ? tema : '' };
+    const preset = { destino, tema: destino && unidad ? tema : '' };
+    presetSubida.current = preset;
     if (destino) setFiltro(destino);
     if (subir === 'escanear') void abrirEscaner();
-    else openUpload();
+    else openUpload(preset);
     // Corre una vez por pedido: lo demás se lee en ese momento
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, plan, params]);
@@ -297,12 +313,15 @@ export default function Biblioteca() {
   const cambiarTema = async (mat: LibraryMaterial, classId: string) => {
     const antes = mat.classId ?? null;
     const nuevo = classId || null;
-    setAllMaterials(prev => prev.map(m => (m.id === mat.id ? { ...m, classId: nuevo } : m)));
+    const poner = (classId: string | null) => (lista: LibraryMaterial[]) => lista.map(m => (m.id === mat.id ? { ...m, classId } : m));
+    setAllMaterials(poner(nuevo));
+    setSearchResults(prev => (prev ? poner(nuevo)(prev) : prev));
     try {
       await asignarTema(mat.id, nuevo);
     } catch (err) {
       console.error(err);
-      setAllMaterials(prev => prev.map(m => (m.id === mat.id ? { ...m, classId: antes } : m)));
+      setAllMaterials(poner(antes));
+      setSearchResults(prev => (prev ? poner(antes)(prev) : prev));
       avisar.error('No se pudo ubicar en el tema', haySenial() ? 'Probá de nuevo.' : 'Hace falta conexión.');
     }
   };
@@ -358,11 +377,12 @@ export default function Biblioteca() {
 
   // ── Upload flow ──
 
-  const openUpload = () => {
+  /** Con preset: lo que pidió el enlace (materia, curso, tema y a dónde volver). Sin: lo de siempre. */
+  const openUpload = (preset?: { destino: string; tema: string }) => {
+    if (!preset) { presetSubida.current = null; volverA.current = null; }
     pedidoAchicar.current++;
     setUplFile(null);
     setUplTitle('');
-    const preset = presetSubida.current;
     setUplDestino(preset?.destino || asignacionFiltro?.clave || destinos[0]?.clave || '');
     setUplTema(preset?.tema ?? '');
     setUplTags('');
@@ -386,6 +406,7 @@ export default function Biblioteca() {
         import('../components/Escaner'),
         import('../lib/escanerNavegador').then(m => m.cargarJspdf()),
       ]);
+      cerrandoParaEscanear.current = desdeSubir;
       setShowUpload(false);
       setEscaner({ Componente, fotos, desdeSubir });
     } catch (err) {
@@ -399,6 +420,8 @@ export default function Biblioteca() {
   const cerrarEscaner = () => {
     const volver = escaner?.desdeSubir;
     setEscaner(null);
+    // Cerró el escáner sin escanear: lo del enlace no queda para la próxima
+    if (!volver) { presetSubida.current = null; volverA.current = null; }
     if (volver) setShowUpload(true);
     // El escáner se desmonta abierto: el foco vuelve a mano al botón que lo abrió
     else window.setTimeout(() => { if (abridorEscaner.current?.isConnected) abridorEscaner.current.focus(); }, 0);
@@ -408,7 +431,7 @@ export default function Biblioteca() {
   const recibirEscaneo = (pdf: File) => {
     const venia = escaner?.desdeSubir;
     setEscaner(null);
-    if (!venia) openUpload();
+    if (!venia) openUpload(presetSubida.current ?? undefined);
     else setShowUpload(true);
     if (!venia || !uplTitle.trim()) setUplTitle(pdf.name.replace(/\.pdf$/i, ''));
     void elegirArchivo(pdf, { conservarTitulo: true, escaneo: true });
@@ -435,8 +458,12 @@ export default function Biblioteca() {
     if (!f) return;
     const viejo = formatoNoAceptado(f);
     if (viejo) { setUplError(viejo); return; }
-    // Un .pptx sin tipo (pasa en algunos equipos): se le pone, si no el depósito lo rechaza
-    if (!f.type && /\.pptx$/i.test(f.name)) f = new File([f], f.name, { type: PPTX_MIME });
+    // Sin tipo o con uno genérico (pasa en algunos equipos): se le pone por la
+    // extensión, si no el depósito lo rechaza
+    if (!f.type || f.type === 'application/octet-stream') {
+      const porExtension = /\.pptx$/i.test(f.name) ? PPTX_MIME : /\.docx$/i.test(f.name) ? DOCX_MIME : /\.pdf$/i.test(f.name) ? 'application/pdf' : '';
+      if (porExtension) f = new File([f], f.name, { type: porExtension });
+    }
     const ok = f.type === 'application/pdf' || f.type === DOCX_MIME || f.type === PPTX_MIME || f.type.startsWith('image/');
     if (!ok) { setUplError('Ese formato no se puede subir: PDF, Word (.docx), PowerPoint (.pptx) o fotos.'); return; }
     if (!conservarTitulo && !uplTitle.trim()) setUplTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
@@ -471,6 +498,8 @@ export default function Biblioteca() {
     pedidoAchicar.current++;
     setAchicando(null);
     setShowUpload(false);
+    // Se cerró para abrir el escáner: lo del enlace sigue (al volver se usa)
+    if (cerrandoParaEscanear.current) { cerrandoParaEscanear.current = false; return; }
     presetSubida.current = null;
     volverA.current = null;
   };
@@ -526,7 +555,8 @@ export default function Biblioteca() {
         subjectName: destino.subjectName,
         courseId: destino.courseId,
         // Ordenado en su tema desde el vamos ("todos mis cursos" no tiene tema)
-        classId: destino.courseId && uplTema ? uplTema : null,
+        classId: destino.courseId && uplTema && unidadesDe(destino.subjectId, destino.courseId).some(u => u.temas.some(t => t.id === uplTema))
+          ? uplTema : null,
         teacherId: user.id,
         schoolId: user.schoolId,
         tags: uplTags.split(',').map(t => t.trim()).filter(Boolean),
@@ -583,7 +613,8 @@ export default function Biblioteca() {
     const tipo = mat.fileType;
     if (tipo !== 'pdf' && tipo !== 'doc' && tipo !== 'pptx') return;
     if (!file && !mat.storagePath) return;
-    setProcessingIds(prev => new Set(prev).add(mat.id));
+    // Ya se está leyendo (por ejemplo, desde otra pantalla): no pagar la IA dos veces
+    if (!empezarLectura(mat.id)) return;
     setTextErrors(prev => { const n = { ...prev }; delete n[mat.id]; return n; });
     try {
       let blob = file;
@@ -592,14 +623,13 @@ export default function Biblioteca() {
         if (!resp.ok) throw new Error('No se pudo bajar el archivo para leerlo. Probá de nuevo.');
         blob = await resp.blob();
       }
-      const text = await leerTextoDeArchivo(blob, tipo, mat.title, m => setProgresoLectura(prev => ({ ...prev, [mat.id]: m })));
+      const text = await leerTextoDeArchivo(blob, tipo, mat.title, m => avanceDeLectura(mat.id, m));
       await updateMaterial(mat.id, { extractedText: text });
     } catch (err) {
       console.error('No se pudo leer el texto:', err);
       setTextErrors(prev => ({ ...prev, [mat.id]: err instanceof Error ? err.message : 'No se pudo leer el texto.' }));
     } finally {
-      setProcessingIds(prev => { const n = new Set(prev); n.delete(mat.id); return n; });
-      setProgresoLectura(prev => { const n = { ...prev }; delete n[mat.id]; return n; });
+      terminarLectura(mat.id);
       refresh();
     }
   };
@@ -817,7 +847,7 @@ export default function Biblioteca() {
     const Icon = deck ? Presentation : fileIcons[mat.fileType] || FileText;
     // Material que es solo texto (armado con IA, adaptado): se lee acá adentro
     const soloTexto = !mat.storagePath && !mat.videoUrl && !!mat.extractedText && mat.fileType !== 'link';
-    const processing = processingIds.has(mat.id);
+    const processing = lecturas.has(mat.id);
     // Word o PDF subido que quedó sin texto: se puede volver a leer
     const sinTexto = !mat.extractedText && !!mat.storagePath && (mat.fileType === 'pdf' || mat.fileType === 'doc' || mat.fileType === 'pptx');
     const textError = textErrors[mat.id];
@@ -853,7 +883,7 @@ export default function Biblioteca() {
             <span className="mat-size">{mat.fileSize}</span>
             {processing && (
               <span className="badge badge-ia" title="No cierres ni cambies de pantalla hasta que termine">
-                <Loader2 size={11} className="spin" /> {progresoLectura[mat.id] ?? 'Leyendo texto...'}
+                <Loader2 size={11} className="spin" /> {lecturas.get(mat.id) ?? 'Leyendo texto...'}
               </span>
             )}
             {!processing && mat.extractedText && (
@@ -874,12 +904,31 @@ export default function Biblioteca() {
           )}
           {/* Ordenarlo: en qué tema de la planificación va (así aparece en Preparar la clase) */}
           {(() => {
-            const unidades = unidadesDe(mat.subjectId, mat.courseId);
+            // "Todos mis cursos": con el curso que se está mirando
+            const curso = mat.courseId ?? (asignacionFiltro?.subjectId === mat.subjectId ? asignacionFiltro.courseId : null);
+            const unidades = unidadesDe(mat.subjectId, curso);
             if (unidades.length === 0) return null;
+            const pendiente = temaPendiente[mat.id];
             return (
               <label className={`mat-tema ${mat.classId ? '' : 'sin'}`}>
                 <span>Tema</span>
-                <select value={mat.classId ?? ''} onChange={e => void cambiarTema(mat, e.target.value)}>
+                <select
+                  aria-label={`Tema de "${mat.title}"`}
+                  value={pendiente ?? mat.classId ?? ''}
+                  // Con el teclado, las flechas cambian el valor a cada toque:
+                  // se guarda al salir del selector, no en cada flecha
+                  onKeyDown={() => { porTeclado.current = true; }}
+                  onPointerDown={() => { porTeclado.current = false; }}
+                  onChange={e => {
+                    if (porTeclado.current) setTemaPendiente(prev => ({ ...prev, [mat.id]: e.target.value }));
+                    else void cambiarTema(mat, e.target.value);
+                  }}
+                  onBlur={() => {
+                    if (pendiente === undefined) return;
+                    setTemaPendiente(prev => { const n = { ...prev }; delete n[mat.id]; return n; });
+                    if (pendiente !== (mat.classId ?? '')) void cambiarTema(mat, pendiente);
+                  }}
+                >
                   <option value="">Sin tema — elegí dónde va</option>
                   {opcionesDeTema(unidades)}
                 </select>
@@ -1075,7 +1124,7 @@ export default function Biblioteca() {
         </div>
 
         <div className="biblioteca-upload">
-          <button className="btn btn-primary w-full" onClick={openUpload}>
+          <button className="btn btn-primary w-full" onClick={() => openUpload()}>
             <Upload size={16} />
             Subir Material
           </button>
@@ -1111,7 +1160,7 @@ export default function Biblioteca() {
           </div>
           {/* En el celular la columna de la izquierda no está: filtros y botones acá */}
           <div className="bib-acciones-celu">
-            <button className="btn btn-primary btn-sm" onClick={openUpload}><Upload size={15} /> Subir</button>
+            <button className="btn btn-primary btn-sm" onClick={() => openUpload()}><Upload size={15} /> Subir</button>
             <button className="btn btn-secondary btn-sm" onClick={() => void abrirEscaner()} disabled={abriendoEscaner}>
               {abriendoEscaner ? <Loader2 size={15} className="spin" /> : <ScanLine size={15} />} Escanear
             </button>
@@ -1168,7 +1217,7 @@ export default function Biblioteca() {
               icono={BookOpen}
               titulo={`Todavía no hay materiales de ${asignacionFiltro.etiqueta}`}
               texto="Subí un apunte, una guía o un video para tenerlo a mano y usarlo con la IA."
-              accion={{ etiqueta: 'Subir material', alTocar: openUpload, icono: Upload }}
+              accion={{ etiqueta: 'Subir material', alTocar: () => openUpload(), icono: Upload }}
               accionSecundaria={{ etiqueta: 'Ver todos los cursos', alTocar: () => setFiltro(null) }}
             />
           ) : (
@@ -1176,14 +1225,14 @@ export default function Biblioteca() {
               icono={BookOpen}
               titulo="Tu biblioteca está vacía"
               texto="Subí o escaneá lo que ya usás: apuntes, guías, presentaciones, fotocopias. La IA lee el texto y arma placas, podcast y actividades."
-              accion={{ etiqueta: 'Subir material', alTocar: openUpload, icono: Upload }}
+              accion={{ etiqueta: 'Subir material', alTocar: () => openUpload(), icono: Upload }}
               accionSecundaria={{ etiqueta: 'Escanear hojas', alTocar: () => void abrirEscaner(), icono: ScanLine }}
             />
           )
         )}
 
         {/* Un curso sin planificación: se ordena por tema cuando cargue el programa */}
-        {cargado && asignacionFiltro && !searchResults && plan !== null && unidadesFiltro.length === 0 && filtered.length > 0 && asignacionFiltro.courseId && (
+        {cargado && asignacionFiltro && !searchResults && plan !== null && !planFallo && unidadesFiltro.length === 0 && filtered.length > 0 && asignacionFiltro.courseId && (
           <p className="bib-sin-plan">
             Cuando cargues tu programa en la planificación, vas a poder ordenar este material por unidad y tema.{' '}
             <Link to={`/planificacion?materia=${asignacionFiltro.subjectId}&curso=${asignacionFiltro.courseId}`}>
@@ -1211,7 +1260,7 @@ export default function Biblioteca() {
                     <small className="bib-grupo-unidad">{s.unidad}</small> {s.tema}
                   </h3>
                   <span className="bib-grupo-cuenta">{s.items.length} material{s.items.length !== 1 ? 'es' : ''}</span>
-                  <button className="btn btn-outline btn-sm" onClick={() => navigate(`/tema/${s.id}`)}>Preparar la clase</button>
+                  <button className="btn btn-outline btn-sm" aria-label={`Preparar la clase de ${s.tema}`} onClick={() => navigate(`/tema/${s.id}`)}>Preparar la clase</button>
                 </header>
                 {s.items.map(tarjeta)}
               </section>

@@ -176,11 +176,36 @@ export async function leerTextoDeArchivo(file: Blob, tipo: 'pdf' | 'doc' | 'pptx
     const { tandasDePdf } = await import('../lib/comprimir');
     const documento = crypto.randomUUID();
     const partes: string[] = [];
-    for await (const t of tandasDePdf(file, PAGINAS_POR_TANDA)) {
+    let tandas: AsyncGenerator<{ desde: number; hasta: number; total: number; indice: number; pdf: Blob }>;
+    let primera: IteratorResult<{ desde: number; hasta: number; total: number; indice: number; pdf: Blob }>;
+    try {
+      tandas = tandasDePdf(file, PAGINAS_POR_TANDA);
+      primera = await tandas.next();
+    } catch (err) {
+      // pdf.js no lo abre (PDF raro): se manda entero a la IA, como antes
+      console.warn('No se pudo partir el PDF, va entero:', err);
+      tandas = (async function* () { /* nada más */ })();
+      primera = { done: false, value: { desde: 1, hasta: 1, total: 1, indice: 1, pdf: file } };
+    }
+    for (let r = primera; !r.done; r = await tandas.next()) {
+      const t = r.value;
       const varias = t.total > PAGINAS_POR_TANDA;
       alAvanzar?.(varias ? `Leyendo las páginas ${t.desde} a ${t.hasta} de ${t.total}…` : 'Leyendo el escaneo…');
-      partes.push(await extractPdfText(await fileToBase64(t.pdf), varias ? `${title ?? 'Documento'} (páginas ${t.desde} a ${t.hasta})` : title,
-        { documento, parte: t.indice }));
+      const base64 = await fileToBase64(t.pdf);
+      const titulo = varias ? `${title ?? 'Documento'} (páginas ${t.desde} a ${t.hasta})` : title;
+      // Un corte de red o un error del servidor en una parte no tira todo lo
+      // leído: se reintenta esa parte (hasta dos veces, esperando un poco)
+      for (let intento = 0; ; intento++) {
+        try {
+          partes.push(await extractPdfText(base64, titulo, { documento, parte: t.indice }));
+          break;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : '';
+          if (intento >= 2 || !/fetch|network|\((5\d\d)\)/i.test(msg)) throw err;
+          alAvanzar?.(`Se cortó; reintentando las páginas ${t.desde} a ${t.hasta}…`);
+          await new Promise(res => setTimeout(res, 3000 * (intento + 1)));
+        }
+      }
     }
     text = partes.map(p => p.trim()).filter(Boolean).join('\n\n');
   } catch (err) {
