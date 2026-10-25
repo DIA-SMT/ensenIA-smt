@@ -884,3 +884,7 @@
 .cv-comp-opcion .cv-groupmode { margin-bottom: 0; }
 .cv-activity .cmp-reloj { margin: 2px 0 8px; }
 .cv-comp-mio { margin-top: 10px; }
+
+/* Sala sin curso (075): elegir para quién es la sala */
+.cv-modo { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.cv-start-form input.cv-input { width: 100%; }

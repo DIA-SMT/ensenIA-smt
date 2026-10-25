@@ -93,6 +93,9 @@ export default function ClaseEnVivo() {
     // Los materiales elegidos antes de arrancar (uno o varios, 049): el primero arranca en pantalla
     const [materialesIniciales, setMaterialesIniciales] = useState<EleccionMaterial[]>([]);
     const [eligiendoInicial, setEligiendoInicial] = useState(false);
+    // Sala sin curso (075): una reunión, una jornada, una charla con familias
+    const [modoInicio, setModoInicio] = useState<'curso' | 'sala'>('curso');
+    const [tituloSala, setTituloSala] = useState('');
     const [searchParams, setSearchParams] = useSearchParams();
 
     // Lanzador de actividades
@@ -144,6 +147,9 @@ export default function ClaseEnVivo() {
     const [pasadas, setPasadas] = useState<LiveSession[]>([]);
 
     const assignments = user?.subjects ?? [];
+    // Sin cursos (la dirección, por ejemplo), solo sala
+    const conCursos = assignments.length > 0;
+    const esModoSala = !conCursos || modoInicio === 'sala';
 
     useEffect(() => {
         getSubjects().then(subjects => {
@@ -270,7 +276,7 @@ export default function ClaseEnVivo() {
 
     // Con la clase viva, carga el curso (para nombres) y sus grupos
     useEffect(() => {
-        if (!session || session.status !== 'live') return;
+        if (!session || session.status !== 'live' || !session.subjectId || !session.courseId) return;
         getEnrolledStudents(session.subjectId, session.courseId).then(setStudents).catch(console.error);
         getGroupsByCourse(session.courseId).then(setGroups).catch(console.error);
     }, [session?.id, session?.status]);
@@ -403,8 +409,27 @@ export default function ClaseEnVivo() {
     // ── Handlers ──
 
     const handleStart = async () => {
+        if (starting) return;
+        if (esModoSala) {
+            setStarting(true);
+            setStartError('');
+            try {
+                setSession(await startLiveSession({
+                    teacherId: user.id,
+                    schoolId: user.schoolId,
+                    subjectId: null,
+                    courseId: null,
+                    title: tituloSala.trim().slice(0, 80) || 'Sala abierta',
+                }));
+            } catch (err) {
+                setStartError(err instanceof Error ? err.message : 'No se pudo abrir la sala.');
+            } finally {
+                setStarting(false);
+            }
+            return;
+        }
         const a = assignments[assignmentIdx];
-        if (!a || starting) return;
+        if (!a) return;
         setStarting(true);
         setStartError('');
         const primero = materialesIniciales[0] ?? null;
@@ -742,7 +767,45 @@ export default function ClaseEnVivo() {
             <div className="cv-container cv-start animate-in">
                 <div className="card cv-start-card">
                     <div className="cv-start-icon"><Radio size={26} /></div>
-                    <h2>Clase en vivo</h2>
+                    <h2>{conCursos ? 'Clase en vivo' : 'Sala en vivo'}</h2>
+                    {conCursos && (
+                        <div className="cv-modo" role="group" aria-label="¿Para quién es?">
+                            <button type="button" className={`cv-chip-seg ${!esModoSala ? 'on' : ''}`} aria-pressed={!esModoSala}
+                                onClick={() => { setModoInicio('curso'); setStartError(''); }}>
+                                Clase con un curso
+                            </button>
+                            <button type="button" className={`cv-chip-seg ${esModoSala ? 'on' : ''}`} aria-pressed={esModoSala}
+                                onClick={() => { setModoInicio('sala'); setStartError(''); }}>
+                                Sala abierta, sin curso
+                            </button>
+                        </div>
+                    )}
+                    {esModoSala ? (
+                        <>
+                            <p className="text-secondary">
+                                Para una reunión, una jornada o una charla con familias: entran con el QR o el código,
+                                sin cuenta, y participan desde el celular. Preguntas, encuestas, nube de palabras,
+                                competencia y preguntas del público, como en una clase.
+                            </p>
+                            <div className="cv-start-form">
+                                <label htmlFor="cv-sala-titulo" className="text-sm text-secondary">Nombre de la sala</label>
+                                <input id="cv-sala-titulo" className="cv-input" maxLength={80} value={tituloSala}
+                                    placeholder="Ej: Reunión con familias de 3° A"
+                                    onChange={e => setTituloSala(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') void handleStart(); }} />
+                                <button className="btn btn-primary w-full" onClick={handleStart} disabled={starting}>
+                                    {starting ? <Loader2 size={16} className="spin" /> : <QrCode size={16} />}
+                                    {starting ? 'Abriendo...' : 'Abrir la sala'}
+                                </button>
+                                {startError && <p className="text-sm text-danger">{startError}</p>}
+                                <p className="text-xs text-subtle">
+                                    Se suman con el QR que vas a proyectar, poniendo solo un nombre. No es una clase de un
+                                    curso: los estudiantes no la ven con su cuenta (si hace falta, escanean el QR como cualquiera).
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                    <>
                     <p className="text-secondary">
                         Dictás tu clase como siempre y, cuando lo necesitás, lanzás una actividad:
                         los celulares de tus estudiantes se convierten en su forma de participar.
@@ -782,6 +845,8 @@ export default function ClaseEnVivo() {
                             Tus estudiantes van a ver un aviso en su pantalla para entrar. Sin códigos, sin instalar nada.
                         </p>
                     </div>
+                    </>
+                    )}
                 </div>
                 {pasadas.length > 0 && (
                     <section className="card cv-pasadas" aria-labelledby="cv-pasadas-titulo">
@@ -801,7 +866,7 @@ export default function ClaseEnVivo() {
                         </ul>
                     </section>
                 )}
-                {assignments[assignmentIdx] && (
+                {!esModoSala && assignments[assignmentIdx] && (
                     <ElegirMaterial
                         abierto={eligiendoInicial}
                         alCerrar={() => setEligiendoInicial(false)}
@@ -849,6 +914,8 @@ export default function ClaseEnVivo() {
                     </div>
                 </div>
                 <div className="cv-header-actions">
+                    {/* Una sala sin curso es solo con invitados: la puerta no se cierra */}
+                    {session.courseId && (
                     <button
                         className={`cv-toggle ${session.guestsEnabled ? 'on' : ''}`}
                         onClick={handleToggleGuests}
@@ -860,6 +927,7 @@ export default function ClaseEnVivo() {
                         <span>Invitados</span>
                         <span className={`cv-toggle-pill ${session.guestsEnabled ? 'on' : ''}`} />
                     </button>
+                    )}
                     {session.guestsEnabled && session.joinCode && (
                         <button
                             className="btn btn-outline btn-sm"
@@ -944,44 +1012,46 @@ export default function ClaseEnVivo() {
 
             {/* Quiénes están: presencia real, no un contador. Tocás a un
                 conectado y le mandás una pregunta directa. */}
-            <div className="card cv-people">
-                <div className="cv-people-head">
-                    <h4><UsersRound size={15} /> En la sala</h4>
-                    <span className="cv-people-count">
-                        <span className="cv-online-dot" /> {onlineCount}/{students.length} conectados
-                    </span>
-                    <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
-                        👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
-                    </button>
-                    <button className="btn btn-outline btn-sm" disabled={students.length === 0}
-                        onClick={() => setPremiar({ titulo: 'Dar medalla', preseleccion: targetStudent ? [targetStudent.id] : [] })}>
-                        <Medal size={14} aria-hidden="true" /> Medalla
-                    </button>
+            {session.courseId && (
+                <div className="card cv-people">
+                    <div className="cv-people-head">
+                        <h4><UsersRound size={15} /> En la sala</h4>
+                        <span className="cv-people-count">
+                            <span className="cv-online-dot" /> {onlineCount}/{students.length} conectados
+                        </span>
+                        <button className="btn btn-outline btn-sm" onClick={() => setShowGroups(true)}>
+                            👥 Grupos{groups.length > 0 ? ` (${groups.length})` : ''}
+                        </button>
+                        <button className="btn btn-outline btn-sm" disabled={students.length === 0}
+                            onClick={() => setPremiar({ titulo: 'Dar medalla', preseleccion: targetStudent ? [targetStudent.id] : [] })}>
+                            <Medal size={14} aria-hidden="true" /> Medalla
+                        </button>
+                    </div>
+                    <div className="cv-people-chips">
+                        {students.map(s => {
+                            const online = onlineIds.has(s.id);
+                            return (
+                                <button
+                                    key={s.id}
+                                    className={`cv-person ${online ? 'online' : ''} ${targetStudent?.id === s.id ? 'targeted' : ''}`}
+                                    disabled={!online}
+                                    title={online
+                                        ? `${s.firstName} está conectado — tocá para mandarle una pregunta directa`
+                                        : `${s.firstName} no está conectado ahora`}
+                                    onClick={() => setTargetStudent(t => (t?.id === s.id ? null : s))}
+                                >
+                                    <span className={`cv-person-dot ${online ? 'on' : ''}`} />
+                                    {s.firstName} {s.lastName[0]}.
+                                    {online && <Target size={12} className="cv-person-target" />}
+                                </button>
+                            );
+                        })}
+                        {students.length === 0 && (
+                            <Cargando texto="Cargando el curso…" />
+                        )}
+                    </div>
                 </div>
-                <div className="cv-people-chips">
-                    {students.map(s => {
-                        const online = onlineIds.has(s.id);
-                        return (
-                            <button
-                                key={s.id}
-                                className={`cv-person ${online ? 'online' : ''} ${targetStudent?.id === s.id ? 'targeted' : ''}`}
-                                disabled={!online}
-                                title={online
-                                    ? `${s.firstName} está conectado — tocá para mandarle una pregunta directa`
-                                    : `${s.firstName} no está conectado ahora`}
-                                onClick={() => setTargetStudent(t => (t?.id === s.id ? null : s))}
-                            >
-                                <span className={`cv-person-dot ${online ? 'on' : ''}`} />
-                                {s.firstName} {s.lastName[0]}.
-                                {online && <Target size={12} className="cv-person-target" />}
-                            </button>
-                        );
-                    })}
-                    {students.length === 0 && (
-                        <Cargando texto="Cargando el curso…" />
-                    )}
-                </div>
-            </div>
+            )}
 
             {/* Reacciones entrantes */}
             {session.reactionsEnabled && reactions.length > 0 && (
@@ -1120,7 +1190,7 @@ export default function ClaseEnVivo() {
             ) : (
                 <div className="card cv-idle">
                     <p className="text-secondary">
-                        {activity ? 'Actividad cerrada. ' : ''}Seguí con tu clase tranquilo —
+                        {activity ? 'Actividad cerrada. ' : ''}{session.courseId ? 'Seguí con tu clase tranquilo' : 'Seguí con la charla tranquilo'} —
                         los celulares están en pausa. Lanzá una actividad cuando quieras.
                     </p>
                 </div>
@@ -1133,7 +1203,7 @@ export default function ClaseEnVivo() {
             <PreguntasPreparadasVivo session={session} lanzar={lanzarPreparada} ocupado={launching}
                 competir={ronda ? undefined : competirConPreparadas} />
 
-            <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />
+            {session.courseId && <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial} />}
 
             {/* Lanzador */}
             <div className="card cv-launcher">
@@ -1269,7 +1339,7 @@ export default function ClaseEnVivo() {
                                 : targetStudent ? `Mandársela a ${targetStudent.firstName}`
                                 : conCompetencia ? `Lanzar con ${segundosComp} segundos`
                                 : groupMode ? 'Lanzar a los grupos'
-                                : 'Lanzar al curso'}
+                                : session.courseId ? 'Lanzar al curso' : 'Lanzar a la sala'}
                         </button>
                     </div>
                 )}
@@ -1289,7 +1359,7 @@ export default function ClaseEnVivo() {
                 />
             )}
 
-            {premiar && (
+            {premiar && session.subjectId && (
                 <PremiarEnVivo
                     titulo={premiar.titulo}
                     students={students}
@@ -1306,7 +1376,7 @@ export default function ClaseEnVivo() {
                 />
             )}
 
-            {showGroups && (
+            {showGroups && session.courseId && (
                 <GruposModal
                     courseId={session.courseId}
                     teacherId={user.id}

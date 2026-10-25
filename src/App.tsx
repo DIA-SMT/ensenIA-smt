@@ -93,7 +93,7 @@ function App() {
                 {ruta('/crear', ['docente'])}
                 {ruta('/agenda', ['docente'])}
                 {ruta('/ia-lab', ['docente'])}
-                {ruta('/clase-en-vivo', ['docente'])}
+                {ruta('/clase-en-vivo', STAFF)}
                 {ruta('/actividad-rapida', ['docente'])}
                 {ruta('/students', ['docente'])}
                 {ruta('/biblioteca', ['docente'])}

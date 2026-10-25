@@ -212,7 +212,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
 
   /** Un borrador con las preguntas de la clase; se abre para revisarlo y publicarlo */
   const armarRepaso = async () => {
-    if (!datos || !sesion || !user || armandoRepaso) return;
+    if (!datos || !sesion?.subjectId || !sesion.courseId || !user || armandoRepaso) return;
     setArmandoRepaso(true);
     try {
       const partes = partesDeRepaso(
@@ -272,6 +272,8 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
   }
 
   const t = datos.totales;
+  // Una sala sin curso (075): participan solo invitados (sin curso, ni medallas, ni lista)
+  const esSala = sesion !== null && !sesion.courseId;
   const noParticiparon = datos.alumnos.filter(a => a.respuestas === 0);
 
   return (
@@ -298,30 +300,43 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
       </header>
 
       <section className="rc-tiles" aria-label="En números">
-        <div className="card rc-tile">
-          <span className="rc-tile-label"><Users size={14} aria-hidden="true" /> Participaron</span>
-          <strong>{t.participaron}/{t.curso}</strong>
-          <span className="rc-tile-sub">{pct(t.participaron, t.curso)}% del curso</span>
-        </div>
-        <div className="card rc-tile">
-          <span className="rc-tile-label">Se conectaron</span>
-          <strong>{t.conectados}/{t.curso}</strong>
-          <span className="rc-tile-sub">{t.invitados ? `+ ${t.invitados} invitado${t.invitados !== 1 ? 's' : ''}` : 'en sus celulares'}</span>
-        </div>
+        {esSala ? (
+          <div className="card rc-tile">
+            <span className="rc-tile-label"><Users size={14} aria-hidden="true" /> Participaron</span>
+            <strong>{t.invitados}</strong>
+            <span className="rc-tile-sub">invitado{t.invitados !== 1 ? 's' : ''}</span>
+          </div>
+        ) : (
+          <>
+            <div className="card rc-tile">
+              <span className="rc-tile-label"><Users size={14} aria-hidden="true" /> Participaron</span>
+              <strong>{t.participaron}/{t.curso}</strong>
+              <span className="rc-tile-sub">{pct(t.participaron, t.curso)}% del curso</span>
+            </div>
+            <div className="card rc-tile">
+              <span className="rc-tile-label">Se conectaron</span>
+              <strong>{t.conectados}/{t.curso}</strong>
+              <span className="rc-tile-sub">{t.invitados ? `+ ${t.invitados} invitado${t.invitados !== 1 ? 's' : ''}` : 'en sus celulares'}</span>
+            </div>
+          </>
+        )}
         <div className="card rc-tile">
           <span className="rc-tile-label"><ClipboardList size={14} aria-hidden="true" /> Actividades</span>
           <strong>{t.actividades}</strong>
           <span className="rc-tile-sub">lanzadas</span>
         </div>
-        <div className="card rc-tile">
-          <span className="rc-tile-label"><Medal size={14} aria-hidden="true" /> Medallas</span>
-          <strong>{t.medallas}</strong>
-          <span className="rc-tile-sub">{datos.medallas.map(m => AWARD_META[m.medalla]?.emoji ?? '🏅').join(' ') || 'ninguna'}</span>
-        </div>
+        {!esSala && (
+          <div className="card rc-tile">
+            <span className="rc-tile-label"><Medal size={14} aria-hidden="true" /> Medallas</span>
+            <strong>{t.medallas}</strong>
+            <span className="rc-tile-sub">{datos.medallas.map(m => AWARD_META[m.medalla]?.emoji ?? '🏅').join(' ') || 'ninguna'}</span>
+          </div>
+        )}
       </section>
 
       {/* Qué sigue (fase 5, parte 4): lo que el docente hace después de la clase */}
-      {sesion && (
+      {/* Asistencia y repaso son de un curso: una sala sin curso (075) no los tiene */}
+      {sesion?.courseId && (
         <section className="card rc-bloque rc-sigue" aria-labelledby="rc-sigue">
           <h3 id="rc-sigue">Qué sigue</h3>
           <div className="rc-sigue-acciones">
@@ -456,34 +471,36 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
         )}
       </section>
 
-      <section className="card rc-bloque" aria-labelledby="rc-alumnos">
-        <h3 id="rc-alumnos">Estudiantes</h3>
-        {noParticiparon.length > 0 && datos.alumnos.length > 0 && (
-          <p className="rc-nota">
-            <strong>No participaron ({noParticiparon.length}):</strong> {noParticiparon.map(a => a.nombre).join(', ')}.
-          </p>
-        )}
-        {datos.alumnos.length === 0 ? (
-          <EstadoVacio compacto icono={Users} titulo="El curso todavía no tiene estudiantes" texto="Cuando la escuela los cargue, vas a ver acá cómo participó cada uno." />
-        ) : (
-          <div className="rc-tabla-wrap">
-            <table className="rc-tabla">
-              <thead><tr><th>Estudiante</th><th>Conectado</th><th>Respuestas</th><th>Aciertos</th><th>Medallas</th></tr></thead>
-              <tbody>
-                {datos.alumnos.map(a => (
-                  <tr key={a.id} className={a.respuestas === 0 ? 'rc-sin' : ''}>
-                    <td>{a.nombre}</td>
-                    <td>{a.conectado ? 'Sí' : 'No'}</td>
-                    <td>{a.respuestas}</td>
-                    <td>{a.preguntas ? `${a.aciertos}/${a.preguntas}` : '—'}</td>
-                    <td>{a.medallas || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {!esSala && (
+        <section className="card rc-bloque" aria-labelledby="rc-alumnos">
+          <h3 id="rc-alumnos">Estudiantes</h3>
+          {noParticiparon.length > 0 && datos.alumnos.length > 0 && (
+            <p className="rc-nota">
+              <strong>No participaron ({noParticiparon.length}):</strong> {noParticiparon.map(a => a.nombre).join(', ')}.
+            </p>
+          )}
+          {datos.alumnos.length === 0 ? (
+            <EstadoVacio compacto icono={Users} titulo="El curso todavía no tiene estudiantes" texto="Cuando la escuela los cargue, vas a ver acá cómo participó cada uno." />
+          ) : (
+            <div className="rc-tabla-wrap">
+              <table className="rc-tabla">
+                <thead><tr><th>Estudiante</th><th>Conectado</th><th>Respuestas</th><th>Aciertos</th><th>Medallas</th></tr></thead>
+                <tbody>
+                  {datos.alumnos.map(a => (
+                    <tr key={a.id} className={a.respuestas === 0 ? 'rc-sin' : ''}>
+                      <td>{a.nombre}</td>
+                      <td>{a.conectado ? 'Sí' : 'No'}</td>
+                      <td>{a.respuestas}</td>
+                      <td>{a.preguntas ? `${a.aciertos}/${a.preguntas}` : '—'}</td>
+                      <td>{a.medallas || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

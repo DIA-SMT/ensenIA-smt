@@ -74,6 +74,7 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', enBarra: true, claves: 'riesgo bienestar señales escaladas' },
   { ruta: '/mensajes', etiqueta: 'Mensajes', icono: MessagesSquare, grupo: 'Comunidad', claves: 'mensajes conversaciones escribir responder chat supervisión' },
   { ruta: '/comunicaciones', etiqueta: 'Comunicaciones', icono: MessageSquare, grupo: 'Comunidad', enBarra: true, claves: 'comunicados avisos mensajes' },
+  { ruta: '/clase-en-vivo', etiqueta: 'Sala en vivo', icono: Radio, grupo: 'Comunidad', claves: 'reunión jornada familias charla qr encuesta preguntas nube proyectar mentimeter' },
   { ruta: '/familias', etiqueta: 'Familias', icono: HeartHandshake, grupo: 'Comunidad', claves: 'padres citaciones tutores' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
   { ruta: '/memoria-estudio', etiqueta: 'Memoria de estudio', titulo: 'Memoria de estudio de EstudIA', icono: Brain, grupo: 'Comunidad', ia: true, claves: 'memoria estudia consentimiento autorización familias privacidad datos personales auditoría revisar papel firmado' },

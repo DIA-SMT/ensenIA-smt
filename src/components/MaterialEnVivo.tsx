@@ -274,15 +274,18 @@ export default function MaterialEnVivo({ session, onSession, lanzar }: {
 
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
 
-      <ElegirMaterial
-        abierto={eligiendo}
-        alCerrar={() => setEligiendo(false)}
-        teacherId={session.teacherId}
-        subjectId={session.subjectId}
-        courseId={session.courseId}
-        elegidos={elegidos}
-        alConfirmar={confirmarLista}
-      />
+      {/* Los materiales son de una materia y un curso: una sala sin curso (075) no los elige */}
+      {session.subjectId && session.courseId && (
+        <ElegirMaterial
+          abierto={eligiendo}
+          alCerrar={() => setEligiendo(false)}
+          teacherId={session.teacherId}
+          subjectId={session.subjectId}
+          courseId={session.courseId}
+          elegidos={elegidos}
+          alConfirmar={confirmarLista}
+        />
+      )}
 
       {proyectando && material && (
         <MaterialViewer material={materialParaVisor(material)} onClose={() => setProyectando(false)} proyectar />

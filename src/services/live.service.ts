@@ -42,8 +42,9 @@ export interface LiveSession {
   id: string;
   teacherId: string;
   schoolId: string;
-  subjectId: string;
-  courseId: string;
+  /** Sin materia ni curso: una sala abierta (075), para una reunión o una jornada, solo con invitados */
+  subjectId: string | null;
+  courseId: string | null;
   title: string;
   status: 'live' | 'ended';
   reactionsEnabled: boolean;
@@ -166,8 +167,9 @@ export async function getMyLiveSession(teacherId: string): Promise<LiveSession |
 export async function startLiveSession(s: {
   teacherId: string;
   schoolId: string;
-  subjectId: string;
-  courseId: string;
+  /** null en los dos: una sala sin curso (075), abierta a invitados desde el arranque */
+  subjectId: string | null;
+  courseId: string | null;
   title: string;
   materialId?: string | null;
   classId?: string | null;
@@ -180,11 +182,12 @@ export async function startLiveSession(s: {
       subject_id: s.subjectId,
       course_id: s.courseId,
       title: s.title,
+      ...(s.courseId ? {} : { guests_enabled: true }),
       // Solo si se eligió: sin la 041 corrida, mandar las columnas rompería
       // el inicio de cualquier clase
       ...(s.materialId ? { material_id: s.materialId } : {}),
       ...(s.classId ? { class_id: s.classId } : {}),
-    })
+    } as never)
     .select('*')
     .single();
   if (error) {
