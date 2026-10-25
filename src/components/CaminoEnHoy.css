@@ -1,0 +1,14 @@
+/* El Camino Docente Tech en Hoy (082) */
+.camino-hoy {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; text-decoration: none; color: var(--text-primary);
+  background: linear-gradient(135deg, var(--cyan-glow), transparent 70%);
+}
+.camino-hoy:hover, .camino-hoy:focus-visible { border-color: var(--acento); }
+.camino-hoy-emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.camino-hoy-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.camino-hoy-titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.camino-hoy-titulo strong { font-size: 1rem; }
+.camino-hoy-titulo small, .camino-hoy-falta { font-size: 0.8125rem; color: var(--text-secondary); }
+.camino-hoy-barra { display: block; height: 8px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; }
+.camino-hoy-barra > span { display: block; height: 100%; border-radius: 999px; background: var(--acento); }
+.camino-hoy-ir { flex-shrink: 0; color: var(--text-subtle); }

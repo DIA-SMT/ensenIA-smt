@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare, GraduationCap, ClipboardCheck, Plus } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getObservacionesDe, fechaLarga, type Observacion } from '../services/acompanamiento.service';
+import { getCaminoDe } from '../services/camino.service';
+import { EMOJI_GRADO, GRADOS, medallasDe, nivelInfo, trofeosDe, type NumerosCamino } from '../lib/caminoDocente';
 import { enlaceMensaje } from '../services/mensajes.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherUsers } from '../services/profiles.service';
@@ -63,6 +65,8 @@ export default function Docentes() {
   const [observaciones, setObservaciones] = useState<Observacion[] | null>(null);
   const [errorObs, setErrorObs] = useState('');
   const [intentoObs, setIntentoObs] = useState(0);
+  // Su camino Docente Tech (082): llega solo si compartió su perfil
+  const [camino, setCamino] = useState<(NumerosCamino & { nivel: number }) | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -119,6 +123,14 @@ export default function Docentes() {
       .catch(err => { if (vigente) setErrorObs(err instanceof Error ? err.message : 'No se pudieron cargar.'); });
     return () => { vigente = false; };
   }, [selectedTeacher?.id, intentoObs]);
+
+  useEffect(() => {
+    setCamino(null);
+    if (!selectedTeacher) return;
+    let vigente = true;
+    getCaminoDe(selectedTeacher.id).then(c => { if (vigente) setCamino(c); }).catch(() => { /* sin la 082: no se muestra */ });
+    return () => { vigente = false; };
+  }, [selectedTeacher?.id]);
 
   // Bitácora: queda registrado cada acceso al perfil de un docente.
   // Deps primitivas: la identidad del objeto user cambia en cada refresh
@@ -352,6 +364,24 @@ export default function Docentes() {
                 </ul>
               )}
             </div>
+
+            {camino && (
+              <div className="profile-section">
+                <h4>{nivelInfo(camino.nivel).emoji} Camino Docente Tech</h4>
+                <p className="text-sm"><strong>Nivel «{nivelInfo(camino.nivel).nombre}»</strong> · {camino.nivel} de 6</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginTop: 6 }}>
+                  {medallasDe(camino).filter(m => m.grado > 0).map(m => (
+                    <span key={m.pilar.clave} className="badge badge-neutral">{m.pilar.emoji} {m.pilar.medalla} · {EMOJI_GRADO[m.grado]} {GRADOS[m.grado]}</span>
+                  ))}
+                  {trofeosDe(camino, camino.nivel).filter(t => t.logrado).map(t => (
+                    <span key={t.clave} className="badge badge-warning">{t.emoji} {t.nombre}</span>
+                  ))}
+                </div>
+                <p className="text-subtle text-xs" style={{ marginTop: 6 }}>
+                  Lo compartió {selectedTeacher.firstName}. Es su camino en la app, no una evaluación.
+                </p>
+              </div>
+            )}
 
             {perfilCompartido && (
               <div className="profile-section">

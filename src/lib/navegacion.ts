@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare, Brain, CalendarRange, BarChart3, IdCard, ListChecks, ClipboardCheck,
+  MessagesSquare, Brain, CalendarRange, BarChart3, IdCard, ListChecks, ClipboardCheck, Trophy,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -63,6 +63,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/comunicados', etiqueta: 'Comunicados', titulo: 'Comunicados de dirección', icono: Megaphone, grupo: 'Escuela', claves: 'avisos dirección mensajes reunión' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
   { ruta: '/perfil', etiqueta: 'Mi perfil', titulo: 'Mi perfil docente', icono: IdCard, grupo: 'Cuenta', claves: 'perfil cv currículum títulos capacitaciones cursos logros antecedentes formación proyectos' },
+  { ruta: '/mi-camino', etiqueta: 'Mi camino', icono: Trophy, grupo: 'Cuenta', claves: 'medallas trofeos nivel puntos logros premios certificado racha gamificación docente tech' },
   { ruta: '/settings', etiqueta: 'Ajustes', titulo: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },
 ];
 

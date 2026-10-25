@@ -13,6 +13,7 @@ import {
   GraduationCap, BookOpenCheck, Trophy, FolderKanban, BookOpenText, Medal, Download, Plus, Pencil, Trash2,
   Eye, Sparkles, type LucideIcon,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
 import { getTeacherAwards } from '../services/awards.service';
@@ -421,6 +422,7 @@ export default function PerfilDocente() {
             <div><dt>Actividades publicadas</dt><dd>{recorrido.actividades}</dd></div>
             <div><dt>Clases en vivo</dt><dd>{recorrido.clasesEnVivo}</dd></div>
           </dl>
+          <Link to="/mi-camino" className="btn btn-outline btn-sm pd-camino">Ver mis medallas y trofeos (Mi camino Docente Tech)</Link>
         </section>
       )}
     </div>

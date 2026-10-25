@@ -49,6 +49,7 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/biblioteca$/, docente: '"Mis materiales", en el menú, grupo "Aula"' },
   { ruta: /^\/clase-en-vivo$/, docente: '"Clase en vivo", en el menú, grupo "Aula"', director: '"Sala en vivo", en el menú, grupo "Comunidad"' },
   { ruta: /^\/seguimiento$/, docente: '"Seguimiento" (consultas, entregas, quién viene atrasado y "Qué van logrando": por cada NAP de sus temas, o por tema si no los vinculó, quién lo logró —60% o más—, quién está en proceso y quién todavía no), en el menú, grupo "Aula"' },
+  { ruta: /^\/mi-camino$/, docente: '"Mi camino" (el camino Docente Tech: medallas, trofeos y nivel), en el menú, grupo "Cuenta"' },
   { ruta: /^\/perfil$/, docente: '"Mi perfil" (título "Mi perfil docente"), en el menú, grupo "Cuenta"', director: '"Mi perfil", en el menú, grupo "Cuenta"' },
   { ruta: /^\/cursos\/[^/]+$/, docente: '"Ficha del curso"', director: '"Ficha del curso"' },
   { ruta: /^\/mensajes$/, docente: '"Mensajes", en el menú, grupo "Escuela"', director: '"Mensajes", en el menú, grupo "Comunidad"' },
@@ -320,6 +321,17 @@ guardan y se mandan solas; publicar notas necesita señal.
 ### Ajustes
 Además de lo de todos, "Lo que la IA recuerda de cómo trabajás" (se prende, se apaga y se
 borra).
+
+### Mi camino (medallas, trofeos y niveles)
+"Mi camino" (menú, grupo "Cuenta"; también la tarjeta de Hoy): el camino Docente Tech del
+año. Seis niveles (Chispa, Brújula, Puente, Docente Tech, Referente, Faro) con puntos por lo
+que hace en la app: subir material, planificar, publicar actividades, corregir y escribir
+devoluciones, tomar lista, clases en vivo de 5 minutos o más, medallas a estudiantes, charlas
+con estudiantes y semanas con actividad. Medallas de bronce, plata y oro en "Tecnología",
+"Humanidad" y "Constancia", y trofeos ("Ciclo completo", "Tecnología con corazón"…). "Bajar
+mi certificado" desde el nivel Brújula. Abrir la app sin hacer nada no suma. No hay ranking:
+lo ve solo el docente, y la dirección si comparte su perfil ("Mi perfil" → "Que lo vea la
+dirección de tu escuela"). "Cómo se suman los puntos" está al final de la pantalla.
 
 ### Acompañamiento de la dirección
 En "Mi perfil" → "Acompañamiento" están las observaciones de clase que la dirección

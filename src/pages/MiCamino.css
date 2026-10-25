@@ -1,0 +1,82 @@
+/* Mi camino Docente Tech (082) */
+.cam-contenedor { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* El nivel */
+.cam-nivel {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); padding: var(--space-5);
+  background: linear-gradient(135deg, var(--cyan-glow), transparent 75%);
+}
+.cam-nivel-emoji { font-size: 3.5rem; line-height: 1; }
+.cam-nivel-texto { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.cam-sobre { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em; color: var(--acento); }
+.cam-nivel-texto h2 { margin: 0; font-size: 1.75rem; line-height: 1.1; }
+.cam-lema { margin: 0; color: var(--text-secondary); font-style: italic; }
+.cam-barra { height: 10px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; margin-top: 4px; }
+.cam-barra > span { display: block; height: 100%; border-radius: 999px; background: var(--acento); }
+.cam-falta { margin: 0; font-size: 0.875rem; color: var(--text-secondary); }
+.cam-falta strong { color: var(--text-primary); }
+.cam-chips { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.cam-chips li { padding: 4px 10px; border-radius: 999px; background: var(--bg-panel); border: 1px solid var(--border-color); font-size: 0.8125rem; font-weight: 600; }
+.cam-certificado { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.cam-certificado small { font-size: 0.75rem; color: var(--text-subtle); }
+
+.cam-privado { margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 0.8125rem; color: var(--text-subtle); }
+.cam-privado svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Cada lado */
+.cam-lado { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.cam-lado-cabecera h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.0625rem; }
+.cam-lado-cabecera h3 svg { color: var(--acento); }
+.cam-lado-cabecera p { margin: 2px 0 0; font-size: 0.875rem; color: var(--text-subtle); }
+
+.cam-medallas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.cam-medalla {
+  display: flex; gap: 10px; padding: 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); background: var(--bg-panel);
+}
+.cam-medalla-emoji { font-size: 1.75rem; line-height: 1; }
+.cam-medalla.g0 .cam-medalla-emoji { filter: grayscale(1); opacity: 0.55; }
+.cam-medalla-texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.cam-medalla-texto strong { font-size: 0.9375rem; }
+.cam-medalla-texto small { font-size: 0.8125rem; color: var(--text-secondary); }
+.cam-grado { align-self: flex-start; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--bg-elevated); color: var(--text-secondary); }
+.cam-medalla.g1 { border-color: #B87333; }
+.cam-medalla.g1 .cam-grado { background: rgba(184, 115, 51, 0.14); color: #8A4F1D; }
+.cam-medalla.g2 { border-color: #8E9AAF; }
+.cam-medalla.g2 .cam-grado { background: rgba(142, 154, 175, 0.2); color: #4A5568; }
+.cam-medalla.g3 { border-color: #D4A017; background: linear-gradient(135deg, rgba(212, 160, 23, 0.10), transparent 70%); }
+.cam-medalla.g3 .cam-grado { background: rgba(212, 160, 23, 0.18); color: #7A5C00; }
+.cam-mini-barra { display: block; height: 5px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; margin-top: 2px; }
+.cam-mini-barra > span { display: block; height: 100%; background: var(--acento); }
+.cam-siguiente { color: var(--text-subtle) !important; }
+
+.cam-trofeos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.cam-trofeo {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 10px;
+  border-radius: var(--radius-md); border: 1px dashed var(--border-color); color: var(--text-secondary);
+}
+.cam-trofeo strong { font-size: 0.9375rem; color: var(--text-primary); }
+.cam-trofeo small { font-size: 0.8125rem; }
+.cam-trofeo-emoji { font-size: 2rem; line-height: 1; }
+.cam-trofeo:not(.logrado) .cam-trofeo-emoji { opacity: 0.6; }
+.cam-trofeo.logrado { border-style: solid; border-color: #D4A017; background: linear-gradient(180deg, rgba(212, 160, 23, 0.10), transparent); }
+.cam-trofeo.logrado small { color: #7A5C00; font-weight: 700; }
+
+.cam-meta { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.cam-meta div { padding: 10px 12px; border-radius: var(--radius-md); background: var(--bg-elevated); }
+.cam-meta dt { font-size: 0.8125rem; color: var(--text-secondary); }
+.cam-meta dd { margin: 2px 0 0; font-size: 1.5rem; font-weight: 750; }
+.cam-nota { margin: 0; font-size: 0.875rem; color: var(--text-secondary); }
+
+.cam-como { padding: var(--space-3) var(--space-4); }
+.cam-como > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 600; }
+.cam-como[open] > summary { margin-bottom: 8px; }
+.cam-pesos { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
+.cam-pesos li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.875rem; }
+.cam-pesos strong { color: var(--acento); }
+
+@media (max-width: 560px) {
+  .cam-nivel { padding: var(--space-4); }
+  .cam-nivel-emoji { font-size: 2.75rem; }
+  .cam-certificado { align-items: stretch; width: 100%; }
+}

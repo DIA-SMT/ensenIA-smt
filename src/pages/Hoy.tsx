@@ -29,6 +29,7 @@ import { getRecentAttendance, todayISO } from '../services/attendance.service';
 import { getMyLiveSession, getMyPastSessions, type LiveSession } from '../services/live.service';
 import BotonMigue from '../components/BotonMigue';
 import { arranqueDelDocente } from '../services/activities.service';
+import CaminoEnHoy from '../components/CaminoEnHoy';
 import { pendientesDe } from '../services/offline-queue.service';
 import { consultasSinResponder } from '../services/seguimiento.service';
 import { getCommunicationsBySchool, sinLeer } from '../services/communications.service';
@@ -418,6 +419,9 @@ export default function Hoy() {
                     </ol>
                 </section>
             )}
+
+            {/* Su camino Docente Tech (082): nivel, racha y los festejos */}
+            <CaminoEnHoy userId={user.id} />
 
             {/* Lo que necesita atención */}
             {alerts.length > 0 && (

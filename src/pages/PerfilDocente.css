@@ -92,3 +92,6 @@
 @media (max-width: 520px) {
   .pd-cv { width: 100%; justify-content: center; }
 }
+
+/* Al Camino Docente Tech (082) */
+.pd-camino { align-self: flex-start; }

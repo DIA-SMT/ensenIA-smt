@@ -46,6 +46,8 @@ export const cargadores = {
   '/alerts':              () => import('../pages/Alerts'),
   '/settings':            () => import('../pages/Settings'),
   '/perfil':              () => import('../pages/PerfilDocente'),
+  // Camino Docente Tech: medallas, trofeos y nivel (082)
+  '/mi-camino':           () => import('../pages/MiCamino'),
   '/migue':               () => import('../pages/Migue'),
   '/agenda':              () => import('../pages/Agenda'),
   '/ia-lab':              () => import('../pages/IALab'),

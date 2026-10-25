@@ -80,6 +80,7 @@ function App() {
                 {ruta('/migue')}
                 {/* El perfil docente (070): quien da clases o dirige */}
                 {ruta('/perfil', STAFF)}
+                {ruta('/mi-camino', ['docente'])}
 
                 {/* Docente */}
                 {ruta('/hoy', ['docente'])}
