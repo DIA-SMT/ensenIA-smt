@@ -14,7 +14,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   BookMarked, Sparkles, Send, Save, AlertTriangle, Info, CheckCircle, BookOpen,
-  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users, CloudUpload, Plus,
+  NotebookText, Download, Check, Loader2, FileText, AlertCircle, Users, CloudUpload, Plus, WifiOff, RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -83,6 +83,9 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
     // Por qué no se pudo guardar cada fila en rojo
     const [errores, setErrores] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
+    // Sin señal no es "no tiene estudiantes"
+    const [errorCarga, setErrorCarga] = useState(false);
+    const [intento, setIntento] = useState(0);
     const [informeFor, setInformeFor] = useState<string | null>(null);
 
     const assignments = user?.subjects ?? [];
@@ -101,6 +104,7 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
     useEffect(() => {
         if (!assignment) return;
         setLoading(true);
+        setErrorCarga(false);
         Promise.all([
             getEnrolledStudents(assignment.subjectId, assignment.courseId),
             getGradesForCourse(assignment.subjectId, assignment.courseId, YEAR),
@@ -131,8 +135,8 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
             setDrafts(d);
             setSaveStates(Object.fromEntries(enEspera.map(op => [keyOf(op.fila.studentId, op.fila.term), 'pendiente' as SaveState])));
             setErrores({});
-        }).catch(console.error).finally(() => setLoading(false));
-    }, [assignment?.subjectId, assignment?.courseId]);
+        }).catch(err => { console.error(err); setErrorCarga(true); }).finally(() => setLoading(false));
+    }, [assignment?.subjectId, assignment?.courseId, intento]);
 
     // Cuando la cola manda una fila, deja de estar pendiente
     useEffect(() => suscribirCola(() => {
@@ -347,6 +351,13 @@ function BoletinTeclado({ exigeTercero }: { exigeTercero: boolean }) {
 
             {loading ? (
                 <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando el curso…" />
+            ) : errorCarga ? (
+                <EstadoVacio
+                    icono={WifiOff}
+                    titulo="No pudimos cargar el curso"
+                    texto="Puede ser la señal. Probá de nuevo en un momento."
+                    accion={{ etiqueta: 'Reintentar', alTocar: () => setIntento(n => n + 1), icono: RotateCcw }}
+                />
             ) : students.length === 0 ? (
                 <EstadoVacio
                     icono={Users}

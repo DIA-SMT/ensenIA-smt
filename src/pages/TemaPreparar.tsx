@@ -16,7 +16,8 @@ import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  Layers, Lock, Pencil, PenLine, Plus, Presentation, Radio, ScanLine, Unlink, Upload, Users, MessagesSquare } from 'lucide-react';
+  Layers, Lock, Pencil, PenLine, Plus, Presentation, Radio, ScanLine, Unlink, Upload, Users, MessagesSquare, WifiOff, RotateCcw
+} from 'lucide-react';
 import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -74,26 +75,33 @@ export default function TemaPreparar() {
   const [trabajando, setTrabajando] = useState(false);
   // "Al terminar, van a poder…" mientras se escribe (null: no se está editando)
   const [borradorObjetivos, setBorradorObjetivos] = useState<string | null>(null);
+  const [errorCarga, setErrorCarga] = useState(false);
+  const [incompleto, setIncompleto] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!id || !user) return;
     setCargando(true);
+    setErrorCarga(false);
     try {
       const r = await getTema(id);
       if (!r || r.unidad.teacherId !== user.id) { setTema(null); return; }
       setTema(r.tema);
       setUnidad(r.unidad);
+      // Si algo de esto no carga, el tema se muestra igual, pero se avisa (no es "no hay material")
+      let incompleto = false;
       const [mats, acts, materias] = await Promise.all([
-        getMaterialsByClass(id).catch(() => [] as LibraryMaterial[]),
-        getActivitiesByClass(id).catch(() => [] as Activity[]),
+        getMaterialsByClass(id).catch(() => { incompleto = true; return [] as LibraryMaterial[]; }),
+        getActivitiesByClass(id).catch(() => { incompleto = true; return [] as Activity[]; }),
         getSubjects(user.schoolId).catch(() => []),
       ]);
+      setIncompleto(incompleto);
       setMateriales(mats.filter(m => m.teacherId === user.id));
       setActividades(acts);
       setMateriaNombre(materias.find(s => s.id === r.unidad.subjectId)?.name ?? '');
     } catch (err) {
+      // Sin señal no es "no encontramos este tema"
       console.error(err);
-      setTema(null);
+      setErrorCarga(true);
     } finally {
       setCargando(false);
     }
@@ -121,6 +129,13 @@ export default function TemaPreparar() {
 
   if (!user) return null;
   if (cargando) return <div className="tp-contenedor"><Esqueleto tipo="tarjetas" cantidad={3} etiqueta="Cargando el tema…" /></div>;
+  if (errorCarga) return (
+    <div className="tp-contenedor">
+      <EstadoVacio icono={WifiOff} titulo="No pudimos abrir el tema"
+        texto="Puede ser la señal. Probá de nuevo en un momento."
+        accion={{ etiqueta: 'Reintentar', alTocar: () => void cargar(), icono: RotateCcw }} />
+    </div>
+  );
   if (!tema || !unidad) return (
     <div className="tp-contenedor">
       <EstadoVacio icono={BookOpen} titulo="No encontramos este tema"
@@ -256,6 +271,13 @@ export default function TemaPreparar() {
       <Link to={delPlan} className="acts-back"><ArrowLeft size={15} /> Planificación</Link>
 
       {/* ── El tema ── */}
+      {incompleto && (
+        <div className="tp-incompleto" role="alert">
+          <WifiOff size={16} aria-hidden="true" />
+          <span>No pudimos traer todo lo del tema (puede ser la señal): puede faltar material o actividades.</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void cargar()}>Reintentar</button>
+        </div>
+      )}
       <section className="card tp-tema" aria-labelledby="tp-titulo">
         <p className="tp-unidad">{materiaNombre}{curso ? ` · ${curso}` : ''} · {unidad.title}</p>
         <h2 id="tp-titulo">{tema.title}</h2>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, CheckCircle, Clock, ChevronRight, Sparkles,
-  CircleDot, Lock, Unlock, Trash2, QrCode, Search, FileText, PencilLine, ClipboardCheck,
+  CircleDot, Lock, Unlock, Trash2, QrCode, Search, FileText, PencilLine, ClipboardCheck, WifiOff, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -33,6 +33,8 @@ export default function Actividades() {
   const [loading, setLoading] = useState(true);
   const [qrFor, setQrFor] = useState<Activity | null>(null);
   const [search, setSearch] = useState('');
+  // Un error de red no es "todavía no publicaste actividades"
+  const [errorCarga, setErrorCarga] = useState(false);
   const [filter, setFilter] = useState<'todas' | 'abiertas' | 'pendientes' | 'cerradas'>('todas');
   // Materia · curso elegido ("materia|curso"); null = todos, agrupados por curso
   const [curso, setCurso] = useState<string | null>(null);
@@ -60,8 +62,10 @@ export default function Actividades() {
         })
       );
       setActivities(withStats);
+      setErrorCarga(false);
     } catch (err) {
       console.error(err);
+      setErrorCarga(true);
     } finally {
       setLoading(false);
     }
@@ -301,7 +305,16 @@ export default function Actividades() {
 
       {loading && <Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando actividades…" />}
 
-      {!loading && activities.length === 0 && (
+      {!loading && errorCarga && (
+        <EstadoVacio
+          icono={WifiOff}
+          titulo="No pudimos cargar tus actividades"
+          texto="Puede ser la señal. Probá de nuevo en un momento."
+          accion={{ etiqueta: 'Reintentar', alTocar: () => void load(), icono: RotateCcw }}
+        />
+      )}
+
+      {!loading && !errorCarga && activities.length === 0 && (
         <EstadoVacio
           icono={Sparkles}
           titulo="Todavía no publicaste actividades"

@@ -5,7 +5,7 @@ import { useContextoMigue } from '../contexts/MigueContext';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
-  PencilLine, Undo2, Ban,
+  PencilLine, Undo2, Ban, WifiOff
 } from 'lucide-react';
 import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,6 +81,7 @@ export default function ActividadDetalle() {
   const [anotandoPapel, setAnotandoPapel] = useState(false);
   const [anotando, setAnotando] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(false);
   const [checkins, setCheckins] = useState<StudentCheckin[]>([]);
   const [obsCategory, setObsCategory] = useState<ObservationCategory>('dificultad');
   const [obsNote, setObsNote] = useState('');
@@ -97,6 +98,7 @@ export default function ActividadDetalle() {
   const load = async () => {
     if (!id) return;
     setLoading(true);
+    setErrorCarga(false);
     try {
       const act = await getActivityById(id);
       setActivity(act);
@@ -114,6 +116,7 @@ export default function ActividadDetalle() {
       }
     } catch (err) {
       console.error(err);
+      setErrorCarga(true);
     } finally {
       setLoading(false);
     }
@@ -182,6 +185,16 @@ export default function ActividadDetalle() {
     <div className="acts-container">
       <Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Cargando actividad…" />
       <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando entregas…" />
+    </div>
+  );
+  if (errorCarga) return (
+    <div className="acts-container">
+      <EstadoVacio
+        icono={WifiOff}
+        titulo="No pudimos cargar la actividad"
+        texto="Puede ser la señal. Probá de nuevo en un momento."
+        accion={{ etiqueta: 'Reintentar', alTocar: () => void load(), icono: RotateCcw }}
+      />
     </div>
   );
   if (!activity) return (

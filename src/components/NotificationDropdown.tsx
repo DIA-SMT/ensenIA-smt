@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { Bell, Check, CheckCheck, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getPendingGradingCount } from '../services/activities.service';
+import { getPendingGradingCount, EVENTO_CORRECCIONES } from '../services/activities.service';
 import { avisar } from './ui/avisar';
 import EstadoVacio from './ui/EstadoVacio';
 import './NotificationDropdown.css';
@@ -54,7 +54,7 @@ export default function NotificationDropdown() {
                 if (!vivo) return;
                 if (anterior !== null && n > anterior) {
                     const nuevas = n - anterior;
-                    avisar.info(nuevas === 1 ? 'Llegó una entrega nueva' : `Llegaron ${nuevas} entregas nuevas`, 'Están en Corregir, esperando tu nota.');
+                    avisar.info(nuevas === 1 ? 'Llegó una entrega nueva' : `Llegaron ${nuevas} entregas nuevas`, 'Están en «Para corregir», esperando tu nota.');
                 }
                 anterior = n;
                 setPorCorregir(n);
@@ -63,10 +63,12 @@ export default function NotificationDropdown() {
         contar();
         const intervalo = window.setInterval(contar, 120_000);
         document.addEventListener('visibilitychange', contar);
+        window.addEventListener(EVENTO_CORRECCIONES, contar);
         return () => {
             vivo = false;
             window.clearInterval(intervalo);
             document.removeEventListener('visibilitychange', contar);
+            window.removeEventListener(EVENTO_CORRECCIONES, contar);
         };
     }, [isDocente, user]);
     const total = unreadCount + porCorregir;

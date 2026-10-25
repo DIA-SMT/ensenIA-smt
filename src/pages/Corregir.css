@@ -306,3 +306,8 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* En pantallas táctiles, las devoluciones rápidas se tocan con el dedo */
+@media (pointer: coarse) {
+  .corr-quick-btn { min-height: var(--touch, 44px); padding: 8px 14px; font-size: 0.875rem; }
+}

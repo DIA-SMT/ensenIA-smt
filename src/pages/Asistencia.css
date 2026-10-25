@@ -222,12 +222,15 @@
 .asis-action.on.tarde { color: var(--warning); border-color: var(--warning); background: rgba(251, 191, 36, 0.12); }
 .asis-action.on.justificado { color: #A5B4FC; border-color: #818CF8; background: var(--indigo-glow); }
 
-/* ── Barra de guardar (fija abajo) ── */
+/* ── Barra de guardar (pegada abajo) ──
+   sticky y no fixed: .animate-in deja un transform en la página y con fixed la
+   barra quedaba al final de la lista. Arriba de la barra inferior del celular. */
 .asis-save-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: sticky;
+  bottom: calc(var(--bottombar-height, 64px) + 20px + env(safe-area-inset-bottom));
+  margin-top: var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -239,19 +242,17 @@
   z-index: 50;
 }
 
-@media (min-width: 900px) {
-  .asis-save-bar {
-    left: auto;
-    right: var(--space-6);
-    bottom: var(--space-5);
-    max-width: 420px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-  }
+@media (min-width: 861px) {
+  .asis-save-bar { bottom: var(--space-5); margin-left: auto; max-width: 420px; }
+}
+
+/* Con el dedo: 44 px */
+@media (pointer: coarse) {
+  .asis-action { width: var(--touch, 44px); height: var(--touch, 44px); }
+  .asis-bulk-btn { min-height: var(--touch, 44px); padding: 8px 14px; font-size: 0.875rem; }
 }
 
 @media (max-width: 520px) {
-  .asis-action { width: 36px; height: 36px; }
   .asis-name { font-size: 13.5px; }
   .asis-current { display: none; }
 }

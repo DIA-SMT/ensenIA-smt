@@ -9,8 +9,8 @@
  * hoy, y se envía sola cuando vuelve la conexión (cola offline).
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
     CheckSquare, Check, X, Clock, FileText, Save, Loader2,
     ArrowLeft, Radio, Users, CloudUpload,
@@ -27,6 +27,7 @@ import {
 } from '../services/offline-queue.service';
 import { haySenial } from '../lib/conexion';
 import { useSinGuardar } from '../lib/sinGuardar';
+import { confirmar } from '../components/ui/avisar';
 import type { Student, Subject } from '../types';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -35,8 +36,7 @@ import './Asistencia.css';
 const CYCLE: AttendanceStatus[] = ['presente', 'ausente', 'tarde', 'justificado'];
 
 export default function Asistencia() {
-    const { user } = useAuth();
-    const navigate = useNavigate();
+    const { user } = useAuth();
     const [searchParams] = useSearchParams();
 
     const [assignmentIdx, setAssignmentIdx] = useState(0);
@@ -85,8 +85,11 @@ export default function Asistencia() {
         if (idx >= 0) setAssignmentIdx(idx);
     }, [searchParams, assignments.length]);
 
+    const pedidoRef = useRef(0);
     const load = useCallback(async () => {
-        if (!user || !current) return;
+        // Sin cursos asignados no hay nada que cargar (antes quedaba "cargando" para siempre)
+        if (!user || !current) { setLoading(false); return; }
+        const yo = ++pedidoRef.current;
         setLoading(true);
         setSaved(false);
         setSucio(false);
@@ -98,6 +101,8 @@ export default function Asistencia() {
                 // Sin señal no hubo clase en vivo que consultar (y esperaría al tope de la red)
                 haySenial() ? getLiveParticipants(current.courseId, today) : Promise.resolve([] as string[]),
             ]);
+            // Si mientras tanto se pidió otro curso, esta respuesta ya no vale
+            if (yo !== pedidoRef.current) return;
             setStudents(studs);
             setEnVivo(new Set(liveIds));
 
@@ -129,11 +134,12 @@ export default function Asistencia() {
             }
         } catch (err) {
             console.error(err);
+            if (yo !== pedidoRef.current) return;
             setError(haySenial()
                 ? 'No se pudo cargar la lista del curso.'
                 : 'Sin conexión, y la lista de este curso no está guardada en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y después funciona sin conexión.');
         } finally {
-            setLoading(false);
+            if (yo === pedidoRef.current) setLoading(false);
         }
     }, [user, current?.courseId, current?.subjectId, today]);
 
@@ -206,9 +212,10 @@ export default function Asistencia() {
 
     return (
         <div className="asis-container animate-in">
-            <button className="asis-back" onClick={() => navigate('/hoy')}>
+            {/* Enlace (no botón): si hay marcas sin guardar, pregunta antes de salir */}
+            <Link to="/hoy" className="asis-back">
                 <ArrowLeft size={15} /> Volver a Hoy
-            </button>
+            </Link>
 
             <div className="card asis-header">
                 <div className="asis-header-main">
@@ -224,7 +231,17 @@ export default function Asistencia() {
                     <select
                         className="form-select asis-course-select"
                         value={assignmentIdx}
-                        onChange={e => setAssignmentIdx(Number(e.target.value))}
+                        aria-label="Materia y curso"
+                        onChange={async e => {
+                            const idx = Number(e.target.value);
+                            // Cambiar de curso descarta lo marcado: se pregunta, como en la Libreta
+                            if (sucio && !(await confirmar({
+                                titulo: 'Tenés marcas sin guardar',
+                                mensaje: 'Si cambiás de curso, lo que marcaste se pierde. Guardá la asistencia primero.',
+                                accion: 'Cambiar igual',
+                            }))) return;
+                            setAssignmentIdx(idx);
+                        }}
                     >
                         {assignments.map((a, i) => (
                             <option key={i} value={i}>
@@ -253,7 +270,14 @@ export default function Asistencia() {
                 </div>
             )}
 
-            {loading ? (
+            {assignments.length === 0 ? (
+                <EstadoVacio
+                    icono={Users}
+                    titulo="Todavía no tenés cursos asignados"
+                    texto="Dirección te asigna tus materias y cursos; cuando lo haga, pasás lista desde acá."
+                    accion={{ etiqueta: 'Volver a Hoy', a: '/hoy', icono: ArrowLeft }}
+                />
+            ) : loading ? (
                 <Esqueleto tipo="filas" cantidad={6} etiqueta="Cargando el curso…" />
             ) : students.length === 0 ? (
                 <EstadoVacio
@@ -274,7 +298,10 @@ export default function Asistencia() {
                         </div>
                         <div className="asis-bulk">
                             <button className="asis-bulk-btn" onClick={() => markAll('presente')}>Todos presentes</button>
-                            <button className="asis-bulk-btn" onClick={() => markAll('ausente')}>Todos ausentes</button>
+                            <button className="asis-bulk-btn" onClick={async () => {
+                                // Sin deshacer: se confirma
+                                if (await confirmar({ titulo: '¿Marcar a todos ausentes?', mensaje: 'Se cambia la marca de todo el curso.', accion: 'Marcar ausentes' })) markAll('ausente');
+                            }}>Todos ausentes</button>
                         </div>
                     </div>
 
@@ -296,19 +323,19 @@ export default function Asistencia() {
                                     <div className="asis-actions">
                                         <button
                                             className={`asis-action ${st === 'presente' ? 'on presente' : ''}`}
-                                            title="Presente" onClick={() => setStatus(s.id, 'presente')}
+                                            title="Presente" aria-label={`${s.firstName} ${s.lastName}: presente`} aria-pressed={st === 'presente'} onClick={() => setStatus(s.id, 'presente')}
                                         ><Check size={15} /></button>
                                         <button
                                             className={`asis-action ${st === 'ausente' ? 'on ausente' : ''}`}
-                                            title="Ausente" onClick={() => setStatus(s.id, 'ausente')}
+                                            title="Ausente" aria-label={`${s.firstName} ${s.lastName}: ausente`} aria-pressed={st === 'ausente'} onClick={() => setStatus(s.id, 'ausente')}
                                         ><X size={15} /></button>
                                         <button
                                             className={`asis-action ${st === 'tarde' ? 'on tarde' : ''}`}
-                                            title="Llegó tarde" onClick={() => setStatus(s.id, 'tarde')}
+                                            title="Llegó tarde" aria-label={`${s.firstName} ${s.lastName}: llegó tarde`} aria-pressed={st === 'tarde'} onClick={() => setStatus(s.id, 'tarde')}
                                         ><Clock size={15} /></button>
                                         <button
                                             className={`asis-action ${st === 'justificado' ? 'on justificado' : ''}`}
-                                            title="Justificado" onClick={() => setStatus(s.id, 'justificado')}
+                                            title="Justificado" aria-label={`${s.firstName} ${s.lastName}: justificado`} aria-pressed={st === 'justificado'} onClick={() => setStatus(s.id, 'justificado')}
                                         ><FileText size={15} /></button>
                                     </div>
                                 </div>

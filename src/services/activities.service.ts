@@ -148,11 +148,13 @@ export async function getActivitiesByTeacher(teacherId: string): Promise<Activit
 }
 
 export async function getActivityById(id: string): Promise<Activity | null> {
-  const { data } = await supabase
+  // Un error de red no es "no existe": se avisa, no se dice que la borraron
+  const { data, error } = await supabase
     .from('activities')
     .select('*, subjects(name), courses(name)')
     .eq('id', id)
     .maybeSingle();
+  if (error) throw new ServiceError(error.message, error);
   return data ? mapActivity(data) : null;
 }
 
@@ -237,6 +239,9 @@ export async function setSubmissionReaction(submissionId: string, reaction: stri
   if (error) throw error;
 }
 
+/** Se corrigió algo: la campanita vuelve a contar (NotificationDropdown) */
+export const EVENTO_CORRECCIONES = 'estudia:correcciones';
+
 export async function gradeSubmission(
   submissionId: string,
   score: number,
@@ -255,6 +260,7 @@ export async function gradeSubmission(
     } as never)
     .eq('id', submissionId);
   if (error) throw new ServiceError(error.message, error);
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_CORRECCIONES));
 }
 
 /**

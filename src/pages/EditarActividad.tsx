@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useContextoMigue } from '../contexts/MigueContext';
-import { ArrowLeft, Save, Send, Sparkles, Loader2, Lock, FileText, Scale } from 'lucide-react';
+import { ArrowLeft, Save, Send, Sparkles, Loader2, Lock, FileText, Scale, WifiOff, RotateCcw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PartesEditor from '../components/PartesEditor';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -86,6 +86,9 @@ export default function EditarActividad() {
 
   const [cargando, setCargando] = useState(true);
   const [noEsta, setNoEsta] = useState(false);
+  // Sin señal: ni "no encontramos" ni el primer curso por las dudas (publicaría en otro)
+  const [errorCarga, setErrorCarga] = useState(false);
+  const [intento, setIntento] = useState(0);
   const [original, setOriginal] = useState<Activity | null>(null);
   const [entregas, setEntregas] = useState(0);
   const [materias, setMaterias] = useState<Record<string, Subject>>({});
@@ -159,7 +162,7 @@ export default function EditarActividad() {
         if (p) setPedido(p.slice(0, 300));
         const temaId = searchParams.get('tema');
         if (temaId) {
-          const r = await getTema(temaId).catch(() => null);
+          const r = await getTema(temaId);
           if (!vigente) return;
           if (r && r.unidad.teacherId === user.id) {
             setAsig({ subjectId: r.unidad.subjectId, courseId: r.unidad.courseId });
@@ -173,15 +176,15 @@ export default function EditarActividad() {
         if (a) setAsig({ subjectId: a.subjectId, courseId: a.courseId });
       } catch (err) {
         console.error(err);
-        if (vigente) setNoEsta(true);
+        if (vigente) setErrorCarga(true);
       } finally {
         if (vigente) setCargando(false);
       }
     })();
     return () => { vigente = false; };
-    // Solo al entrar: los parámetros de la URL son el punto de partida
+    // Solo al entrar (y al reintentar): los parámetros de la URL son el punto de partida
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, user?.id]);
+  }, [id, user?.id, intento]);
 
   // Los temas de esa materia y curso, de este año
   useEffect(() => {
@@ -319,7 +322,8 @@ export default function EditarActividad() {
       } else {
         avisar.exito(original.status === 'draft' ? 'Borrador guardado' : 'Cambios guardados',
           bloqueado ? 'Lo que se corrige solo (opción múltiple) ya se volvió a corregir. Las notas que pusiste vos no cambian: si cambiaste la correcta o los puntos, revisalas.' : undefined);
-        const fresca = await getActivityById(original.id);
+        // Ya se guardó: si releerla falla, no es un error de guardado
+        const fresca = await getActivityById(original.id).catch(() => null);
         if (fresca) setOriginal(fresca);
       }
     } catch (err) {
@@ -370,6 +374,13 @@ export default function EditarActividad() {
 
   if (!user) return null;
   if (cargando) return <div className="ea-contenedor"><Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando…" /></div>;
+  if (errorCarga) return (
+    <div className="ea-contenedor">
+      <EstadoVacio icono={WifiOff} titulo="No pudimos abrir esto"
+        texto="Puede ser la señal. Probá de nuevo en un momento."
+        accion={{ etiqueta: 'Reintentar', alTocar: () => { setErrorCarga(false); setCargando(true); setIntento(n => n + 1); }, icono: RotateCcw }} />
+    </div>
+  );
   if (noEsta) return (
     <div className="ea-contenedor">
       <EstadoVacio icono={FileText} titulo="No encontramos esta actividad"
@@ -412,7 +423,7 @@ export default function EditarActividad() {
           </p>
         )}
 
-        {!original && asignaciones.length > 1 && !searchParams.get('tema') && (
+        {!original && asignaciones.length > 1 && !classId && (
           <div className="em-field">
             <label htmlFor="ea-para">Para</label>
             <select id="ea-para" className="form-select"

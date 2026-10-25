@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ClipboardCheck, Check, ChevronDown, ChevronUp, Loader2, ArrowLeft,
-    Sparkles, PartyPopper, X,
+    Sparkles, PartyPopper, X, WifiOff, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getPendingGrading, gradeSubmission, setSubmissionReaction, porPartes, type PendingGrading } from '../services/activities.service';
@@ -21,6 +21,7 @@ import { sugerirDevolucion, type Devolucion } from '../components/devolucion-ia'
 import { avisar, confirmar } from '../components/ui/avisar';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
+import { useSinGuardar } from '../lib/sinGuardar';
 import './Corregir.css';
 
 const QUICK_FEEDBACK = ['👏 Excelente', '👍 Muy bien', '💪 Seguí así', '🤝 Hablemos'];
@@ -51,6 +52,12 @@ export default function Corregir() {
     const [expanded, setExpanded] = useState<string | null>(null);
     const [scores, setScores] = useState<Record<string, string>>({});
     const [feedbacks, setFeedbacks] = useState<Record<string, string>>({});
+    // Un error de red no es "estás al día"
+    const [errorCarga, setErrorCarga] = useState(false);
+    // Entregas a las que el docente ya les escribió o les cambió la nota sin guardar
+    const [tocadas, setTocadas] = useState<Set<string>>(new Set());
+    const tocar = (id: string) => setTocadas(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
+    useSinGuardar('corregir', tocadas.size > 0);
     const [savingId, setSavingId] = useState<string | null>(null);
     const [doneCount, setDoneCount] = useState(0);
     // Devolución sugerida por IA: cuál está escribiendo, qué notas vinieron
@@ -70,6 +77,7 @@ export default function Corregir() {
     const load = useCallback(async () => {
         if (!user) return;
         setLoading(true);
+        setErrorCarga(false);
         try {
             const list = await getPendingGrading(user.id);
             setPending(list);
@@ -80,8 +88,10 @@ export default function Corregir() {
             });
             setScores(preset);
             if (list.length > 0) setExpanded(list[0].submissionId);
+            setTocadas(new Set());
         } catch (err) {
             console.error(err);
+            setErrorCarga(true);
         } finally {
             setLoading(false);
         }
@@ -96,6 +106,12 @@ export default function Corregir() {
         if (raw === undefined || raw === '' || savingId) return;
         const score = Number(raw);
         if (Number.isNaN(score)) return;
+        // El máximo del input no frena lo que se tipea: un 70 sobre 10 ensuciaba la libreta
+        const tope = p.points ?? 100;
+        if (score < 0 || score > tope) {
+            avisar.error(`La nota va de 0 a ${tope}`, `Revisá la de ${p.studentName}.`);
+            return;
+        }
 
         setSavingId(p.submissionId);
         try {
@@ -104,9 +120,13 @@ export default function Corregir() {
             setPending(prev => {
                 const next = prev.filter(x => x.submissionId !== p.submissionId);
                 const idx = prev.findIndex(x => x.submissionId === p.submissionId);
-                setExpanded(next[idx]?.submissionId ?? next[0]?.submissionId ?? null);
+                const siguiente = next[idx]?.submissionId ?? next[0]?.submissionId ?? null;
+                setExpanded(siguiente);
+                // Directo a la nota de la que sigue: un toque menos por entrega
+                if (siguiente) requestAnimationFrame(() => document.getElementById(`corr-nota-${siguiente}`)?.focus());
                 return next;
             });
+            setTocadas(prev => { const s = new Set(prev); s.delete(p.submissionId); return s; });
             setDoneCount(n => n + 1);
         } catch (err) {
             console.error(err);
@@ -117,12 +137,19 @@ export default function Corregir() {
     };
 
     const handleQuickFeedback = (p: PendingGrading, text: string) => {
-        setFeedbacks(prev => ({ ...prev, [p.submissionId]: text }));
+        // Si ya escribió algo propio, se suma: no se pisa
+        setFeedbacks(prev => {
+            const actual = (prev[p.submissionId] ?? '').trim();
+            const propio = actual && !QUICK_FEEDBACK.includes(actual);
+            return { ...prev, [p.submissionId]: propio ? `${actual} ${text}` : text };
+        });
+        tocar(p.submissionId);
         setSubmissionReaction(p.submissionId, text).catch(console.error);
     };
 
     // ── Devolución sugerida por IA (borrador: nunca se guarda sola) ──
     const aplicarSugerencia = (id: string, d: Devolucion) => {
+        tocar(id);
         setFeedbacks(prev => ({ ...prev, [id]: d.devolucion }));
         if (d.puntaje != null) {
             setScores(prev => ({ ...prev, [id]: String(d.puntaje) }));
@@ -270,7 +297,16 @@ export default function Corregir() {
                 </div>
             )}
 
-            {!loading && pending.length === 0 && (
+            {!loading && errorCarga && (
+                <EstadoVacio
+                    icono={WifiOff}
+                    titulo="No pudimos traer lo que tenés para corregir"
+                    texto="Puede ser la señal. Probá de nuevo en un momento."
+                    accion={{ etiqueta: 'Reintentar', alTocar: () => void load(), icono: RotateCcw }}
+                />
+            )}
+
+            {!loading && !errorCarga && pending.length === 0 && (
                 <EstadoVacio
                     icono={PartyPopper}
                     titulo={doneCount > 0 ? '¡Terminaste!' : 'Estás al día'}
@@ -361,11 +397,13 @@ export default function Corregir() {
                                     {/* Nota + devolución */}
                                     <div className="corr-grade">
                                         <div className="corr-grade-row">
-                                            <label>
+                                            <label htmlFor={`corr-nota-${p.submissionId}`}>
                                                 Nota {p.points != null && <span className="text-subtle">(sobre {p.points})</span>}
                                             </label>
                                             <input
+                                                id={`corr-nota-${p.submissionId}`}
                                                 type="number"
+                                                inputMode="decimal"
                                                 className="corr-score"
                                                 min={0}
                                                 max={p.points ?? 100}
@@ -373,6 +411,7 @@ export default function Corregir() {
                                                 onChange={e => {
                                                     setScores(prev => ({ ...prev, [p.submissionId]: e.target.value }));
                                                     setNotaSugerida(prev => ({ ...prev, [p.submissionId]: false }));
+                                                    tocar(p.submissionId);
                                                 }}
                                                 onKeyDown={e => { if (e.key === 'Enter') handleGrade(p); }}
                                             />
@@ -420,7 +459,7 @@ export default function Corregir() {
                                             aria-busy={sugiriendoId === p.submissionId}
                                             placeholder="Devolución para el estudiante (opcional)"
                                             value={feedbacks[p.submissionId] ?? ''}
-                                            onChange={e => setFeedbacks(prev => ({ ...prev, [p.submissionId]: e.target.value }))}
+                                            onChange={e => { setFeedbacks(prev => ({ ...prev, [p.submissionId]: e.target.value })); tocar(p.submissionId); }}
                                         />
                                     </div>
                                 </div>

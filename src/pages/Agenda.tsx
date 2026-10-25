@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { X, Users, MapPin, Wand2, CheckSquare, Plus, Pencil, Trash2, CalendarDays, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Users, MapPin, Wand2, CheckSquare, Plus, Pencil, Trash2, CalendarDays, Loader2, CheckCircle2, ArrowRight, WifiOff, RotateCcw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getScheduleByTeacher, crearBloques, actualizarBloque, borrarBloque, type BloqueNuevo } from '../services/schedule.service';
 import { getSubjects } from '../services/subjects.service';
@@ -64,21 +64,24 @@ export default function Agenda() {
     const [editando, setEditando] = useState<string | null>(null);
     const [form, setForm] = useState<Formulario | null>(null);
     const [guardando, setGuardando] = useState(false);
+    const [errorCarga, setErrorCarga] = useState(false);
+    const [intento, setIntento] = useState(0);
 
     const asignaciones = user?.subjects ?? [];
 
     useEffect(() => {
         if (!user) return;
+        setErrorCarga(false);
         getScheduleByTeacher(user.id).then(setBloques).catch(err => {
             console.error(err);
-            avisar.error('No se pudo cargar tu horario', 'Revisá la conexión y probá de nuevo.');
+            setErrorCarga(true);
         }).finally(() => setCargando(false));
         getSubjects(user.schoolId).then(list => {
             const map: Record<string, Subject> = {};
             list.forEach(s => { map[s.id] = s; });
             setMaterias(map);
         }).catch(console.error);
-    }, [user]);
+    }, [user, intento]);
 
     // Rango de horas de la grilla: el habitual, estirado si hay clases antes o después
     const [desde, hasta] = useMemo(() => {
@@ -221,6 +224,13 @@ export default function Agenda() {
                     icono={CalendarDays}
                     titulo="Todavía no tenés materias asignadas"
                     texto="Para cargar tu horario, dirección tiene que asignarte tus materias y cursos."
+                />
+            ) : errorCarga ? (
+                <EstadoVacio
+                    icono={WifiOff}
+                    titulo="No pudimos cargar tu horario"
+                    texto="Puede ser la señal. Tu horario sigue guardado: probá de nuevo en un momento."
+                    accion={{ etiqueta: 'Reintentar', alTocar: () => { setCargando(true); setIntento(n => n + 1); }, icono: RotateCcw }}
                 />
             ) : bloques.length === 0 ? (
                 <EstadoVacio

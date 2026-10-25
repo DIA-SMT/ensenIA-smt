@@ -28,6 +28,8 @@ import { extractQuestions } from '../services/documents.service';
 import { createActivity } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import { confirmar } from '../components/ui/avisar';
+import { useSinGuardar } from '../lib/sinGuardar';
 import type { Subject, ActivityQuestion, SubjectAssignment } from '../types';
 import ElegirNivelIA from '../components/ElegirNivelIA';
 import type { NivelIA } from '../lib/nivelIA';
@@ -95,6 +97,9 @@ export default function ActividadRapida() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, claveCurso]);
 
+  // Lo generado o escrito se pierde si se sale antes de publicar
+  useSinGuardar('actividad-rapida', Boolean(content.trim()) && !publishedId);
+
   if (!user) return null;
 
   const subjectName = assignment ? (subjectsMap[assignment.subjectId]?.name ?? '') : '';
@@ -113,6 +118,12 @@ export default function ActividadRapida() {
   // ── Generar con IA (streaming) ──
   const handleGenerate = async () => {
     if (!topic.trim() || !assignment || generating) return;
+    // Regenerar reemplaza lo que ya hay (y lo que el docente le cambió)
+    if (content.trim() && !(await confirmar({
+      titulo: '¿Reemplazar la actividad?',
+      mensaje: 'La IA arma una nueva y se pierde la que tenés, con lo que le cambiaste.',
+      accion: 'Reemplazar',
+    }))) return;
     setGenerating(true);
     setError('');
     setContent('');

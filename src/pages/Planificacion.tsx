@@ -100,7 +100,8 @@ export default function Planificacion() {
     getSubjects(user.schoolId)
       .then(lista => setMaterias(Object.fromEntries(lista.map(s => [s.id, s]))))
       .catch(console.error);
-    getScheduleByTeacher(user.id).then(setHorario).catch(() => setHorario([]));
+    // Si no cargó, no se dice "cargá tu horario" (no se sabe): queda sin aviso
+    getScheduleByTeacher(user.id).then(setHorario).catch(() => setHorario(null));
   }, [user]);
 
   // Cada carga lleva un número: si el docente cambia de curso mientras otra
@@ -295,7 +296,7 @@ export default function Planificacion() {
       </section>
 
       {/* La memoria del docente viene prendida: se avisa una vez */}
-      {!avisoMemoriaVisto && (
+      {!avisoMemoriaVisto && Boolean(unidades?.length) && (
         <div className="pl-aviso pl-aviso-info" role="note">
           <Brain size={16} aria-hidden="true" />
           <span>La IA va a ir anotando cómo trabajás (el formato de tus materiales, lo que le corregís) para no pedírtelo de nuevo. Solo lo ves vos; lo borrás o lo apagás en Ajustes.</span>
@@ -311,10 +312,10 @@ export default function Planificacion() {
         <div className="pl-aviso" role="note">
           <CalendarClock size={16} aria-hidden="true" />
           <span>Para que salgan las fechas, cargá tu horario de {materiaNombre} en {asignacion?.courseName}.</span>
-          <Link to="/mis-clases" className="btn btn-secondary btn-sm">Cargar mi horario</Link>
+          <Link to="/agenda?volver=/planificacion" className="btn btn-secondary btn-sm">Cargar mi horario</Link>
         </div>
       )}
-      {sinTrimestres && (
+      {sinTrimestres && Boolean(unidades?.length) && (
         <div className="pl-aviso" role="note">
           <AlertTriangle size={16} aria-hidden="true" />
           <span>Dirección todavía no cargó los trimestres de {anio}.</span>

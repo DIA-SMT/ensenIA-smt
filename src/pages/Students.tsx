@@ -5,7 +5,7 @@ import { coincideBusqueda } from '../services/busqueda.service';
 import {
     Search, AlertTriangle, X, HeartPulse, PencilLine, MessagesSquare,
     Users as UsersIcon, CalendarPlus, CheckCircle, Sparkles, Copy, Medal, Flame,
-    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload, ArrowUpRight,
+    BookOpenCheck, FileDown, Trash2, ArrowUpDown, Award, Plus, CloudUpload, ArrowUpRight, WifiOff, RotateCcw
 } from 'lucide-react';
 import { avisarADireccionPorAlumno, TEMAS_AVISO } from '../services/alerts.service';
 import { useAuth } from '../contexts/AuthContext';
@@ -217,16 +217,19 @@ export default function Students() {
 
     // Hasta que llega la lista no se dice "no hay estudiantes"
     const [cargandoLista, setCargandoLista] = useState(true);
+    // Un error de red no es "todavía no tenés estudiantes" (y no hay que llamar a dirección)
+    const [errorLista, setErrorLista] = useState(false);
+    const [intentoLista, setIntentoLista] = useState(0);
 
     useEffect(() => {
         if (!user) return;
         const courseIds = user.subjects?.map(s => s.courseId) ?? [];
         getStudentsByTeacher(courseIds)
-            .then(setAllStudents)
-            .catch(console.error)
+            .then(l => { setAllStudents(l); setErrorLista(false); })
+            .catch(err => { console.error(err); setErrorLista(true); })
             .finally(() => setCargandoLista(false));
         getWellbeingSignals().then(setSignals).catch(console.error);
-    }, [user]);
+    }, [user, intentoLista]);
 
     // Enlace directo: /students?student=<id> (desde una alerta) o
     // /students?estudiante=<id> (desde el buscador) abre la ficha. Solo si el
@@ -609,7 +612,16 @@ export default function Students() {
 
                 {cargandoLista && <Esqueleto tipo="tabla" cantidad={6} etiqueta="Cargando estudiantes…" className="stu-vacio" />}
 
-                {!cargandoLista && allStudents.length === 0 && (
+                {!cargandoLista && errorLista && (
+                    <EstadoVacio
+                        icono={WifiOff}
+                        titulo="No pudimos cargar tus estudiantes"
+                        texto="Puede ser la señal. Probá de nuevo en un momento."
+                        accion={{ etiqueta: 'Reintentar', alTocar: () => { setCargandoLista(true); setIntentoLista(n => n + 1); }, icono: RotateCcw }}
+                    />
+                )}
+
+                {!cargandoLista && !errorLista && allStudents.length === 0 && (
                     <EstadoVacio
                         icono={UsersIcon}
                         titulo="Todavía no tenés estudiantes"

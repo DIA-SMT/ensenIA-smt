@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   MessagesSquare, Megaphone, CalendarClock, Plus, Send, Loader2, ArrowLeft, Archive, ArchiveRestore,
-  ShieldCheck, Eye, Search, X, Inbox, Reply, Check, ClipboardList,
+  ShieldCheck, Eye, Search, X, Inbox, Reply, Check, ClipboardList, WifiOff, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -72,14 +72,18 @@ function VistaConversacion({ id, yo, alVolver, alCambiar }: { id: string; yo: st
   const finRef = useRef<HTMLDivElement>(null);
   const cantidad = useRef(0);
 
+  // La primera carga falló (sin señal): no es "no encontramos esta conversación"
+  const [errorConv, setErrorConv] = useState(false);
   const cargar = useCallback(async () => {
     try {
       const c = await verConversacion(id);
       setConv(c);
+      setErrorConv(false);
       if (c?.soyParticipante && c.sinLeer) marcarLeida(id).catch(console.error);
     } catch (err) {
       console.error(err);
-      setConv(prev => (prev === undefined ? null : prev));
+      // Solo pesa si todavía no se había visto nada (si ya se vio, queda lo de antes)
+      setErrorConv(true);
     }
   }, [id]);
 
@@ -99,6 +103,12 @@ function VistaConversacion({ id, yo, alVolver, alCambiar }: { id: string; yo: st
     }
   }, [conv?.mensajes.length]);
 
+  if (conv === undefined && errorConv) return (
+    <div className="msj-vista">
+      <EstadoVacio compacto icono={WifiOff} titulo="No pudimos abrir la conversación" texto="Puede ser la señal. Probá de nuevo en un momento."
+        accion={{ etiqueta: 'Reintentar', alTocar: () => void cargar(), icono: RotateCcw }} />
+    </div>
+  );
   if (conv === undefined) return <div className="msj-vista"><Esqueleto tipo="filas" cantidad={4} etiqueta="Cargando la conversación…" /></div>;
   if (conv === null) return <div className="msj-vista"><EstadoVacio compacto icono={MessagesSquare} titulo="No encontramos esta conversación" texto="Puede que no participes en ella." /></div>;
 
@@ -189,7 +199,13 @@ function NuevoMensaje({ inicial, alCerrar, alCrear }: {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { misContactos().then(setContactos).catch(() => setContactos([])); }, []);
+  // Sin señal no es "no hay a quién escribirle"
+  const [errorContactos, setErrorContactos] = useState(false);
+  const [intentoContactos, setIntentoContactos] = useState(0);
+  useEffect(() => {
+    setErrorContactos(false);
+    misContactos().then(setContactos).catch(() => { setErrorContactos(true); setContactos([]); });
+  }, [intentoContactos]);
 
   const elegidos = (contactos ?? []).filter(c => para.includes(c.id));
   const sugeridos = (contactos ?? [])
@@ -238,7 +254,13 @@ function NuevoMensaje({ inicial, alCerrar, alCrear }: {
         </label>
         {contactos === null ? <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando contactos…" /> : (
           <ul className="msj-contactos" aria-label="Personas a las que les podés escribir">
-            {sugeridos.length === 0 && <li className="msj-vacio">{contactos.length === 0 ? 'Todavía no hay a quién escribirle.' : 'Nadie coincide con la búsqueda.'}</li>}
+            {sugeridos.length === 0 && (
+              <li className="msj-vacio">
+                {errorContactos
+                  ? <>No pudimos cargar tus contactos. <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setContactos(null); setIntentoContactos(n => n + 1); }}>Reintentar</button></>
+                  : contactos.length === 0 ? 'Todavía no hay a quién escribirle.' : 'Nadie coincide con la búsqueda.'}
+              </li>
+            )}
             {sugeridos.map(c => (
               <li key={c.id}>
                 <button onClick={() => { setPara(p => [...p, c.id]); setBuscar(''); }}>
