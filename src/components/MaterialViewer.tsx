@@ -158,7 +158,8 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
           {error && <div className="em-error">{error}</div>}
           {cargando && <Cargando texto="Abriendo el material…" />}
 
-          {videoId && (
+          {/* Escondido no sigue sonando: el video vuelve a empezar */}
+          {videoId && !oculto && (
             <div className="mv-video">
               <iframe src={youTubeEmbedUrl(videoId)} title={material.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -212,6 +213,7 @@ export default function MaterialViewer({ material, onClose, onDescargar, proyect
               mazo={deck}
               notas={verNotas && !proyectar}
               grande={proyectar}
+              teclado={!oculto}
               pie={material.subjectName || undefined}
             />
           )}

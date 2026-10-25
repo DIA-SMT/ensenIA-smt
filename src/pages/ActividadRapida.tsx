@@ -43,6 +43,8 @@ export default function ActividadRapida() {
   const [assignmentIdx, setAssignmentIdx] = useState(0);
 
   const [topic, setTopic] = useState('');
+  // El tema del programa que se tocó en las sugerencias (dos temas pueden llamarse igual)
+  const [temaElegido, setTemaElegido] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [editing, setEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -97,6 +99,11 @@ export default function ActividadRapida() {
 
   // Sugerencias: lo que sigue sin dar primero; si ya se dio todo, lo último.
   const listaTemas = temas?.clave === claveCurso ? temas.lista : [];
+  // Si la actividad es de un tema del programa, queda en ese tema (y se ve en él). Escrito
+  // a mano, solo si un único tema se llama así
+  const mismoTitulo = listaTemas.filter(t => t.clase === topic.trim());
+  const temaDelPrograma = (temaElegido && listaTemas.some(t => t.id === temaElegido) ? temaElegido : null)
+    ?? (mismoTitulo.length === 1 ? mismoTitulo[0].id : null);
   const pendientes = listaTemas.filter(t => !t.dada);
   const sugerencias = (pendientes.length ? pendientes : [...listaTemas].reverse()).slice(0, MAX_SUGERENCIAS);
 
@@ -190,7 +197,7 @@ export default function ActividadRapida() {
         schoolId: user.schoolId,
         sourceTool: 'act',
         // Si el tema es uno del programa, la actividad queda en ese tema (y se ve en él)
-        classId: listaTemas.find(t => t.clase === topic.trim())?.id ?? null,
+        classId: temaDelPrograma,
         dueDate: dueDateIso(),
         points: points ? Number(points) : null,
       });
@@ -203,7 +210,7 @@ export default function ActividadRapida() {
     }
   };
 
-  const crearOtra = () => { setPublishedId(null); setTopic(''); setContent(''); setQuestions([]); setEditing(false); };
+  const crearOtra = () => { setPublishedId(null); setTopic(''); setTemaElegido(null); setContent(''); setQuestions([]); setEditing(false); };
 
   // ── Publicada ──
   if (publishedId) {
@@ -304,7 +311,7 @@ export default function ActividadRapida() {
             type="text"
             placeholder='Ej: "suma de vectores con ejemplos de la vida real"'
             value={topic}
-            onChange={e => setTopic(e.target.value)}
+            onChange={e => { setTopic(e.target.value); setTemaElegido(null); }}
             onKeyDown={e => { if (e.key === 'Enter') handleGenerate(); }}
           />
 
@@ -319,9 +326,9 @@ export default function ActividadRapida() {
                   <button
                     key={`${t.unidad}-${t.clase}`}
                     type="button"
-                    className={`ar-sugerencia${topic === t.clase ? ' elegida' : ''}`}
-                    aria-pressed={topic === t.clase}
-                    onClick={() => setTopic(t.clase)}
+                    className={`ar-sugerencia${temaElegido === t.id ? ' elegida' : ''}`}
+                    aria-pressed={temaElegido === t.id}
+                    onClick={() => { setTopic(t.clase); setTemaElegido(t.id); }}
                     title={t.unidad}
                   >
                     {t.clase}

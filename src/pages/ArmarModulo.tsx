@@ -198,6 +198,8 @@ export default function ArmarModulo() {
 
     const baseMaterial = materials.find(m => m.id === baseMaterialId) ?? null;
     const baseTema = temas.find(t => t.id === temaId) ?? null;
+    /** El tema al que vuelve todo: solo si la clase sale de ese tema (no de un material o un tema nuevo) */
+    const temaDeLaClase = origen === 'tema' && baseTema ? baseTema.id : null;
     // Dónde queda guardado lo que se genera, para no volver a generarlo:
     //  · de un material de la biblioteca → en ese mismo material (antes se
     //    creaba un "Módulo:" nuevo cada vez y las placas se rehacían siempre);
@@ -529,12 +531,12 @@ export default function ArmarModulo() {
 
     /** Con un tema: la pregunta queda en el tema y se lanza en el aula con un toque */
     const guardarVivoEnTema = async () => {
-        if (!temaId || !preguntaVivo || lanzando) return;
+        if (!temaDeLaClase || !preguntaVivo || lanzando) return;
         setLanzando(true);
         try {
-            const ya = await getPreguntasDeTemas([temaId]).catch(() => []);
+            const ya = await getPreguntasDeTemas([temaDeLaClase]).catch(() => []);
             const options = (preguntaVivo.options ?? []).map((label, i) => ({ id: String.fromCharCode(97 + i), label }));
-            await crearPregunta(temaId, 'quiz', {
+            await crearPregunta(temaDeLaClase, 'quiz', {
                 question: preguntaVivo.prompt,
                 options,
                 correctId: options[preguntaVivo.correct_index ?? 0]?.id,
@@ -627,7 +629,7 @@ export default function ArmarModulo() {
         setStep(1); setTopic(''); setContent('');
         setApunte(null); setCards(null); setPodcastPath(null);
         setMazoMat(null); setJuegoMat(null); setDiagramaMat(null);
-        setTarea(null); setPreguntaVivo(null); setLiveReady(false);
+        setTarea(null); setPreguntaVivo(null); setLiveReady(false); setVivoGuardada(false);
         setFuera(new Set()); setEnviada(null);
         setStates(ESTADOS_INICIALES);
         setRehacer(new Set());
@@ -639,8 +641,8 @@ export default function ArmarModulo() {
     return (
         <div className="mod-container animate-in">
             {/* Llegado desde un tema: se vuelve a él */}
-            {temaId && origen === 'tema' && (
-                <Link to={`/tema/${temaId}`} className="mod-volver"><ArrowLeft size={15} aria-hidden="true" /> Volver al tema</Link>
+            {temaDeLaClase && (
+                <Link to={`/tema/${temaDeLaClase}`} className="mod-volver"><ArrowLeft size={15} aria-hidden="true" /> Volver al tema</Link>
             )}
             {/* Pasos */}
             <div className="mod-steps">
@@ -1032,10 +1034,10 @@ export default function ArmarModulo() {
 
                             {/* La pregunta en vivo no se manda: con un tema queda entre sus
                                 preguntas preparadas; sin tema, se lanza en el aula */}
-                            {preguntaVivo && temaId && (
+                            {preguntaVivo && temaDeLaClase && (
                                 <div className="mod-results">
                                     {vivoGuardada ? (
-                                        <button className="mod-result mod-result-live" onClick={() => navigate(`/tema/${temaId}`)}>
+                                        <button className="mod-result mod-result-live" onClick={() => navigate(`/tema/${temaDeLaClase}`)}>
                                             <Check size={16} /> Guardada en el tema: la lanzás desde la clase en vivo con un toque
                                         </button>
                                     ) : (
@@ -1046,7 +1048,7 @@ export default function ArmarModulo() {
                                     )}
                                 </div>
                             )}
-                            {preguntaVivo && !temaId && (
+                            {preguntaVivo && !temaDeLaClase && (
                                 <div className="mod-results">
                                     {liveReady ? (
                                         <button className="mod-result mod-result-live" onClick={() => navigate('/clase-en-vivo')}>
@@ -1070,8 +1072,8 @@ export default function ArmarModulo() {
                                             <span>Los chicos la ven en Mis materiales, todo junto. Si la bajan con conexión, la tienen aunque después no haya señal.</span>
                                         </div>
                                         <div className="mod-final">
-                                            {temaId && (
-                                                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/tema/${temaId}`)}>
+                                            {temaDeLaClase && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/tema/${temaDeLaClase}`)}>
                                                     <ArrowRight size={14} /> Volver al tema
                                                 </button>
                                             )}

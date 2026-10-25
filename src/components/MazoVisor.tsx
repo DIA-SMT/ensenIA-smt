@@ -398,13 +398,15 @@ export function Lamina({ dia, pie, alCambiar }: {
   );
 }
 
-export default function MazoVisor({ mazo, notas = false, grande = false, pie }: {
+export default function MazoVisor({ mazo, notas = false, grande = false, pie, teclado = true }: {
   mazo: Mazo;
   /** Ofrecer las notas del docente. Nunca para estudiantes ni en el proyector. */
   notas?: boolean;
   /** Letra más grande, para proyectar. */
   grande?: boolean;
   pie?: string;
+  /** Las flechas y el espacio pasan las láminas (no mientras está escondido) */
+  teclado?: boolean;
 }) {
   const [i, setI] = useState(0);
   const [verNotas, setVerNotas] = useState(false);
@@ -414,6 +416,7 @@ export default function MazoVisor({ mazo, notas = false, grande = false, pie }: 
   const ir = useCallback((d: number) => setI(x => Math.max(0, Math.min(total - 1, x + d))), [total]);
 
   useEffect(() => {
+    if (!teclado) return;
     const onKey = (e: KeyboardEvent) => {
       if (enCampoDeTexto(e.target)) return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); ir(1); }
@@ -421,7 +424,7 @@ export default function MazoVisor({ mazo, notas = false, grande = false, pie }: 
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [ir]);
+  }, [ir, teclado]);
 
   if (!dia) return null;
 

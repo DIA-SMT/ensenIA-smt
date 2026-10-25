@@ -28,12 +28,14 @@ import './MaterialEnVivo.css';
 /** Con menos que esto, la IA inventaría en vez de preguntar sobre el material. */
 const MIN_TEXTO = 120;
 
-export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar }: {
+export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar, onMaterial }: {
   session: LiveSession;
   onSession: (s: LiveSession) => void;
   lanzar: (kind: LiveActivityKind, config: LiveActivityConfig) => Promise<void>;
   /** El panel proyecta el material y pasa solo a la pregunta cuando se lanza una */
-  onProyectar: (m: ReturnType<typeof materialParaVisor>) => void;
+  onProyectar: () => void;
+  /** El que está en pantalla, como lo muestra el visor (null si no hay) */
+  onMaterial: (m: ReturnType<typeof materialParaVisor> | null) => void;
 }) {
   const [material, setMaterial] = useState<MaterialDeClase | null | undefined>(undefined);
   const [eligiendo, setEligiendo] = useState(false);
@@ -60,6 +62,9 @@ export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar
       .catch(() => { if (!cancelado) setMaterial(null); });
     return () => { cancelado = true; };
   }, [session.id, elegido]);
+
+  // El panel lo proyecta: siempre el que está en pantalla ahora
+  useEffect(() => { onMaterial(material ? materialParaVisor(material) : null); }, [material, onMaterial]);
 
   const texto = material ? textoDeMaterial(material) : '';
   // Diapositivas guardadas desde el Laboratorio: al proyectar se pasan una por una
@@ -217,7 +222,7 @@ export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar
 
           <div className="mev-acciones">
             <button type="button" className="btn btn-secondary btn-sm"
-              onClick={() => onProyectar(materialParaVisor(material))}>
+              onClick={onProyectar}>
               <MonitorPlay size={14} aria-hidden="true" /> Proyectar
             </button>
             <button type="button" className={`btn btn-sm ${session.materialVisible ? 'btn-primary' : 'btn-secondary'}`}

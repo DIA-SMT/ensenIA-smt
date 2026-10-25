@@ -14,7 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useMigue } from '../contexts/MigueContext';
 import {
     Zap, Radio, ListChecks, FlaskConical, MessagesSquare,
-    ArrowRight, CalendarRange, Upload, ScanLine, FolderOpen, type LucideIcon,
+    ArrowRight, CalendarRange, Upload, ScanLine, FolderOpen, type LucideIcon, WifiOff,
 } from 'lucide-react';
 import UsosIA from '../components/ui/UsosIA';
 import { Esqueleto } from '../components/ui/Esqueleto';
@@ -60,20 +60,24 @@ export default function Crear() {
     const migue = useMigue();
     const [temas, setTemas] = useState<TemaParaElegir[] | null>(null);
     const [materias, setMaterias] = useState<Record<string, string>>({});
+    // Un error de red nunca es "no tenés temas": se avisa y se reintenta
+    const [sinTemas, setSinTemas] = useState(false);
+    const [intento, setIntento] = useState(0);
 
     useEffect(() => {
         if (!user) return;
         let vivo = true;
         Promise.all([
-            getTemasConFecha(user.id).catch(() => [] as PlanningUnit[]),
+            getTemasConFecha(user.id).then(u => u, () => null),
             getSubjects().catch(() => []),
         ]).then(([unidades, subjects]) => {
             if (!vivo) return;
-            setTemas(proximosTemas(unidades, hoyISO()));
             setMaterias(Object.fromEntries(subjects.map(s => [s.id, s.name])));
+            if (unidades === null) { setSinTemas(true); return; }
+            setTemas(proximosTemas(unidades, hoyISO()));
         });
         return () => { vivo = false; };
-    }, [user]);
+    }, [user, intento]);
 
     if (!user) return null;
     const hoy = hoyISO();
@@ -93,7 +97,16 @@ export default function Crear() {
             {/* Primero el tema: ahí queda todo junto */}
             <section className="crear-temas" aria-labelledby="crear-temas-titulo">
                 <h2 id="crear-temas-titulo" className="crear-seccion">¿Para qué tema?</h2>
-                {temas === null ? (
+                {sinTemas && temas === null ? (
+                    <div className="crear-tema crear-tema-vacio" role="status">
+                        <WifiOff size={22} aria-hidden="true" />
+                        <span>
+                            <strong>No pudimos traer tus temas</strong>
+                            <small>Puede ser la señal. Probá de nuevo, o entrá a tu planificación.</small>
+                        </span>
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => { setSinTemas(false); setIntento(n => n + 1); }}>Reintentar</button>
+                    </div>
+                ) : temas === null ? (
                     <Esqueleto filas={2} etiqueta="Buscando tus próximos temas…" />
                 ) : temas.length === 0 ? (
                     <Link to="/planificacion" className="crear-tema crear-tema-vacio">

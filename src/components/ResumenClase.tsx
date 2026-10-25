@@ -178,23 +178,15 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
   const [sinResponder, setSinResponder] = useState<PreguntaPublico[]>([]);
   // El resumen aparece en la misma pantalla que estaba proyectada: los nombres, a pedido
   const [verAutores, setVerAutores] = useState(false);
-  // El tema de la clase, para tildarlo como dado sin ir a la planificación
-  const [tema, setTema] = useState<{ id: string; titulo: string; dado: boolean } | null>(null);
-  const [marcando, setMarcando] = useState(false);
-  const [recienMarcado, setRecienMarcado] = useState(false);
+  // Los temas de la clase, para tildarlos como dados sin ir a la planificación
+  const [temas, setTemas] = useState<{ id: string; titulo: string; dado: boolean }[]>([]);
+  const [marcando, setMarcando] = useState<string | null>(null);
+  const [recienMarcados, setRecienMarcados] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelado = false;
     getMaterialesDeClase(sessionId).then(m => { if (!cancelado) setMateriales(m); }).catch(console.error);
-    getLiveSession(sessionId).then(s => {
-      if (cancelado) return;
-      setSesion(s);
-      if (s?.classId) {
-        getTema(s.classId)
-          .then(t => { if (!cancelado && t) setTema({ id: t.tema.id, titulo: t.tema.title, dado: t.tema.isComplete }); })
-          .catch(() => { /* sin señal: no se ofrece, se tilda en la planificación */ });
-      }
-    }).catch(console.error);
+    getLiveSession(sessionId).then(s => { if (!cancelado) setSesion(s); }).catch(console.error);
     getPreguntasDelPublico(sessionId)
       .then(p => { if (!cancelado) setSinResponder(p.lista.filter(x => x.estado !== 'respondida')); })
       .catch(() => { /* sin la 074, o sin señal: el resumen sigue */ });
@@ -223,18 +215,37 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
     }
   };
 
-  const marcarDado = async () => {
-    if (!tema || marcando) return;
-    setMarcando(true);
+  // Los temas de la lista de la clase (049) y el que quedó en pantalla. No solo
+  // este último: si al final se mostró un PDF queda en null, y si se adelantó el
+  // tema siguiente, sería ese.
+  const idsTemas = [...new Set([
+    ...materiales.filter(m => m.tipo === 'tema' && m.classId).map(m => m.classId!),
+    ...(sesion?.classId ? [sesion.classId] : []),
+  ])].slice(0, 3);
+  const claveTemas = idsTemas.join(',');
+  useEffect(() => {
+    let cancelado = false;
+    if (!claveTemas) { setTemas([]); return; }
+    Promise.all(claveTemas.split(',').map(id => getTema(id).catch(() => null)))
+      .then(lista => {
+        if (cancelado) return;
+        setTemas(lista.flatMap(t => (t ? [{ id: t.tema.id, titulo: t.tema.title, dado: t.tema.isComplete }] : [])));
+      });
+    return () => { cancelado = true; };
+  }, [claveTemas]);
+
+  const marcarDado = async (id: string) => {
+    if (marcando) return;
+    setMarcando(id);
     try {
-      await marcarTemaDado(tema.id);
-      setTema({ ...tema, dado: true });
-      setRecienMarcado(true);
+      await marcarTemaDado(id);
+      setTemas(prev => prev.map(t => (t.id === id ? { ...t, dado: true } : t)));
+      setRecienMarcados(prev => new Set(prev).add(id));
     } catch (err) {
       console.error(err);
       avisar.error('No se pudo marcar el tema.', 'Probá de nuevo, o tildalo en la planificación.');
     } finally {
-      setMarcando(false);
+      setMarcando(null);
     }
   };
 
@@ -399,9 +410,9 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
               </Link>
             )}
             {/* El tema ya tildado de antes no se ofrece; recién tildado, se confirma */}
-            {tema && (!tema.dado || recienMarcado) && (
+            {temas.filter(t => !t.dado || recienMarcados.has(t.id)).map(tema => (
               tema.dado ? (
-                <Link to={`/planificacion?materia=${sesion.subjectId}&curso=${sesion.courseId}`} className="rc-sigue-item rc-sigue-hecho">
+                <Link key={tema.id} to={`/planificacion?materia=${sesion.subjectId}&curso=${sesion.courseId}`} className="rc-sigue-item rc-sigue-hecho">
                   <CircleCheck size={18} aria-hidden="true" />
                   <span>
                     <strong>«{tema.titulo}» quedó como dado</strong>
@@ -409,15 +420,15 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
                   </span>
                 </Link>
               ) : (
-                <button type="button" className="rc-sigue-item" onClick={() => void marcarDado()} disabled={marcando}>
-                  {marcando ? <Loader2 size={18} className="spin" aria-hidden="true" /> : <CircleCheck size={18} aria-hidden="true" />}
+                <button key={tema.id} type="button" className="rc-sigue-item" onClick={() => void marcarDado(tema.id)} disabled={marcando !== null}>
+                  {marcando === tema.id ? <Loader2 size={18} className="spin" aria-hidden="true" /> : <CircleCheck size={18} aria-hidden="true" />}
                   <span>
-                    <strong>{marcando ? 'Marcando…' : `Marcar «${tema.titulo}» como dado`}</strong>
+                    <strong>{marcando === tema.id ? 'Marcando…' : `Marcar «${tema.titulo}» como dado`}</strong>
                     <small>Queda tildado en tu planificación, sin tener que ir a buscarlo.</small>
                   </span>
                 </button>
               )
-            )}
+            ))}
           </div>
         </section>
       )}

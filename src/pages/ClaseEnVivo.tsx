@@ -113,7 +113,11 @@ export default function ClaseEnVivo() {
     // material o la clase (pregunta, resultados, QR)—; con el material puesto,
     // una pregunta activa se muestra sola y al cerrarla vuelve el material.
     const [proyeccion, setProyeccion] = useState<'vivo' | 'material' | null>(null);
-    const [materialProyectado, setMaterialProyectado] = useState<LibraryMaterial | null>(null);
+    // El material que está en pantalla en la clase (lo avisa MaterialEnVivo): si
+    // se cambia desde el celular, la pared muestra el nuevo
+    const [materialActual, setMaterialActual] = useState<LibraryMaterial | null>(null);
+    // El último que se proyectó queda montado y escondido: al volver, misma lámina
+    const [materialVisto, setMaterialVisto] = useState<string | null>(null);
     // La actividad durante la cual el docente pidió ver el material igual
     const [materialPese, setMaterialPese] = useState<string | null>(null);
     const [connected, setConnected] = useState(0);
@@ -296,6 +300,10 @@ export default function ClaseEnVivo() {
         setVistaComp(null);
         setPodioFinal(null);
         setCompetir(false);
+        // La proyección es de esta clase: la próxima arranca sin nada en la pared
+        setProyeccion(null);
+        setMaterialVisto(null);
+        setMaterialPese(null);
     }, []);
 
     // ── Una vuelta: estado, resultados, emojis, invitados y presencia en un
@@ -902,8 +910,16 @@ export default function ClaseEnVivo() {
     const hayActiva = !!activity && activity.status !== 'closed';
     // Con el material proyectado y una pregunta activa, se ve la pregunta (salvo que
     // el docente haya pedido el material para esta); al cerrarla, vuelve el material
-    const modoProyeccion = proyeccion === 'material' && hayActiva && activity && materialPese !== activity.id
-        ? 'vivo' : proyeccion;
+    const modoProyeccion = proyeccion === 'material' && !materialActual ? null
+        : proyeccion === 'material' && hayActiva && activity && materialPese !== activity.id ? 'vivo'
+            : proyeccion;
+    /** Pedido a mano: el material, aunque haya una pregunta en curso */
+    const proyectarMaterial = () => {
+        if (!materialActual) return;
+        setMaterialVisto(materialActual.id);
+        setMaterialPese(hayActiva && activity ? activity.id : null);
+        setProyeccion('material');
+    };
 
     const studentName = (id: string) => {
         const s = students.find(x => x.id === id);
@@ -1174,7 +1190,7 @@ export default function ClaseEnVivo() {
 
             {session.courseId && (
                 <MaterialEnVivo session={session} onSession={setSession} lanzar={lanzarDesdeMaterial}
-                    onProyectar={m => { setMaterialProyectado(m); setMaterialPese(null); setProyeccion('material'); }} />
+                    onMaterial={setMaterialActual} onProyectar={proyectarMaterial} />
             )}
 
             {/* Quiénes están: presencia real, no un contador. Tocás a un
@@ -1364,9 +1380,10 @@ export default function ClaseEnVivo() {
             </div>
 
             {/* El material en la pared; con una pregunta en curso, pasa sola a la pregunta */}
-            {proyeccion && materialProyectado && (
+            {materialActual && (materialVisto === materialActual.id || proyeccion === 'material') && (
                 <MaterialViewer
-                    material={materialProyectado}
+                    key={materialActual.id}
+                    material={materialActual}
                     proyectar
                     oculto={modoProyeccion !== 'material'}
                     onClose={() => setProyeccion(null)}
@@ -1390,9 +1407,7 @@ export default function ClaseEnVivo() {
                     competencia={{ quedan, vista: vistaComp, final: podioFinal }}
                     preguntas={{ abiertas: session.preguntasAbiertas, lista: preguntas.lista }}
                     onClose={() => setProyeccion(null)}
-                    alVerMaterial={materialProyectado
-                        ? () => { setMaterialPese(hayActiva && activity ? activity.id : null); setProyeccion('material'); }
-                        : undefined}
+                    alVerMaterial={materialActual ? proyectarMaterial : undefined}
                 />
             )}
 
