@@ -38,7 +38,7 @@ import type { ScheduleBlock, Alert as AlertType, TeacherStats, Communication, Pl
 import './Hoy.css';
 
 const TIMELINE_META: Record<TimelineKind, { icon: typeof Boxes; label: string }> = {
-    modulo: { icon: Boxes, label: 'Armaste un módulo' },
+    modulo: { icon: Boxes, label: 'Armaste una clase completa' },
     material: { icon: Upload, label: 'Subiste material' },
     actividad: { icon: ClipboardList, label: 'Publicaste una actividad' },
     vivo: { icon: Radio, label: 'Diste una clase en vivo' },

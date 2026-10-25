@@ -198,7 +198,7 @@ export async function getTeacherTimeline(teacherId: string, limit = 12): Promise
   for (const m of (materials.data ?? []) as any[]) {
     const esModulo = (m.tags ?? []).includes('módulo');
     const extras: string[] = [];
-    if (m.study_cards?.length) extras.push(`${m.study_cards.length} placas`);
+    if (m.study_cards?.length) extras.push(`${m.study_cards.length} tarjetas`);
     if (m.podcast_status === 'ready') extras.push('podcast');
     items.push({
       id: `mat-${m.id}`,

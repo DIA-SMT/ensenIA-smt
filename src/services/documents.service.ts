@@ -368,8 +368,8 @@ export async function generateStudyCards(
   const completas = (cards ?? []).filter(placaCompleta);
   if (completas.length < 4) {
     throw new Error(truncated
-      ? 'Las placas salieron cortadas. Probá de nuevo; si el material es muy largo, acotá el tema.'
-      : 'La IA no armó suficientes placas con este material. Probá de nuevo.');
+      ? 'Las tarjetas salieron cortadas. Probá de nuevo; si el material es muy largo, acotá el tema.'
+      : 'La IA no armó suficientes tarjetas con este material. Probá de nuevo.');
   }
   return completas;
 }

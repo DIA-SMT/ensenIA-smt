@@ -651,7 +651,7 @@ export default function Biblioteca() {
   const handleDelete = async (mat: LibraryMaterial) => {
     const ok = await confirmar({
       titulo: `¿Eliminar "${mat.title}"?`,
-      mensaje: 'Se borra de tu biblioteca junto con sus placas y su podcast, y tus estudiantes dejan de verlo. No se puede deshacer.',
+      mensaje: 'Se borra de tu biblioteca junto con sus tarjetas y su podcast, y tus estudiantes dejan de verlo. No se puede deshacer.',
       accion: 'Eliminar',
       peligro: true,
     });
@@ -795,15 +795,15 @@ export default function Biblioteca() {
     }
     if (!mat.extractedText) return;
     setCardsGeneratingId(mat.id);
-    avisar.info('Armando las placas…', 'Tarda cerca de un minuto. Quedan guardadas en el material: no hace falta volver a generarlas.');
+    avisar.info('Armando las tarjetas de repaso…', 'Tarda cerca de un minuto. Quedan guardadas en el material: no hace falta volver a generarlas.');
     try {
       const cards = await generateStudyCards(mat.extractedText, mat.title, await contextoDePlacas(mat));
-      if (!cards.length) throw new Error('La IA no generó placas para este material.');
+      if (!cards.length) throw new Error('La IA no generó tarjetas para este material.');
       await updateMaterial(mat.id, { studyCards: cards });
       setCardsFor({ ...mat, studyCards: cards });
       refresh();
     } catch (err) {
-      avisar.error('No se pudieron generar las placas.', err instanceof Error ? err.message : 'Probá de nuevo.');
+      avisar.error('No se pudieron generar las tarjetas.', err instanceof Error ? err.message : 'Probá de nuevo.');
     } finally {
       setCardsGeneratingId(null);
     }
@@ -906,7 +906,7 @@ export default function Biblioteca() {
             )}
             {!processing && sinTexto && (
               <span className={`badge ${textError ? 'badge-danger' : 'badge-neutral'}`}
-                title="Sin texto, la IA no puede hacer placas, podcast ni usarlo en IA Lab">
+                title="Sin texto, la IA no puede hacer tarjetas ni podcast, ni usarlo para preparar con la IA">
                 {textError ? 'No se pudo leer' : 'Sin texto'}
               </span>
             )}
@@ -983,7 +983,7 @@ export default function Biblioteca() {
             {mat.videoUrl && !mat.extractedText && (
               <button
                 className="mat-action-btn"
-                title="Lee los subtítulos del video: la IA puede resumirlo, hacer placas y responder sobre él"
+                title="Lee los subtítulos del video: la IA puede resumirlo, hacer tarjetas y responder sobre él"
                 onClick={() => handleTranscribe(mat)}
                 disabled={transcribingId === mat.id}
               >
@@ -1000,7 +1000,7 @@ export default function Biblioteca() {
             {sinTexto && (
               <button
                 className="mat-action-btn"
-                title="Lee el texto del archivo para que la IA pueda hacer placas, podcast y usarlo en IA Lab"
+                title="Lee el texto del archivo para que la IA pueda hacer tarjetas y podcast, y usarlo para preparar con la IA"
                 onClick={() => leerTexto(mat)}
                 disabled={processing}
               >
@@ -1027,8 +1027,8 @@ export default function Biblioteca() {
                 disabled={cardsGeneratingId === mat.id}
               >
                 {cardsGeneratingId === mat.id
-                  ? <><Loader2 size={14} className="spin" /> Armando placas…</>
-                  : <><Layers size={14} /> {mat.studyCards?.length ? 'Placas' : 'Crear placas'}</>}
+                  ? <><Loader2 size={14} className="spin" /> Armando tarjetas…</>
+                  : <><Layers size={14} /> {mat.studyCards?.length ? 'Tarjetas' : 'Crear tarjetas'}</>}
               </button>
             )}
             {mat.extractedText && !juegoMat && (
@@ -1239,7 +1239,7 @@ export default function Biblioteca() {
             <EstadoVacio
               icono={BookOpen}
               titulo="Tu biblioteca está vacía"
-              texto="Subí o escaneá lo que ya usás: apuntes, guías, presentaciones, fotocopias. La IA lee el texto y arma placas, podcast y actividades."
+              texto="Subí o escaneá lo que ya usás: apuntes, guías, presentaciones, fotocopias. La IA lee el texto y arma tarjetas de repaso, podcast y actividades."
               accion={{ etiqueta: 'Subir material', alTocar: () => openUpload(), icono: Upload }}
               accionSecundaria={{ etiqueta: 'Escanear hojas', alTocar: () => void abrirEscaner(), icono: ScanLine }}
             />

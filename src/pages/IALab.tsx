@@ -400,7 +400,7 @@ export default function IALab() {
             setExpandedUnits(prev => new Set(prev).add(unit.id));
         } catch (err) {
             console.error('Error creando unidad:', err);
-            avisar.error('No se pudo crear el módulo.', 'Probá de nuevo.');
+            avisar.error('No se pudo crear la unidad.', 'Probá de nuevo.');
         }
     };
 
@@ -426,7 +426,7 @@ export default function IALab() {
     const handleDeleteUnit = async (unit: PlanningUnit) => {
         const n = unit.classes.length;
         const ok = await confirmar({
-            titulo: `¿Eliminar el módulo "${unit.title}"?`,
+            titulo: `¿Eliminar la unidad "${unit.title}"?`,
             mensaje: n > 0
                 ? `Se borran también sus ${n} ${n === 1 ? 'tema' : 'temas'}, con el contenido que escribiste. No se puede deshacer.`
                 : 'No se puede deshacer.',
@@ -442,10 +442,10 @@ export default function IALab() {
                 setCenterMode('chat');
             }
             await refreshPlanning();
-            avisar.exito('Módulo eliminado');
+            avisar.exito('Unidad eliminada');
         } catch (err) {
             console.error('Error eliminando unidad:', err);
-            avisar.error('No se pudo eliminar el módulo.', 'Probá de nuevo.');
+            avisar.error('No se pudo eliminar la unidad.', 'Probá de nuevo.');
         }
     };
 
@@ -987,7 +987,7 @@ export default function IALab() {
             <div className="lab-sidebar card">
                 <div className="lab-panel-header">
                     <Folder size={18} className="text-ia-accent" />
-                    <h3 aria-level={2}>Mis módulos</h3>
+                    <h3 aria-level={2}>Mis unidades</h3>
                 </div>
 
                 {/* Subject/Course Selector */}
@@ -1018,23 +1018,23 @@ export default function IALab() {
 
                 {/* Units Tree */}
                 <div className="units-tree">
-                    {!modulosCargados && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando tus módulos…" />}
+                    {!modulosCargados && <Esqueleto tipo="filas" cantidad={3} etiqueta="Cargando tus unidades…" />}
                     {modulosCargados && modulosFallaron && filteredUnits.length === 0 && (
                         <EstadoVacio
                             compacto
                             icono={Folder}
-                            titulo={haySenial() ? 'No se pudieron traer tus módulos' : 'Sin conexión'}
+                            titulo={haySenial() ? 'No se pudieron traer tus unidades' : 'Sin conexión'}
                             texto={haySenial()
-                                ? 'Probá de nuevo en un rato. Tus módulos siguen guardados.'
-                                : 'Tus módulos no están guardados en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y quedan para usar sin conexión.'}
+                                ? 'Probá de nuevo en un rato. Tus unidades siguen guardadas.'
+                                : 'Tus unidades no están guardadas en este equipo. Con señal, tocá «Preparar para el aula» en Mi día y quedan para usar sin conexión.'}
                         />
                     )}
                     {modulosCargados && !modulosFallaron && filteredUnits.length === 0 && (
                         <EstadoVacio
                             compacto
                             icono={Folder}
-                            titulo="Todavía no tenés módulos"
-                            texto="Subí tu programa y la IA arma los módulos, o creá uno a mano."
+                            titulo="Todavía no tenés unidades"
+                            texto="Subí tu programa y la IA arma las unidades, o creá una a mano."
                             accion={currentAssignment ? { etiqueta: 'Importar programa', alTocar: () => setShowImportModal(true), icono: FileUp } : undefined}
                         />
                     )}
@@ -1048,7 +1048,7 @@ export default function IALab() {
                                     <span className="unit-title">{unit.title}</span>
                                     <button
                                         className="unit-delete-btn"
-                                        title="Eliminar este módulo y sus temas"
+                                        title="Eliminar esta unidad y sus temas"
                                         onClick={e => { e.stopPropagation(); handleDeleteUnit(unit); }}
                                     >
                                         <Trash2 size={12} />
@@ -1105,7 +1105,7 @@ export default function IALab() {
                             <input
                                 autoFocus
                                 value={unitInput}
-                                placeholder="Título del módulo..."
+                                placeholder="Título de la unidad..."
                                 onChange={e => setUnitInput(e.target.value)}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter') handleCreateUnit();
@@ -1121,7 +1121,7 @@ export default function IALab() {
                             onClick={() => setCreatingUnit(true)}
                             disabled={!currentAssignment}
                         >
-                            <Plus size={15} /> Nuevo módulo
+                            <Plus size={15} /> Nueva unidad
                         </button>
                     )}
                     <button
@@ -1211,8 +1211,8 @@ export default function IALab() {
                                     </div>
                                     <p className="welcome-tip">
                                         💡 Elegí un <strong>tema</strong> de la izquierda y voy a conocer sus objetivos.
-                                        Para que salga todo de una (placas, podcast, actividad), usá
-                                        <strong> Armar módulo</strong>.
+                                        Para que salga todo de una (presentación, tarjetas de repaso, actividad), usá
+                                        <strong> Armar la clase completa</strong>.
                                     </p>
                                 </div>
                             )}
@@ -1453,7 +1453,7 @@ export default function IALab() {
                                             </button>
                                         );
                                         const piezas = [
-                                            mat.studyCards?.length ? `${mat.studyCards.length} placas` : null,
+                                            mat.studyCards?.length ? `${mat.studyCards.length} tarjetas` : null,
                                             mat.podcastStatus === 'ready' ? 'podcast' : null,
                                         ].filter(Boolean).join(' · ');
                                         return (

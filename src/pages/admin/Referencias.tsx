@@ -136,7 +136,7 @@ export default function Referencias() {
 
       {!cargando && !error && docs.length === 0 && (
         <EstadoVacio icono={Library} titulo="La biblioteca todavía está vacía"
-          texto="Acá va lo común a todas las escuelas municipales: leyes y resoluciones nacionales, provinciales y municipales, los NAP, los lineamientos de ESI y técnicas pedagógicas. La IA del Laboratorio, Crear y Migue busca en lo publicado y lo cita con su número de norma. Cargá cada documento desde su fuente oficial."
+          texto="Acá va lo común a todas las escuelas municipales: leyes y resoluciones nacionales, provinciales y municipales, los NAP, los lineamientos de ESI y técnicas pedagógicas. La IA (Preguntale a la IA, Crear y Migue) busca en lo publicado y lo cita con su número de norma. Cargá cada documento desde su fuente oficial."
           accion={{ etiqueta: 'Agregar documento', icono: Plus, alTocar: () => abrir(null) }} />
       )}
 
@@ -489,7 +489,7 @@ function EditorReferencia({ id: idInicial, sugerenciasAreas, alCerrar, alCambiar
     if (!doc) return;
     const ok = await confirmar({
       titulo: `¿Publicar «${doc.titulo}»?`,
-      mensaje: `Desde ahora la IA del Laboratorio, Crear y Migue lo va a consultar y citar en todas las escuelas municipales. ${doc.audiencia === 'comunidad' ? 'También lo van a ver estudiantes y familias.' : 'Lo ven docentes y dirección; estudiantes y familias, no.'}`,
+      mensaje: `Desde ahora la IA (Preguntale a la IA, Crear y Migue) lo va a consultar y citar en todas las escuelas municipales. ${doc.audiencia === 'comunidad' ? 'También lo van a ver estudiantes y familias.' : 'Lo ven docentes y dirección; estudiantes y familias, no.'}`,
       accion: 'Publicar',
     });
     if (ok) await accion('publicar', () => publicarReferencia(doc.id, true), 'Publicado: la IA ya lo puede citar');

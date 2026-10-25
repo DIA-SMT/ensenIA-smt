@@ -90,7 +90,7 @@ export function studyCardsToPdf(rawCards: StudyCard[], title: string, subjectNam
     footer(doc, W, H, subjectName);
   });
 
-  doc.save(`placas_${title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').slice(0, 50)}.pdf`);
+  doc.save(`tarjetas_${title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').slice(0, 50)}.pdf`);
 }
 
 /** Texto largo (resumen IA) → PDF A4 simple y legible. */

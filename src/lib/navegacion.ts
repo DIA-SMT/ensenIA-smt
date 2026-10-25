@@ -50,7 +50,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/hoy', etiqueta: 'Hoy', titulo: 'Mi día', icono: Sun, grupo: 'Mi día', enBarra: true, claves: 'inicio panel resumen hoy clases' },
   { ruta: '/planificacion', etiqueta: 'Planificación', titulo: 'Mi planificación', icono: CalendarRange, grupo: 'Mi día', enBarra: true, claves: 'planificar programa anual unidades temas fechas año importar subir programa calendario' },
   { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula repasar entendieron temas difíciles comprensión' },
-  { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo placas diapositivas evaluación resumen ia generar' },
+  { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo clase completa placas tarjetas repaso diapositivas evaluación resumen ia generar' },
   { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', enBarra: true, claves: 'tareas entregas consignas resultados corregir' },
   { ruta: '/seguimiento', etiqueta: 'Seguimiento', icono: Activity, grupo: 'Aula', claves: 'consultas dudas preguntas devoluciones atrasados entregas quién no entregó cómo vienen responder aclaraciones' },
   { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
@@ -122,7 +122,7 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
   // Siguen a mano desde el buscador aunque ya no estén sueltas en el menú
   docente: [
     { ruta: '/actividad-rapida', etiqueta: 'Nueva actividad rápida', icono: Zap, claves: 'crear publicar consigna' },
-    { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase armada material planificar armar placas diapositivas juego crucigrama diagrama tarea enviar' },
+    { ruta: '/modulo', etiqueta: 'Armar la clase (diapositivas, juego y tarea)', icono: Boxes, claves: 'módulo clase completa clase armada material planificar armar placas tarjetas diapositivas juego crucigrama diagrama tarea enviar' },
     { ruta: '/ia-lab', etiqueta: 'Preguntale a la IA', icono: FlaskConical, claves: 'laboratorio ia chat generar evaluación resumen presentación oral ideas' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
   ],

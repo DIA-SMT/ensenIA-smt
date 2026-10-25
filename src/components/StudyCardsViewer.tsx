@@ -43,7 +43,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose, o
       studyCardsToPdf(cards, title, subjectName);
     } catch (err) {
       console.error('No se pudo generar el PDF:', err);
-      avisar.error('No se pudo generar el PDF de las placas.', 'Probá de nuevo en un rato.');
+      avisar.error('No se pudo generar el PDF de las tarjetas.', 'Probá de nuevo en un rato.');
     } finally {
       setGenerando(false);
     }
@@ -76,7 +76,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose, o
         onKeyDown={e => { if (e.key === 'ArrowLeft') prev(); if (e.key === 'ArrowRight') next(); }}
       >
         <div className="em-modal-header">
-          <h3 id="sc-titulo"><Layers size={17} className="text-ia-accent" aria-hidden="true" /> Placas — {title}</h3>
+          <h3 id="sc-titulo"><Layers size={17} className="text-ia-accent" aria-hidden="true" /> Tarjetas de repaso — {title}</h3>
           <div className="flex items-center gap-2">
             {quizTotal > 0 && quizDone > 0 && (
               <span className="sc-score" title="Quiz respondidos correctamente">
@@ -84,11 +84,11 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose, o
               </span>
             )}
             {onEditar && (
-              <button className="btn btn-outline btn-sm" onClick={onEditar} title="Corregir, borrar, ordenar o sumar placas">
+              <button className="btn btn-outline btn-sm" onClick={onEditar} title="Corregir, borrar, ordenar o sumar tarjetas">
                 <Pencil size={14} aria-hidden="true" /> Editar
               </button>
             )}
-            <button className="btn-icon" aria-label="Cerrar las placas" onClick={onClose}><X size={18} aria-hidden="true" /></button>
+            <button className="btn-icon" aria-label="Cerrar las tarjetas" onClick={onClose}><X size={18} aria-hidden="true" /></button>
           </div>
         </div>
 
@@ -169,7 +169,7 @@ export default function StudyCardsViewer({ cards, title, subjectName, onClose, o
                   key={i}
                   className={`sc-dot sc-dot-${cardType(c)} ${i === index ? 'active' : ''} ${picked[i] !== undefined ? 'done' : ''}`}
                   onClick={() => goTo(i)}
-                  aria-label={`Placa ${i + 1}`}
+                  aria-label={`Tarjeta ${i + 1}`}
                   aria-current={i === index ? 'true' : undefined}
                 />
               ))}

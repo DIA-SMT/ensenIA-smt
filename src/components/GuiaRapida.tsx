@@ -30,7 +30,7 @@ interface Destino {
 const DESTINOS: Record<string, Destino[]> = {
   docente: [
     { emoji: '📤', title: 'Subir o escanear tu material', desc: 'PDF, Word, PowerPoint o tus hojas con la cámara; lo ordenás por tema', to: '/biblioteca?subir=archivo' },
-    { emoji: '📖', title: 'Preparar una clase', desc: 'Tus módulos y temas, con la IA como asistente', to: '/ia-lab' },
+    { emoji: '📖', title: 'Preparar una clase', desc: 'Tus unidades y temas, con la IA como asistente', to: '/ia-lab' },
     { emoji: '🧱', title: 'Armar la clase de un tema', desc: 'Diapositivas, juego, diagrama y tarea, y la mandás al curso', to: '/modulo' },
     { emoji: '📡', title: 'Dar la clase en vivo', desc: 'Los celulares se vuelven la forma de participar', to: '/clase-en-vivo' },
     { emoji: '✋', title: 'Pasar lista', desc: 'Todos presentes por defecto; marcás las excepciones', to: '/asistencia' },
@@ -49,7 +49,7 @@ const DESTINOS: Record<string, Destino[]> = {
     { emoji: '🏫', title: 'Mi escuela', desc: 'Tus actividades, tus logros y cómo venís', to: '/mis-actividades' },
     { emoji: '📡', title: 'Entrar a la clase en vivo', desc: 'Participá desde el celu cuando tu docente la abra', to: '/clase' },
     { emoji: '🤖', title: 'Practicar con Mi guía IA', desc: 'Te pregunta y te explica fácil. No te hace la tarea', to: '/mi-guia' },
-    { emoji: '📚', title: 'Ver mis materiales', desc: 'Placas, podcasts y resúmenes de tus materias', to: '/mi-biblioteca' },
+    { emoji: '📚', title: 'Ver mis materiales', desc: 'Tarjetas de repaso, podcasts y resúmenes de tus materias', to: '/mi-biblioteca' },
   ],
   padre: [
     { emoji: '💙', title: 'Cómo le va', desc: 'Notas, logros y asistencia, contados en claro', to: '/mis-hijos' },

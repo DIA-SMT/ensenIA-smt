@@ -24,8 +24,8 @@ const ROL: Record<string, string> = {
   padre: 'Familias', superadmin: 'Superadmin',
 };
 const FUNCION: Record<string, string> = {
-  chat: 'Laboratorio IA (chat)', migue: 'Migue', migue_riesgo: 'Migue · detección de riesgo',
-  documentos: 'Documentos (lectura, resúmenes, placas)', podcast: 'Podcast',
+  chat: 'Preguntale a la IA (chat)', migue: 'Migue', migue_riesgo: 'Migue · detección de riesgo',
+  documentos: 'Documentos (lectura, resúmenes, tarjetas)', podcast: 'Podcast',
 };
 
 // Cada cuánto se renueva el tope de la clave en OpenRouter

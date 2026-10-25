@@ -436,7 +436,7 @@ export default function Estudiar() {
           compacto
           icono={BookOpen}
           titulo="Todavía no hay material para practicar"
-          texto="Cuando tus docentes compartan material, vas a poder practicar con quiz, guía y placas."
+          texto="Cuando tus docentes compartan material, vas a poder practicar con quiz, guía y tarjetas."
         />
       )}
       <div className="sp-activity-list">

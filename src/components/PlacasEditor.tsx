@@ -96,7 +96,7 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
     const cerrar = async () => {
         if (cambios && !(await confirmar({
             titulo: '¿Salir sin guardar?',
-            mensaje: 'Se pierden los cambios que hiciste en las placas.',
+            mensaje: 'Se pierden los cambios que hiciste en las tarjetas.',
             accion: 'Salir sin guardar',
             cancelar: 'Seguir editando',
             peligro: true,
@@ -106,13 +106,13 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
 
     const guardar = async () => {
         if (placas.length === 0) {
-            avisar.error('Dejá al menos una placa', 'Si no querés placas para este material, cerrá sin guardar.');
+            avisar.error('Dejá al menos una tarjeta', 'Si no querés tarjetas para este material, cerrá sin guardar.');
             return;
         }
         if (incompletas.length > 0) {
             setMostrarErrores(true);
             avisar.error(
-                incompletas.length === 1 ? 'Hay una placa incompleta' : `Hay ${incompletas.length} placas incompletas`,
+                incompletas.length === 1 ? 'Hay una tarjeta incompleta' : `Hay ${incompletas.length} tarjetas incompletas`,
                 'Completala o borrala antes de guardar. Están marcadas en rojo.',
             );
             document.querySelector(`.pe-lista > li:nth-child(${incompletas[0] + 1})`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -136,12 +136,12 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
                 };
             });
             await alGuardar(limpias);
-            avisar.exito('Placas guardadas', 'Tus estudiantes ven esta versión.');
+            avisar.exito('Tarjetas guardadas', 'Tus estudiantes ven esta versión.');
             setCambios(false);
             alCerrar();
         } catch (err) {
             console.error(err);
-            avisar.error('No se pudieron guardar las placas', 'Revisá la conexión y probá de nuevo.');
+            avisar.error('No se pudieron guardar las tarjetas', 'Revisá la conexión y probá de nuevo.');
         } finally {
             setGuardando(false);
         }
@@ -150,7 +150,7 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
     const rehacer = async () => {
         if (!alRehacer) return;
         if (!(await confirmar({
-            titulo: '¿Rehacer las placas con IA?',
+            titulo: '¿Rehacer las tarjetas con la IA?',
             mensaje: 'Se arman de nuevo desde el material y reemplazan a estas en el editor. Usa uno de tus usos de IA del día. Nada se guarda hasta que toques "Guardar".',
             accion: 'Rehacer',
         }))) return;
@@ -160,9 +160,9 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
             setPlacas(nuevas.map(c => ({ ...c, options: [...(c.options ?? [])] })));
             setCambios(true);
             setMostrarErrores(false);
-            avisar.info(`Listas ${nuevas.length} placas nuevas`, 'Revisalas y tocá "Guardar" para quedarte con estas.');
+            avisar.info(`Listas ${nuevas.length} tarjetas nuevas`, 'Revisalas y tocá "Guardar" para quedarte con estas.');
         } catch (err) {
-            avisar.error('No se pudieron rehacer las placas', err instanceof Error ? err.message : 'Probá de nuevo.');
+            avisar.error('No se pudieron rehacer las tarjetas', err instanceof Error ? err.message : 'Probá de nuevo.');
         } finally {
             setRehaciendo(false);
         }
@@ -174,7 +174,7 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
         <Dialogo abierto alCerrar={alCerrar} alPedirCierre={() => { void cerrar(); }} etiquetadoPor="pe-titulo" className="dialogo-em">
             <div className="em-modal em-modal-lg pe-modal">
                 <div className="em-modal-header">
-                    <h3 id="pe-titulo">Editar placas — {titulo}</h3>
+                    <h3 id="pe-titulo">Editar tarjetas — {titulo}</h3>
                     <button className="btn btn-ghost" onClick={() => { void cerrar(); }} aria-label="Cerrar" disabled={guardando}>
                         <X size={18} aria-hidden="true" />
                     </button>
@@ -211,16 +211,16 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
                                             value={c.emoji ?? ''}
                                             maxLength={4}
                                             onChange={e => cambiar(i, { emoji: e.target.value })}
-                                            aria-label={`Emoji de la placa ${i + 1}`}
+                                            aria-label={`Emoji de la tarjeta ${i + 1}`}
                                         />
                                         <div className="pe-acciones">
-                                            <button className="btn-icon" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Subir la placa ${i + 1}`} title="Subir">
+                                            <button className="btn-icon" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Subir la tarjeta ${i + 1}`} title="Subir">
                                                 <ArrowUp size={16} aria-hidden="true" />
                                             </button>
                                             <button className="btn-icon" onClick={() => mover(i, 1)} disabled={i === placas.length - 1} aria-label={`Bajar la placa ${i + 1}`} title="Bajar">
                                                 <ArrowDown size={16} aria-hidden="true" />
                                             </button>
-                                            <button className="btn-icon pe-borrar" onClick={() => borrar(i)} aria-label={`Borrar la placa ${i + 1}`} title="Borrar">
+                                            <button className="btn-icon pe-borrar" onClick={() => borrar(i)} aria-label={`Borrar la tarjeta ${i + 1}`} title="Borrar">
                                                 <Trash2 size={16} aria-hidden="true" />
                                             </button>
                                         </div>
@@ -293,14 +293,14 @@ export default function PlacasEditor({ placas: iniciales, titulo, alCerrar, alGu
                                         </>
                                     )}
 
-                                    {mal && <p className="pe-falta" role="alert">Falta completar esta placa.</p>}
+                                    {mal && <p className="pe-falta" role="alert">Falta completar esta tarjeta.</p>}
                                 </li>
                             );
                         })}
                     </ol>
 
                     <div className="pe-agregar">
-                        <span>Agregar una placa:</span>
+                        <span>Agregar una tarjeta:</span>
                         {(Object.keys(TIPOS) as Tipo[]).map(t => {
                             const Icono = TIPOS[t].icono;
                             return (

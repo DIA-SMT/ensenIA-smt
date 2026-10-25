@@ -133,7 +133,7 @@ export default function Topbar({ alBuscar, alAbrirPreferencias, alAbrirGuia }: T
         <NotificationDropdown />
 
         {isDocente && pathname !== '/crear' && (
-          <Link to="/crear" className="btn btn-primary nueva-clase-btn" title="Crear una actividad, un módulo o una evaluación">
+          <Link to="/crear" className="btn btn-primary nueva-clase-btn" title="Crear una actividad, una clase completa o una evaluación">
             <Plus size={18} aria-hidden="true" />
             <span>Crear</span>
           </Link>

@@ -60,7 +60,7 @@ const PIECES: { key: PieceKey; emoji: string; icon: typeof Layers; label: string
     { key: 'actividad', emoji: '📝', icon: ClipboardList, label: 'Tarea', desc: 'Con preguntas que se corrigen solas. Se publica recién cuando la enviás' },
     { key: 'juego', emoji: '🧩', icon: Puzzle, label: 'Crucigrama', desc: 'Las palabras clave del tema, para repasar jugando' },
     { key: 'diagrama', emoji: '🗺️', icon: Network, label: 'Diagrama', desc: 'El tema de un vistazo' },
-    { key: 'placas', emoji: '🃏', icon: Layers, label: 'Placas de estudio', desc: 'Tarjetas con preguntas y quiz para repasar desde el celular' },
+    { key: 'placas', emoji: '🃏', icon: Layers, label: 'Tarjetas de repaso', desc: 'Para repasar desde el celular: ideas clave, preguntas y quiz' },
     { key: 'podcast', emoji: '🎧', icon: Headphones, label: 'Podcast', desc: 'Un audio de 2-3 minutos para escuchar en el colectivo' },
     { key: 'vivo', emoji: '📡', icon: Radio, label: 'Pregunta para la clase en vivo', desc: 'Queda lista para lanzarla cuando estés en el aula' },
 ];
@@ -214,7 +214,7 @@ export default function ArmarModulo() {
      *  arrastra el prefijo (evita "Módulo: Módulo: ..."). */
     const moduleName = (origen === 'material' && baseMaterial ? (topic.trim() || baseMaterial.title)
         : origen === 'tema' && baseTema ? (topic.trim() || baseTema.title)
-        : topic.trim()).replace(/^Módulo:\s*/i, '').replace(/[\s.]+$/, '');
+        : topic.trim()).replace(/^(Módulo|Apunte):\s*/i, '').replace(/[\s.]+$/, '');
 
     const canGenerate = Boolean(assignment) && (
         origen === 'material' ? Boolean(baseMaterial)
@@ -387,7 +387,7 @@ export default function ArmarModulo() {
                     return Promise.resolve();
                 }
                 return pieza(key, async () => {
-                    const generated = await generateStudyCards(content, `Módulo: ${moduleName}`, { ...contexto, tema: temaIA });
+                    const generated = await generateStudyCards(content, `Apunte: ${moduleName}`, { ...contexto, tema: temaIA });
                     await updateMaterial(mat.id, { studyCards: generated });
                     setCards(generated);
                     setMaterials(prev => prev.map(m => (m.id === mat.id ? { ...m, studyCards: generated } : m)));
@@ -487,7 +487,7 @@ export default function ArmarModulo() {
             // El apunte: con material, o con un tema que ya tiene su material, se
             // usa ese. Si no, el contenido queda como material nuevo.
             const mat = destino ?? await createMaterial({
-                title: `Módulo: ${moduleName}`,
+                title: `Apunte: ${moduleName}`,
                 description: `Generado con IA para ${subjectName} · ${assignment.courseName}`,
                 fileType: 'doc',
                 fileName: '',
@@ -740,7 +740,7 @@ export default function ArmarModulo() {
                                 <div className="mod-existing-head">
                                     <Check size={16} />
                                     <div>
-                                        <strong>{origen === 'material' ? 'Este material ya tiene placas o podcast' : 'Este tema ya tiene su material'}</strong>
+                                        <strong>{origen === 'material' ? 'Este material ya tiene tarjetas o podcast' : 'Este tema ya tiene su material'}</strong>
                                         <em>Se generó una vez y quedó guardado. Usalo directo; si armás la clase igual, se reusa lo guardado salvo que pidas rehacerlo.</em>
                                     </div>
                                 </div>
@@ -962,7 +962,7 @@ export default function ArmarModulo() {
                                         titulo="Apunte del tema"
                                         detalle={[
                                             'El contenido completo',
-                                            cards?.length ? `${cards.length} placas` : '',
+                                            cards?.length ? `${cards.length} tarjetas` : '',
                                             podcastPath ? 'podcast' : '',
                                         ].filter(Boolean).join(' · ')}
                                         incluida={vaEnElEnvio('apunte')}
