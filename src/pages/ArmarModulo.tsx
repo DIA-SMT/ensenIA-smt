@@ -223,6 +223,10 @@ export default function ArmarModulo() {
     );
 
     const contexto = assignment ? { subjectName, courseName: assignment.courseName } : undefined;
+    // Con un tema de la planificación, sus objetivos orientan las diapositivas y las placas
+    const temaIA = origen === 'tema' && baseTema
+        ? { titulo: baseTema.title, unidad: baseTema.unitTitle, objetivos: baseTema.objectives ?? [] }
+        : undefined;
     const pie = assignment ? `${subjectName} · ${assignment.courseName}` : undefined;
 
     // ── Paso 1 → 2: la IA arma el contenido ──
@@ -329,7 +333,7 @@ export default function ArmarModulo() {
         switch (key) {
             case 'diapositivas':
                 return pieza(key, async () => {
-                    const limpio = normalizarMazo(await generateSlides(content, moduleName, contexto));
+                    const limpio = normalizarMazo(await generateSlides(content, moduleName, contexto, { tema: temaIA, fuente: 'material' }));
                     if (!limpio) throw new Error('mazo vacío');
                     // Material aparte del apunte, en el mismo tema (063): el apunte se
                     // reconoce por la etiqueta 'módulo', así que no lo tapa
@@ -381,7 +385,7 @@ export default function ArmarModulo() {
                     return Promise.resolve();
                 }
                 return pieza(key, async () => {
-                    const generated = await generateStudyCards(content, `Módulo: ${moduleName}`);
+                    const generated = await generateStudyCards(content, `Módulo: ${moduleName}`, { ...contexto, tema: temaIA });
                     await updateMaterial(mat.id, { studyCards: generated });
                     setCards(generated);
                     setMaterials(prev => prev.map(m => (m.id === mat.id ? { ...m, studyCards: generated } : m)));
@@ -1089,7 +1093,7 @@ export default function ArmarModulo() {
                         setMaterials(prev => prev.map(m => (m.id === apunte.id ? { ...m, studyCards: placas } : m)));
                     }}
                     alRehacer={content.trim() || destino?.extractedText
-                        ? () => generateStudyCards(content.trim() || destino!.extractedText!, moduleName || topic)
+                        ? () => generateStudyCards(content.trim() || destino!.extractedText!, moduleName || topic, { ...contexto, tema: temaIA })
                         : undefined}
                 />
             )}

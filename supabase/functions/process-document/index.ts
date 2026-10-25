@@ -11,12 +11,16 @@
  *  - armar_actividad:   tema de la planificación → { titulo, consigna, partes[] con puntos } (063)
  *  - practice_quiz:     materialId → quiz pedagógico para estudiantes, CACHEADO en el material (1 sola generación)
  *  - study_guide:       materialId → guía de estudio para estudiantes, CACHEADA en el material
+ *  - slides / study_cards: material (o solo el tema) → mazo de diapositivas / placas de repaso
+ *
+ * Las opciones de toda pregunta generada se mezclan de este lado (_ordenar.ts).
  *
  * Nota: llamamos a Claude vía OpenRouter (chat completions) con fetch crudo,
  * mismo estilo que ia-chat, sin dependencias npm en el bundle de Deno.
  */
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { acomodarPlacas, mezclarOpciones } from './_ordenar.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_SONNET = 'anthropic/claude-sonnet-5';
@@ -53,6 +57,10 @@ interface ProcessRequest {
   variante?: string;
   /** slides y armar_actividad: lo que pidió el docente (cantidad, enfoque, extras). */
   pedido?: string;
+  /** slides y study_cards: el tema de la planificación, para que el resultado apunte a sus objetivos */
+  tema?: { titulo?: string; unidad?: string; objetivos?: string[] };
+  /** slides: 'tema' si no hay material (el texto es solo el tema y la IA puede usar lo que sabe) */
+  fuente?: 'material' | 'tema';
   /** extract_text de a tandas: el mismo id en todas las partes de un documento, y el número de parte (1, 2…) */
   documento?: string;
   parte?: number;
@@ -228,12 +236,12 @@ const STUDY_CARDS_SCHEMA = {
           emoji: { type: 'string', description: 'Un solo emoji representativo' },
           tag: { type: 'string', description: 'Eje temático (2-4 palabras); usar 3-5 tags distintos en total' },
           title: { type: 'string', description: "concept: título corto y potente (máx. 6 palabras). Otros tipos: ''" },
-          body: { type: 'string', description: "concept: explicación en 2-4 oraciones simples. Otros tipos: ''" },
+          body: { type: 'string', description: "concept: 2 o 3 oraciones cortas, hasta 280 caracteres. Otros tipos: ''" },
           question: { type: 'string', description: "flashcard/quiz: la pregunta. concept: ''" },
-          answer: { type: 'string', description: "flashcard: respuesta en 1-3 oraciones. Otros: ''" },
-          options: { type: 'array', items: { type: 'string' }, description: 'quiz: exactamente 4 opciones plausibles. Otros: []' },
-          correct_index: { type: 'integer', description: 'quiz: índice 0-3 de la correcta (variá la posición). Otros: 0' },
-          explanation: { type: 'string', description: "quiz: por qué es correcta y por qué no las otras. Otros: ''" },
+          answer: { type: 'string', description: "flashcard: respuesta en 1 o 2 oraciones. Otros: ''" },
+          options: { type: 'array', items: { type: 'string' }, description: 'quiz: exactamente 4 opciones plausibles, del mismo largo. Otros: []' },
+          correct_index: { type: 'integer', description: 'quiz: índice 0-3 de la correcta. Otros: 0' },
+          explanation: { type: 'string', description: "quiz: por qué es la correcta y qué confunde de la incorrecta más tentadora, sin nombrar letras ni posiciones. Otros: ''" },
         },
       },
     },
@@ -302,32 +310,32 @@ const SLIDES_SCHEMA = {
           tipo: {
             type: 'string',
             enum: ['portada', 'puntos', 'destacado', 'dos-columnas', 'pregunta', 'cierre'],
-            description: 'Qué forma tiene la lámina. Alterná: un mazo entero de "puntos" se ve monótono proyectado.',
+            description: 'Qué forma tiene la lámina.',
           },
-          titulo: { type: 'string', description: 'Título corto, de 3 a 8 palabras.' },
+          titulo: { type: 'string', description: 'De 3 a 8 palabras. En "pregunta", la pregunta entera.' },
           puntos: {
             type: 'array',
             items: { type: 'string' },
-            description: 'puntos/cierre: 3 a 5 viñetas de una línea. portada: la bajada. pregunta: la frase, verso o caso que hay que analizar, si la pregunta no se entiende sin eso. Vacío en destacado y dos-columnas.',
+            description: 'puntos/cierre: las viñetas. portada: materia y curso. pregunta: un solo elemento con el texto, verso o caso a analizar, o vacío. Vacío en destacado y dos-columnas.',
           },
           destacado: {
             type: 'string',
-            description: 'Solo en "destacado": la idea, definición o cita que ocupa toda la lámina. Una o dos oraciones. Vacío en el resto.',
+            description: 'Solo en "destacado": una o dos oraciones. Vacío en el resto.',
           },
           izquierda: COLUMNA_SCHEMA,
           derecha: COLUMNA_SCHEMA,
           opciones: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Solo en "pregunta": 3 o 4 opciones, sin la letra adelante. Vacío en el resto.',
+            description: 'Solo en "pregunta": 3 o 4 opciones del mismo largo, sin letra adelante. Vacío en el resto.',
           },
           correcta: {
             type: 'integer',
-            description: 'Solo en "pregunta": índice 0-based de la correcta. -1 si es de opinión o en el resto de los tipos.',
+            description: 'Solo en "pregunta": índice desde 0 de la correcta. -1 si es de opinión o en el resto de los tipos.',
           },
           nota: {
             type: 'string',
-            description: 'Nota para el docente: cómo presentar esta lámina, qué preguntar, dónde suelen trabarse. 1 o 2 frases.',
+            description: 'Para el docente (el curso no la ve). Puede ir vacía si el pedido no quiere notas.',
           },
         },
       },
@@ -517,34 +525,37 @@ Analizá el documento y extraé su estructura REAL (no inventes contenido que no
 - Mantené el idioma y la terminología del documento.
 - Si el documento NO es un programa educativo, devolvé units como array vacío.`,
 
-  slides: `Sos EstudIA, asistente pedagógico de docentes de secundaria argentina. Armá las diapositivas de una clase, para proyectar en el aula.
+  slides: `Sos EstudIA. Armás las diapositivas que un docente de secundaria argentina proyecta en el aula. Acompañan lo que el docente dice: no son un apunte. Nadie lee un párrafo proyectado.
 
-Las diapositivas acompañan al docente: no lo reemplazan ni son un apunte. Nadie lee un párrafo proyectado.
+DE DÓNDE SALE EL CONTENIDO
+- <documento>: es el material del docente y todo sale de ahí. Si cita un verso, una frase o un ejemplo sin decir de quién es, no se lo atribuyas a nadie, aunque creas saberlo: el docente lo proyecta sin poder verificarlo. Si falta algo importante para el tema, avisalo en una nota.
+- <tema> (no hay material): usá el contenido escolar estándar del tema, al nivel del curso. Si hace falta un dato que no podés asegurar, escribí [completar] en la lámina y avisalo en la nota.
+- Podés inventar situaciones y ejemplos para explicar (un caso del barrio, un problema con números redondos), siempre como hipotéticos. Nunca agregues hechos: cifras, fechas, nombres, autores, citas ni datos de Tucumán que no estén en la fuente.
+- Si vienen objetivos del tema, el mazo apunta a ellos.
 
-REGLAS DE CONTENIDO
-- Entre 8 y 12 láminas, incluida la portada, salvo que el pedido del docente diga otra cantidad: ahí manda el pedido.
-- Frases cortas, de una línea. Si una viñeta ocupa dos renglones, está de más.
-- Sin "Introducción", "Desarrollo", "Conclusión": títulos que digan algo.
-- Nada que no esté en el material. No inventes datos, fechas ni autores.
-- Si el material cita un verso, una frase o un ejemplo SIN decir de quién es, vos tampoco se lo atribuyas a nadie. Ni aunque creas saberlo: el docente lo va a proyectar sin poder verificarlo. Citá exactamente lo que dice la fuente, nada más.
-- Ejemplos de Tucumán o del día a día cuando el tema lo permita.
-- Español rioplatense, de vos.
+EL RECORRIDO
+1. portada: el tema; en puntos, la materia y el curso tal como te los pasan (si no vienen, vacío).
+2. Para arrancar: una situación o pregunta cercana (lo que viven a esa edad) que traiga lo que ya saben. Si es de opinión, pregunta con correcta -1; si es abierta, destacado.
+3. El desarrollo, una idea por lámina, de lo concreto a lo abstracto. Si el tema es un procedimiento (cálculo, análisis, resolución), un ejemplo resuelto paso a paso antes de pedirles que lo hagan.
+4. Después de las ideas centrales, una pregunta para ver si se entendió: las opciones incorrectas son errores que los chicos cometen de verdad con este tema.
+5. cierre: 2 o 3 ideas para llevarse y una pregunta de salida que se conteste en una línea.
 
-CÓMO ALTERNAR LAS LÁMINAS
-Un mazo donde todo es título + viñetas se ve monótono proyectado. Elegí el tipo según lo que tenga que mostrar esa lámina:
-- portada: la primera. Título del tema; en puntos, la bajada (materia, curso).
-- puntos: para enumerar. 3 a 5 viñetas. Es la base, pero no la única.
-- destacado: una definición, una idea fuerte o una cita que merece la lámina entera. Usá al menos una.
-- dos-columnas: cuando hay dos cosas que se comparan o se oponen (antes/después, causa/efecto, dos posturas, dos métodos).
-- pregunta: 1 o 2 en el mazo, repartidas, para que el curso participe. 3 o 4 opciones.
-  La pregunta tiene que entenderse SOLA proyectada. Si para contestarla hay que ver una frase, un verso o un caso, ponelo en puntos. Las notas del docente NO se proyectan: el curso no las ve. Nada de "¿qué recurso aparece acá?" sin el "acá" en la lámina.
-- cierre: la última. Qué se llevan de la clase.
+TIPOS DE LÁMINA (alterná: un mazo todo de viñetas aburre proyectado)
+- puntos: 3 a 5 viñetas.
+- destacado: una definición, idea fuerte o cita que merece la lámina entera. Al menos una.
+- dos-columnas: dos cosas que se comparan u oponen (antes/después, causa/efecto, dos posturas).
+- pregunta: 1 a 3 en el mazo. El titulo es la pregunta entera y no adelanta la respuesta. Tiene que entenderse sola proyectada (las notas no se ven): si hace falta un texto, verso, caso o dato, va en puntos como un solo elemento (versos separados con " / "). 3 o 4 opciones de hasta 8 palabras, sin "todas/ninguna de las anteriores".
 
-NOTAS PARA EL DOCENTE
-Cada lámina lleva una nota con algo que le sirva de verdad: qué preguntar para abrir, dónde suelen trabarse los chicos, con qué conectarlo. No repitas lo que ya dice la lámina.
+ESCRITURA
+- Títulos que dicen la idea ("La propaganda busca cambiar conductas"), no rótulos ("Propaganda"); nada de "Introducción" o "Conclusión".
+- Viñetas de una línea. Lo que necesita explicación va a la nota.
+- Fórmulas en texto plano (v = d / t, x², H₂O), sin LaTeX.
+- Español rioplatense, de vos, al nivel del curso.
 
-CAMPOS QUE NO APLICAN
-Mandalos vacíos: '' para texto, [] para listas, -1 para correcta. No los llenes "por las dudas".`,
+NOTA DE CADA LÁMINA (para el docente, el curso no la ve)
+Lo que le sirve para darla y no está escrito en ella: qué preguntar, dónde se traban los chicos, un ejemplo más. 1 o 2 frases. En una pregunta: cuál es la correcta y qué confusión hay detrás de la incorrecta más tentadora, nombrándolas por lo que dicen, nunca por letra ni posición (las opciones se mezclan).
+
+El pedido del docente manda en cantidad, enfoque, cuánto texto y extras; nunca habilita inventar hechos. Sin cantidad pedida: 8 a 12 láminas con la portada. Si hay notas de cómo trabaja el docente, respetalas.`,
 
   diagram: `Sos EstudIA, asistente pedagógico de secundaria argentina. Convertí el material en UN diagrama claro para proyectar en el aula o mirar en el celular.
 
@@ -569,20 +580,27 @@ Reglas:
 - pista_frase: ayuda a descifrarla sin decirla.
 - Nada que no esté en el material. Español rioplatense.`,
 
-  study_cards: `Sos EstudIA, asistente pedagógico. Convertí el material de estudio en PLACAS INTERACTIVAS: tarjetas que estudiantes de secundaria recorren desde el celular para repasar de verdad, no solo leer.
+  study_cards: `Sos EstudIA. Convertís un material en PLACAS que estudiantes de secundaria argentina recorren solos en el celular para repasar. Se aprende recordando, no releyendo: la mayoría de las placas le piden que traiga la respuesta de memoria.
 
-Generá entre 10 y 14 placas MEZCLADAS (no agrupadas por tipo):
-- "concept" (2 a 4): la primera presenta el tema; las demás explican UNA idea central cada una. Título corto y potente + explicación en 2-4 oraciones simples.
-- "flashcard" (4 a 5): pregunta concreta al frente, respuesta de 1-3 oraciones al dorso. Para autoevaluarse tapando la respuesta.
-- "quiz" (4 a 5): pregunta con 4 opciones plausibles y de largo parecido, UNA correcta (variá su posición). La explicación dice por qué es correcta y por qué las otras no.
+QUÉ ENTRA
+- Lo que hay que saber del tema: conceptos, relaciones, causas, procedimientos, ejemplos que aclaran. Nada trivial ni anecdótico.
+- Nada de la organización del curso aunque esté en el material: números de clase, fechas, criterios de evaluación, consignas o reflexiones para el docente, "según la unidad…". Si el material es una planificación, tomá solo los contenidos.
+- Fiel al material: no agregues hechos que no estén (cifras, fechas, nombres, autores, citas). Sí podés inventar casos y ejemplos para practicar, como hipotéticos. Si vienen objetivos del tema, priorizá lo que apunta a ellos.
 
-Reglas:
-- "tag": el eje temático de cada placa (2-4 palabras). Usá entre 3 y 5 tags distintos en total, repetidos con coherencia.
-- Lenguaje claro de secundaria, español rioplatense. Ejemplos concretos cuando ayuden.
-- Un emoji representativo por placa.
-- Cubrí lo más importante del material: conceptos, causas, excepciones, ejemplos. Nada trivial ni anecdótico.
-- Fiel al material: no inventes contenido que no esté.
-- Los campos que no correspondan al tipo van vacíos ('' o [] o 0).`,
+LAS PLACAS: 10 a 14, mezcladas (nunca tres seguidas del mismo tipo)
+- concept (2 a 4): la primera presenta el tema; cada una explica UNA sola idea. title de hasta 6 palabras que diga la idea; body de 2 o 3 oraciones cortas, hasta 280 caracteres (se lee en un celular).
+- flashcard (4 o 5): una pregunta que se contesta de memoria en una o dos oraciones. Mejor "¿por qué…?", "¿qué diferencia hay…?", "¿qué pasa si…?" que "¿qué es…?". Nada de "nombrá un ejemplo del material".
+- quiz (4 o 5): poné a prueba la idea con un caso o ejemplo nuevo, no con la frase del texto. La pregunta (con su caso) hasta 200 caracteres.
+  - 4 opciones de hasta 12 palabras; las incorrectas son errores que un estudiante comete de verdad con este tema, nunca absurdas ni de chiste.
+  - Todas del mismo largo y la misma forma: si la correcta lleva "porque…", todas lo llevan. La correcta no puede ser la más larga ni la más completa.
+  - Sin "todas/ninguna de las anteriores" y sin preguntas en negativo ("¿cuál NO…?").
+  - explanation, hasta 2 oraciones: por qué es la correcta y qué confusión hay detrás de la incorrecta más tentadora. Sin nombrar letras ni posiciones: las opciones se muestran mezcladas.
+- La pregunta sobre una idea no va pegada a la placa que la explica: dejá al menos una placa de otra idea en el medio, así se recuerda en vez de releer.
+
+FORMA
+- tag: el eje (2 a 4 palabras); 3 a 5 tags en total, repetidos con coherencia.
+- Un emoji por placa que tenga que ver con lo que dice.
+- Español rioplatense, de vos, claro y al nivel del curso.`,
 
   class_report: `Sos EstudIA, asistente pedagógico de secundaria argentina. Vas a recibir los datos de una clase en vivo que acaba de terminar: el material, las preguntas que lanzó el docente con cuántos respondieron y acertaron, la participación de cada estudiante, el ánimo del check-in, los emojis y las medallas.
 
@@ -616,9 +634,9 @@ Reglas:
   practice_quiz: `Sos EstudIA, un tutor amigable para estudiantes de secundaria argentina. Creá un quiz de práctica a partir del material de estudio.
 
 Reglas:
-- Entre 5 y 8 preguntas multiple choice, cada una con exactamente 4 opciones plausibles (los distractores reflejan confusiones típicas, no opciones absurdas).
-- Cubrí las ideas centrales del material, ordenadas de lo más básico a lo más desafiante.
-- En "explanation" explicá POR QUÉ la respuesta correcta es correcta, en 1-3 oraciones, como un profe copado; si sirve, aclará por qué las otras confunden. Es feedback para APRENDER, no solo corregir.
+- Entre 5 y 8 preguntas multiple choice, cada una con exactamente 4 opciones plausibles (los distractores reflejan confusiones típicas, no opciones absurdas). Todas del mismo largo y forma: la correcta no puede ser la más larga ni la más completa. Sin "todas/ninguna de las anteriores".
+- Cubrí las ideas centrales del material, ordenadas de lo más básico a lo más desafiante. Nada de la organización del curso (números de clase, fechas, criterios de evaluación).
+- En "explanation" explicá POR QUÉ la respuesta correcta es correcta, en 1-3 oraciones, como un profe copado; si sirve, aclará por qué las otras confunden. Es feedback para APRENDER, no solo corregir. Sin nombrar letras ni posiciones: las opciones se muestran mezcladas.
 - En "hint" da una pista corta que oriente el razonamiento sin regalar la respuesta.
 - Voseo, lenguaje claro de secundaria, español rioplatense.
 - Fiel al material: no inventes contenido que no esté.`,
@@ -645,7 +663,7 @@ Tipo:
 Reglas:
 - titulo: corto, nombra el tema (sin "TP N°").
 - consigna: para el estudiante, 2 a 5 líneas en Markdown: qué va a hacer y cómo se califica. Si una parte necesita un texto, un caso o datos, ponelos en su enunciado.
-- Cada parte se entiende sola. Opción múltiple: 3 o 4 opciones plausibles, una sola correcta, sin "todas/ninguna de las anteriores"; correct_index es su posición desde 0. Desarrollo: type "open", options vacío, correct_index 0.
+- Cada parte se entiende sola. Opción múltiple: 3 o 4 opciones plausibles y del mismo largo (la correcta no puede ser la más larga), una sola correcta, sin "todas/ninguna de las anteriores"; correct_index es su posición desde 0, y el enunciado no nombra letras ni posiciones (las opciones se mezclan). Desarrollo: type "open", options vacío, correct_index 0.
 - points: enteros o con medio punto; en total suman 10 salvo que el pedido diga otro total. Más puntos a lo que más cuesta.
 - Fiel al tema; no inventes datos dudosos. Español rioplatense, al nivel del curso.
 - Si hay notas de cómo trabaja el docente, respetalas. Si el pedido contradice algo de esto, vale el pedido.`,
@@ -1114,7 +1132,18 @@ Deno.serve(async (req: Request) => {
   const hints: string[] = [];
   if (title) hints.push(`Título del documento: ${title}`);
   if ((mode === 'slides' || mode === 'armar_actividad') && body.pedido?.trim()) hints.push(`Pedido del docente (respetalo): ${body.pedido.trim().slice(0, 1500)}`);
-  if (mode === 'armar_actividad' && profile?.role === 'docente') {
+  // El tema de la planificación: el mazo y las placas apuntan a sus objetivos
+  if ((mode === 'slides' || mode === 'study_cards') && body.tema && typeof body.tema === 'object') {
+    const linea = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+    const tituloTema = linea(body.tema.titulo, 200);
+    const unidad = linea(body.tema.unidad, 200);
+    const objetivos = Array.isArray(body.tema.objetivos)
+      ? body.tema.objetivos.map(o => linea(o, 200)).filter(Boolean).slice(0, 6)
+      : [];
+    if (tituloTema) hints.push(`Tema de la planificación: ${tituloTema}${unidad ? ` (unidad: ${unidad})` : ''}`);
+    if (objetivos.length) hints.push(`Objetivos del tema:\n${objetivos.map(o => `- ${o}`).join('\n')}`);
+  }
+  if ((mode === 'armar_actividad' || mode === 'slides') && profile?.role === 'docente') {
     const notas = await notasDelDocente(supabase, user.id, context?.subjectName, context?.courseName);
     if (notas) hints.push(`Cómo trabaja este docente (lo fue pidiendo en otras charlas):\n${notas}`);
   }
@@ -1130,7 +1159,10 @@ Deno.serve(async (req: Request) => {
     type: 'text',
     text: [
       hints.join('\n'),
-      textInput ? `<documento>\n${textInput}\n</documento>` : '',
+      // Diapositivas sin material: lo que llega es solo el tema (el prompt dice qué cambia)
+      textInput
+        ? (mode === 'slides' && body.fuente === 'tema' ? `<tema>\n${textInput}\n</tema>` : `<documento>\n${textInput}\n</documento>`)
+        : '',
       mode === 'extract_text' ? 'Transcribí el documento.'
         : mode === 'summarize' ? 'Resumí el documento.'
         : mode === 'class_report' ? 'Escribí el informe de la clase.'
@@ -1266,14 +1298,30 @@ Deno.serve(async (req: Request) => {
   try {
     const parsed = JSON.parse(outputText);
     if (mode === 'import_program') return json({ program: parsed, truncated });
-    if (mode === 'slides') return json({ deck: parsed, truncated });
+    // Las opciones de las preguntas se mezclan acá (_ordenar.ts): el modelo
+    // pone la correcta casi siempre en el mismo lugar
+    if (mode === 'slides') {
+      const diapositivas = Array.isArray(parsed.diapositivas)
+        ? parsed.diapositivas.map((d: { tipo?: string; opciones?: string[]; correcta?: number }) => {
+          if (d?.tipo !== 'pregunta' || !Array.isArray(d.opciones)) return d;
+          const { opciones, correcta } = mezclarOpciones(d.opciones, d.correcta ?? -1);
+          return { ...d, opciones, correcta };
+        })
+        : parsed.diapositivas;
+      return json({ deck: { ...parsed, diapositivas }, truncated });
+    }
     if (mode === 'diagram') return json({ diagram: parsed, truncated });
     if (mode === 'word_game') return json({ game: parsed, truncated });
     if (mode === 'armar_actividad') {
       if (truncated) return json({ error: 'API_ERROR', message: 'Salió incompleta. Probá de nuevo o pedí menos partes.' }, 502);
-      return json({ titulo: parsed.titulo ?? '', consigna: parsed.consigna ?? '', partes: parsed.partes ?? [] });
+      const partes = (parsed.partes ?? []).map((p: { type?: string; options?: string[]; correct_index?: number }) => {
+        if (p?.type !== 'multiple_choice' || !Array.isArray(p.options)) return p;
+        const { opciones, correcta } = mezclarOpciones(p.options, p.correct_index ?? -1);
+        return { ...p, options: opciones, correct_index: correcta };
+      });
+      return json({ titulo: parsed.titulo ?? '', consigna: parsed.consigna ?? '', partes });
     }
-    if (mode === 'study_cards') return json({ cards: parsed.cards ?? [], truncated });
+    if (mode === 'study_cards') return json({ cards: Array.isArray(parsed.cards) ? acomodarPlacas(parsed.cards) : [], truncated });
 
     // ── Quiz de práctica: validar antes de cachear (nunca cachear basura) ──
     if (mode === 'practice_quiz') {
@@ -1283,7 +1331,10 @@ Deno.serve(async (req: Request) => {
         q.prompt && Array.isArray(q.options) && q.options.length >= 2 &&
         typeof q.correct_index === 'number' && q.correct_index >= 0 && q.correct_index < q.options.length &&
         q.explanation,
-      );
+      ).map((q: { options: string[]; correct_index: number }) => {
+        const { opciones, correcta } = mezclarOpciones(q.options, q.correct_index);
+        return { ...q, options: opciones, correct_index: correcta };
+      });
       if (truncated || questions.length < 3) {
         return json({ error: 'API_ERROR', message: 'El quiz salió incompleto. Intentá de nuevo.' }, 502);
       }

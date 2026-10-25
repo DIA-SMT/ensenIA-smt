@@ -307,6 +307,22 @@ export default function IALab() {
         setSearchParams(searchParams, { replace: true });
     }, [searchParams, setSearchParams]);
 
+    // ── Con un tema elegido, el material que el docente subió a ese tema
+    // viene ya elegido en el pedido (lo puede cambiar o sacar). Una vez por
+    // herramienta y tema: si eligió "Sin material", no se le vuelve a poner. ──
+    const materialPuestoPara = useRef<string | null>(null);
+    useEffect(() => {
+        if (!briefTool || !['pres', 'sum', 'act', 'eval'].includes(briefTool) || !selectedClass || attachedDoc) return;
+        const clave = `${briefTool}:${selectedClass.id}`;
+        if (materialPuestoPara.current === clave) return;
+        const delTema = materials.filter(m => m.classId === selectedClass.id && m.extractedText?.trim() && !m.tags.includes(TAG_PRESENTACION));
+        // Primero lo que subió el docente; lo que armó la IA, si no hay otra cosa
+        const elegido = delTema.find(m => !m.tags.includes('IA') && !m.tags.includes('módulo')) ?? delTema[0];
+        if (!elegido) return;
+        materialPuestoPara.current = clave;
+        setAttachedDoc(elegido);
+    }, [briefTool, selectedClass, attachedDoc, materials]);
+
     // ── Cleanup AbortController on unmount ──
     useEffect(() => {
         return () => {
@@ -813,16 +829,33 @@ export default function IALab() {
      * regulares, que es por lo que una coma de más rompía el mazo.
      */
     const armarMazo = async (brief: string) => {
-        const fuente = attachedDoc?.extractedText?.trim() || brief;
+        const material = attachedDoc?.extractedText?.trim() || '';
+        const unidad = selectedClass ? allUnits.find(u => u.id === selectedClass.unitId) : undefined;
+        // El diseño lo aplica la app (se lee del pedido más abajo): a la IA no le sirve
+        const pedido = brief.split('\n').filter(l => !/^\s*Diseño visual elegido:/i.test(l)).join('\n').trim() || brief;
+        // Sin material va el tema (con el contenido que tenga en la planificación)
+        // y la IA puede usar lo que sabe del tema. Antes iba el pedido como si
+        // fuera el material, y el prompt le prohibía salir de ahí: mazos flacos.
+        const soloTema = selectedClass
+            ? [`Tema: ${selectedClass.title}`, selectedClass.content?.trim() ? `Contenido del tema:\n${selectedClass.content.trim()}` : '']
+                .filter(Boolean).join('\n\n')
+            : pedido;
         const titulo = selectedClass?.title || attachedDoc?.title || subjectName || 'Clase';
         setArmandoMazo(true);
         try {
-            // Con material adjunto, el material es la fuente y el pedido
-            // (cantidad, enfoque, extras) viaja aparte: antes se perdía
-            const generado = await generateSlides(fuente, titulo, {
+            // El pedido (cantidad, enfoque, extras) viaja aparte del texto,
+            // salvo que el pedido sea lo único que hay
+            const generado = await generateSlides(material || soloTema, titulo, {
                 subjectName: subjectName || undefined,
                 courseName: currentAssignment?.courseName,
-            }, { pedido: attachedDoc?.extractedText?.trim() ? brief : undefined });
+            }, {
+                pedido: material || selectedClass ? pedido : undefined,
+                // Los objetivos del tema orientan el mazo
+                tema: selectedClass
+                    ? { titulo: selectedClass.title, unidad: unidad?.title, objetivos: selectedClass.objectives ?? [] }
+                    : undefined,
+                fuente: material ? 'material' : 'tema',
+            });
             // El diseño elegido en el pedido llega al mazo (antes abría siempre en Institucional)
             const diseno = disenoEnTexto(brief);
             setMazo(diseno ? { ...generado, diseno } : generado);
@@ -1291,7 +1324,10 @@ export default function IALab() {
                                     tool={briefTool}
                                     classTitle={selectedClass?.title}
                                     hasAttachedDoc={!!attachedDoc}
-                                    materiales={materials.filter(m => m.extractedText && !m.tags.includes(TAG_PRESENTACION))}
+                                    // Los del tema elegido, primero
+                                    materiales={materials
+                                        .filter(m => m.extractedText && !m.tags.includes(TAG_PRESENTACION))
+                                        .sort((a, b) => Number(b.classId === selectedClass?.id && !!selectedClass) - Number(a.classId === selectedClass?.id && !!selectedClass))}
                                     materialId={attachedDoc?.id ?? null}
                                     alElegirMaterial={id => {
                                         const doc = materials.find(m => m.id === id);

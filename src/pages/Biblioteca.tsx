@@ -12,11 +12,11 @@ import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useAuth } from '../contexts/AuthContext';
 import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial, renameMaterial, asignarTema } from '../services/library.service';
 import { getSubjects } from '../services/subjects.service';
-import { getTemasConFecha } from '../services/planning.service';
+import { getTema, getTemasConFecha } from '../services/planning.service';
 import {
   uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
   summarizeDocument, updateMaterial, formatFileSize,
-  generateStudyCards, generatePodcast,
+  generateStudyCards, generatePodcast, type TemaParaIA,
 } from '../services/documents.service';
 import { parseYouTubeId, youTubeThumbnail } from '../lib/youtube';
 import { transcribeYouTube } from '../services/documents.service';
@@ -773,6 +773,21 @@ export default function Biblioteca() {
     }
   };
 
+  /**
+   * Materia, curso y tema del material: con el curso, las placas salen al
+   * nivel de esos chicos; con el tema, apuntan a sus objetivos.
+   */
+  const contextoDePlacas = async (mat: LibraryMaterial) => {
+    const courseName = mat.courseId ? (user.subjects ?? []).find(a => a.courseId === mat.courseId)?.courseName : undefined;
+    let tema: TemaParaIA | undefined;
+    if (mat.classId) {
+      // Sin el tema igual se arman
+      const t = await getTema(mat.classId).catch(() => null);
+      if (t) tema = { titulo: t.tema.title, unidad: t.unidad.title, objetivos: t.tema.objectives ?? [] };
+    }
+    return { subjectName: mat.subjectName || undefined, courseName, tema };
+  };
+
   const handleStudyCards = async (mat: LibraryMaterial) => {
     if (mat.studyCards?.length) {
       setCardsFor(mat);
@@ -782,7 +797,7 @@ export default function Biblioteca() {
     setCardsGeneratingId(mat.id);
     avisar.info('Armando las placas…', 'Tarda cerca de un minuto. Quedan guardadas en el material: no hace falta volver a generarlas.');
     try {
-      const cards = await generateStudyCards(mat.extractedText, mat.title);
+      const cards = await generateStudyCards(mat.extractedText, mat.title, await contextoDePlacas(mat));
       if (!cards.length) throw new Error('La IA no generó placas para este material.');
       await updateMaterial(mat.id, { studyCards: cards });
       setCardsFor({ ...mat, studyCards: cards });
@@ -1660,7 +1675,7 @@ export default function Biblioteca() {
             refresh();
           }}
           alRehacer={placasEditando.extractedText
-            ? () => generateStudyCards(placasEditando.extractedText!, placasEditando.title)
+            ? async () => generateStudyCards(placasEditando.extractedText!, placasEditando.title, await contextoDePlacas(placasEditando))
             : undefined}
         />
       )}

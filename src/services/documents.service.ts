@@ -341,11 +341,27 @@ export function placaCompleta(c: StudyCard): boolean {
     && typeof c.correct_index === 'number' && c.correct_index >= 0 && c.correct_index < opciones.length;
 }
 
-export async function generateStudyCards(text: string, title: string): Promise<StudyCard[]> {
+/** El tema de la planificación: la IA apunta a sus objetivos (diapositivas y placas). */
+export interface TemaParaIA {
+  titulo: string;
+  unidad?: string;
+  objetivos?: string[];
+}
+
+export async function generateStudyCards(
+  text: string,
+  title: string,
+  /** Materia, curso (el nivel del lenguaje) y tema, si se conocen */
+  contexto?: { subjectName?: string; courseName?: string; tema?: TemaParaIA },
+): Promise<StudyCard[]> {
   const { cards, truncated } = await callProcessDocument<{ cards: StudyCard[]; truncated?: boolean }>({
     mode: 'study_cards',
     text,
     title,
+    context: contexto?.subjectName || contexto?.courseName
+      ? { subjectName: contexto.subjectName, courseName: contexto.courseName }
+      : undefined,
+    tema: contexto?.tema,
   });
   // Si la respuesta se cortó, las últimas placas pueden venir a medias:
   // se descartan las incompletas en vez de mostrar un quiz sin opciones.
@@ -487,8 +503,14 @@ export async function generateSlides(
   text: string,
   title: string,
   context?: { subjectName?: string; courseName?: string },
-  /** Lo que pidió el docente (cantidad, enfoque, extras) cuando el texto es un material adjunto. */
-  opciones?: { pedido?: string },
+  opciones?: {
+    /** Lo que pidió el docente (cantidad, enfoque, extras), aparte del texto. */
+    pedido?: string;
+    /** El tema de la planificación (sus objetivos orientan el mazo). */
+    tema?: TemaParaIA;
+    /** 'tema': no hay material, el texto es solo el tema y la IA puede usar lo que sabe. */
+    fuente?: 'material' | 'tema';
+  },
 ): Promise<Mazo> {
   const { deck, truncated } = await callProcessDocument<{ deck: unknown; truncated?: boolean }>({
     mode: 'slides',
@@ -496,6 +518,8 @@ export async function generateSlides(
     title,
     context,
     pedido: opciones?.pedido,
+    tema: opciones?.tema,
+    fuente: opciones?.fuente,
   });
 
   const mazo = normalizarMazo(deck);

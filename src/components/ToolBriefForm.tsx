@@ -35,17 +35,19 @@ interface Props {
 const USAN_MATERIAL: IAToolType[] = ['pres', 'sum', 'act', 'eval'];
 
 const ENFOQUES: { id: string; nombre: string; prompt: string }[] = [
-  { id: 'expositiva', nombre: 'Expositiva', prompt: 'Expositiva clásica: introducción, desarrollo por partes y cierre con las ideas clave.' },
+  { id: 'expositiva', nombre: 'Expositiva', prompt: 'Expositiva: un arranque, el desarrollo por partes y un cierre con las ideas clave.' },
   { id: 'visual', nombre: 'Visual', prompt: 'Visual: una sola idea fuerte por diapositiva, frases muy cortas y un ejemplo concreto cuando ayude.' },
   { id: 'caso', nombre: 'Con un caso', prompt: 'Narrativa: un caso o historia cercana (de la vida cotidiana en Argentina) que hile todas las diapositivas.' },
-  { id: 'interactiva', nombre: 'Interactiva', prompt: 'Interactiva: cada 2 o 3 diapositivas de contenido, una de "🙋 Pregunta al grupo" con opciones A) B) C) D).' },
+  // Las preguntas son láminas de tipo "pregunta" (las opciones las letra el visor)
+  { id: 'interactiva', nombre: 'Interactiva', prompt: 'Interactiva: después de cada 2 o 3 diapositivas de contenido, una lámina de pregunta para el curso.' },
   { id: 'repaso', nombre: 'Para repasar', prompt: 'De repaso: esquemas, comparaciones y preguntas para revisar lo que ya se vio, sin contenido nuevo.' },
 ];
 
 const TEXTOS: { id: string; nombre: string; prompt: string }[] = [
-  { id: 'poco', nombre: 'Poco', prompt: '2 o 3 viñetas por diapositiva, de hasta 8 palabras cada una.' },
-  { id: 'normal', nombre: 'Normal', prompt: '3 o 4 viñetas breves por diapositiva.' },
-  { id: 'mucho', nombre: 'Completo', prompt: '4 o 5 viñetas por diapositiva, cada una con una explicación de una línea.' },
+  // "En las láminas de viñetas": dicho "por diapositiva", el modelo hacía todo el mazo de viñetas
+  { id: 'poco', nombre: 'Poco', prompt: 'En las láminas de viñetas, 2 o 3 de hasta 8 palabras.' },
+  { id: 'normal', nombre: 'Normal', prompt: 'En las láminas de viñetas, 3 o 4 breves.' },
+  { id: 'mucho', nombre: 'Completo', prompt: 'En las láminas de viñetas, 4 o 5; cada una puede sumar una aclaración corta después de dos puntos.' },
 ];
 
 const TOOL_TITLES: Partial<Record<IAToolType, string>> = {
@@ -168,16 +170,19 @@ export default function ToolBriefForm({ tool, classTitle, hasAttachedDoc, materi
           estiloSum === 'Con preguntas de comprensión' ? 'Cerrá con 3-5 preguntas de comprensión.' : '',
         ].filter(Boolean).join('\n');
       case 'pres':
+        // Que se base solo en el material ya lo dicen las instrucciones de
+        // las diapositivas (y las notas ya vienen por defecto): no se repite
         return [
           `Creá una presentación en diapositivas sobre "${temaTxt}".`,
-          fuente,
           `Cantidad: ${slides} diapositivas en total, contando la portada.`,
           `Enfoque: ${ENFOQUES.find(e => e.id === enfoque)?.prompt ?? ''}`,
           `Texto: ${TEXTOS.find(t => t.id === texto)?.prompt ?? ''}`,
           extrasPres.includes('Un emoji por diapositiva') ? 'Empezá el título de cada diapositiva con un emoji que la represente.' : '',
           extrasPres.includes('Ejemplos cotidianos') ? 'Usá ejemplos de la vida cotidiana de chicos de secundaria en Argentina.' : '',
+          // Sin notas pedidas, van vacías (y la respuesta sale más corta), salvo para avisar lo que falta
+          extrasPres.includes('Notas para el docente') ? '' : 'Notas vacías, salvo para avisar un dato que falta o que hay que completar.',
           (() => {
-            const resto = extrasPres.filter(e => e !== 'Un emoji por diapositiva' && e !== 'Ejemplos cotidianos');
+            const resto = extrasPres.filter(e => e !== 'Un emoji por diapositiva' && e !== 'Ejemplos cotidianos' && e !== 'Notas para el docente');
             return resto.length > 0 ? `Incluí además: ${resto.map(s => s.toLowerCase()).join(', ')}.` : '';
           })(),
           `Diseño visual elegido: ${disenoDe(diseno).nombre} (lo aplica la plataforma: escribí solo el contenido, sin indicaciones de colores ni tipografías).`,
