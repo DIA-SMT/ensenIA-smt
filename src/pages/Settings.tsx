@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ETIQUETA_ROL } from '../lib/navegacion';
 import PanelPreferencias from '../components/shell/PanelPreferencias';
 import MemoriaDocente from '../components/MemoriaDocente';
+import InstalarApp from '../components/InstalarApp';
 import './Settings.css';
 
 /**
@@ -82,6 +83,8 @@ export default function Settings() {
 
             {/* Memoria del docente (062) */}
             {user.role === 'docente' && <MemoriaDocente />}
+
+            <InstalarApp variante="ajustes" />
 
             <section className="card settings-section" aria-labelledby="ajustes-lectura">
                 <div>
