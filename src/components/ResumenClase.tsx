@@ -372,7 +372,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
               <Link to={`/asistencia?curso=${sesion.courseId}&materia=${sesion.subjectId}`} className="rc-sigue-item">
                 <ListChecks size={18} aria-hidden="true" />
                 <span>
-                  <strong>Pasar asistencia de hoy</strong>
+                  <strong>Pasar lista de hoy</strong>
                   {/* La lista marca a los que respondieron o mandaron un emoji hoy (sin número
                       acá: esa cuenta suma todas las clases del día y no coincidiría) */}
                   <small>{t.participaron > 0

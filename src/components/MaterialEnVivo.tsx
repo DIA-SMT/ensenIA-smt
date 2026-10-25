@@ -194,7 +194,7 @@ export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar
           compacto
           icono={BookOpen}
           titulo="Todavía no elegiste material"
-          texto="Elegí uno o varios temas de tu temario o materiales de tu biblioteca: los proyectás, los ven en los celulares y la IA saca preguntas para lanzar."
+          texto="Elegí uno o varios temas de tu temario o de Mis materiales: los proyectás, los ven en los celulares y la IA saca preguntas para lanzar."
           accion={{ etiqueta: 'Elegir materiales', alTocar: () => setEligiendo(true), icono: BookOpen }}
         />
       )}
@@ -208,7 +208,7 @@ export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar
             <span className="mev-sub">
               {material.tipo === 'tema'
                 ? `Tema del temario · ${material.unidad}`
-                : deck ? `Diapositivas de tu biblioteca · ${deck.diapositivas.length}` : 'De tu biblioteca'}
+                : deck ? `Diapositivas de Mis materiales · ${deck.diapositivas.length}` : 'De Mis materiales'}
             </span>
             {deck && (
               <span className="mev-sub">Al proyectarlas, pasalas con los botones o con las flechas del teclado.</span>
@@ -238,7 +238,7 @@ export default function MaterialEnVivo({ session, onSession, lanzar, onProyectar
             <p className="mev-nota">
               {material.tipo === 'tema'
                 ? 'Este tema tiene solo el título: para sacar preguntas hace falta el contenido de la clase.'
-                : 'Este material no tiene texto: leelo primero en la Biblioteca con "Leer texto".'}
+                : 'Este material no tiene texto: leelo primero en Mis materiales con "Leer texto".'}
             </p>
           )}
           {session.materialVisible && (

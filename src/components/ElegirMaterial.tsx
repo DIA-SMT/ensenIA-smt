@@ -91,7 +91,7 @@ export default function ElegirMaterial({
         </button>
       </div>
       <p className="dialogo-bajada">
-        Elegí uno o varios: temas de tu temario o materiales de tu biblioteca. En la clase pasás de uno a otro con un toque.
+        Elegí uno o varios: temas de tu temario o de Mis materiales. En la clase pasás de uno a otro con un toque.
       </p>
 
       <div className="elm-cuerpo">
@@ -104,7 +104,7 @@ export default function ElegirMaterial({
             compacto
             icono={BookOpen}
             titulo="Todavía no tenés material de esta materia"
-            texto="Cargá temas en tu temario o subí algo a tu biblioteca. Mientras, la clase anda igual sin material."
+            texto="Cargá temas en tu temario o subí algo a Mis materiales. Mientras, la clase anda igual sin material."
           />
         )}
 
@@ -134,7 +134,7 @@ export default function ElegirMaterial({
             </section>
 
             <section aria-labelledby="elm-biblio">
-              <h3 id="elm-biblio" className="elm-seccion">De tu biblioteca</h3>
+              <h3 id="elm-biblio" className="elm-seccion">De Mis materiales</h3>
               {materiales?.length === 0 && <p className="text-secondary text-sm">No subiste materiales de esta materia.</p>}
               <ul className="elm-lista">
                 {materiales?.map(m => (

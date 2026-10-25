@@ -706,7 +706,7 @@ export default function ArmarModulo() {
                                     onClick={() => setOrigen('material')}
                                 >
                                     <BookOpen size={16} />
-                                    <span><strong>De mi biblioteca</strong>
+                                    <span><strong>De Mis materiales</strong>
                                         <em>Usa tu material tal cual: la clase sale real</em></span>
                                 </button>
                             )}

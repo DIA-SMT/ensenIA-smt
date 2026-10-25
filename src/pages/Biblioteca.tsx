@@ -35,7 +35,7 @@ import AdaptarMaterial from '../components/AdaptarMaterial';
 import GenerarVisual from '../components/GenerarVisual';
 import PracticarMaterial from '../components/juegos/PracticarMaterial';
 import { esJuego } from '../lib/juegos';
-import { Network, Puzzle, Gamepad2 } from 'lucide-react';
+import { Network, Puzzle, Gamepad2, ChevronDown } from 'lucide-react';
 import PodcastPlayer from '../components/PodcastPlayer';
 import Dialogo from '../components/shell/Dialogo';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -656,7 +656,7 @@ export default function Biblioteca() {
   const handleDelete = async (mat: LibraryMaterial) => {
     const ok = await confirmar({
       titulo: `¿Eliminar "${mat.title}"?`,
-      mensaje: 'Se borra de tu biblioteca junto con sus tarjetas y su podcast, y tus estudiantes dejan de verlo. No se puede deshacer.',
+      mensaje: 'Se borra de Mis materiales junto con sus tarjetas y su podcast, y tus estudiantes dejan de verlo. No se puede deshacer.',
       accion: 'Eliminar',
       peligro: true,
     });
@@ -960,6 +960,7 @@ export default function Biblioteca() {
               <span key={tag} className="mat-tag">{tag}</span>
             ))}
           </div>
+          {/* Lo de todos los días a mano (botones grandes); lo de la IA y el resto, en "Más" */}
           <div className="mat-actions">
             {deck && (
               <button
@@ -967,24 +968,20 @@ export default function Biblioteca() {
                 title="Pasar las diapositivas en pantalla completa y bajarlas como PowerPoint"
                 onClick={() => setPresentando({ mazo: deck, mat })}
               >
-                <Play size={14} /> Proyectar
-              </button>
-            )}
-            {deck && (
-              <button
-                className="mat-action-btn"
-                title="Corregir, reordenar o agregar diapositivas"
-                // Si es de los viejos, ya viene convertido; al guardar pasa a JSON
-                onClick={() => setEditando({ mazo: deck, mat })}
-              >
-                <PencilLine size={14} /> Editar
+                <Play size={16} /> Proyectar
               </button>
             )}
             {mat.videoUrl && (
               <button className="mat-action-btn" title="Ver el video acá" onClick={() => setPlaying(mat)}>
-                <Youtube size={14} /> Ver video
+                <Youtube size={16} /> Ver video
               </button>
             )}
+            {(mat.storagePath || (soloTexto && !deck)) && (
+              <button className="mat-action-btn" title={juegoMat ? 'Probarlo como lo van a jugar tus estudiantes' : 'Verlo acá, sin descargar'} onClick={() => setViendo(mat)}>
+                {juegoMat ? <><Puzzle size={16} /> Jugar</> : <><Eye size={16} /> Ver</>}
+              </button>
+            )}
+            {/* Sin texto la IA no puede hacer nada con él: leerlo va a la vista */}
             {mat.videoUrl && !mat.extractedText && (
               <button
                 className="mat-action-btn"
@@ -993,13 +990,8 @@ export default function Biblioteca() {
                 disabled={transcribingId === mat.id}
               >
                 {transcribingId === mat.id
-                  ? <><Loader2 size={14} className="spin" /> Transcribiendo...</>
-                  : <><Captions size={14} /> Transcribir</>}
-              </button>
-            )}
-            {(mat.storagePath || (soloTexto && !deck)) && (
-              <button className="mat-action-btn" title={juegoMat ? 'Probarlo como lo van a jugar tus estudiantes' : 'Verlo acá, sin descargar'} onClick={() => setViendo(mat)}>
-                {juegoMat ? <><Puzzle size={14} /> Jugar</> : <><Eye size={14} /> Ver</>}
+                  ? <><Loader2 size={16} className="spin" /> Transcribiendo...</>
+                  : <><Captions size={16} /> Transcribir</>}
               </button>
             )}
             {sinTexto && (
@@ -1010,88 +1002,8 @@ export default function Biblioteca() {
                 disabled={processing}
               >
                 {processing
-                  ? <><Loader2 size={14} className="spin" /> Leyendo...</>
-                  : <><ScanText size={14} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
-              </button>
-            )}
-            {!juegoMat && (
-            <button
-              className="mat-action-btn"
-              title="Resumen pedagógico con IA"
-              onClick={() => handleSummary(mat)}
-              disabled={processing}
-            >
-              <Sparkles size={14} /> Resumen IA
-            </button>
-            )}
-            {mat.extractedText && !juegoMat && (
-              <button
-                className="mat-action-btn"
-                title="Tarjetas visuales para que los chicos repasen en el celu"
-                onClick={() => handleStudyCards(mat)}
-                disabled={cardsGeneratingId === mat.id}
-              >
-                {cardsGeneratingId === mat.id
-                  ? <><Loader2 size={14} className="spin" /> Armando tarjetas…</>
-                  : <><Layers size={14} /> {mat.studyCards?.length ? 'Tarjetas' : 'Crear tarjetas'}</>}
-              </button>
-            )}
-            {mat.extractedText && !juegoMat && (
-              <button
-                className="mat-action-btn"
-                title="Resumen en audio de 2-3 min para que repasen con auriculares"
-                onClick={() => handlePodcast(mat)}
-                disabled={podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'}
-              >
-                {podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'
-                  ? <><Loader2 size={14} className="spin" /> Grabando...</>
-                  : <><Headphones size={14} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
-              </button>
-            )}
-            {mat.extractedText && !juegoMat && (
-              <button
-                className="mat-action-btn"
-                title="Migue lo lee y te ayuda a usarlo: preguntas, adaptaciones, cómo darlo en clase"
-                onClick={() => migue?.abrir({ contexto: { tipo: 'material', id: mat.id, titulo: mat.title, detalle: mat.subjectName } })}
-              >
-                <MessagesSquare size={14} /> Preguntale a Migue
-              </button>
-            )}
-            {mat.extractedText && !deck && !juegoMat && (
-              <button
-                className="mat-action-btn"
-                title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
-                onClick={() => setAdaptando(mat)}
-              >
-                <Wand2 size={14} /> Adaptar
-              </button>
-            )}
-            {mat.extractedText && !mat.visual && (
-              <button
-                className="mat-action-btn"
-                title="Flujograma, ciclo, causas y efecto, mapa mental o línea de tiempo con este material"
-                onClick={() => setVisualPara({ mat, tipo: 'diagrama' })}
-              >
-                <Network size={14} /> Diagrama
-              </button>
-            )}
-            {mat.extractedText && !mat.visual && (
-              <button
-                className="mat-action-btn"
-                title="Crucigrama con los conceptos clave, para imprimir (en el celular, los chicos tienen los juegos de Practicar)"
-                onClick={() => setVisualPara({ mat, tipo: 'juego' })}
-              >
-                <Puzzle size={14} /> Crucigrama
-              </button>
-            )}
-            {/* Los juegos que los chicos tienen en "Practicar" (072): el docente los prueba y quedan armados */}
-            {mat.extractedText && !mat.visual && (
-              <button
-                className="mat-action-btn"
-                title="Probá los juegos para repasar que tus estudiantes tienen en «Practicar». Se arman una vez y quedan para todo el curso"
-                onClick={() => setProbandoJuegos(mat)}
-              >
-                <Gamepad2 size={14} /> Juegos
+                  ? <><Loader2 size={16} className="spin" /> Leyendo...</>
+                  : <><ScanText size={16} /> {textError ? 'Reintentar' : 'Leer texto'}</>}
               </button>
             )}
             {/* La clase en vivo todavía no muestra los juegos: proyectaría solo las pistas */}
@@ -1101,23 +1013,122 @@ export default function Biblioteca() {
                 title="Trabajarlo en la clase en vivo: proyectarlo, mostrarlo en los celulares y sacar preguntas"
                 onClick={() => navigate(`/clase-en-vivo?material=${mat.id}`)}
               >
-                <Radio size={14} /> En vivo
+                <Radio size={16} /> En vivo
               </button>
             )}
             <button
               className={`mat-action-btn ${mat.isSharedWithStudents ? 'active' : ''}`}
               title={mat.isSharedWithStudents ? 'Dejar de compartir' : `Compartir con tus estudiantes de ${destinoDe(mat)}`}
+              aria-pressed={mat.isSharedWithStudents}
               onClick={() => handleToggleShare(mat)}
             >
-              <Share2 size={14} /> {mat.isSharedWithStudents ? 'Compartido' : 'Compartir'}
-            </button>
-            <button className="mat-action-btn" title="Cambiar nombre o descripción" onClick={() => openEdit(mat)}>
-              <PencilLine size={14} />
-            </button>
-            <button className="mat-action-btn danger" title="Eliminar" onClick={() => handleDelete(mat)}>
-              <Trash2 size={14} />
+              <Share2 size={16} /> {mat.isSharedWithStudents ? 'Compartido' : 'Compartir'}
             </button>
           </div>
+          <details className="mat-mas">
+            <summary>
+              <Sparkles size={15} aria-hidden="true" /> Con la IA y más
+              <ChevronDown size={15} className="mat-mas-flecha" aria-hidden="true" />
+            </summary>
+            <div className="mat-mas-lista">
+              {mat.extractedText && !juegoMat && (
+                <button
+                  className="mat-action-btn"
+                  title="Migue lo lee y te ayuda a usarlo: preguntas, adaptaciones, cómo darlo en clase"
+                  onClick={() => migue?.abrir({ contexto: { tipo: 'material', id: mat.id, titulo: mat.title, detalle: mat.subjectName } })}
+                >
+                  <MessagesSquare size={16} /> Preguntale a Migue
+                </button>
+              )}
+              {!juegoMat && (
+                <button
+                  className="mat-action-btn"
+                  title="Resumen pedagógico con IA"
+                  onClick={() => handleSummary(mat)}
+                  disabled={processing}
+                >
+                  <Sparkles size={16} /> Resumen
+                </button>
+              )}
+              {mat.extractedText && !juegoMat && (
+                <button
+                  className="mat-action-btn"
+                  title="Tarjetas visuales para que los chicos repasen en el celu"
+                  onClick={() => handleStudyCards(mat)}
+                  disabled={cardsGeneratingId === mat.id}
+                >
+                  {cardsGeneratingId === mat.id
+                    ? <><Loader2 size={16} className="spin" /> Armando tarjetas…</>
+                    : <><Layers size={16} /> {mat.studyCards?.length ? 'Tarjetas' : 'Crear tarjetas'}</>}
+                </button>
+              )}
+              {mat.extractedText && !juegoMat && (
+                <button
+                  className="mat-action-btn"
+                  title="Resumen en audio de 2-3 min para que repasen con auriculares"
+                  onClick={() => handlePodcast(mat)}
+                  disabled={podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'}
+                >
+                  {podcastGeneratingId === mat.id || mat.podcastStatus === 'generating'
+                    ? <><Loader2 size={16} className="spin" /> Grabando...</>
+                    : <><Headphones size={16} /> {mat.podcastStatus === 'ready' ? 'Podcast' : 'Crear podcast'}</>}
+                </button>
+              )}
+              {mat.extractedText && !deck && !juegoMat && (
+                <button
+                  className="mat-action-btn"
+                  title="Hacer una versión en lectura fácil, paso a paso, con glosario o más corta. El original no cambia."
+                  onClick={() => setAdaptando(mat)}
+                >
+                  <Wand2 size={16} /> Adaptar
+                </button>
+              )}
+              {mat.extractedText && !mat.visual && (
+                <button
+                  className="mat-action-btn"
+                  title="Flujograma, ciclo, causas y efecto, mapa mental o línea de tiempo con este material"
+                  onClick={() => setVisualPara({ mat, tipo: 'diagrama' })}
+                >
+                  <Network size={16} /> Diagrama
+                </button>
+              )}
+              {mat.extractedText && !mat.visual && (
+                <button
+                  className="mat-action-btn"
+                  title="Crucigrama con los conceptos clave, para imprimir (en el celular, los chicos tienen los juegos de Practicar)"
+                  onClick={() => setVisualPara({ mat, tipo: 'juego' })}
+                >
+                  <Puzzle size={16} /> Crucigrama
+                </button>
+              )}
+              {/* Los juegos que los chicos tienen en "Practicar" (072): el docente los prueba y quedan armados */}
+              {mat.extractedText && !mat.visual && (
+                <button
+                  className="mat-action-btn"
+                  title="Probá los juegos para repasar que tus estudiantes tienen en «Practicar». Se arman una vez y quedan para todo el curso"
+                  onClick={() => setProbandoJuegos(mat)}
+                >
+                  <Gamepad2 size={16} /> Juegos
+                </button>
+              )}
+              {deck && (
+                <button
+                  className="mat-action-btn"
+                  title="Corregir, reordenar o agregar diapositivas"
+                  // Si es de los viejos, ya viene convertido; al guardar pasa a JSON
+                  onClick={() => setEditando({ mazo: deck, mat })}
+                >
+                  <PencilLine size={16} /> Editar diapositivas
+                </button>
+              )}
+              <button className="mat-action-btn" title="Cambiar nombre o descripción" onClick={() => openEdit(mat)}>
+                <PencilLine size={16} /> Cambiar nombre
+              </button>
+              <button className="mat-action-btn danger" onClick={() => handleDelete(mat)}>
+                <Trash2 size={16} /> Eliminar
+              </button>
+            </div>
+          </details>
         </div>
       </div>
     );
@@ -1129,7 +1140,7 @@ export default function Biblioteca() {
       <aside className="card biblioteca-sidebar">
         <div className="biblioteca-sidebar-header">
           <BookOpen size={18} />
-          <h3 aria-level={2}>Biblioteca Docente</h3>
+          <h3 aria-level={2}>Mis materiales</h3>
         </div>
 
         <div className="biblioteca-filters">
@@ -1182,7 +1193,7 @@ export default function Biblioteca() {
             <Search size={16} className="search-icon" />
             <input
               className="search-input"
-              aria-label="Buscar en la biblioteca"
+              aria-label="Buscar en tus materiales"
               placeholder="Buscar por título, tag o contenido..."
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -1656,7 +1667,7 @@ export default function Biblioteca() {
           <div className="em-modal-footer">
             <button className="btn btn-outline btn-sm" onClick={() => void pedirCerrarSubir()} disabled={uploading}>Cancelar</button>
             <button className="btn btn-primary btn-sm" onClick={handleUpload} disabled={uploading || !uplFile || !!achicando}>
-              {uploading ? 'Subiendo...' : 'Subir a la biblioteca'}
+              {uploading ? 'Subiendo...' : 'Subir a Mis materiales'}
             </button>
           </div>
         </div>

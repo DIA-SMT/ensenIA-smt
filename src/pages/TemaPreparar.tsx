@@ -217,7 +217,7 @@ export default function TemaPreparar() {
     if (trabajando) return;
     const ok = await confirmar({
       titulo: `¿Sacar «${m.title}» de este tema?`,
-      mensaje: 'Sigue en tu biblioteca; solo deja de estar en este tema.',
+      mensaje: 'Sigue en Mis materiales; solo deja de estar en este tema.',
       accion: 'Sacar del tema',
     });
     if (!ok) return;
@@ -362,12 +362,12 @@ export default function TemaPreparar() {
         <div className="tp-acciones">
           <Link to={`/modulo?tema=${tema.id}`} className="btn btn-outline btn-sm"><Layers size={14} /> Armar la clase completa</Link>
           <Link to={`/ia-lab?clase=${tema.id}&herramienta=pres`} className="btn btn-outline btn-sm"><Presentation size={14} /> Presentación con IA</Link>
-          <button type="button" className="btn btn-outline btn-sm" onClick={abrirSumar}><Plus size={14} /> Sumar de la biblioteca</button>
+          <button type="button" className="btn btn-outline btn-sm" onClick={abrirSumar}><Plus size={14} /> Sumar de Mis materiales</button>
         </div>
         {sumando && (
           <div className="tp-sumar">
-            {biblioteca === null ? <p className="tp-vacio">Buscando en tu biblioteca…</p>
-              : sumables.length === 0 ? <p className="tp-vacio">No hay materiales de {materiaNombre || 'esta materia'} sin tema. Lo que subas a la biblioteca aparece acá.</p>
+            {biblioteca === null ? <p className="tp-vacio">Buscando en tus materiales…</p>
+              : sumables.length === 0 ? <p className="tp-vacio">No hay materiales de {materiaNombre || 'esta materia'} sin tema. Lo que subas a Mis materiales aparece acá.</p>
                 : (
                   <ul className="tp-lista">
                     {sumables.map(m => (

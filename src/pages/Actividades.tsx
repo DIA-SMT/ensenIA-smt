@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, CheckCircle, Clock, ChevronRight, Sparkles,
-  CircleDot, Lock, Unlock, Trash2, QrCode, Search, FileText, PencilLine,
+  CircleDot, Lock, Unlock, Trash2, QrCode, Search, FileText, PencilLine, ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubjects } from '../services/subjects.service';
@@ -22,6 +22,8 @@ import './Actividades.css';
 
 interface ActivityWithStats extends Activity {
   submitted: number;
+  /** Entregadas y sin corregir: la misma cuenta que "para corregir" en Hoy */
+  porCorregir: number;
   avgScore: number | null;
 }
 
@@ -52,6 +54,7 @@ export default function Actividades() {
           return {
             ...a,
             submitted: submitted.length,
+            porCorregir: subs.filter(s => s.status === 'submitted').length,
             avgScore: scores.length ? scores.reduce((x, y) => x + y, 0) / scores.length : null,
           };
         })
@@ -215,6 +218,8 @@ export default function Actividades() {
     </div>
   );
 
+  const porCorregir = activities.reduce((n, a) => n + a.porCorregir, 0);
+
   return (
     <div className="acts-container animate-in">
       <div className="acts-header">
@@ -227,6 +232,11 @@ export default function Actividades() {
         {/* Con la lista vacía, el botón está en el estado vacío */}
         {(loading || activities.length > 0) && (
           <div className="acts-crear">
+            {porCorregir > 0 && (
+              <Link to="/corregir" className="btn btn-secondary btn-sm">
+                <ClipboardCheck size={15} aria-hidden="true" /> {porCorregir} para corregir
+              </Link>
+            )}
             <Link to="/actividades/nueva?tipo=tp" className="btn btn-primary btn-sm">
               <FileText size={15} aria-hidden="true" /> Trabajo práctico o evaluación
             </Link>

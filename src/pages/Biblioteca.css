@@ -143,10 +143,12 @@
 
 .mat-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
 }
+.mat-meta .badge { white-space: nowrap; }
 
 .mat-size {
   font-size: 0.75rem;
@@ -186,11 +188,12 @@
 .mat-action-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    gap: 6px;
+    min-height: var(--touch, 44px);
+    font-size: 0.8125rem;
+    font-weight: 600;
     color: var(--text-secondary);
-    padding: 5px 10px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-color);
     background: transparent;
@@ -353,3 +356,37 @@
 .bib-grupo-ayuda { margin: 0 0 var(--space-2); font-size: 0.8125rem; color: var(--text-secondary); grid-column: 1 / -1; }
 .bib-grupo-unidad { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-subtle); }
 .bib-sin-plan { margin: 0 0 var(--space-3); padding: 10px 12px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); font-size: 0.8125rem; color: var(--text-secondary); }
+
+/* "Con la IA y más" (UX docente, etapa 5): lo que no se usa todos los días */
+.mat-mas { margin-top: 6px; }
+.mat-mas > summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch, 44px);
+    padding: 0 4px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--acento);
+    cursor: pointer;
+    list-style: none;
+    border-radius: var(--radius-sm);
+}
+.mat-mas > summary::-webkit-details-marker { display: none; }
+.mat-mas > summary:hover { background: var(--bg-hover); }
+.mat-mas-flecha { margin-left: auto; transition: transform var(--transition-fast); }
+.mat-mas[open] .mat-mas-flecha { transform: rotate(180deg); }
+.mat-mas-lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 6px;
+    padding-top: 4px;
+}
+.mat-mas-lista .mat-action-btn { width: 100%; }
+@media (prefers-reduced-motion: reduce) { .mat-mas-flecha { transition: none; } }
+
+/* En el celular, el ícono no le roba ancho a los botones */
+@media (max-width: 480px) {
+    .biblioteca-card { gap: var(--space-3); padding: var(--space-4); }
+    .biblioteca-card > .mat-icon-wrap { width: 40px; height: 40px; }
+}

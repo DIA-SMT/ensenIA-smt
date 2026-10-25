@@ -200,7 +200,7 @@ export default function ImportProgramModal(props: Props) {
               </div>
               <label className="em-checkbox-row">
                 <input type="checkbox" checked={saveToLibrary} onChange={e => setSaveToLibrary(e.target.checked)} />
-                Guardar el programa también en mi Biblioteca
+                Guardar el programa también en Mis materiales
               </label>
             </>
           )}

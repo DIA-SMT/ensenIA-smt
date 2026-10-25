@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare, Brain, CalendarRange, BarChart3, IdCard,
+  MessagesSquare, Brain, CalendarRange, BarChart3, IdCard, ListChecks, ClipboardCheck,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -52,8 +52,8 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/mis-clases', etiqueta: 'Mis clases', icono: Calendar, grupo: 'Mi día', claves: 'horario clases semana calendario agenda clima aula repasar entendieron temas difíciles comprensión' },
   { ruta: '/crear', etiqueta: 'Crear', titulo: '¿Qué querés crear?', icono: Wand2, grupo: 'Aula', ia: true, claves: 'nueva actividad módulo clase completa placas tarjetas repaso diapositivas evaluación resumen ia generar' },
   { ruta: '/actividades', etiqueta: 'Actividades', icono: ClipboardList, grupo: 'Aula', enBarra: true, claves: 'tareas entregas consignas resultados corregir' },
-  { ruta: '/seguimiento', etiqueta: 'Seguimiento', icono: Activity, grupo: 'Aula', claves: 'consultas dudas preguntas devoluciones atrasados entregas quién no entregó cómo vienen responder aclaraciones' },
-  { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', enBarra: true, claves: 'notas calificaciones trimestre boletín informes' },
+  { ruta: '/seguimiento', etiqueta: 'Seguimiento', icono: Activity, grupo: 'Aula', enBarra: true, claves: 'consultas dudas preguntas devoluciones atrasados entregas quién no entregó cómo vienen responder aclaraciones' },
+  { ruta: '/libreta', etiqueta: 'Libreta', icono: BookMarked, grupo: 'Aula', claves: 'notas calificaciones trimestre boletín informes' },
   { ruta: '/students', etiqueta: 'Estudiantes', icono: Users, grupo: 'Aula', claves: 'alumnos chicos ficha curso' },
   { ruta: '/biblioteca', etiqueta: 'Mis materiales', titulo: 'Mis materiales', icono: BookOpen, grupo: 'Aula', claves: 'material documentos archivos apuntes' },
   { ruta: '/clase-en-vivo', etiqueta: 'Clase en vivo', icono: Radio, grupo: 'Aula', claves: 'qr proyectar sala preguntas presencia' },
@@ -127,6 +127,8 @@ export const ACCIONES_POR_ROL: Record<UserRole, AccionRapida[]> = {
     { ruta: '/migue', etiqueta: 'Migue, tu asistente', icono: Sparkles, claves: 'preguntale a la ia asistente ayuda ideas consulta chat adaptar rúbrica' },
     { ruta: '/ia-lab', etiqueta: 'Preparar con la IA (presentación, evaluación, resumen)', icono: FlaskConical, claves: 'laboratorio ia generar evaluación resumen presentación diapositivas oral rúbrica' },
     { ruta: '/agenda', etiqueta: 'Mi horario de la semana', icono: Calendar, claves: 'agenda horario semana calendario' },
+    { ruta: '/asistencia', etiqueta: 'Pasar lista (asistencia de hoy)', icono: ListChecks, claves: 'tomar lista presentes ausentes faltas tardanzas asistencia' },
+    { ruta: '/corregir', etiqueta: 'Para corregir (entregas sin nota)', icono: ClipboardCheck, claves: 'corregir entregas pendientes devoluciones notas calificar revisar trabajos' },
   ],
   director: [],
   estudiante: [],
@@ -167,6 +169,8 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname === '/ia-lab') return 'Preparar con la IA';
   if (pathname === '/agenda') return 'Mi horario';
   if (pathname === '/migue') return 'Migue';
+  if (pathname === '/asistencia') return 'Asistencia de hoy';
+  if (pathname === '/corregir') return 'Para corregir';
   if (pathname === '/actividades/nueva') return 'Armar actividad, TP o evaluación';
   if (pathname.startsWith('/actividades/') && pathname.endsWith('/editar')) return 'Editar la actividad';
   if (pathname.startsWith('/actividades/')) return 'Resultados de la actividad';
@@ -189,6 +193,9 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   if (['/modulo', '/ia-lab'].includes(pathname) || pathname.startsWith('/tema/')) return rol === 'docente' ? '/planificacion' : null;
   if (pathname === '/actividad-rapida') return rol === 'docente' ? '/crear' : null;
   if (pathname === '/agenda') return '/mis-clases';
+  // Se llega desde Hoy (la lista) y desde Actividades (las entregas)
+  if (pathname === '/asistencia') return rol === 'docente' ? '/hoy' : null;
+  if (pathname === '/corregir') return rol === 'docente' ? '/actividades' : null;
   if (pathname.startsWith('/mis-actividades/') || pathname.startsWith('/materia/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';
   if (pathname.startsWith('/admin/escuelas/')) return '/admin';

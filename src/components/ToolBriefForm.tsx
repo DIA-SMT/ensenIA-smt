@@ -213,7 +213,7 @@ export default function ToolBriefForm({ tool, classTitle, hasAttachedDoc, materi
 
       {alElegirMaterial && USAN_MATERIAL.includes(tool) && (
         <label className="brief-field">
-          <span className="brief-label"><Paperclip size={13} aria-hidden="true" /> Material de tu biblioteca <span className="brief-hint">(opcional)</span></span>
+          <span className="brief-label"><Paperclip size={13} aria-hidden="true" /> Uno de tus materiales <span className="brief-hint">(opcional)</span></span>
           <select
             className="form-select brief-select"
             value={materialId ?? ''}
@@ -263,7 +263,7 @@ export default function ToolBriefForm({ tool, classTitle, hasAttachedDoc, materi
       {tool === 'sum' && (
         <>
           {!hasAttachedDoc && !alElegirMaterial && (
-            <p className="brief-hint-row">💡 Tip: adjuntá un material de la Biblioteca en el panel derecho y la IA lo usa como fuente.</p>
+            <p className="brief-hint-row">💡 Tip: adjuntá uno de tus materiales en el panel derecho y la IA lo usa como fuente.</p>
           )}
           <PillGroup label="Estilo" options={['Conceptos clave', 'Con glosario', 'Con preguntas de comprensión']} value={estiloSum} onChange={setEstiloSum} />
           <PillGroup label="Extensión" options={['Breve', 'Media', 'Detallada']} value={extensionSum} onChange={setExtensionSum} />

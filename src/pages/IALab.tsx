@@ -734,7 +734,7 @@ export default function IALab() {
         if (!currentSession) return;
         const ok = await confirmar({
             titulo: '¿Limpiar la conversación?',
-            mensaje: 'Se borran todos los mensajes de este chat. Lo que ya guardaste en un tema, en la biblioteca o como actividad no se toca.',
+            mensaje: 'Se borran todos los mensajes de este chat. Lo que ya guardaste en un tema, en Mis materiales o como actividad no se toca.',
             accion: 'Limpiar',
             peligro: true,
         });
@@ -1683,7 +1683,7 @@ export default function IALab() {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="lab-material"><Paperclip size={14} aria-hidden="true" /> Material de la Biblioteca</label>
+                        <label htmlFor="lab-material"><Paperclip size={14} aria-hidden="true" /> Uno de tus materiales</label>
                         <select
                             id="lab-material"
                             className="form-select"

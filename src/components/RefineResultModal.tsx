@@ -149,7 +149,7 @@ export default function RefineResultModal({
             <button
               className="btn btn-secondary btn-sm"
               disabled={busy !== null || !title.trim()}
-              onClick={() => run('material', () => onSaveAsMaterial(content, title.trim()), 'Guardado en tu Biblioteca')}
+              onClick={() => run('material', () => onSaveAsMaterial(content, title.trim()), 'Guardado en Mis materiales')}
             >
               <BookOpen size={14} /> {busy === 'material' ? 'Guardando…' : 'Guardar como material'}
             </button>

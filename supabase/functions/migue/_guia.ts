@@ -97,7 +97,8 @@ un consejo pedagógico corto.
 
 Para moverse por la app:
 - En la computadora, el menú está a la izquierda. En el celular, lo principal está en la
-  barra de abajo y el resto en "Más".
+  barra de abajo y el resto en "Más". Docente: "Hoy", "Planificación", "Actividades" y
+  "Seguimiento" abajo; la "Libreta" y lo demás, en "Más".
 - Arriba está el buscador "Buscar o ir a…" (en la computadora también con Ctrl+K): lleva a
   cualquier pantalla escribiendo cómo se llama o para qué sirve.
 - El botón "?" de arriba abre la guía rápida "¿Qué querés hacer?", con accesos a lo más
@@ -147,8 +148,9 @@ Menú: grupo "Mi día": "Hoy" (el inicio), "Planificación", "Mis clases"; grupo
 grupo "Escuela": "Mensajes", "Citaciones", "Alertas", "Comunicados", "Normativa"; grupo
 "Cuenta": "Ajustes". No están en el menú (se llega con el buscador o desde otra pantalla):
 "Nueva actividad rápida", "Armar la clase completa (diapositivas, juego y tarea)",
-"Preparar con la IA", "Migue, tu asistente", "Mi horario de la semana", la asistencia (desde "Hoy"
-→ "Pasar lista") y "Para corregir" (desde "Hoy").
+"Preparar con la IA", "Migue, tu asistente", "Mi horario de la semana", "Pasar lista (asistencia
+de hoy)" (también desde "Hoy" → "Pasar lista") y "Para corregir (entregas sin nota)" (también
+desde "Hoy" y desde "Actividades" → "N para corregir").
 Sin materias asignadas, la app dice "Todavía no tenés cursos asignados": se las asigna la
 dirección. Lo que se arma con IA (presentaciones, actividades, resúmenes, tarjetas, juegos)
 tiene 15 usos por día ("Te quedan N usos de IA hoy"); las charlas con Migue van aparte.
@@ -218,12 +220,12 @@ publica directo, sin borrador. Después: "Mostrar QR para el aula", "Ver resulta
 
 ### Preparar la clase de un tema
 "Preparar ▾" → "Todo lo del tema": "Para dar la clase" (sus materiales, "Armar la clase
-completa", "Presentación con IA", "Sumar de la biblioteca") y "Para los chicos"
+completa", "Presentación con IA", "Sumar de Mis materiales") y "Para los chicos"
 ("Trabajo práctico", "Evaluación", "Actividad") y "Dar esta clase en vivo".
 
 ### Armar la clase completa (diapositivas, juego y tarea)
 "¿Para qué curso?" → "¿De dónde sale el contenido?" (un tema de la planificación, un
-material de la biblioteca o "De un tema nuevo") → "Armar la clase completa" → elegir las piezas
+"De Mis materiales" o "De un tema nuevo") → "Armar la clase completa" → elegir las piezas
 (Diapositivas, Tarea, Crucigrama, Diagrama, Tarjetas de repaso, Podcast, "Pregunta para la
 clase en vivo") → "Generar N cosas" → "Revisá tu clase" (cada parte con su casilla
 "Enviar") → "Enviar al curso" o "Dejarla guardada sin enviar". Los chicos la ven en "Mis
@@ -253,7 +255,7 @@ usar" → "Insertar en clase", "Guardar como material" o "Publicar actividad".
    (también desde el celular) pasa sola a la pregunta, y al cerrarla vuelve al material en
    la misma lámina. Se cambia a mano con "Pregunta y QR" y "Material".
 4. "Terminar" → "Terminar clase" abre el "Resumen de la clase". En "Qué sigue": "Pasar
-   asistencia de hoy", el repaso y "Marcar «tema» como dado" (lo tilda en la planificación).
+   lista de hoy", el repaso y "Marcar «tema» como dado" (lo tilda en la planificación).
 
 ### Libreta (notas)
 Elegir "Materia y curso" y "Trimestre". Pestañas:
@@ -280,11 +282,14 @@ guarda y se manda sola.
 medalla", "Observaciones" ("Guardar observación"), "Familia" ("Escribirle a …", "Citar a
 la familia") y "Avisar a dirección".
 
-### Mis materiales (biblioteca)
+### Mis materiales
 "Subir" → el archivo (PDF, Word o imagen), "Título", "Materia y curso" y la casilla
-"Compartir con los estudiantes de …" → "Subir a la biblioteca". "Video" suma un link de
-YouTube. Cada material tiene, según el tipo: "Resumen IA", "Crear tarjetas", "Crear
-podcast", "Preguntale a Migue", "Adaptar", "Diagrama", "Crucigrama", "Juegos", "En vivo", "Compartir".
+"Compartir con los estudiantes de …" → "Subir a Mis materiales". "Video" suma un link de
+YouTube. Cada material tiene a mano, según el tipo: "Ver" (o "Proyectar" si son
+diapositivas, "Ver video", "Jugar"), "Leer texto" o "Transcribir" si todavía no tiene texto,
+"En vivo" y "Compartir". Lo demás está en "Con la IA y más": "Preguntale a Migue",
+"Resumen", "Crear tarjetas", "Crear podcast", "Adaptar", "Diagrama", "Crucigrama", "Juegos",
+"Editar diapositivas", "Cambiar nombre" y "Eliminar".
 
 ### Citaciones, alertas y comunicados
 - Citar a una familia: "Citaciones" → "Familia de" (el estudiante) → "Título", "Mensaje"
