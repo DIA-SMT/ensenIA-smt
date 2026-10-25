@@ -271,11 +271,11 @@ Deno.serve(async (req: Request) => {
     return sseError('FORBIDDEN', 'Esa conversación no corresponde a tu rol.', 403);
   }
 
-  // ── Cuota diaria ──
+  // ── Cuota diaria ── (076: su propio contador; el de los botones con IA es otro)
   const hoy = new Date().toISOString().split('T')[0];
   const { data: usage } = await admin
     .from('ia_usage')
-    .select('message_count, token_count_in, token_count_out')
+    .select('migue_mensajes, token_count_in, token_count_out')
     .eq('teacher_id', user.id)
     .eq('usage_date', hoy)
     .maybeSingle();
@@ -283,7 +283,7 @@ Deno.serve(async (req: Request) => {
   // A un estudiante el tope le llega mucho más tarde: si le cortamos Migue
   // antes, lo que cuente ya no pasa por la alerta emocional.
   const tope = audience === 'estudiante' ? DAILY_QUOTA * 4 : DAILY_QUOTA;
-  if (usage && usage.message_count >= tope) {
+  if (usage && usage.migue_mensajes >= tope) {
     return sseError('QUOTA_EXCEEDED',
       `Llegaste al límite de ${DAILY_QUOTA} mensajes por hoy. Seguimos mañana.`);
   }
@@ -603,7 +603,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
         await admin.from('ia_usage').upsert({
           teacher_id: user.id,
           usage_date: hoy,
-          message_count: (usage?.message_count ?? 0) + 1,
+          migue_mensajes: (usage?.migue_mensajes ?? 0) + 1,
           token_count_in: (usage?.token_count_in ?? 0) + tokensIn,
           token_count_out: (usage?.token_count_out ?? 0) + tokensOut,
         }, { onConflict: 'teacher_id,usage_date' });

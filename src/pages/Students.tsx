@@ -509,8 +509,18 @@ export default function Students() {
         try {
             const s = selectedStudent;
             const notas = notasFicha ?? await getPublishedGradesByStudent(s.id);
+            // El nombre del chico no viaja a la IA: va como [E] (también si aparece en
+            // un comentario o una observación) y se vuelve a poner en la respuesta.
+            // Los nombres de los docentes tampoco hacen falta.
+            const nombres = [s.firstName, s.lastName].map(x => x?.trim() ?? '').filter(x => x.length >= 2);
+            // Con o sin tilde: "Benítez" y "benitez" son el mismo chico
+            const VARIANTES: Record<string, string> = { a: 'aáàâä', e: 'eéèêë', i: 'iíìîï', o: 'oóòôö', u: 'uúùûü', n: 'nñ' };
+            const patron = (n: string) => [...n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()]
+                .map(c => (VARIANTES[c] ? `[${VARIANTES[c]}]` : c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('');
+            const tapar = (t: string) => nombres.reduce(
+                (acc, n) => acc.replace(new RegExp(`(?<!\\p{L})${patron(n)}(?!\\p{L})`, 'giu'), '[E]'), t);
             const lines: string[] = [
-                `ESTUDIANTE: ${s.firstName} ${s.lastName} — ${s.courseName}.`,
+                `ESTUDIANTE: [E] — ${s.courseName}.`,
                 '',
                 'NOTAS PUBLICADAS EN LA LIBRETA:',
                 ...(notas.length
@@ -522,17 +532,17 @@ export default function Students() {
                 'CHECK-INS EMOCIONALES RECIENTES:',
                 ...(checkins.length
                     ? checkins.slice(0, 10).map(c =>
-                        `- ${FEELING_META[c.feeling].label} (${c.moment === 'inicio' ? 'al empezar' : 'al terminar'} una actividad)${c.comment ? `: "${c.comment}"` : ''} — ${new Date(c.createdAt).toLocaleDateString('es-AR')}`)
+                        `- ${FEELING_META[c.feeling].label} (${c.moment === 'inicio' ? 'al empezar' : 'al terminar'} una actividad)${c.comment ? `: "${tapar(c.comment)}"` : ''} — ${new Date(c.createdAt).toLocaleDateString('es-AR')}`)
                     : ['(sin check-ins registrados)']),
                 '',
                 'OBSERVACIONES DEL EQUIPO DOCENTE:',
                 ...(observations.length
                     ? observations.slice(0, 10).map(o =>
-                        `- [${OBSERVATION_META[o.category].label}] ${o.note} (${o.teacherName ?? 'docente'}, ${new Date(o.createdAt).toLocaleDateString('es-AR')})`)
+                        `- [${OBSERVATION_META[o.category].label}] ${tapar(o.note)} (docente, ${new Date(o.createdAt).toLocaleDateString('es-AR')})`)
                     : ['(sin observaciones registradas)']),
             ];
-            const summary = await summarizeStudent(lines.join('\n'), `${s.firstName} ${s.lastName}`);
-            setSummaryText(summary);
+            const summary = await summarizeStudent(lines.join('\n'), 'Estudiante');
+            setSummaryText(summary.replace(/\[E\]/g, s.firstName));
         } catch (err) {
             setSummaryError(err instanceof Error ? err.message : 'No se pudo generar el resumen.');
         } finally {

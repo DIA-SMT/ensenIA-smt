@@ -47,7 +47,9 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/corregir$/, docente: '"Para corregir" (todas las entregas sin nota; se llega desde "Hoy")' },
   { ruta: /^\/students$/, docente: '"Estudiantes", en el menú, grupo "Aula"' },
   { ruta: /^\/biblioteca$/, docente: '"Mis materiales" (título "Biblioteca docente"), en el menú, grupo "Aula"' },
-  { ruta: /^\/clase-en-vivo$/, docente: '"Clase en vivo", en el menú, grupo "Aula"' },
+  { ruta: /^\/clase-en-vivo$/, docente: '"Clase en vivo", en el menú, grupo "Aula"', director: '"Sala en vivo", en el menú, grupo "Comunidad"' },
+  { ruta: /^\/seguimiento$/, docente: '"Seguimiento" (consultas, entregas y quién viene atrasado), en el menú, grupo "Aula"' },
+  { ruta: /^\/perfil$/, docente: '"Mi perfil" (título "Mi perfil docente"), en el menú, grupo "Cuenta"', director: '"Mi perfil", en el menú, grupo "Cuenta"' },
   { ruta: /^\/cursos\/[^/]+$/, docente: '"Ficha del curso"', director: '"Ficha del curso"' },
   { ruta: /^\/mensajes$/, docente: '"Mensajes", en el menú, grupo "Escuela"', director: '"Mensajes", en el menú, grupo "Comunidad"' },
   { ruta: /^\/familias$/, docente: '"Citaciones" (título "Citaciones a familias"), en el menú, grupo "Escuela"', director: '"Familias", en el menú, grupo "Comunidad"' },
@@ -148,7 +150,8 @@ grupo "Escuela": "Mensajes", "Citaciones", "Alertas", "Comunicados", "Normativa"
 la IA" (abre "Preparar con la IA"), "Mi horario de la semana", la asistencia (desde "Hoy"
 → "Pasar lista") y "Para corregir" (desde "Hoy").
 Sin materias asignadas, la app dice "Todavía no tenés cursos asignados": se las asigna la
-dirección. La IA tiene 15 usos por día ("Te quedan N usos de IA hoy").
+dirección. Lo que se arma con IA (presentaciones, actividades, resúmenes, tarjetas, juegos)
+tiene 15 usos por día ("Te quedan N usos de IA hoy"); las charlas con Migue van aparte.
 
 ### Armar un TP, una evaluación o una actividad con preguntas (opción múltiple o desarrollo)
 Se entra por "Crear" → "Trabajo práctico o evaluación", por "Actividades" → "Trabajo
@@ -221,7 +224,7 @@ completa", "Presentación con IA", "Sumar de la biblioteca") y "Para los chicos"
 ### Armar la clase (diapositivas, juego y tarea)
 "¿Para qué curso?" → "¿De dónde sale el contenido?" (un tema de la planificación, un
 material de la biblioteca o "De un tema nuevo") → "Armar la clase" → elegir las piezas
-(Diapositivas, Tarea, Crucigrama, Diagrama, Placas de estudio, Podcast, "Pregunta para la
+(Diapositivas, Tarea, Crucigrama, Diagrama, Tarjetas de repaso, Podcast, "Pregunta para la
 clase en vivo") → "Generar N cosas" → "Revisá tu clase" (cada parte con su casilla
 "Enviar") → "Enviar al curso" o "Dejarla guardada sin enviar". Los chicos la ven en "Mis
 materiales"; la tarea se crea al enviar.
@@ -229,7 +232,7 @@ materiales"; la tarea se crea al enviar.
 ### Preparar con la IA
 (En el buscador: "Preguntale a la IA".) Herramientas: "Crear una actividad", "Armar una
 evaluación", "Resumir un texto", "Preparar diapositivas", "Evaluar exposiciones", "Hacer
-un diagrama", "Armar un juego", "Pregunta libre". Con cada respuesta: "Revisar y usar" →
+un diagrama", "Armar un crucigrama", "Pregunta libre". Con cada respuesta: "Revisar y usar" →
 "Insertar en clase", "Guardar como material" o "Publicar actividad".
 
 ### Clase en vivo
@@ -271,8 +274,8 @@ la familia") y "Avisar a dirección".
 ### Mis materiales (biblioteca)
 "Subir" → el archivo (PDF, Word o imagen), "Título", "Materia y curso" y la casilla
 "Compartir con los estudiantes de …" → "Subir a la biblioteca". "Video" suma un link de
-YouTube. Cada material tiene, según el tipo: "Resumen IA", "Crear placas", "Crear
-podcast", "Usar en IA Lab", "Adaptar", "Diagrama", "Juego", "En vivo", "Compartir".
+YouTube. Cada material tiene, según el tipo: "Resumen IA", "Crear tarjetas", "Crear
+podcast", "Usar en IA Lab", "Adaptar", "Diagrama", "Crucigrama", "Juegos", "En vivo", "Compartir".
 
 ### Citaciones, alertas y comunicados
 - Citar a una familia: "Citaciones" → "Familia de" (el estudiante) → "Título", "Mensaje"
@@ -411,7 +414,7 @@ cada clase: "Diapositivas", "Apunte", "Tarea" y "Guardar para usar sin señal".
 
 ### Estudiar y repasar
 - "Estudiar": "Mi semana" (lo que vence en 7 días, con "Practicar"), "Practicá con tu
-  material" (cada material con "Practicar", que es un quiz, "Guía" y "Placas"), la racha,
+  material" (cada material con "Practicar": el quiz, los juegos y las tarjetas de repaso), la racha,
   los XP y "Mis medallas".
 - "Mis materiales": lo que subieron sus docentes, con "Ver", "Practicar", "Resumen",
   "Podcast" o "Explicámelo fácil", según el material.

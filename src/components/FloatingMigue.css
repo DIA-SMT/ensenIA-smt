@@ -102,3 +102,8 @@
 @media (prefers-reduced-motion: reduce) {
   .migue-flotante-burbuja { transition: none; }
 }
+
+/* En el celular, más chica: no tapa tanto lo de abajo */
+@media (max-width: 640px) {
+  .migue-flotante-burbuja { width: 58px; height: 58px; }
+}

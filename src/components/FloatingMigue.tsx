@@ -96,6 +96,8 @@ export default function FloatingMigue() {
 
   return (
     <>
+      {/* Con el panel abierto no hace falta (y tapaba su botón de enviar) */}
+      {!abierto && (
       <button
         type="button"
         className="migue-flotante-burbuja"
@@ -117,6 +119,7 @@ export default function FloatingMigue() {
         <span className="migue-flotante-ia" aria-hidden="true">IA</span>
         <span className="migue-flotante-agarre" aria-hidden="true">•••</span>
       </button>
+      )}
 
       <Dialogo abierto={abierto} alCerrar={() => setAbierto(false)} etiqueta="Migue, asistente pedagógico" className="dialogo-migue">
         <Suspense fallback={<Cargando texto="Abriendo a Migue…" />}>

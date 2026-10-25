@@ -705,6 +705,7 @@ Escribí una síntesis profesional y humana del estudiante (máx. 220 palabras) 
 
 Reglas:
 - Basate SOLO en los datos provistos; no inventes.
+- El estudiante figura como [E]: nombralo así (la app pone el nombre después).
 - Tono constructivo y respetuoso: es material para hablar con la familia o el equipo.
 - Español rioplatense. Nada de tecnicismos psicológicos ni diagnósticos.`,
 
@@ -1287,6 +1288,12 @@ Deno.serve(async (req: Request) => {
       { role: 'user', content: userContent },
     ],
   };
+  // Lo que habla de chicos (la ficha de uno, el informe de la clase) va solo a
+  // proveedores que no guardan los pedidos, como Migue y el chat
+  if (mode === 'student_summary' || mode === 'class_report') {
+    const zdr = Deno.env.get('OPENROUTER_SOLO_ZDR') === 'no' ? undefined : { zdr: true };
+    if (zdr) orBody.provider = zdr;
+  }
   if (pdfBase64) {
     // "native": el PDF lo procesa el propio modelo (visión de Claude, sirve para escaneos)
     orBody.plugins = [{ id: 'file-parser', pdf: { engine: 'native' } }];
