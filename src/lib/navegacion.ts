@@ -179,6 +179,7 @@ export function tituloDe(rol: UserRole | undefined, pathname: string): string {
   if (pathname.startsWith('/materia/')) return 'Mi materia';
   if (pathname.startsWith('/cursos/')) return 'Ficha del curso';
   if (pathname.startsWith('/admin/escuelas/')) return 'Gestión de la escuela';
+  if (pathname.startsWith('/acompanamiento/')) return 'Observación de clase';
   return 'SMT EstudIA';
 }
 
@@ -199,5 +200,6 @@ export function itemActivo(rol: UserRole | undefined, pathname: string): RutaPan
   if (pathname.startsWith('/mis-actividades/') || pathname.startsWith('/materia/')) return '/mis-actividades';
   if (pathname.startsWith('/cursos/')) return rol === 'director' ? '/panel' : '/students';
   if (pathname.startsWith('/admin/escuelas/')) return '/admin';
+  if (pathname.startsWith('/acompanamiento/')) return rol === 'director' ? '/docentes' : null;
   return null;
 }

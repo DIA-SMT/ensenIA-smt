@@ -72,6 +72,8 @@ export const cargadores = {
   '/materia/:id':         () => import('../pages/MiMateria'),
   '/vocacional':          () => import('../pages/Vocacional'),
   '/docentes':            () => import('../pages/Docentes'),
+  // Observación de clase de un docente (081)
+  '/acompanamiento/:docente/:obs': () => import('../pages/ObservarClase'),
   '/horario':             () => import('../pages/HorarioEscuela'),
   '/cursos/:id':          () => import('../pages/CourseDetail'),
   '/comunicaciones':      () => import('../pages/Comunicaciones'),

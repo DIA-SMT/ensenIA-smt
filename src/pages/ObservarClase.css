@@ -1,0 +1,97 @@
+/* Observación de clase (081): acompañamiento de dirección a un docente */
+.obs-contenedor { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: 96px; }
+.obs-volver { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 44px; font-size: 0.9375rem; font-weight: 600; color: var(--text-secondary); text-decoration: none; }
+.obs-volver:hover { color: var(--text-primary); }
+
+.obs-cabecera, .obs-seccion { padding: var(--space-4); }
+.obs-cabecera { display: flex; flex-direction: column; gap: 6px; }
+.obs-cabecera-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.obs-cabecera h2 { margin: 0; font-size: 1.25rem; }
+.obs-sub { margin: 0; font-weight: 600; color: var(--text-primary); }
+.obs-estado {
+  padding: 3px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700;
+  background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-color);
+}
+.obs-estado.cerrada { background: var(--success-light); color: var(--success); border-color: var(--success); }
+.obs-seguimiento { margin: 4px 0 0; display: flex; align-items: flex-start; gap: 6px; font-size: 0.875rem; color: var(--text-secondary); }
+.obs-seguimiento svg { flex-shrink: 0; margin-top: 2px; }
+
+.obs-seccion { display: flex; flex-direction: column; gap: var(--space-3); }
+.obs-seccion h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+.obs-seccion h3 svg { color: var(--acento); }
+.obs-seccion-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.obs-total { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.obs-ayuda { margin: 0; font-size: 0.875rem; color: var(--text-subtle); }
+.obs-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+
+.obs-fila { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.obs-campo { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.obs-campo > span { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.obs-campo-corto { flex: 0 0 180px; }
+
+/* Cada dimensión de la pauta */
+.obs-dimension { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.obs-dimension legend { padding: 0 4px; font-weight: 700; font-size: 0.9375rem; }
+.obs-mirar { margin: 0; font-size: 0.8125rem; color: var(--text-subtle); }
+.obs-valores { display: flex; flex-wrap: wrap; gap: 6px; }
+.obs-valor {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 6px 12px;
+  border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-panel);
+  color: var(--text-secondary); font-size: 0.875rem; font-weight: 600; cursor: pointer;
+}
+.obs-valor:hover { border-color: var(--border-strong); color: var(--text-primary); }
+/* Elegido: color + tilde + negrita (el color solo no alcanza) */
+.obs-valor.on { color: var(--text-primary); border-width: 2px; background: var(--nivel-claro); border-color: var(--nivel); }
+.obs-valor-leido { margin: 0; align-self: flex-start; padding: 3px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; background: var(--nivel-claro); border: 1px solid var(--nivel); }
+.obs-valor.logrado, .obs-valor-leido.logrado { --nivel: var(--success); --nivel-claro: var(--success-light); }
+.obs-valor.en_proceso, .obs-valor-leido.en_proceso { --nivel: var(--warning); --nivel-claro: var(--warning-light); }
+.obs-valor.a_fortalecer, .obs-valor-leido.a_fortalecer { --nivel: var(--acento); --nivel-claro: var(--cyan-glow); }
+.obs-valor.no_observado, .obs-valor-leido.no_observado { --nivel: var(--border-strong); --nivel-claro: var(--bg-elevated); }
+.obs-nota { min-height: 0; }
+
+.obs-migue { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Acuerdos */
+.obs-acuerdo-edit { display: flex; align-items: center; gap: 6px; }
+.obs-acuerdo-edit .form-input { flex: 1; min-width: 0; }
+.obs-agregar { align-self: flex-start; }
+.obs-acuerdos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.obs-acuerdo {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  padding: 10px 12px; min-height: 48px; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer;
+}
+.obs-acuerdo input { width: 20px; height: 20px; accent-color: var(--success); }
+.obs-acuerdo input:disabled { cursor: default; }
+.obs-acuerdo small { font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); }
+.obs-acuerdo.cumplido { background: var(--success-light); border-color: var(--success); }
+.obs-acuerdo.cumplido small { color: var(--success); }
+
+.obs-contexto { padding: var(--space-3) var(--space-4); }
+.obs-contexto > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.obs-contexto[open] > summary { margin-bottom: 8px; }
+.obs-contexto .obs-ayuda { margin-bottom: 10px; }
+
+/* Guardar y compartir siempre a mano */
+.obs-barra {
+  position: sticky; bottom: 12px; z-index: 3;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: var(--radius-lg); border: 1px solid var(--border-color);
+  background: var(--bg-panel); box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.08));
+}
+.obs-borrar { margin-right: auto; color: var(--danger); }
+
+/* En el celular, arriba de la barra inferior */
+@media (max-width: 860px) {
+  .obs-barra { bottom: calc(var(--bottombar-height) + 20px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 560px) {
+  .obs-campo-corto { flex: 1 1 100%; }
+  /* Guardar y compartir lado a lado (apilados tapaban media pantalla); borrar, en su renglón */
+  .obs-barra { padding: 8px; gap: 6px; }
+  .obs-barra .btn:not(.obs-borrar) { flex: 1 1 0; justify-content: center; padding-inline: 8px; font-size: 0.875rem; white-space: nowrap; }
+  .obs-barra .btn:not(.obs-borrar) svg { display: none; }
+  .obs-borrar { flex-basis: 100%; justify-content: center; }
+}
+@media (pointer: coarse) {
+  .obs-valor { min-height: 44px; }
+}

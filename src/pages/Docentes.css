@@ -26,3 +26,16 @@
   font-weight: 700;
   color: var(--text-primary);
 }
+
+/* Acompañamiento (081): las observaciones de clase en el panel */
+.doc-obs-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+.doc-obs-cabecera h4 { margin: 0; }
+.doc-obs-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.doc-obs {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; min-height: 44px;
+  border: 1px solid var(--border-color); border-radius: var(--radius-md); text-decoration: none; color: var(--text-primary);
+}
+.doc-obs:hover { border-color: var(--border-strong); background: var(--bg-elevated); }
+.doc-obs span { font-size: 0.875rem; font-weight: 600; }
+.doc-obs small { font-size: 0.75rem; color: var(--text-subtle); }
+.doc-obs.borrador { border-style: dashed; }

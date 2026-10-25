@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare, GraduationCap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare, GraduationCap, ClipboardCheck, Plus } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getObservacionesDe, fechaLarga, type Observacion } from '../services/acompanamiento.service';
 import { enlaceMensaje } from '../services/mensajes.service';
 import { useAuth } from '../contexts/AuthContext';
 import { getTeacherUsers } from '../services/profiles.service';
@@ -56,6 +57,12 @@ export default function Docentes() {
   // domingo mostraba las del viernes).
   const diaSemana = new Date().getDay();
   const todayIndex = diaSemana >= 1 && diaSemana <= 5 ? diaSemana - 1 : -1;
+  // Al volver de una observación (?docente=…), su panel queda abierto
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Las observaciones de clase del docente elegido (081)
+  const [observaciones, setObservaciones] = useState<Observacion[] | null>(null);
+  const [errorObs, setErrorObs] = useState('');
+  const [intentoObs, setIntentoObs] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +100,25 @@ export default function Docentes() {
       .then(lista => setUso(Object.fromEntries(lista.map(u => [u.teacherId, u]))))
       .catch(console.error);
   }, [user]);
+
+  useEffect(() => {
+    const id = searchParams.get('docente');
+    if (!id || teachers.length === 0) return;
+    const t = teachers.find(x => x.id === id);
+    if (t) setSelectedTeacher(t);
+    setSearchParams({}, { replace: true });
+  }, [teachers, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    setObservaciones(null);
+    setErrorObs('');
+    if (!selectedTeacher) return;
+    let vigente = true;
+    getObservacionesDe(selectedTeacher.id)
+      .then(l => { if (vigente) setObservaciones(l); })
+      .catch(err => { if (vigente) setErrorObs(err instanceof Error ? err.message : 'No se pudieron cargar.'); });
+    return () => { vigente = false; };
+  }, [selectedTeacher?.id, intentoObs]);
 
   // Bitácora: queda registrado cada acceso al perfil de un docente.
   // Deps primitivas: la identidad del objeto user cambia en cada refresh
@@ -283,6 +309,48 @@ export default function Docentes() {
                   </span>
                 ))}
               </div>
+            </div>
+
+            {/* ── Acompañamiento (081): observaciones de clase, formativas ── */}
+            <div className="profile-section">
+              <div className="doc-obs-cabecera">
+                <h4><ClipboardCheck size={14} style={{ marginRight: 6 }} /> Acompañamiento</h4>
+                <Link to={`/acompanamiento/${selectedTeacher.id}/nueva`} className="btn btn-secondary btn-sm">
+                  <Plus size={13} aria-hidden="true" /> Observar una clase
+                </Link>
+              </div>
+              {errorObs ? (
+                <p className="text-secondary text-sm">
+                  {errorObs}{' '}
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIntentoObs(n => n + 1)}>Reintentar</button>
+                </p>
+              ) : observaciones === null ? (
+                <p className="text-secondary text-sm">Cargando…</p>
+              ) : observaciones.length === 0 ? (
+                <p className="text-secondary text-sm">
+                  Todavía sin observaciones de clase. Es formativa: {selectedTeacher.firstName} la ve cuando la compartís y puede responder.
+                </p>
+              ) : (
+                <ul className="doc-obs-lista">
+                  {observaciones.map(o => {
+                    const cumplidos = o.acuerdos.filter(a => a.cumplido).length;
+                    const estado = o.estado === 'borrador'
+                      ? 'Borrador: todavía no la ve'
+                      : o.respuestaDocente ? 'Compartida · respondió' : o.notificadoAt ? 'Compartida · se notificó' : 'Compartida · sin notificarse';
+                    return (
+                      <li key={o.id}>
+                        <Link to={`/acompanamiento/${selectedTeacher.id}/${o.id}`} className={`doc-obs ${o.estado}`}>
+                          <span>{fechaLarga(o.fecha)}{o.materia && o.curso ? ` · ${o.materia} — ${o.curso}` : ''}</span>
+                          <small>
+                            {estado}
+                            {o.estado === 'cerrada' && o.acuerdos.length > 0 ? ` · ${cumplidos} de ${o.acuerdos.length} acuerdos` : ''}
+                          </small>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             {perfilCompartido && (

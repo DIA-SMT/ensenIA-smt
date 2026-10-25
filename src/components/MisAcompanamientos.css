@@ -1,0 +1,43 @@
+/* "Acompañamiento" en Mi perfil (081) */
+.macomp-lista { display: flex; flex-direction: column; gap: 8px; }
+.macomp-item { border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-panel); }
+.macomp-item > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; min-height: 52px; cursor: pointer; list-style: none;
+}
+.macomp-item > summary::-webkit-details-marker { display: none; }
+.macomp-item[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+.macomp-titulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.macomp-titulo strong { font-size: 0.9375rem; }
+.macomp-titulo small { font-size: 0.8125rem; color: var(--text-subtle); overflow-wrap: anywhere; }
+.macomp-estado { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--cyan-glow); color: var(--acento); border: 1px solid var(--acento); }
+.macomp-estado.visto { background: var(--bg-elevated); color: var(--text-secondary); border-color: var(--border-color); }
+
+.macomp-cuerpo { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+.macomp-bloque { display: flex; flex-direction: column; gap: 6px; }
+.macomp-bloque h4 { margin: 0; font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); }
+.macomp-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+
+.macomp-pauta { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.macomp-pauta li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.macomp-pauta li p { flex-basis: 100%; margin: 0; font-size: 0.875rem; color: var(--text-secondary); white-space: pre-wrap; }
+.macomp-dim { font-weight: 600; font-size: 0.875rem; }
+.macomp-valor { padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--nivel-claro); border: 1px solid var(--nivel); }
+.macomp-valor.logrado { --nivel: var(--success); --nivel-claro: var(--success-light); }
+.macomp-valor.en_proceso { --nivel: var(--warning); --nivel-claro: var(--warning-light); }
+.macomp-valor.a_fortalecer { --nivel: var(--acento); --nivel-claro: var(--cyan-glow); }
+.macomp-valor.no_observado { --nivel: var(--border-strong); --nivel-claro: var(--bg-elevated); }
+
+.macomp-acuerdos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.macomp-acuerdos li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.macomp-acuerdos li:not(.cumplido) { grid-template-columns: 1fr auto; }
+.macomp-acuerdos li.cumplido { background: var(--success-light); border-color: var(--success); }
+.macomp-acuerdos li.cumplido svg { color: var(--success); }
+.macomp-acuerdos small { font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); }
+
+.macomp-tuyo { padding-top: 12px; border-top: 1px solid var(--border-subtle); align-items: flex-start; }
+.macomp-nota { margin: 0; font-size: 0.8125rem; color: var(--text-subtle); }
+.macomp-campo { display: flex; flex-direction: column; gap: 6px; align-self: stretch; }
+.macomp-campo > label { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; font-weight: 600; }
+.macomp-acciones { display: flex; justify-content: flex-end; gap: 6px; }
+.macomp-respuesta { display: flex; flex-direction: column; gap: 6px; align-self: stretch; align-items: flex-start; }

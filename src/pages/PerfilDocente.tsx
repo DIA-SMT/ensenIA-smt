@@ -23,6 +23,7 @@ import { descargarCV, lineaAntecedente, SECCIONES_CV } from '../lib/cvDocente';
 import { avisar, confirmar } from '../components/ui/avisar';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import EstadoVacio from '../components/ui/EstadoVacio';
+import MisAcompanamientos from '../components/MisAcompanamientos';
 import {
   TEACHER_AWARD_META,
   type AntecedenteDocente, type PerfilDocente as Perfil, type RecorridoEnEstudia, type TeacherAward, type TipoAntecedente,
@@ -385,6 +386,9 @@ export default function PerfilDocente() {
           </section>
         );
       })}
+
+      {/* ── Las observaciones de clase que le compartió la dirección (081); sin ninguna, no aparece ── */}
+      <MisAcompanamientos docenteId={user.id} />
 
       {/* ── Lo que le reconoció la dirección (lo da la dirección, no se edita acá) ── */}
       {premios.length > 0 && (

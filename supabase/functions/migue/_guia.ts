@@ -59,6 +59,7 @@ const PANTALLAS: Pantalla[] = [
   { ruta: /^\/panel$/, director: '"Qué está pasando", en el menú, grupo "Escuela"' },
   { ruta: /^\/dashboard$/, director: '"Tablero" (título "Tablero de dirección"), en el menú, grupo "Escuela"' },
   { ruta: /^\/docentes$/, director: '"Docentes" (título "Equipo docente"), en el menú, grupo "Escuela"' },
+  { ruta: /^\/acompanamiento\/[^/]+\/[^/]+$/, director: '"Observación de clase" (el acompañamiento a un docente; se llega desde "Docentes")' },
   { ruta: /^\/horario$/, director: '"Horario" (título "Horario de la escuela"), en el menú, grupo "Escuela"' },
   { ruta: /^\/comunicaciones$/, director: '"Comunicaciones", en el menú, grupo "Comunidad"' },
   { ruta: /^\/memoria-estudio$/, director: '"Memoria de estudio", en el menú, grupo "Comunidad"' },
@@ -320,6 +321,12 @@ guardan y se mandan solas; publicar notas necesita señal.
 Además de lo de todos, "Lo que la IA recuerda de cómo trabajás" (se prende, se apaga y se
 borra).
 
+### Acompañamiento de la dirección
+En "Mi perfil" → "Acompañamiento" están las observaciones de clase que la dirección
+compartió: lo observado, "Fortalezas", "Sugerencias" y "Acuerdos". "Me notifiqué" y "Tu
+respuesta (opcional)" → "Enviar respuesta" (se puede cambiar). Es formativo, no una nota;
+los borradores de la dirección no se ven.
+
 ${CUENTA}
 ${SESION_EQUIPO}`,
 
@@ -389,6 +396,14 @@ ${MENSAJES_EQUIPO}
   curricular", "Pulso de bienestar", "Adopción docente", "Respuesta de familias" y el
   "Mapa institucional" (tocando un curso se abre su ficha).
 - **Docentes**: tocar la fila abre el "Perfil docente", con "Escribirle" y "Dar medalla".
+- **Acompañamiento** (observar una clase): en el "Perfil docente", "Acompañamiento" →
+  "Observar una clase". "La clase" (fecha, materia y curso); "Lo que observaste": seis
+  partes de la pauta, cada una "Logrado", "En proceso", "A fortalecer" o "No observado",
+  con una nota opcional; "La devolución": "Fortalezas" y "Sugerencias" ("Redactar con
+  Migue" arma un borrador con lo marcado; "Volver a lo que tenía" lo deshace); "Acuerdos"
+  ("Agregar un acuerdo"). "Guardar borrador" (el docente no la ve) o "Cerrar y compartir":
+  la ve completa, le llega un aviso, puede notificarse y responder; después solo se tildan
+  los acuerdos cumplidos. Es formativo: la app no pone notas ni compara docentes.
 - **Horario**: solo para ver, "Por curso" o "Por docente"; se cambia con "Editar en Mi
   escuela".
 - **Alertas**: cada alerta va de Abierta → En seguimiento → Cerrada. "Tomar en

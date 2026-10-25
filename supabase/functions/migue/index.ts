@@ -31,6 +31,7 @@ import { memoriaDocenteDesde, memoriaDocenteParaPrompt } from '../ia-chat/_memor
 import { bloqueFicha, fichaDelCurso, generarFicha, normalizarArea, programaDelCurso } from './_fichas.ts';
 import { reglasDeIADelEstudiante } from './_reglas-ia.ts';
 import { bloqueTutor, MIN_ESTUDIANTES_RESUMEN, resumirTutor, tutorDelEstudiante, type Tutor } from './_tutor.ts';
+import { leerPautaEntrada, redactarObservacion } from './_acompanamiento.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -55,11 +56,15 @@ interface MigueRequest {
    *  (_contexto.ts); si no es suyo, no llega nada. */
   contexto?: unknown;
   /** 'ficha': el superadmin arma la ficha de una materia y un año (077).
-   *  'resumen_tutor': el docente pide lo que les costó en el repaso de un tema (079). */
+   *  'resumen_tutor': el docente pide lo que les costó en el repaso de un tema (079).
+   *  'redactar_observacion': la dirección pide un borrador de la devolución de una clase (081). */
   accion?: unknown;
   materia?: unknown;
   anio?: unknown;
   tema?: unknown;
+  escuela?: unknown;
+  pauta?: unknown;
+  notas?: unknown;
 }
 
 function sseEvent(event: string, data: Record<string, unknown>): string {
@@ -282,6 +287,39 @@ Deno.serve(async (req: Request) => {
       },
     });
     return r.ok ? jsonResp({ texto: r.texto, fuentes: r.fuentes }) : jsonResp({ error: r.error }, 422);
+  }
+
+  if (body.accion === 'redactar_observacion') {
+    const auth = req.headers.get('Authorization');
+    if (!auth) return jsonResp({ error: 'Falta autenticación' }, 401);
+    const adminO = createClient(supabaseUrl, serviceKey);
+    const { data: { user: u }, error: errU } = await adminO.auth.getUser(auth.replace('Bearer ', ''));
+    if (errU || !u) return jsonResp({ error: 'Sesión inválida' }, 401);
+    const escuela = typeof body.escuela === 'string' && /^[0-9a-f-]{36}$/i.test(body.escuela) ? body.escuela : '';
+    if (!escuela) return jsonResp({ error: 'Falta la escuela.' }, 400);
+    // Solo quien dirige ESA escuela (como manages_school en la base)
+    const { data: membresia } = await adminO.from('school_memberships')
+      .select('user_id').eq('user_id', u.id).eq('school_id', escuela).eq('role', 'director').maybeSingle();
+    if (!membresia) return jsonResp({ error: 'Solo la dirección de la escuela puede usar esto.' }, 403);
+    // Los nombres de la escuela, tapados para el proveedor; vuelven en la respuesta
+    const seudoO = new Seudonimos(await padronDeEscuela(adminO, escuela));
+    const r = await redactarObservacion({
+      apiKey: OPENROUTER_API_KEY,
+      pauta: leerPautaEntrada(body.pauta),
+      notas: typeof body.notas === 'string' ? body.notas.slice(0, 3000) : '',
+      tapar: t => seudoO.tapar(t),
+      destapar: t => seudoO.destapar(t),
+      anotar: (modelo, uso) => {
+        const us = uso as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+        void registrarConsumo(adminO, {
+          user_id: u.id, school_id: escuela, role: 'director', feature: 'acompanamiento_redactar', model: modelo,
+          tokens_in: us?.prompt_tokens ?? 0, tokens_out: us?.completion_tokens ?? 0, cost_usd: costoDe(uso), ...cacheDe(uso),
+        });
+      },
+    });
+    return r.ok
+      ? jsonResp({ fortalezas: r.fortalezas, sugerencias: r.sugerencias, acuerdos: r.acuerdos })
+      : jsonResp({ error: r.error }, 422);
   }
 
   if (body.accion === 'resumen_tutor') {
