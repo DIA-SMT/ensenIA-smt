@@ -218,3 +218,20 @@
 .settings-section-title svg { color: var(--acento); }
 .settings-section-desc { font-size: 0.8125rem; color: var(--text-subtle); margin-top: 4px; }
 .settings-section .panel-prefs { padding: 0; }
+
+/* Enlace al perfil docente (070) */
+.settings-perfil-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.settings-perfil-link > svg:first-child { color: var(--acento); flex-shrink: 0; }
+.settings-perfil-link span { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.settings-perfil-link small { color: var(--text-subtle); font-size: 0.8125rem; }
+.settings-perfil-link:hover, .settings-perfil-link:focus-visible { border-color: var(--acento); }

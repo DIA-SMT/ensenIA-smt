@@ -620,6 +620,42 @@ export interface TeacherAward {
   teacherName?: string;
 }
 
+// ── Perfil del docente (070) ──
+
+export type TipoAntecedente = 'titulo' | 'capacitacion' | 'logro' | 'proyecto' | 'publicacion';
+
+/** Lo que el docente cuenta de sí. La dirección lo ve solo si lo comparte. */
+export interface PerfilDocente {
+  userId: string;
+  sobreMi: string;
+  /** Año en que empezó a dar clases (de ahí sale la antigüedad) */
+  docenteDesde: number | null;
+  intereses: string[];
+  compartirConDireccion: boolean;
+}
+
+/** Un título, una capacitación, un logro, un proyecto o una publicación. */
+export interface AntecedenteDocente {
+  id: string;
+  userId: string;
+  tipo: TipoAntecedente;
+  titulo: string;
+  institucion: string;
+  anio: number | null;
+  /** Solo capacitaciones: horas reloj de la constancia */
+  horas: number | null;
+  detalle: string;
+}
+
+/** Lo que hizo en la app este año (sin comparar con nadie). */
+export interface RecorridoEnEstudia {
+  anio: number;
+  temasDados: number;
+  materiales: number;
+  actividades: number;
+  clasesEnVivo: number;
+}
+
 /** Catálogo de medallas docente → estudiante (mitad clásicas, mitad bien argentas). */
 export const AWARD_META: Record<string, { emoji: string; label: string; description: string }> = {
   crack: { emoji: '🌟', label: '¡Crack!', description: 'Te la re bancaste' },

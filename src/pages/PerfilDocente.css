@@ -1,0 +1,94 @@
+/* Mi perfil docente (070) */
+.pd-contenedor { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* .card no trae relleno propio */
+.pd-cabecera, .pd-seccion { padding: var(--space-4); }
+@media (min-width: 640px) { .pd-cabecera, .pd-seccion { padding: var(--space-5); } }
+
+.pd-cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.pd-avatar {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--acento);
+  background: var(--cyan-glow);
+  border: 2px solid var(--acento);
+}
+.pd-cabecera-texto { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+.pd-cabecera-texto h2 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.pd-sub { margin: 0; font-size: 0.875rem; color: var(--text-secondary); }
+.pd-chips { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-chip {
+  font-size: 0.8125rem;
+  color: var(--acento);
+  background: var(--cyan-glow);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+}
+.pd-cv { flex-shrink: 0; }
+
+.pd-seccion { display: flex; flex-direction: column; gap: var(--space-3); }
+.pd-seccion h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+.pd-seccion h3 svg { color: var(--acento); }
+.pd-seccion-cabecera { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.pd-total { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+.pd-vacio { margin: 0; font-size: 0.875rem; color: var(--text-subtle); }
+
+.pd-campo { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.pd-campo > span, .pd-campo > legend { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); padding: 0; }
+.pd-campo small { font-weight: 400; color: var(--text-subtle); }
+.pd-campo-corto { max-width: 160px; }
+.pd-fila { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+.pd-intereses { display: flex; flex-wrap: wrap; gap: 6px; }
+.pd-interes {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.pd-interes.si { color: var(--acento); border-color: var(--acento); background: var(--cyan-glow); font-weight: 600; }
+.pd-otro { display: flex; gap: 8px; margin-top: 6px; }
+.pd-otro .form-input { flex: 1; min-width: 0; }
+
+.pd-compartir { padding: var(--space-3); border-radius: var(--radius-md); background: var(--bg-elevated); }
+.pd-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+.pd-lista { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.pd-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; min-height: 52px; }
+.pd-item + .pd-item { border-top: 1px solid var(--border-subtle, var(--border-color)); }
+.pd-item-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.pd-item-titulo { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.pd-item-texto small { font-size: 0.8125rem; color: var(--text-subtle); }
+.pd-detalle { white-space: pre-wrap; }
+.pd-emoji { width: 26px; text-align: center; font-size: 1.25rem; flex-shrink: 0; }
+.pd-agregar { align-self: flex-start; }
+
+.pd-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.pd-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--space-2); margin: 0; }
+.pd-numeros div { padding: var(--space-3); border-radius: var(--radius-md); background: var(--bg-elevated); display: flex; flex-direction: column-reverse; gap: 2px; }
+.pd-numeros dt { font-size: 0.8125rem; color: var(--text-secondary); }
+.pd-numeros dd { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+
+@media (max-width: 520px) {
+  .pd-cv { width: 100%; justify-content: center; }
+}

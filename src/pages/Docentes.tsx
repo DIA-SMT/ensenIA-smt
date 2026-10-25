@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare } from 'lucide-react';
+import { Search, X, Calendar, BookOpen, Users, Activity, Medal, MessagesSquare, GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { enlaceMensaje } from '../services/mensajes.service';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,11 +13,16 @@ import { logAccess } from '../services/audit.service';
 import { getUsoDocentes, type UsoDeUnDocente } from '../services/devolucion.service';
 import { coincideBusqueda } from '../services/busqueda.service';
 import FichaDocente from '../components/FichaDocente';
+import { getPerfilDocente, getAntecedentes } from '../services/perfil-docente.service';
+import { lineaAntecedente, SECCIONES_CV } from '../lib/cvDocente';
 import { formatRelative, daysSince } from '../lib/format';
 import AwardPickerModal from '../components/AwardPickerModal';
 import { Esqueleto } from '../components/ui/Esqueleto';
 import EstadoVacio from '../components/ui/EstadoVacio';
-import { TEACHER_AWARD_META, type TeacherAward, type User, type Subject, type Student, type ScheduleBlock } from '../types';
+import {
+  TEACHER_AWARD_META, type TeacherAward, type User, type Subject, type Student, type ScheduleBlock,
+  type PerfilDocente, type AntecedenteDocente,
+} from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
 import './Students.css';
@@ -96,6 +101,25 @@ export default function Docentes() {
     if (!selectedTeacher) return;
     setTeacherAwards([]);
     getTeacherAwards(selectedTeacher.id).then(setTeacherAwards).catch(console.error);
+  }, [selectedTeacher?.id]);
+
+  // Su perfil docente (070): llega solo si lo compartió con la dirección
+  // (la base no devuelve nada si no). Si no, no se muestra nada: ni un "no
+  // lo compartió" que lo exponga.
+  const [perfilCompartido, setPerfilCompartido] = useState<{ perfil: PerfilDocente; antecedentes: AntecedenteDocente[] } | null>(null);
+  useEffect(() => {
+    setPerfilCompartido(null);
+    if (!selectedTeacher) return;
+    let vigente = true;
+    const id = selectedTeacher.id;
+    getPerfilDocente(id)
+      .then(async perfil => {
+        if (!perfil || !vigente) return;
+        const antecedentes = await getAntecedentes(id);
+        if (vigente) setPerfilCompartido({ perfil, antecedentes });
+      })
+      .catch(console.error);
+    return () => { vigente = false; };
   }, [selectedTeacher?.id]);
 
   useEffect(() => {
@@ -260,6 +284,32 @@ export default function Docentes() {
                 ))}
               </div>
             </div>
+
+            {perfilCompartido && (
+              <div className="profile-section">
+                <h4><GraduationCap size={14} style={{ marginRight: 6 }} /> Formación y logros</h4>
+                <p className="text-secondary text-xs">Lo cargó y lo compartió el o la docente.</p>
+                {perfilCompartido.perfil.docenteDesde && (
+                  <p className="text-sm">Docente desde {perfilCompartido.perfil.docenteDesde}</p>
+                )}
+                {perfilCompartido.perfil.sobreMi && <p className="text-sm">{perfilCompartido.perfil.sobreMi}</p>}
+                {perfilCompartido.perfil.intereses.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginTop: 6 }}>
+                    {perfilCompartido.perfil.intereses.map(i => <span key={i} className="badge badge-neutral">{i}</span>)}
+                  </div>
+                )}
+                {SECCIONES_CV.map(s => {
+                  const items = perfilCompartido.antecedentes.filter(a => a.tipo === s.tipo);
+                  if (!items.length) return null;
+                  return (
+                    <div key={s.tipo} style={{ marginTop: 10 }}>
+                      <p className="text-sm font-semibold">{s.titulo}</p>
+                      {items.map(a => <p key={a.id} className="text-secondary text-sm">{lineaAntecedente(a)}</p>)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="profile-section">
               <h4><Calendar size={14} style={{ marginRight: 6 }} /> Horario de hoy</h4>

@@ -1,4 +1,5 @@
-import { User as UserIcon, Mail, School, Shield, LogOut, Accessibility, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Mail, School, Shield, LogOut, Accessibility, ShieldCheck, IdCard, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ETIQUETA_ROL } from '../lib/navegacion';
 import PanelPreferencias from '../components/shell/PanelPreferencias';
@@ -50,6 +51,18 @@ export default function Settings() {
                         <input id="aj-escuela" type="text" value={school?.name ?? '-'} readOnly className="settings-input" />
                     </div>
                 </div>
+
+                {/* El perfil docente (070): lo que no sale de la cuenta */}
+                {(user.role === 'docente' || user.role === 'director') && (
+                    <Link to="/perfil" className="settings-perfil-link">
+                        <IdCard size={18} aria-hidden="true" />
+                        <span>
+                            <strong>Tu perfil docente</strong>
+                            <small>Tu formación, tus logros y tu CV para bajar</small>
+                        </span>
+                        <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                )}
             </section>
 
             {/* Mis materias */}

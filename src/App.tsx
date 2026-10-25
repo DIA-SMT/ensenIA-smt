@@ -78,6 +78,8 @@ function App() {
                     decide el servidor según el rol, no el cliente. */}
                 {ruta('/settings')}
                 {ruta('/migue')}
+                {/* El perfil docente (070): quien da clases o dirige */}
+                {ruta('/perfil', STAFF)}
 
                 {/* Docente */}
                 {ruta('/hoy', ['docente'])}

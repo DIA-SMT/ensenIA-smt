@@ -45,6 +45,7 @@ export const cargadores = {
   '/dashboard':           () => import('../pages/Dashboard'),
   '/alerts':              () => import('../pages/Alerts'),
   '/settings':            () => import('../pages/Settings'),
+  '/perfil':              () => import('../pages/PerfilDocente'),
   '/migue':               () => import('../pages/Migue'),
   '/agenda':              () => import('../pages/Agenda'),
   '/ia-lab':              () => import('../pages/IALab'),

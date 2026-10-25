@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Calendar, FlaskConical, Users, BookOpen, Bell, Settings,
   MessageSquare, ClipboardList, HeartHandshake, GraduationCap, Megaphone,
   Rocket, BookMarked, Scale, Sparkles, Compass, Zap, Sun, Radio, Boxes, Activity, Building2, CalendarClock, Wand2, Library,
-  MessagesSquare, Brain, CalendarRange, BarChart3,
+  MessagesSquare, Brain, CalendarRange, BarChart3, IdCard,
 } from 'lucide-react';
 import type { UserRole } from '../types';
 import type { RutaPantalla } from './pantallas';
@@ -62,6 +62,7 @@ const DOCENTE: ItemNav[] = [
   { ruta: '/alerts', etiqueta: 'Alertas', icono: Bell, grupo: 'Escuela', claves: 'riesgo bienestar señales seguimiento hablar avisar dirección' },
   { ruta: '/comunicados', etiqueta: 'Comunicados', titulo: 'Comunicados de dirección', icono: Megaphone, grupo: 'Escuela', claves: 'avisos dirección mensajes reunión' },
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Escuela', claves: 'protocolos reglamento convivencia' },
+  { ruta: '/perfil', etiqueta: 'Mi perfil', titulo: 'Mi perfil docente', icono: IdCard, grupo: 'Cuenta', claves: 'perfil cv currículum títulos capacitaciones cursos logros antecedentes formación proyectos' },
   { ruta: '/settings', etiqueta: 'Ajustes', titulo: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración accesibilidad letra contraste datos' },
 ];
 
@@ -77,6 +78,7 @@ const DIRECTOR: ItemNav[] = [
   { ruta: '/normativa', etiqueta: 'Normativa', icono: Scale, grupo: 'Comunidad', claves: 'protocolos reglamento cargar' },
   { ruta: '/memoria-estudio', etiqueta: 'Memoria de estudio', titulo: 'Memoria de estudio de EstudIA', icono: Brain, grupo: 'Comunidad', ia: true, claves: 'memoria estudia consentimiento autorización familias privacidad datos personales auditoría revisar papel firmado' },
   { ruta: '/mi-escuela', etiqueta: 'Mi escuela', titulo: 'Gestión de la escuela', icono: Building2, grupo: 'Cuenta', claves: 'usuarios cuentas docentes alumnos cursos materias alta clave dni' },
+  { ruta: '/perfil', etiqueta: 'Mi perfil', titulo: 'Mi perfil docente', icono: IdCard, grupo: 'Cuenta', claves: 'perfil cv currículum títulos capacitaciones cursos logros antecedentes formación proyectos' },
   { ruta: '/settings', etiqueta: 'Ajustes', icono: Settings, grupo: 'Cuenta', claves: 'configuración umbrales accesibilidad letra contraste datos' },
 ];
 
