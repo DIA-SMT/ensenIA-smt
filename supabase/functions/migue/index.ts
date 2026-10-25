@@ -30,6 +30,7 @@ import { accionesDe, GUIA_ACCIONES, sinMarcas } from './_acciones.ts';
 import { memoriaDocenteDesde, memoriaDocenteParaPrompt } from '../ia-chat/_memoria-docente.ts';
 import { bloqueFicha, fichaDelCurso, generarFicha, normalizarArea, programaDelCurso } from './_fichas.ts';
 import { reglasDeIADelEstudiante } from './_reglas-ia.ts';
+import { bloqueTutor, MIN_ESTUDIANTES_RESUMEN, resumirTutor, tutorDelEstudiante, type Tutor } from './_tutor.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -53,10 +54,12 @@ interface MigueRequest {
   /** Lo que el docente está mirando: solo { tipo, id }. Se lee con su RLS
    *  (_contexto.ts); si no es suyo, no llega nada. */
   contexto?: unknown;
-  /** 'ficha': el superadmin arma la ficha de una materia y un año (077) */
+  /** 'ficha': el superadmin arma la ficha de una materia y un año (077).
+   *  'resumen_tutor': el docente pide lo que les costó en el repaso de un tema (079). */
   accion?: unknown;
   materia?: unknown;
   anio?: unknown;
+  tema?: unknown;
 }
 
 function sseEvent(event: string, data: Record<string, unknown>): string {
@@ -279,6 +282,45 @@ Deno.serve(async (req: Request) => {
     return r.ok ? jsonResp({ texto: r.texto, fuentes: r.fuentes }) : jsonResp({ error: r.error }, 422);
   }
 
+  if (body.accion === 'resumen_tutor') {
+    const auth = req.headers.get('Authorization');
+    if (!auth) return jsonResp({ error: 'Falta autenticación' }, 401);
+    const adminR = createClient(supabaseUrl, serviceKey);
+    const { data: { user: u }, error: errU } = await adminR.auth.getUser(auth.replace('Bearer ', ''));
+    if (errU || !u) return jsonResp({ error: 'Sesión inválida' }, 401);
+    const temaId = typeof body.tema === 'string' && /^[0-9a-f-]{36}$/i.test(body.tema) ? body.tema : '';
+    if (!temaId) return jsonResp({ error: 'Falta el tema.' }, 400);
+    // Que sea suyo lo decide la base, con SU JWT (050)
+    const asU = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: auth } } });
+    const { data: esMio } = await asU.rpc('es_mi_tema', { p_class: temaId });
+    if (esMio !== true) return jsonResp({ error: 'Ese tema no es tuyo.' }, 403);
+    const { data: tt } = await adminR.from('tutor_temas').select('consigna').eq('class_id', temaId).maybeSingle();
+    if (!tt) return jsonResp({ error: 'Este tema todavía no tiene un repaso con Migue.' }, 404);
+    const { data: tema } = await adminR
+      .from('planning_classes')
+      .select('title, planning_units(courses(school_id), subjects(name))')
+      .eq('id', temaId)
+      .maybeSingle();
+    const unidad = (tema as { planning_units?: { courses?: { school_id?: string } | null; subjects?: { name?: string } | null } | null } | null)?.planning_units;
+    // Los nombres de los chicos de ese curso, tapados para el proveedor
+    const seudoR = new Seudonimos(new Set(await padronDeEscuela(adminR, unidad?.courses?.school_id ?? null)));
+    const r = await resumirTutor({
+      admin: adminR, apiKey: OPENROUTER_API_KEY, classId: temaId,
+      titulo: (tema as { title?: string } | null)?.title ?? 'el tema', materia: unidad?.subjects?.name ?? 'la materia',
+      consigna: (tt as { consigna: string | null }).consigna, tapar: t => seudoR.tapar(t),
+      anotar: (modelo, uso) => {
+        const us = uso as { prompt_tokens?: number; completion_tokens?: number } | undefined;
+        void registrarConsumo(adminR, {
+          user_id: u.id, role: 'docente', feature: 'tutor_resumen', model: modelo,
+          tokens_in: us?.prompt_tokens ?? 0, tokens_out: us?.completion_tokens ?? 0, cost_usd: costoDe(uso), ...cacheDe(uso),
+        });
+      },
+    });
+    return r.ok
+      ? jsonResp({ resumen: r.resumen, estudiantes: r.estudiantes, mensajes: r.mensajes, minimo: MIN_ESTUDIANTES_RESUMEN })
+      : jsonResp({ error: r.error }, 422);
+  }
+
   const { sessionId, messages } = body;
   if (!sessionId || !messages?.length) {
     return new Response('Missing required fields', { status: 400, headers: corsHeaders() });
@@ -320,7 +362,7 @@ Deno.serve(async (req: Request) => {
   // ── La sesión tiene que ser suya y de esta audiencia ──
   const { data: sesion } = await admin
     .from('migue_sessions')
-    .select('id, user_id, audience')
+    .select('id, user_id, audience, class_id')
     .eq('id', sessionId)
     .maybeSingle();
   if (!sesion || sesion.user_id !== user.id) {
@@ -447,6 +489,16 @@ Deno.serve(async (req: Request) => {
     anio = Number(((st as any)?.courses?.name ?? '').match(/\d/)?.[0]) || null;
   }
 
+  // ── Repaso de un tema (079): solo si el docente lo tiene abierto para su curso ──
+  let tutor: Tutor | null = null;
+  if (sesion.class_id) {
+    if (audience !== 'estudiante') return sseError('FORBIDDEN', 'Ese repaso es para estudiantes.', 403);
+    tutor = await tutorDelEstudiante(asUser, sesion.class_id);
+    if (!tutor) {
+      return sseError('TUTOR_CERRADO', 'Tu docente cerró este repaso. Podés seguir charlando con Migue desde "Migue".');
+    }
+  }
+
   // Tres partes (077): la fija es igual para todos los de su rol (caché compartido);
   // la de la persona va después; la normativa de esta pregunta, al final del mensaje
   const { fijo: promptBase, persona: promptPersona, turno: promptNormativa } = buildSystemPromptPartes({
@@ -507,6 +559,16 @@ Deno.serve(async (req: Request) => {
       programa = seudo.tapar(await programaDelCurso(admin, user.id, ctx));
     } catch (e) {
       console.error('ficha o programa del curso:', String(e).slice(0, 200));
+    }
+  }
+  // En un repaso: la ficha de esa materia y año, y lo del tema (los dos, compartidos por el curso)
+  let delTema = '';
+  if (tutor) {
+    try {
+      ficha = await fichaDelCurso(admin, tutor.materia, anio ? `${anio}°` : null);
+      delTema = seudo.tapar(await bloqueTutor(admin, tutor, anio));
+    } catch (e) {
+      console.error('repaso del tema:', String(e).slice(0, 200));
     }
   }
   if (profile.role === 'docente') {
@@ -619,6 +681,7 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
     { type: 'text', text: promptFijo, cache_control: cache },
   ];
   if (ficha) sistema.push({ type: 'text', text: bloqueFicha(ficha), cache_control: cache });
+  if (delTema) sistema.push({ type: 'text', text: delTema, cache_control: cache });
   const persona = [promptPersona, programa].filter(Boolean).join('\n\n');
   if (persona) sistema.push({ type: 'text', text: persona });
   if (avisoDerivacion) sistema.push({ type: 'text', text: avisoDerivacion.trim() });

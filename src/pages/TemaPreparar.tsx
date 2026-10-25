@@ -16,8 +16,7 @@ import { lecturasActuales, suscribirLecturas } from '../lib/lecturasEnCurso';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Circle, ClipboardList, Eye, FileText,
-  Layers, Lock, Pencil, PenLine, Plus, Presentation, Radio, ScanLine, Unlink, Upload, Users,
-} from 'lucide-react';
+  Layers, Lock, Pencil, PenLine, Plus, Presentation, Radio, ScanLine, Unlink, Upload, Users, MessagesSquare } from 'lucide-react';
 import PreguntasEnVivoEditor from '../components/PreguntasEnVivoEditor';
 import { useAuth } from '../contexts/AuthContext';
 import EstadoVacio from '../components/ui/EstadoVacio';
@@ -34,6 +33,7 @@ import { getSubjects } from '../services/subjects.service';
 import { fechaCorta } from '../services/planificacion.service';
 import { TIPOS_ACTIVIDAD } from '../lib/actividades';
 import type { Activity, LibraryMaterial, PlanningClass, PlanningUnit, TipoActividad } from '../types';
+import RepasoConMigue from '../components/RepasoConMigue';
 import './Actividades.css';
 import './TemaPreparar.css';
 
@@ -426,6 +426,14 @@ export default function TemaPreparar() {
           <p className="tp-ayuda">Preguntas para lanzar durante la clase: los chicos contestan desde el celular y ves las respuestas al instante.</p>
         </div>
         <PreguntasEnVivoEditor classId={tema.id} actividades={actividades} />
+      </section>
+
+      {/* ── Para repasar con Migue (079) ── */}
+      <section className="card tp-seccion" aria-labelledby="tp-repaso">
+        <div className="tp-seccion-cabecera">
+          <h3 id="tp-repaso"><MessagesSquare size={17} aria-hidden="true" /> Para repasar con Migue</h3>
+        </div>
+        <RepasoConMigue classId={tema.id} curso={curso || 'el curso'} />
       </section>
 
       <BotonMigue contexto={contextoMigue} variante="enlace" className="tp-ia" texto="¿Otra cosa? Preguntale a Migue sobre este tema" />

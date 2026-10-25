@@ -39,6 +39,7 @@ import {
 } from '../types';
 // Estilos compartidos con otras pantallas: desde que cada pantalla se baja
 // por separado, lo que no se importa acá no llega.
+import RepasosAbiertos from '../components/RepasosAbiertos';
 import './Actividades.css';
 import './StudentPortal.css';
 import './Estudiar.css';
@@ -341,6 +342,9 @@ export default function Estudiar() {
           </div>
         </div>
       </div>
+
+      {/* ── Los repasos que abrieron sus docentes (079) ── */}
+      <RepasosAbiertos />
 
       {/* ── Mis medallas (de docentes + de materia) ── */}
       <h3 className="sp-section-title"><Medal size={17} /> Mis medallas</h3>

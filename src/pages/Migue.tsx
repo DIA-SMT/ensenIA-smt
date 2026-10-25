@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Send, Sparkles, RotateCcw, Scale, ShieldAlert, Loader2, Info, X, ArrowRight, Copy, Check, Wand2,
 } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
 import type { ContextoMigue } from '../contexts/MigueContext';
 import { createMaterial } from '../services/library.service';
 import { agregarAlTema } from '../services/planning.service';
+import { getTutoresAbiertos, type TutorAbierto } from '../services/tutor.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import RefineResultModal from '../components/RefineResultModal';
 import PublishActivityModal from '../components/PublishActivityModal';
@@ -38,6 +39,7 @@ import type { MigueAudience, MigueSession } from '../types';
 // por separado, lo que no se importa acá no llega.
 import '../components/Modals.css';
 import './Migue.css';
+import '../components/RepasoConMigue.css';
 
 interface Burbuja {
   role: 'user' | 'assistant';
@@ -137,6 +139,10 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
   const { user } = useAuth();
   const navigate = useNavigate();
   const audience = user ? audienceForRole(user.role) : null;
+  const [searchParams] = useSearchParams();
+  // Repaso de un tema (079): el estudiante, en la página (no en el globito)
+  const temaRepaso = audience === 'estudiante' && !enPanel ? searchParams.get('tema') : null;
+  const [repaso, setRepaso] = useState<TutorAbierto | null>(null);
 
   const [sesion, setSesion] = useState<MigueSession | null>(null);
   const [burbujas, setBurbujas] = useState<Burbuja[]>([]);
@@ -157,8 +163,19 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
     if (!user || !audience) { setCargando(false); return; }
     let cancelado = false;
     (async () => {
+      // Al pasar del repaso al Migue de siempre (o al revés), la charla es otra
+      setError('');
+      setCargando(true);
+      setBurbujas([]);
       try {
-        const s = await getOrCreateSession(audience);
+        let tema: TutorAbierto | null = null;
+        if (temaRepaso) {
+          tema = (await getTutoresAbiertos()).find(t => t.classId === temaRepaso) ?? null;
+          if (!tema && !cancelado) setError('Ese repaso ya no está abierto. Podés seguir charlando con Migue acá.');
+        }
+        if (cancelado) return;
+        setRepaso(tema);
+        const s = await getOrCreateSession(audience, tema?.classId ?? null);
         if (cancelado) return;
         setSesion(s);
         const msgs = await getMessages(s.id);
@@ -174,7 +191,7 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
       }
     })();
     return () => { cancelado = true; abortRef.current?.abort(); };
-  }, [user, audience]);
+  }, [user, audience, temaRepaso]);
 
   // Mientras Migue escribe: texto parejo y el hilo acompaña sin tirones
   // (antes: un scrollIntoView suave por cada fragmento, que movía la página)
@@ -200,7 +217,9 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
   const esEquipo = audience === 'equipo';
   // Lo que está mirando lo usa el servidor solo con un docente: a la dirección no se le muestra
   const contextoActivo = user.role === 'docente' && usarContexto ? contexto : null;
-  const sugerencias = contextoActivo ? sugerenciasDe(contextoActivo) : enc.sugerencias;
+  const sugerencias = repaso
+    ? [`Haceme preguntas para repasar «${corto(repaso.titulo)}»`, 'No lo entendí: explicámelo de otra forma', 'Dame un ejercicio para practicar']
+    : contextoActivo ? sugerenciasDe(contextoActivo) : enc.sugerencias;
 
   const enviar = async (pregunta?: string) => {
     const contenido = (pregunta ?? texto).trim();
@@ -332,8 +351,21 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
         </div>
       </div>
 
-      {/* Lo que está mirando: Migue lo tiene en cuenta, salvo que se lo saque */}
-      {contextoActivo ? (
+      {/* Repaso de un tema (079): qué ve su docente, dicho claro */}
+      {repaso ? (
+        <div className="migue-repaso" role="status">
+          <span>
+            Repasando <strong>«{repaso.titulo}»</strong> · {repaso.materia}
+            <small>
+              Tu docente no lee esta charla: ve un resumen de las dudas del curso, sin nombres. Si contás
+              algo que preocupa, la escuela se entera para darte una mano.
+            </small>
+          </span>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/migue')}>
+            Volver al Migue de siempre
+          </button>
+        </div>
+      ) : contextoActivo ? (
         <div className="migue-contexto" role="status">
           <span>
             Hablando {HABLANDO_DE[contextoActivo.tipo]} <strong>«{contextoActivo.titulo}»</strong>

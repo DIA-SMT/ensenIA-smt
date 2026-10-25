@@ -42,33 +42,34 @@ function mapMessage(row: any): MigueMessage {
  * La conversación abierta del usuario, o una nueva.
  * No manda user_id ni school_id: los pone el servidor (018), que es
  * justamente el dato que no hay que creerle al cliente.
+ *
+ * Con un tema (079): la charla de repaso de ese tema, aparte de la de
+ * siempre. Que el repaso esté abierto para su curso lo controla la función.
  */
-export async function getOrCreateSession(audience: MigueAudience): Promise<MigueSession> {
-  const { data: existing, error } = await supabase
-    .from('migue_sessions')
-    .select('*')
-    .eq('audience', audience)
-    .order('updated_at', { ascending: false })
-    .limit(1);
+export async function getOrCreateSession(audience: MigueAudience, classId: string | null = null): Promise<MigueSession> {
+  const buscar = async (conTema: boolean) => {
+    let q = supabase.from('migue_sessions').select('*').eq('audience', audience);
+    if (conTema) q = classId ? q.eq('class_id', classId) : q.is('class_id', null);
+    return q.order('updated_at', { ascending: false }).limit(1);
+  };
+  let { data: existing, error } = await buscar(true);
+  // Sin la 079 no hay columna class_id: la de siempre, como antes
+  if (error?.code === '42703' && !classId) ({ data: existing, error } = await buscar(false));
   if (error) throw error;
   if (existing && existing.length > 0) return mapSession(existing[0]);
 
   const { data, error: err2 } = await supabase
     .from('migue_sessions')
-    .insert({ audience })
+    .insert(classId ? { audience, class_id: classId } : { audience })
     .select('*')
     .single();
   if (!err2) return mapSession(data);
 
-  // Dos cargas de la página a la vez: la UNIQUE(user_id, audience) de
-  // la 019 hace que la segunda choque. No es un error para el usuario,
-  // es que la conversación ya existe.
+  // Dos cargas de la página a la vez: la única por persona, audiencia y
+  // tema (079; antes 019) hace que la segunda choque. No es un error para
+  // el usuario, es que la conversación ya existe.
   if (err2.code !== '23505') throw err2;
-  const { data: ya, error: err3 } = await supabase
-    .from('migue_sessions')
-    .select('*')
-    .eq('audience', audience)
-    .limit(1);
+  const { data: ya, error: err3 } = await buscar(true);
   if (err3) throw err3;
   if (!ya || ya.length === 0) throw err2;
   return mapSession(ya[0]);

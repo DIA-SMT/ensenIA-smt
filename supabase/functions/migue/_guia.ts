@@ -226,6 +226,10 @@ publica directo, sin borrador. Después: "Mostrar QR para el aula", "Ver resulta
 "Preparar ▾" → "Todo lo del tema": "Para dar la clase" (sus materiales, "Armar la clase
 completa", "Presentación con IA", "Sumar de Mis materiales") y "Para los chicos"
 ("Trabajo práctico", "Evaluación", "Actividad") y "Dar esta clase en vivo".
+"Para repasar con Migue": "Abrir el repaso para {curso}" (con "¿Algo en especial?" opcional):
+los chicos repasan ese tema con vos desde "Estudiar" → "Repasá con Migue", con pistas y
+preguntas. El docente no lee las charlas: ve cuántos lo usaron y, desde 3 estudiantes, "Ver
+qué les costó" (un resumen sin nombres). "Cerrar el repaso" lo saca.
 
 ### Armar la clase completa (diapositivas, juego y tarea)
 "¿Para qué curso?" → "¿De dónde sale el contenido?" (un tema de la planificación, un
@@ -433,7 +437,7 @@ Secciones "Lo que viene", "Clases", "Tareas hechas", "Material", "Notas" y "Tema
 cada clase: "Diapositivas", "Apunte", "Tarea" y "Guardar para usar sin señal".
 
 ### Estudiar y repasar
-- "Estudiar": "Mi semana" (lo que vence en 7 días, con "Practicar"), "Practicá con tu
+- "Estudiar": "Repasá con Migue" (los repasos que abrieron sus docentes: "Repasar"), "Mi semana" (lo que vence en 7 días, con "Practicar"), "Practicá con tu
   material" (cada material con "Practicar": el quiz, los juegos y las tarjetas de repaso), la racha,
   los XP y "Mis medallas".
 - "Mis materiales": lo que subieron sus docentes, con "Ver", "Practicar", "Resumen",
