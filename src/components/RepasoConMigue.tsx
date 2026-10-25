@@ -59,7 +59,9 @@ export default function RepasoConMigue({ classId, curso }: { classId: string; cu
     try {
       const r = await pedirResumenTutor(classId);
       setUso({ estudiantes: r.estudiantes, mensajes: r.mensajes });
-      if (r.resumen) setTutor(prev => (prev ? { ...prev, resumen: r.resumen, resumenAt: new Date().toISOString(), resumenEstudiantes: r.estudiantes } : prev));
+      if (r.sinCambios) {
+        avisar.info('El resumen sigue igual', `Se actualiza cuando lo usen al menos ${r.minimo} estudiantes más: así no se puede saber qué preguntó cada uno.`);
+      } else if (r.resumen) setTutor(prev => (prev ? { ...prev, resumen: r.resumen, resumenAt: new Date().toISOString(), resumenEstudiantes: r.estudiantes } : prev));
       else avisar.info(`Todavía lo usaron ${r.estudiantes} estudiante${r.estudiantes !== 1 ? 's' : ''}`, `El resumen sale desde ${r.minimo}, así no se sabe quién preguntó qué.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo armar el resumen.');

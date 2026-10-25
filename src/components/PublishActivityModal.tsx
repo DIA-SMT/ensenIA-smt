@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X, Send, Sparkles, Trash2, AlertCircle, CheckCircle, ListChecks } from 'lucide-react';
 import { createActivity } from '../services/activities.service';
+import ElegirNivelIA from './ElegirNivelIA';
+import { nivelIAPorDefecto, type NivelIA } from '../lib/nivelIA';
 import { extractQuestions } from '../services/documents.service';
 import type { ActivityQuestion, IAToolType } from '../types';
 import Dialogo from './shell/Dialogo';
@@ -33,6 +35,7 @@ export default function PublishActivityModal(props: Props) {
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [points, setPoints] = useState<string>('10');
+  const [nivelIA, setNivelIA] = useState<NivelIA>(() => nivelIAPorDefecto(props.sourceTool === 'eval' ? 'evaluacion' : 'actividad'));
   const [questions, setQuestions] = useState<ActivityQuestion[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -79,6 +82,7 @@ export default function PublishActivityModal(props: Props) {
         tipo: props.sourceTool === 'eval' ? 'evaluacion' : 'actividad',
         dueDate: dueDate ? new Date(dueDate + 'T23:59:00').toISOString() : null,
         points: points ? Number(points) : null,
+        iaPermitida: nivelIA,
       });
       setDone({ id: act.id, borrador: estado === 'draft' });
     } catch (err) {
@@ -138,6 +142,8 @@ export default function PublishActivityModal(props: Props) {
                   <input type="number" min="1" max="100" value={points} onChange={e => setPoints(e.target.value)} />
                 </div>
               </div>
+
+              <ElegirNivelIA id="pub-nivel-ia" valor={nivelIA} alCambiar={setNivelIA} />
 
               <div className="em-field">
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

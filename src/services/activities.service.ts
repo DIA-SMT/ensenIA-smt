@@ -96,32 +96,32 @@ export async function createActivity(a: {
   /** Cuánta ayuda de la IA permite (078). Por defecto, con pistas. */
   iaPermitida?: 'sin_ia' | 'guia' | 'libre';
 }): Promise<Activity> {
-  const row = unwrap(
-    await supabase
-      .from('activities')
-      .insert({
-        title: a.title,
-        description: a.description ?? null,
-        content_md: a.contentMd,
-        questions: a.questions as any,
-        subject_id: a.subjectId,
-        course_id: a.courseId,
-        teacher_id: a.teacherId,
-        school_id: a.schoolId,
-        unit_id: a.unitId ?? null,
-        class_id: a.classId ?? null,
-        source_tool: (a.sourceTool as any) ?? null,
-        status: a.estado ?? 'published',
-        due_date: a.dueDate ?? null,
-        points: a.points ?? null,
-        ...(a.tipo && a.tipo !== 'actividad' ? { tipo: a.tipo } : {}),
-        // Solo si no es el de siempre: así anda igual en una base sin la 078
-        ...(a.iaPermitida && a.iaPermitida !== 'guia' ? { ia_permitida: a.iaPermitida } : {}),
-      } as never)
-      .select('*')
-      .single()
-  );
-  return mapActivity(row);
+  const fila: Record<string, unknown> = {
+    title: a.title,
+    description: a.description ?? null,
+    content_md: a.contentMd,
+    questions: a.questions as any,
+    subject_id: a.subjectId,
+    course_id: a.courseId,
+    teacher_id: a.teacherId,
+    school_id: a.schoolId,
+    unit_id: a.unitId ?? null,
+    class_id: a.classId ?? null,
+    source_tool: (a.sourceTool as any) ?? null,
+    status: a.estado ?? 'published',
+    due_date: a.dueDate ?? null,
+    points: a.points ?? null,
+    ...(a.tipo && a.tipo !== 'actividad' ? { tipo: a.tipo } : {}),
+    // Solo si no es el de siempre: así anda igual en una base sin la 078
+    ...(a.iaPermitida && a.iaPermitida !== 'guia' ? { ia_permitida: a.iaPermitida } : {}),
+  };
+  let res = await supabase.from('activities').insert(fila as never).select('*').single();
+  // Sin la 078 la columna no existe: se publica igual, sin la regla de IA
+  if (res.error && /ia_permitida/.test(res.error.message)) {
+    delete fila.ia_permitida;
+    res = await supabase.from('activities').insert(fila as never).select('*').single();
+  }
+  return mapActivity(unwrap(res));
 }
 
 /** Actividades, TP y evaluaciones de un tema de la planificación (borradores incluidos). */
@@ -185,7 +185,12 @@ export async function updateActivity(id: string, changes: {
   if (changes.classId !== undefined) db.class_id = changes.classId;
   if (changes.status !== undefined) db.status = changes.status;
   if (changes.iaPermitida !== undefined) db.ia_permitida = changes.iaPermitida;
-  const { error } = await supabase.from('activities').update(db as never).eq('id', id);
+  let { error } = await supabase.from('activities').update(db as never).eq('id', id);
+  // Sin la 078: lo demás se guarda igual
+  if (error && 'ia_permitida' in db && /ia_permitida/.test(error.message)) {
+    delete db.ia_permitida;
+    ({ error } = await supabase.from('activities').update(db as never).eq('id', id));
+  }
   // Con el mensaje de la base: dice por qué no se pudo (por ejemplo, que ya hay entregas)
   if (error) throw new ServiceError(error.message, error);
 }

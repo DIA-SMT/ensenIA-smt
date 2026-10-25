@@ -125,6 +125,7 @@ function DialogoCopiar({ activity, destinos, alCerrar, alCopiar }: DialogoProps)
           estado: activity.status === 'draft' ? 'draft' : 'published',
           dueDate,
           points: activity.points ?? null,
+          iaPermitida: activity.iaPermitida ?? 'guia',
         });
         nuevos.push({ clave, etiqueta: o.etiqueta, id: copia.id });
       } catch (err) {

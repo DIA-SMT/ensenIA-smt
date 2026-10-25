@@ -45,17 +45,20 @@ export interface Ficha { area: string; anio: number; materia: string; texto: str
 /** La ficha de esa materia y ese año, si la Municipalidad ya la armó. Sin ficha (o sin la 077), null. */
 export async function fichaDelCurso(
   admin: SupabaseClient, materia: string | null | undefined, curso: string | null | undefined,
+  opciones: { paraEstudiantes?: boolean } = {},
 ): Promise<Ficha | null> {
   const area = normalizarArea(materia);
   const anio = anioDeCurso(curso);
   if (!area || !anio) return null;
   const { data, error } = await admin
     .from('fichas_curso')
-    .select('materia, texto')
+    .select('materia, texto, solo_equipo')
     .eq('area', area)
     .eq('anio', anio)
     .maybeSingle();
   if (error || !data) return null;
+  // Armada con algún documento solo para el equipo (047): no va a un estudiante
+  if (opciones.paraEstudiantes && data.solo_equipo !== false) return null;
   return { area, anio, materia: data.materia, texto: data.texto };
 }
 
@@ -142,12 +145,12 @@ export async function generarFicha(p: {
 
   const { data: refs, error: errRefs } = await p.admin
     .from('referencias')
-    .select('id, titulo, numero, areas, anios')
+    .select('id, titulo, numero, areas, anios, audiencia')
     .in('tipo', ['nap', 'diseno_curricular'])
     .eq('publicada', true)
     .eq('vigente', true);
   if (errRefs) return { ok: false, error: 'No se pudo leer la Biblioteca de referencia.' };
-  type Ref = { id: string; titulo: string; numero: string | null; areas: string[]; anios: number[] };
+  type Ref = { id: string; titulo: string; numero: string | null; areas: string[]; anios: number[]; audiencia: string };
   // De esa materia (por nombre de área) y de ese año (o de todos)
   const usadas = ((refs ?? []) as Ref[]).filter(r =>
     (r.areas ?? []).some(a => normalizarArea(a) === area)
@@ -221,6 +224,7 @@ export async function generarFicha(p: {
   const { error: errGuardar } = await p.admin.from('fichas_curso').upsert({
     area, anio: p.anio, materia: p.materia.trim().slice(0, 80), texto,
     fuentes: usadas.map(u => u.id), generada_at: new Date().toISOString(), generada_por: p.userId,
+    solo_equipo: usadas.some(u => u.audiencia !== 'comunidad'),
   }, { onConflict: 'area,anio' });
   if (errGuardar) {
     console.error('fichas_curso upsert:', errGuardar.message);

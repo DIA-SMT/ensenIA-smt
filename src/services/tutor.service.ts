@@ -61,7 +61,7 @@ export async function getUsoTutor(classId: string): Promise<{ estudiantes: numbe
 }
 
 /** Lo que les costó: lo arma Migue (sin nombres, desde tres estudiantes). */
-export async function pedirResumenTutor(classId: string): Promise<{ resumen: string | null; estudiantes: number; mensajes: number; minimo: number }> {
+export async function pedirResumenTutor(classId: string): Promise<{ resumen: string | null; estudiantes: number; mensajes: number; minimo: number; sinCambios: boolean }> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('No hay sesión activa.');
   const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/migue`, {
@@ -71,7 +71,10 @@ export async function pedirResumenTutor(classId: string): Promise<{ resumen: str
   });
   const json = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(json.error || `No se pudo armar el resumen (${resp.status}).`);
-  return { resumen: json.resumen ?? null, estudiantes: json.estudiantes ?? 0, mensajes: json.mensajes ?? 0, minimo: json.minimo ?? 3 };
+  return {
+    resumen: json.resumen ?? null, estudiantes: json.estudiantes ?? 0, mensajes: json.mensajes ?? 0,
+    minimo: json.minimo ?? 3, sinCambios: Boolean(json.sinCambios),
+  };
 }
 
 export interface TutorAbierto {

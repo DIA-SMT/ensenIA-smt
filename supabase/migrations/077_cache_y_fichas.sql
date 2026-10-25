@@ -28,10 +28,15 @@ CREATE TABLE IF NOT EXISTS fichas_curso (
   texto TEXT NOT NULL CHECK (length(btrim(texto)) > 0 AND length(texto) <= 8000),
   -- Las referencias con las que se armó
   fuentes UUID[] NOT NULL DEFAULT '{}',
+  -- Si alguna fuente es solo para el equipo (047), la ficha no va a los
+  -- prompts de estudiantes (el repaso de un tema, 079)
+  solo_equipo BOOLEAN NOT NULL DEFAULT true,
   generada_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   generada_por UUID REFERENCES profiles(id) ON DELETE SET NULL,
   PRIMARY KEY (area, anio)
 );
+
+ALTER TABLE fichas_curso ADD COLUMN IF NOT EXISTS solo_equipo BOOLEAN NOT NULL DEFAULT true;
 
 ALTER TABLE fichas_curso ENABLE ROW LEVEL SECURITY;
 

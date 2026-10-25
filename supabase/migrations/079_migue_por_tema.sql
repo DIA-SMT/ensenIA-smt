@@ -13,7 +13,7 @@
 --  · migue_sessions.class_id: la charla de repaso de un estudiante sobre un
 --    tema. Una por tema (más la de siempre, sin tema).
 --  · tutores_abiertos(): lo que ve el estudiante (los repasos abiertos de
---    sus materias y cursos).
+--    sus materias y cursos), y tutor_abierto(tema): ese, si lo ve.
 --  · uso_tutor(tema): para el docente, cuántos estudiantes lo usaron y
 --    cuántos mensajes hubo. Solo números.
 --
@@ -80,12 +80,31 @@ AS $$
   JOIN enrollments e ON e.subject_id = u.subject_id AND e.course_id = u.course_id
   WHERE t.abierto
     AND e.student_id = auth_student_id()
+    -- Del año, y del docente que todavía da esa materia en ese curso: si lo
+    -- cambiaron, el repaso no queda abierto sin nadie que lo pueda cerrar
+    AND (u.anio IS NULL OR u.anio = extract(year FROM now())::int)
+    AND EXISTS (SELECT 1 FROM teacher_assignments ta
+                WHERE ta.teacher_id = u.teacher_id AND ta.subject_id = u.subject_id AND ta.course_id = u.course_id)
   ORDER BY t.updated_at DESC
-  LIMIT 20
 $$;
 
 REVOKE ALL ON FUNCTION tutores_abiertos() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION tutores_abiertos() TO authenticated;
+
+-- El de un tema, para la función migue en cada mensaje (con el JWT del estudiante)
+CREATE OR REPLACE FUNCTION tutor_abierto(p_class UUID)
+RETURNS TABLE (
+  class_id UUID, titulo TEXT, unidad TEXT, materia TEXT, subject_id UUID, course_id UUID,
+  consigna TEXT, objetivos JSONB, ya_empezo BOOLEAN
+)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT * FROM tutores_abiertos() x WHERE x.class_id = p_class
+$$;
+
+REVOKE ALL ON FUNCTION tutor_abierto(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION tutor_abierto(UUID) TO authenticated;
 
 -- ── Para el docente: cuánto se usó (solo números, nunca el contenido) ──
 CREATE OR REPLACE FUNCTION uso_tutor(p_class UUID)
@@ -115,4 +134,5 @@ SELECT
   NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'migue_sessions_user_audience_key') AS sin_unica_vieja,
   to_regclass('public.migue_sessions_una_por_tema') IS NOT NULL AS una_por_tema,
   to_regprocedure('public.tutores_abiertos()') IS NOT NULL AS tutores_abiertos,
+  to_regprocedure('public.tutor_abierto(uuid)') IS NOT NULL AS tutor_abierto,
   to_regprocedure('public.uso_tutor(uuid)') IS NOT NULL AS uso_tutor;

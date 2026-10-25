@@ -225,7 +225,9 @@ function cacheDe(usage: unknown): { tokens_cache_leidos: number; tokens_cache_es
 
 /** Lo que escribe la persona no puede hacerse pasar por el bloque de la app */
 function sinEtiquetaDeApp(texto: string): string {
-  return texto.replace(/<\s*\/?\s*contexto_app/gi, m => m.replace('<', '‹'));
+  // Sin caracteres invisibles ni variantes (＜, &lt;, contexto-app…) que el modelo leería igual
+  const limpio = texto.normalize('NFKC').replace(/[­​-‏‪-‮⁠-⁤﻿]/g, '');
+  return limpio.replace(/(?:<|&lt;|&#0*60;|&#x0*3c;)\s*\/?\s*contexto[\s_-]*app/gi, m => `‹${m.replace(/^(?:<|&lt;|&#0*60;|&#x0*3c;)/i, '')}`);
 }
 
 function jsonResp(body: Record<string, unknown>, status = 200): Response {
@@ -294,7 +296,8 @@ Deno.serve(async (req: Request) => {
     const asU = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: auth } } });
     const { data: esMio } = await asU.rpc('es_mi_tema', { p_class: temaId });
     if (esMio !== true) return jsonResp({ error: 'Ese tema no es tuyo.' }, 403);
-    const { data: tt } = await adminR.from('tutor_temas').select('consigna').eq('class_id', temaId).maybeSingle();
+    const { data: tt } = await adminR.from('tutor_temas')
+      .select('resumen, resumen_at, resumen_estudiantes').eq('class_id', temaId).maybeSingle();
     if (!tt) return jsonResp({ error: 'Este tema todavía no tiene un repaso con Migue.' }, 404);
     const { data: tema } = await adminR
       .from('planning_classes')
@@ -302,22 +305,27 @@ Deno.serve(async (req: Request) => {
       .eq('id', temaId)
       .maybeSingle();
     const unidad = (tema as { planning_units?: { courses?: { school_id?: string } | null; subjects?: { name?: string } | null } | null } | null)?.planning_units;
-    // Los nombres de los chicos de ese curso, tapados para el proveedor
-    const seudoR = new Seudonimos(new Set(await padronDeEscuela(adminR, unidad?.courses?.school_id ?? null)));
+    // Los nombres de los chicos de ese curso, tapados para el proveedor. Sin
+    // saber la escuela no se puede tapar nada: no se resume
+    const escuelaDelCurso = unidad?.courses?.school_id ?? null;
+    if (!escuelaDelCurso) return jsonResp({ error: 'No se pudo preparar el resumen. Probá de nuevo en un rato.' }, 422);
+    const seudoR = new Seudonimos(new Set(await padronDeEscuela(adminR, escuelaDelCurso)));
+    const ant = tt as { resumen: string | null; resumen_at: string | null; resumen_estudiantes: number | null };
     const r = await resumirTutor({
       admin: adminR, apiKey: OPENROUTER_API_KEY, classId: temaId,
       titulo: (tema as { title?: string } | null)?.title ?? 'el tema', materia: unidad?.subjects?.name ?? 'la materia',
-      consigna: (tt as { consigna: string | null }).consigna, tapar: t => seudoR.tapar(t),
+      anterior: { at: ant.resumen_at, resumen: ant.resumen, estudiantes: ant.resumen_estudiantes },
+      tapar: t => seudoR.tapar(t),
       anotar: (modelo, uso) => {
         const us = uso as { prompt_tokens?: number; completion_tokens?: number } | undefined;
         void registrarConsumo(adminR, {
-          user_id: u.id, role: 'docente', feature: 'tutor_resumen', model: modelo,
+          user_id: u.id, school_id: escuelaDelCurso, role: 'docente', feature: 'tutor_resumen', model: modelo,
           tokens_in: us?.prompt_tokens ?? 0, tokens_out: us?.completion_tokens ?? 0, cost_usd: costoDe(uso), ...cacheDe(uso),
         });
       },
     });
     return r.ok
-      ? jsonResp({ resumen: r.resumen, estudiantes: r.estudiantes, mensajes: r.mensajes, minimo: MIN_ESTUDIANTES_RESUMEN })
+      ? jsonResp({ resumen: r.resumen, estudiantes: r.estudiantes, mensajes: r.mensajes, minimo: MIN_ESTUDIANTES_RESUMEN, sinCambios: r.sinCambios })
       : jsonResp({ error: r.error }, 422);
   }
 
@@ -360,11 +368,16 @@ Deno.serve(async (req: Request) => {
   const escuela = school?.name ?? 'la escuela';
 
   // ── La sesión tiene que ser suya y de esta audiencia ──
-  const { data: sesion } = await admin
+  let { data: sesion, error: errSesion } = await admin
     .from('migue_sessions')
     .select('id, user_id, audience, class_id')
     .eq('id', sessionId)
     .maybeSingle();
+  // Sin la 079 todavía (no hay class_id): la de siempre. Nunca dejar a nadie sin Migue
+  if (errSesion) {
+    const viejo = await admin.from('migue_sessions').select('id, user_id, audience').eq('id', sessionId).maybeSingle();
+    sesion = viejo.data ? { ...viejo.data, class_id: null } : null;
+  }
   if (!sesion || sesion.user_id !== user.id) {
     return sseError('FORBIDDEN', 'Esa conversación no es tuya.', 403);
   }
@@ -490,13 +503,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Repaso de un tema (079): solo si el docente lo tiene abierto para su curso ──
+  // Si está cerrado (o no se pudo mirar) NO se corta acá: lo que escribió pasa
+  // igual por la alerta emocional, y recién después se le avisa (con `derivada`)
   let tutor: Tutor | null = null;
+  let repasoNoDisponible: 'cerrado' | 'error' | null = null;
   if (sesion.class_id) {
     if (audience !== 'estudiante') return sseError('FORBIDDEN', 'Ese repaso es para estudiantes.', 403);
-    tutor = await tutorDelEstudiante(asUser, sesion.class_id);
-    if (!tutor) {
-      return sseError('TUTOR_CERRADO', 'Tu docente cerró este repaso. Podés seguir charlando con Migue desde "Migue".');
-    }
+    const t = await tutorDelEstudiante(asUser, sesion.class_id);
+    if (t === 'cerrado' || t === 'error') repasoNoDisponible = t;
+    else tutor = t;
   }
 
   // Tres partes (077): la fija es igual para todos los de su rol (caché compartido);
@@ -565,7 +580,7 @@ Deno.serve(async (req: Request) => {
   let delTema = '';
   if (tutor) {
     try {
-      ficha = await fichaDelCurso(admin, tutor.materia, anio ? `${anio}°` : null);
+      ficha = await fichaDelCurso(admin, tutor.materia, anio ? `${anio}°` : null, { paraEstudiantes: true });
       delTema = seudo.tapar(await bloqueTutor(admin, tutor, anio));
     } catch (e) {
       console.error('repaso del tema:', String(e).slice(0, 200));
@@ -651,6 +666,13 @@ Deno.serve(async (req: Request) => {
         derivada = clasif.nivel;
       }
     }
+  }
+
+  // El repaso se cerró (o no se pudo mirar): ya pasó por la alerta, y el aviso lleva `derivada`
+  if (repasoNoDisponible) {
+    return sseError('TUTOR_CERRADO', repasoNoDisponible === 'cerrado'
+      ? 'Tu docente cerró este repaso. Podés seguir charlando con Migue desde "Migue".'
+      : 'No se pudo abrir el repaso. Probá de nuevo en un rato.', 200, derivada);
   }
 
   const avisoDerivacion = derivada
