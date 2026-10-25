@@ -34,6 +34,7 @@ function mapActivity(row: any): Activity {
     createdAt: row.created_at,
     tipo: row.tipo ?? 'actividad',
     publishedAt: row.published_at ?? null,
+    iaPermitida: row.ia_permitida === 'sin_ia' || row.ia_permitida === 'libre' ? row.ia_permitida : 'guia',
     subjectName: row.subjects?.name,
     courseName: row.courses?.name,
   };
@@ -92,6 +93,8 @@ export async function createActivity(a: {
   tipo?: TipoActividad;
   /** 'draft': se guarda sin que la vean los estudiantes. Por defecto se publica. */
   estado?: 'draft' | 'published';
+  /** Cuánta ayuda de la IA permite (078). Por defecto, con pistas. */
+  iaPermitida?: 'sin_ia' | 'guia' | 'libre';
 }): Promise<Activity> {
   const row = unwrap(
     await supabase
@@ -112,6 +115,8 @@ export async function createActivity(a: {
         due_date: a.dueDate ?? null,
         points: a.points ?? null,
         ...(a.tipo && a.tipo !== 'actividad' ? { tipo: a.tipo } : {}),
+        // Solo si no es el de siempre: así anda igual en una base sin la 078
+        ...(a.iaPermitida && a.iaPermitida !== 'guia' ? { ia_permitida: a.iaPermitida } : {}),
       } as never)
       .select('*')
       .single()
@@ -167,6 +172,7 @@ export async function updateActivity(id: string, changes: {
   tipo?: TipoActividad;
   classId?: string | null;
   status?: 'draft' | 'published' | 'closed';
+  iaPermitida?: 'sin_ia' | 'guia' | 'libre';
 }): Promise<void> {
   const db: Record<string, unknown> = {};
   if (changes.title !== undefined) db.title = changes.title;
@@ -178,6 +184,7 @@ export async function updateActivity(id: string, changes: {
   if (changes.tipo !== undefined) db.tipo = changes.tipo;
   if (changes.classId !== undefined) db.class_id = changes.classId;
   if (changes.status !== undefined) db.status = changes.status;
+  if (changes.iaPermitida !== undefined) db.ia_permitida = changes.iaPermitida;
   const { error } = await supabase.from('activities').update(db as never).eq('id', id);
   // Con el mensaje de la base: dice por qué no se pudo (por ejemplo, que ya hay entregas)
   if (error) throw new ServiceError(error.message, error);

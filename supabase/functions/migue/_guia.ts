@@ -176,6 +176,10 @@ práctico" o "Evaluación" (así ya queda con su tema).
    desarrollo). Un TP o una evaluación tiene que tener puntaje. Las flechas ordenan las
    partes y el tacho las quita.
 8. "Fecha de entrega (opcional)": vence ese día a las 23:59.
+   "Ayuda de la IA": "Sin IA" (Migue no ayuda con esa actividad, aunque le peguen la
+   consigna; es lo que se propone en las evaluaciones), "Con pistas" (explica y da pistas,
+   no respuestas; lo de siempre) o "Libre" (revisa el borrador y da ejemplos parecidos).
+   El estudiante lo ve en la actividad.
 9. "Guardar borrador" (los estudiantes no la ven) o "Publicar a {curso}" (la ven en su
    "Mi escuela", también sin señal). Si falta algo, la app dice qué (por ejemplo "En la
    parte 2, marcá la opción correcta.").
@@ -188,7 +192,7 @@ opción múltiple se recorrige sola), pero no agregar ni quitar partes: para eso
 → "¿Sobre qué tema?" y "Generar con IA" (o "…o escribila vos") → revisarla en "Así la ven
 tus estudiantes" ("Editar") → opcional "Generar preguntas con IA" (cuestionario que se
 corrige solo; las preguntas se quitan o se regeneran, no se editan de a una) → fecha
-("Sin fecha", "Para mañana", "En la semana") y "Puntos" → "Publicar a {curso}": se
+("Sin fecha", "Para mañana", "En la semana"), "Puntos" y "Ayuda de la IA" → "Publicar a {curso}": se
 publica directo, sin borrador. Después: "Mostrar QR para el aula", "Ver resultados" o
 "Crear otra". Para editar cada pregunta, conviene "Trabajo práctico o evaluación".
 
@@ -407,7 +411,9 @@ clase en vivo aparece arriba "¡… está en vivo!".
 
 ### Hacer y entregar una actividad
 1. Abrila desde "Mis actividades", "La que sigue" o la materia.
-2. Tocá "Comenzar actividad" (si dice que está cerrada, ya no acepta entregas).
+2. Tocá "Comenzar actividad" (si dice que está cerrada, ya no acepta entregas). Arriba dice
+   cuánta ayuda de la IA permitió su docente: "Sin IA" (con esa no lo ayudás), "Con pistas"
+   o "Libre".
 3. Opción múltiple: tocá una opción (A, B, C…). Pregunta abierta: escribí en "Escribí tu
    respuesta...".
 4. No hay que guardar: se guarda solo ("se guarda automáticamente"; sin señal, en el

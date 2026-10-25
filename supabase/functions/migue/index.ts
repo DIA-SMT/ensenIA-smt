@@ -29,6 +29,7 @@ import { leerPedido, resolverContexto, seccionContexto, type ContextoResuelto } 
 import { accionesDe, GUIA_ACCIONES, sinMarcas } from './_acciones.ts';
 import { memoriaDocenteDesde, memoriaDocenteParaPrompt } from '../ia-chat/_memoria-docente.ts';
 import { bloqueFicha, fichaDelCurso, generarFicha, normalizarArea, programaDelCurso } from './_fichas.ts';
+import { reglasDeIADelEstudiante } from './_reglas-ia.ts';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL_CHAT = 'anthropic/claude-sonnet-5';
@@ -621,7 +622,16 @@ de la escuela para que puedan darle una mano, y que no está solo. No le pidas p
   const persona = [promptPersona, programa].filter(Boolean).join('\n\n');
   if (persona) sistema.push({ type: 'text', text: persona });
   if (avisoDerivacion) sistema.push({ type: 'text', text: avisoDerivacion.trim() });
-  const delTurno = (promptNormativa + pantallaActual(profile.role, body.pantalla) + extraDocente).trim();
+  // Estudiante: lo que su docente permite de la IA en lo que tiene pendiente (078)
+  let reglasIA = '';
+  if (audience === 'estudiante' && studentId) {
+    try {
+      reglasIA = await reglasDeIADelEstudiante(asUser, t => seudo.tapar(t));
+    } catch (e) {
+      console.error('reglas de IA del estudiante:', String(e).slice(0, 200));
+    }
+  }
+  const delTurno = (promptNormativa + pantallaActual(profile.role, body.pantalla) + extraDocente + reglasIA).trim();
 
   const orBody = {
     model: MODEL_CHAT,

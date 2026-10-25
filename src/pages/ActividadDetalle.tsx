@@ -17,6 +17,7 @@ import {
 import NotaPorPartes from '../components/NotaPorPartes';
 import AclaracionesEditor from '../components/AclaracionesEditor';
 import { TIPOS_ACTIVIDAD, leerPuntajes, partesCompletas, puntosATexto, sumaPuntajes } from '../lib/actividades';
+import { NIVEL_IA } from '../lib/nivelIA';
 import { getCheckinsByActivity, getObservationsByStudent } from '../services/wellbeing.service';
 import { guardarObservacionResiliente } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -493,6 +494,9 @@ export default function ActividadDetalle() {
               <span className="badge badge-cyan">{activity.subjectName}</span>
               <span className="badge badge-neutral">{activity.courseName}</span>
               {activity.points != null && <span className="badge badge-neutral">{activity.points} pts</span>}
+              <span className="badge badge-neutral" title={NIVEL_IA[activity.iaPermitida ?? 'guia'].docente}>
+                IA: {NIVEL_IA[activity.iaPermitida ?? 'guia'].etiqueta.toLowerCase()}
+              </span>
               {activity.dueDate && (
                 <span className="text-xs text-subtle flex items-center gap-1">
                   <Clock size={12} /> Vence {new Date(activity.dueDate).toLocaleDateString('es-AR')}

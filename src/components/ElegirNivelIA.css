@@ -1,0 +1,31 @@
+/* "Ayuda de la IA" al armar una actividad (078) */
+.nivel-ia { display: flex; flex-direction: column; gap: 6px; }
+.nivel-ia-titulo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.nivel-ia-opciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.nivel-ia-opcion {
+  min-height: var(--touch, 44px);
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nivel-ia-opcion:hover { border-color: var(--acento); color: var(--text-primary); }
+.nivel-ia-opcion.activa { border-color: var(--acento); background: var(--cyan-glow); color: var(--text-primary); }
+.nivel-ia-detalle { margin: 0; font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.4; }
+
+/* Lo que ve el estudiante en la actividad */
+.aviso-nivel-ia {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 8px 0 0; padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  font-size: 0.875rem; line-height: 1.4; color: var(--text-secondary);
+}
+.aviso-nivel-ia svg { flex-shrink: 0; margin-top: 2px; color: var(--acento); }
+.aviso-nivel-ia.sin_ia { background: var(--warning-light); color: var(--warning-ink); }
+.aviso-nivel-ia.sin_ia svg { color: var(--warning-ink); }

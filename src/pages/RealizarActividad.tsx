@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle, SearchX } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Send, Play, PartyPopper, AlertCircle, SearchX, Bot } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getActivityForStudent, getStudentByUserId, getOrCreateSubmission, getMySubmissions, getMySubmission,
@@ -23,6 +23,8 @@ import {
 } from '../services/offline-queue.service';
 import { haySenial, esErrorDeRed } from '../lib/conexion';
 import { useSenial } from '../lib/useSenial';
+import { NIVEL_IA } from '../lib/nivelIA';
+import '../components/ElegirNivelIA.css';
 import { leerBorrador, guardarBorrador, borrarBorrador, conBorrador } from '../lib/borradorEntrega';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import CheckinCard from '../components/CheckinCard';
@@ -391,6 +393,12 @@ export default function RealizarActividad() {
                 </span>
               )}
             </div>
+            {/* Lo que pidió su docente sobre la IA (078) */}
+            {!isDone && (
+              <p className={`aviso-nivel-ia ${activity.iaPermitida ?? 'guia'}`}>
+                <Bot size={15} aria-hidden="true" /> {NIVEL_IA[activity.iaPermitida ?? 'guia'].estudiante}
+              </p>
+            )}
           </div>
           {isDone && (
             <div className="sp-score-box">

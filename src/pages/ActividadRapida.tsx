@@ -29,6 +29,8 @@ import { createActivity } from '../services/activities.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import EstadoVacio from '../components/ui/EstadoVacio';
 import type { Subject, ActivityQuestion, SubjectAssignment } from '../types';
+import ElegirNivelIA from '../components/ElegirNivelIA';
+import type { NivelIA } from '../lib/nivelIA';
 import './ActividadRapida.css';
 import '../components/Modals.css';
 
@@ -57,6 +59,7 @@ export default function ActividadRapida() {
 
   const [due, setDue] = useState<DueOption>('week');
   const [points, setPoints] = useState('10');
+  const [nivelIA, setNivelIA] = useState<NivelIA>('guia');
   const [publishing, setPublishing] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [publishedTitle, setPublishedTitle] = useState('');
@@ -200,6 +203,7 @@ export default function ActividadRapida() {
         classId: temaDelPrograma,
         dueDate: dueDateIso(),
         points: points ? Number(points) : null,
+        iaPermitida: nivelIA,
       });
       setPublishedId(activity.id);
       setPublishedTitle(activity.title);
@@ -468,6 +472,7 @@ export default function ActividadRapida() {
                 <input type="number" min="1" max="100" value={points} onChange={e => setPoints(e.target.value)} />
               </label>
             </div>
+            <ElegirNivelIA id="ar-nivel-ia" valor={nivelIA} alCambiar={setNivelIA} />
             <button type="button" className="btn btn-primary w-full ar-publish-btn" onClick={handlePublish} disabled={publishing} aria-busy={publishing}>
               <Send size={16} aria-hidden="true" /> {publishing ? 'Publicando…' : `Publicar a ${assignment?.courseName ?? 'curso'}`}
             </button>

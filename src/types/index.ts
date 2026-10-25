@@ -133,6 +133,8 @@ export interface Activity {
   tipo: TipoActividad;
   /** La primera vez que se publicó; null mientras es borrador */
   publishedAt?: string | null;
+  /** Cuánta ayuda de la IA permite el docente (078). Sin la 078, 'guia'. */
+  iaPermitida?: 'sin_ia' | 'guia' | 'libre';
   subjectName?: string;
   courseName?: string;
 }

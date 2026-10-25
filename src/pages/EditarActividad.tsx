@@ -32,6 +32,8 @@ import { armarActividad } from '../services/documents.service';
 import {
   TIPOS_ACTIVIDAD, leerPuntos, puntoValido, puntosATexto, repartirPuntos, sumaDePuntos,
 } from '../lib/actividades';
+import ElegirNivelIA from '../components/ElegirNivelIA';
+import { nivelIAPorDefecto, type NivelIA } from '../lib/nivelIA';
 import type { Activity, ActivityQuestion, Subject, TipoActividad } from '../types';
 import '../components/Modals.css';
 import './Actividades.css';
@@ -92,6 +94,9 @@ export default function EditarActividad() {
   const [temas, setTemas] = useState<TemaOpcion[]>([]);
   const [classId, setClassId] = useState<string>('');
   const [tipo, setTipo] = useState<TipoActividad>('tp');
+  // null = lo que se propone según el tipo (evaluación: sin IA; el resto: con pistas)
+  const [iaElegida, setIaElegida] = useState<NivelIA | null>(null);
+  const nivelIA = iaElegida ?? nivelIAPorDefecto(tipo);
   const [titulo, setTitulo] = useState('');
   const [consigna, setConsigna] = useState('');
   const [partes, setPartes] = useState<ActivityQuestion[]>([]);
@@ -137,6 +142,7 @@ export default function EditarActividad() {
           setAsig({ subjectId: act.subjectId, courseId: act.courseId });
           setClassId(act.classId ?? '');
           setTipo(act.tipo);
+          setIaElegida(act.iaPermitida ?? 'guia');
           setTitulo(act.title);
           setConsigna(act.contentMd);
           setPartes(act.questions);
@@ -282,6 +288,7 @@ export default function EditarActividad() {
           points: total,
           tipo,
           estado: accion === 'publicar' ? 'published' : 'draft',
+          iaPermitida: nivelIA,
         });
         setSucio(false);
         if (accion === 'publicar') {
@@ -301,6 +308,8 @@ export default function EditarActividad() {
         dueDate,
         tipo,
         classId: classId || null,
+        // Sin la 078, cambiarlo daría error: solo se manda si cambió
+        ...(nivelIA !== (original.iaPermitida ?? 'guia') ? { iaPermitida: nivelIA } : {}),
         ...(accion === 'publicar' ? { status: 'published' as const } : {}),
       });
       setSucio(false);
@@ -343,6 +352,7 @@ export default function EditarActividad() {
         points: conPuntos ? sumaDePuntos(partes) : (leerPuntos(textoTotal) ?? null),
         tipo,
         estado: 'draft',
+        iaPermitida: nivelIA,
       });
       setSucio(false);
       avisar.exito('Copia en borrador', 'Cambiale lo que quieras y publicala. La original sigue como estaba.');
@@ -521,6 +531,8 @@ export default function EditarActividad() {
             <input id="ea-vence" type="date" value={vence} onChange={e => { setVence(e.target.value); tocar(); }} />
           </div>
         </div>
+
+        <ElegirNivelIA id="ea-nivel-ia" valor={nivelIA} alCambiar={n => { setIaElegida(n); tocar(); }} />
 
         {error && <p className="em-error" role="alert">{error}</p>}
 
