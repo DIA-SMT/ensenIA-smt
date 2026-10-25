@@ -11,18 +11,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Radio, Send, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
+import { Radio, Send, ArrowLeft, Loader2, BookOpen, CloudUpload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getStudentByUserId } from '../services/activities.service';
 import {
-    getLiveSessionForCourse, getSessionState, getLiveResults,
-    upsertLiveResponse, getMyLiveResponse, sendLiveReaction, saveLiveCheckin,
-    sendHeartbeat, LIVE_KIND_META, LIVE_REACTIONS, getLiveClassMaterial, materialParaVisor,
+    getEstadoAlumno, upsertLiveResponse, sendLiveReaction, saveLiveCheckin,
+    LIVE_KIND_META, LIVE_REACTIONS, getLiveClassMaterial, materialParaVisor,
     type LiveSession, type LiveActivity, type LiveResults, type MaterialDeClase,
 } from '../services/live.service';
 import MaterialViewer from '../components/MaterialViewer';
+import SenialEnVivo from '../components/SenialEnVivo';
 import { getMyGroup, type CourseGroup } from '../services/groups.service';
-import { getNewestAwardSince } from '../services/awards.service';
+import { useSondeo } from '../lib/sondeo';
+import { esErrorDeRed } from '../lib/conexion';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, AWARD_META, type Student, type CheckinFeeling, type StudentAward } from '../types';
 import { avisar } from '../components/ui/avisar';
@@ -32,6 +33,31 @@ import './ClaseEnVivo.css';
 
 const POLL_MS = 2500;
 const REACTION_COOLDOWN_MS = 3000;
+
+/** Una respuesta que no salió por falta de señal: se manda sola cuando vuelve */
+interface Pendiente {
+    activityId: string;
+    payload: Record<string, unknown>;
+    /** Era su primer check-in de esta pregunta: también va a su bienestar */
+    checkin?: CheckinFeeling;
+}
+
+/**
+ * Lo que espera señal queda en sessionStorage: si se recarga la página o el
+ * celular descarta la pestaña, sigue ahí. Un check-in de bienestar que no
+ * salió no puede perderse sin aviso (es un camino de cuidado).
+ */
+const clavePendiente = (studentId: string) => `estudia_vivo_pendiente:${studentId}`;
+const claveCheckin = (studentId: string) => `estudia_vivo_checkin:${studentId}`;
+function leerGuardado<T>(clave: string): T | null {
+    try { const v = sessionStorage.getItem(clave); return v ? JSON.parse(v) as T : null; } catch { return null; }
+}
+function guardar(clave: string, valor: unknown) {
+    try {
+        if (valor == null) sessionStorage.removeItem(clave);
+        else sessionStorage.setItem(clave, JSON.stringify(valor));
+    } catch { /* sin almacenamiento: queda en memoria mientras la pantalla siga abierta */ }
+}
 
 export default function ClaseEnVivoAlumno() {
     const { user } = useAuth();
@@ -51,17 +77,55 @@ export default function ClaseEnVivoAlumno() {
     const lastReactionAt = useRef(0);
     const [reactionFlash, setReactionFlash] = useState<string | null>(null);
 
-    // Presencia: el docente ve quién está. Late cada ~30s, no en cada poll,
-    // para cuidar datos y batería.
-    const lastBeatAt = useRef(0);
     const [myGroup, setMyGroup] = useState<CourseGroup | null>(null);
 
-    // Medallas que llegan durante la clase: se festejan en el momento. Solo
-    // las nuevas desde que abrió esta pantalla, y se pregunta cada ~8 s (no
-    // en cada poll) para cuidar datos.
+    // Medallas que llegan durante la clase: se festejan en el momento (solo
+    // las nuevas desde que abrió esta pantalla). Vienen en el mismo pedido.
     const medallasDesde = useRef(new Date().toISOString());
-    const ultimaRevisionMedallas = useRef(0);
     const [festejo, setFestejo] = useState<StudentAward | null>(null);
+
+    // Sin señal, la respuesta queda acá y sale en la primera vuelta que ande
+    const [pendiente, setPendiente] = useState<Pendiente | null>(null);
+    const pendienteRef = useRef<Pendiente | null>(null);
+    const studentId = student?.id ?? null;
+    const ponerPendiente = useCallback((p: Pendiente | null) => {
+        pendienteRef.current = p;
+        setPendiente(p);
+        if (studentId) guardar(clavePendiente(studentId), p);
+    }, [studentId]);
+    // Un check-in que se respondió pero no llegó a su bienestar: se reintenta
+    const checkinPendienteRef = useRef<CheckinFeeling | null>(null);
+    const ponerCheckinPendiente = useCallback((f: CheckinFeeling | null) => {
+        checkinPendienteRef.current = f;
+        if (studentId) guardar(claveCheckin(studentId), f);
+    }, [studentId]);
+    // Mientras sale una respuesta, la vuelta no pisa la que ya se ve elegida
+    const enviandoRef = useRef(false);
+    // Sube con cada respuesta que el chico elige: una vuelta que salió antes
+    // trae lo de antes y no tiene que pisarlo (llega tarde con poca señal)
+    const versionRef = useRef(0);
+    const sessionRef = useRef<LiveSession | null>(null);
+
+    // Lo que quedó esperando señal antes de recargar la página
+    useEffect(() => {
+        if (!studentId) return;
+        const p = leerGuardado<Pendiente>(clavePendiente(studentId));
+        pendienteRef.current = p;
+        setPendiente(p);
+        checkinPendienteRef.current = leerGuardado<CheckinFeeling>(claveCheckin(studentId));
+    }, [studentId]);
+
+    /** El check-in también alimenta su bienestar; sin señal, queda para la próxima vuelta */
+    const guardarCheckin = useCallback(async (feeling: CheckinFeeling) => {
+        if (!studentId) return;
+        try {
+            await saveLiveCheckin(studentId, feeling);
+            if (checkinPendienteRef.current === feeling) ponerCheckinPendiente(null);
+        } catch (err) {
+            if (esErrorDeRed(err)) ponerCheckinPendiente(feeling);
+            else { console.error(err); ponerCheckinPendiente(null); }
+        }
+    }, [studentId, ponerCheckinPendiente]);
 
     // Material de la clase: solo si el docente lo muestra (y mientras dure la clase)
     const [material, setMaterial] = useState<MaterialDeClase | null>(null);
@@ -70,68 +134,111 @@ export default function ClaseEnVivoAlumno() {
     // La clase que acaba de terminar: para preguntarle si le sirvió
     const [terminada, setTerminada] = useState<{ id: string; titulo: string } | null>(null);
 
+    // La ficha: sin señal se reintenta (antes un error decía "Tu cuenta no
+    // está vinculada a un curso" y ahí quedaba)
+    const [fichaSinSenial, setFichaSinSenial] = useState(false);
     useEffect(() => {
         if (!user) return;
-        getStudentByUserId(user.id).then(setStudent).catch(() => setStudent(null));
+        let vivo = true;
+        let intentos = 0;
+        let timer: number | undefined;
+        const buscar = () => {
+            getStudentByUserId(user.id, { tirarSiFalla: true })
+                .then(s => { if (vivo) { setFichaSinSenial(false); setStudent(s); } })
+                .catch(err => {
+                    if (!vivo) return;
+                    if (!esErrorDeRed(err)) { console.error(err); setStudent(null); return; }
+                    intentos++;
+                    setFichaSinSenial(true);
+                    timer = window.setTimeout(buscar, Math.min(2500 * 2 ** Math.min(intentos, 3), 15_000));
+                });
+        };
+        buscar();
+        const alVolver = () => { if (document.visibilityState === 'visible' && intentos > 0) { window.clearTimeout(timer); buscar(); } };
+        window.addEventListener('online', alVolver);
+        return () => { vivo = false; window.clearTimeout(timer); window.removeEventListener('online', alVolver); };
     }, [user]);
 
-    const poll = useCallback(async () => {
+    /**
+     * Una vuelta: un solo pedido (071). Si falla por la señal, tira el error
+     * y la pantalla queda como estaba (antes salía de la clase y decía
+     * "No hay clase en vivo ahora"). Solo deja la clase si el servidor dice
+     * que terminó o que no hay.
+     */
+    const vuelta = useCallback(async (senal: AbortSignal) => {
         if (!student) return;
-        try {
-            if (!session) {
-                const s = await getLiveSessionForCourse(student.courseId);
-                setSession(s);
-                return;
+        const version = versionRef.current;
+        const e = await getEstadoAlumno(sessionRef.current?.id ?? null, medallasDesde.current, senal);
+        // Hay señal: un check-in que no había llegado a su bienestar, sale ahora
+        if (checkinPendienteRef.current) void guardarCheckin(checkinPendienteRef.current);
+        if (e.estado !== 'en_vivo') {
+            if (e.estado === 'terminada') setTerminada({ id: e.sessionId, titulo: e.titulo });
+            sessionRef.current = null;
+            setSession(null);
+            setActivity(null);
+            setResults(null);
+            // La respuesta ya no tiene dónde ir; el check-in sí (a su bienestar)
+            const quedo = pendienteRef.current;
+            if (quedo) {
+                ponerPendiente(null);
+                if (quedo.checkin) void guardarCheckin(quedo.checkin);
             }
-            const state = await getSessionState(session.id, { asStudent: true });
-            if (!state || state.session.status !== 'live') {
-                if (state?.session.status === 'ended') setTerminada({ id: session.id, titulo: session.title });
-                setSession(null);
-                setActivity(null);
-                setResults(null);
-                return;
-            }
-            setSession(state.session);
-            setActivity(state.activity);
-
-            if (Date.now() - lastBeatAt.current > 30_000) {
-                lastBeatAt.current = Date.now();
-                sendHeartbeat(session.id, student.id).catch(console.error);
-            }
-
-            if (Date.now() - ultimaRevisionMedallas.current > 8_000) {
-                ultimaRevisionMedallas.current = Date.now();
-                getNewestAwardSince(student.id, medallasDesde.current).then(a => {
-                    if (!a) return;
-                    medallasDesde.current = a.createdAt;
-                    setFestejo(a);
-                }).catch(console.error);
-            }
-
-            // Cambió la actividad → resetear respuesta local y traer la mía si existe
-            if (state.activity && state.activity.id !== lastActivityId.current) {
-                lastActivityId.current = state.activity.id;
-                setMyAnswer(null);
-                setTextDraft('');
-                setWordDraft('');
-                setSelectedChips([]);
-                getMyLiveResponse(state.activity.id, student.id).then(setMyAnswer).catch(console.error);
-            }
-
-            if (state.activity && state.activity.status !== 'closed') {
-                getLiveResults(state.activity.id).then(setResults).catch(console.error);
-            }
-        } catch (err) {
-            console.error('poll error:', err);
+            return;
         }
-    }, [student, session?.id]);
+        sessionRef.current = e.session;
+        setSession(e.session);
+        setActivity(e.activity);
+        setResults(e.results);
+        if (e.medalla) {
+            medallasDesde.current = e.medalla.createdAt;
+            setFestejo(e.medalla);
+        }
 
-    useEffect(() => {
-        if (!student) return;
-        poll();
-        const id = window.setInterval(poll, POLL_MS);
-        return () => window.clearInterval(id);
-    }, [student, poll]);
+        // Cambió la actividad → se limpian los borradores de la anterior
+        const actId = e.activity?.id ?? null;
+        if (actId !== lastActivityId.current) {
+            lastActivityId.current = actId;
+            setTextDraft('');
+            setWordDraft('');
+            setSelectedChips([]);
+        }
+
+        // Hay señal: si quedó una respuesta sin salir, sale ahora (con los
+        // botones quietos, para que no se cruce con otra)
+        const p = pendienteRef.current;
+        if (p && !enviandoRef.current) {
+            if (!e.activity || e.activity.id !== p.activityId || e.activity.status !== 'active') {
+                // Se cerró antes de que volviera la señal. El check-in igual
+                // va a su bienestar: lo que sentía no deja de importar.
+                ponerPendiente(null);
+                if (p.checkin) void guardarCheckin(p.checkin);
+                avisar.info('Tu respuesta no llegó a salir', 'La pregunta se cerró mientras no había señal.');
+            } else {
+                enviandoRef.current = true;
+                setSending(true);
+                try {
+                    await upsertLiveResponse(p.activityId, e.session.id, student.id, p.payload);
+                    if (pendienteRef.current === p) {
+                        ponerPendiente(null);
+                        setMyAnswer(p.payload);
+                    }
+                    if (p.checkin) void guardarCheckin(p.checkin);
+                    return;
+                } catch (err) {
+                    if (esErrorDeRed(err)) throw err;
+                    if (pendienteRef.current === p) ponerPendiente(null);
+                    avisar.error('No se pudo enviar tu respuesta.', err instanceof Error ? err.message : '');
+                } finally {
+                    enviandoRef.current = false;
+                    setSending(false);
+                }
+            }
+        }
+        // Solo si el chico no eligió nada mientras viajaba esta vuelta
+        if (!enviandoRef.current && !pendienteRef.current && versionRef.current === version) setMyAnswer(e.myAnswer);
+    }, [student, ponerPendiente, guardarCheckin]);
+
+    const sondeo = useSondeo(vuelta, POLL_MS, Boolean(student));
 
     const materialKey = session?.materialVisible ? `${session.id}:${session.materialId ?? ''}:${session.classId ?? ''}` : null;
     useEffect(() => {
@@ -156,12 +263,33 @@ export default function ClaseEnVivoAlumno() {
     }, [student?.id, session?.id]);
 
     if (!user) return null;
-    if (student === undefined) return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Buscando tu clase en vivo…" /></div>;
+    if (student === undefined) {
+        return (
+            <div className="cv-container">
+                {fichaSinSenial && <SenialEnVivo fallas={2} ultimaOk={null} detalle="Apenas vuelva, buscamos tu clase en vivo." />}
+                <Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Buscando tu clase en vivo…" />
+            </div>
+        );
+    }
     if (!student) {
         return (
             <div className="cv-container cv-start">
                 <div className="card cv-start-card">
                     <p className="text-secondary">Tu cuenta no está vinculada a un curso.</p>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Todavía no se pudo preguntar: no es "no hay clase" ──
+    if (!session && sondeo.ultimaOk === null) {
+        if (sondeo.fallas === 0) {
+            return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={1} etiqueta="Buscando tu clase en vivo…" /></div>;
+        }
+        return (
+            <div className="cv-container cv-start animate-in">
+                <div className="card cv-start-card">
+                    <SenialEnVivo fallas={Math.max(sondeo.fallas, 2)} deRed={sondeo.deRed} ultimaOk={null} detalle="Apenas se pueda, buscamos tu clase en vivo." />
                 </div>
             </div>
         );
@@ -192,21 +320,42 @@ export default function ClaseEnVivoAlumno() {
 
     const submit = async (payload: Record<string, unknown>) => {
         if (!activity || sending) return;
+        // El check-in vivo también alimenta las señales de bienestar (el
+        // primero). Si el primero todavía espera señal y cambia de emoción,
+        // el que va a su bienestar es el último que eligió.
+        const pendienteDeEsta = pendienteRef.current?.activityId === activity.id ? pendienteRef.current : null;
+        const primero = !answered || Boolean(pendienteDeEsta?.checkin);
+        const checkin = activity.kind === 'checkin' && payload.feeling && primero ? payload.feeling as CheckinFeeling : undefined;
+        const anterior = myAnswer;
+        versionRef.current++;
         setSending(true);
+        enviandoRef.current = true;
+        // Se ve elegida enseguida, aunque tarde en salir
+        setMyAnswer(payload);
         try {
             await upsertLiveResponse(activity.id, session.id, student.id, payload);
-            setMyAnswer(payload);
-            // El check-in vivo también alimenta las señales de bienestar
-            if (activity.kind === 'checkin' && payload.feeling && !answered) {
-                saveLiveCheckin(student.id, payload.feeling as CheckinFeeling).catch(console.error);
-            }
+            ponerPendiente(null);
+            if (checkin) void guardarCheckin(checkin);
+            // Que los resultados lleguen ya, sin esperar la próxima vuelta
+            sondeo.ahora();
         } catch (err) {
-            console.error(err);
-            avisar.error('No se pudo enviar tu respuesta.', 'Revisá tu conexión y probá de nuevo.');
+            if (esErrorDeRed(err)) {
+                // Sin señal: queda guardada y sale sola cuando vuelva
+                ponerPendiente({ activityId: activity.id, payload, checkin });
+            } else {
+                // La rechazó el servidor (por ejemplo, se cerró justo): no se guarda
+                console.error(err);
+                setMyAnswer(anterior);
+                avisar.error('No se pudo enviar tu respuesta.', err instanceof Error && err.message ? err.message : 'Probá de nuevo.');
+            }
         } finally {
+            enviandoRef.current = false;
             setSending(false);
         }
     };
+
+    // La respuesta de esta pregunta todavía espera señal
+    const esperandoSenial = pendiente !== null && pendiente.activityId === activity?.id;
 
     const react = async (emoji: string) => {
         const now = Date.now();
@@ -236,6 +385,8 @@ export default function ClaseEnVivoAlumno() {
                 </div>
             </div>
 
+            <SenialEnVivo fallas={sondeo.fallas} deRed={sondeo.deRed} ultimaOk={sondeo.ultimaOk} detalle="Seguí en esta pantalla: lo que respondas sale solo cuando se pueda." />
+
             {/* Actividad */}
             {activity && activity.status !== 'closed' && !targetedToOther ? (
                 <div className="card cv-activity">
@@ -253,8 +404,15 @@ export default function ClaseEnVivoAlumno() {
                         <span className="badge badge-ia">
                             {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
                         </span>
-                        {answered && <span className="badge badge-success">✓ Respondiste</span>}
+                        {esperandoSenial
+                            ? <span className="badge badge-warning">Esperando señal</span>
+                            : answered && <span className="badge badge-success">✓ Respondiste</span>}
                     </div>
+                    {esperandoSenial && (
+                        <p className="cv-pendiente" role="status">
+                            <CloudUpload size={14} aria-hidden="true" /> Tu respuesta quedó guardada en el celular y sale sola cuando vuelva la señal.
+                        </p>
+                    )}
                     {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
 
                     {/* ── Responder ── */}

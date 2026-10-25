@@ -48,6 +48,8 @@ export default function Asistencia() {
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
     const [fromLive, setFromLive] = useState(0);
+    // Quiénes se conectaron hoy a la clase en vivo: ayuda a ver quién falta (no lo decide)
+    const [enVivo, setEnVivo] = useState<Set<string>>(new Set());
     const [alreadyTaken, setAlreadyTaken] = useState(false);
     // Guardada en este equipo, esperando señal para enviarse
     const [pendiente, setPendiente] = useState(false);
@@ -97,6 +99,7 @@ export default function Asistencia() {
                 haySenial() ? getLiveParticipants(current.courseId, today) : Promise.resolve([] as string[]),
             ]);
             setStudents(studs);
+            setEnVivo(new Set(liveIds));
 
             // Lo tomado sin señal y todavía sin enviar manda sobre lo del servidor
             const enEspera = pendientesDe('asistencia').find(op => op.clave === claveAsistencia(current.courseId, current.subjectId, today));
@@ -246,7 +249,7 @@ export default function Asistencia() {
                 <div className="asis-notice asis-notice-live">
                     <Radio size={15} />
                     {fromLive} estudiante{fromLive !== 1 ? 's' : ''} participaron desde el celular en la clase en vivo de hoy.
-                    Están como presentes: marcá solo los que faltaron.
+                    Están como presentes y tienen el ícono de en vivo al lado del nombre: fijate en los que no lo tienen y marcá solo los que faltaron.
                 </div>
             )}
 
@@ -283,6 +286,11 @@ export default function Asistencia() {
                                     <button className="asis-student" onClick={() => cycleStatus(s.id)} title="Tocar para cambiar">
                                         <span className="asis-avatar">{s.avatarInitials}</span>
                                         <span className="asis-name">{s.firstName} {s.lastName}</span>
+                                        {enVivo.has(s.id) && (
+                                            <span className="asis-envivo" title="Se conectó a la clase en vivo de hoy">
+                                                <Radio size={13} aria-hidden="true" /><span className="sr-only">Se conectó a la clase en vivo de hoy</span>
+                                            </span>
+                                        )}
                                         <span className="asis-current">{ATTENDANCE_META[st].emoji}</span>
                                     </button>
                                     <div className="asis-actions">

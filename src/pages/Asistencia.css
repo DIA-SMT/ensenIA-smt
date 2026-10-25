@@ -255,3 +255,11 @@
   .asis-name { font-size: 13.5px; }
   .asis-current { display: none; }
 }
+
+/* Se conectó a la clase en vivo de hoy (071): ayuda a ver quién falta */
+.asis-envivo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--acento);
+}

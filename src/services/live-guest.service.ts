@@ -12,6 +12,7 @@
  */
 
 import { supabase } from './_helpers';
+import { esErrorDeRed } from '../lib/conexion';
 import type { LiveActivityKind, LiveActivityConfig, LiveActivityStatus, LiveResults } from './live.service';
 
 // ── Tipos ──
@@ -73,6 +74,8 @@ const MENSAJES: Record<string, string> = {
   RESPUESTA_VACIA: 'Te falta elegir o escribir algo antes de enviar.',
   REACCIONES_CERRADAS: 'El docente apagó las reacciones.',
   EMOJI_NO_PERMITIDO: 'Ese emoji no está habilitado.',
+  // No llegó al servidor (071): no es un rechazo, se puede reintentar
+  SIN_SENIAL: 'Sin señal. Apenas vuelva, sigue solo.',
 };
 
 export class GuestError extends Error {
@@ -85,9 +88,10 @@ export class GuestError extends Error {
   }
 }
 
-function fail(message: string | undefined): never {
+function fail(error: { message?: string } | null): never {
+  if (esErrorDeRed(error)) throw new GuestError('SIN_SENIAL');
   // PostgREST devuelve el texto del RAISE EXCEPTION tal cual.
-  const code = Object.keys(MENSAJES).find(k => message?.includes(k)) ?? 'DESCONOCIDO';
+  const code = Object.keys(MENSAJES).find(k => error?.message?.includes(k)) ?? 'DESCONOCIDO';
   throw new GuestError(code);
 }
 
@@ -98,15 +102,16 @@ export async function joinLiveSession(code: string, name: string): Promise<Guest
     p_code: code.trim().toUpperCase(),
     p_name: name.trim(),
   });
-  if (error) fail(error.message);
+  if (error) fail(error);
   return data as unknown as GuestSession;
 }
 
 // ── Estado (un solo llamado por poll) ──
 
-export async function getGuestState(token: string): Promise<GuestState> {
-  const { data, error } = await supabase.rpc('live_guest_state', { p_token: token });
-  if (error) fail(error.message);
+export async function getGuestState(token: string, senal?: AbortSignal): Promise<GuestState> {
+  const pedido = supabase.rpc('live_guest_state', { p_token: token });
+  const { data, error } = await (senal ? pedido.abortSignal(senal) : pedido);
+  if (error) fail(error);
   return data as unknown as GuestState;
 }
 
@@ -122,7 +127,7 @@ export async function submitGuestResponse(
     p_activity: activityId,
     p_payload: payload as never,
   });
-  if (error) fail(error.message);
+  if (error) fail(error);
 }
 
 export async function sendGuestReaction(token: string, emoji: string): Promise<void> {
@@ -130,7 +135,7 @@ export async function sendGuestReaction(token: string, emoji: string): Promise<v
     p_token: token,
     p_emoji: emoji,
   });
-  if (error) fail(error.message);
+  if (error) fail(error);
 }
 
 // ── Persistencia local ──

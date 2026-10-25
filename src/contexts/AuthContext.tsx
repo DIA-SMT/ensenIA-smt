@@ -122,6 +122,14 @@ function borrarDatosOffline() {
   olvidarBusquedas();
   // El escaneo a medio hacer de la Biblioteca: fotos que pueden mostrar trabajos de chicos
   void borrarEscaneo();
+  // Respuestas de la clase en vivo que esperaban señal (071): pueden traer
+  // texto libre de un chico. El check-in pendiente (solo la emoción, en esa
+  // pestaña) se deja, como la cola: es un camino de cuidado.
+  try {
+    for (const k of Object.keys(sessionStorage)) {
+      if (k.startsWith('estudia_vivo_pendiente')) sessionStorage.removeItem(k);
+    }
+  } catch { /* sin storage */ }
 }
 
 function reclamarDatosLocales(userId: string) {

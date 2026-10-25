@@ -14,7 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Users } from 'lucide-react';
+import { X, Users, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import { LIVE_KIND_META, type LiveSession, type LiveActivity, type LiveResults } from '../services/live.service';
 import { FEELING_META, type CheckinFeeling } from '../types';
@@ -28,10 +28,12 @@ interface Props {
     connected: number;
     /** Los emojis del último minuto (los mismos que ve el panel). */
     reactions: { emoji: string; createdAt: string }[];
+    /** No llegan datos (poca señal): lo proyectado puede estar atrasado */
+    sinSenial?: boolean;
     onClose: () => void;
 }
 
-export default function ProyectarVivo({ session, activity, results, connected, reactions, onClose }: Props) {
+export default function ProyectarVivo({ session, activity, results, connected, reactions, sinSenial = false, onClose }: Props) {
     const [qr, setQr] = useState('');
     const shellRef = useRef<HTMLDivElement>(null);
 
@@ -96,6 +98,8 @@ export default function ProyectarVivo({ session, activity, results, connected, r
                     <span>{session.title}</span>
                 </div>
                 <div className="pv-top-right">
+                    {/* Discreto: lo ve la sala, pero el docente tiene que saber que está atrasado */}
+                    {sinSenial && <span className="pv-senial" role="status"><WifiOff size={18} aria-hidden="true" /> Sin señal</span>}
                     {session.guestsEnabled && connected > 0 && (
                         <span className="pv-connected"><Users size={22} /> {connected} conectados</span>
                     )}

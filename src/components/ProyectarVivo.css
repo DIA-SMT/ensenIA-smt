@@ -365,3 +365,17 @@
 @media (prefers-reduced-motion: reduce) {
     .pv-emoji { animation-duration: 0.01s; display: none; }
 }
+
+/* Poca señal (071): lo proyectado puede estar atrasado */
+.pv-senial {
+    display: flex;
+    align-items: center;
+    gap: 0.4vw;
+    font-size: 1.1vw;
+    font-weight: 600;
+    color: #FCD34D;
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 999px;
+    padding: 0.3vw 0.9vw;
+}

@@ -837,3 +837,23 @@
 .cv-text-item:has(.cv-sacar) { padding-right: 34px; }
 .cv-text-item .cv-sacar { position: absolute; top: 4px; right: 4px; }
 .cv-retenidas { margin: 0 0 8px; padding: 8px 10px; border: 1px dashed var(--danger); border-radius: var(--radius-md); font-size: 0.8125rem; color: var(--danger-ink); }
+
+/* Poca señal (071): aviso cuando no llegan los datos */
+.cv-senial {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid var(--warning);
+  background: var(--warning-light);
+  color: var(--warning-ink);
+}
+.cv-senial svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Respuesta que espera señal para salir */
+.cv-pendiente {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px;
+  color: var(--warning-ink);
+}

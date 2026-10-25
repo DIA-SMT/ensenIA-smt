@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Radio, Send, Loader2, LogIn } from 'lucide-react';
+import { Radio, Send, Loader2, LogIn, CloudUpload } from 'lucide-react';
 import {
     joinLiveSession, getGuestState, submitGuestResponse, sendGuestReaction,
     loadGuestSession, saveGuestSession, clearGuestSession, GuestError,
@@ -21,6 +21,8 @@ import { LIVE_KIND_META, LIVE_REACTIONS } from '../services/live.service';
 import { LiveResultsView } from './ClaseEnVivo';
 import { FEELING_META, type CheckinFeeling } from '../types';
 import { Cargando } from '../components/ui/Esqueleto';
+import SenialEnVivo from '../components/SenialEnVivo';
+import { useSondeo } from '../lib/sondeo';
 import './ClaseEnVivo.css';
 import './ClaseEnVivoInvitado.css';
 
@@ -52,20 +54,40 @@ export default function ClaseEnVivoInvitado() {
         setGuest(loadGuestSession(code));
     }, [code]);
 
-    // ── Poll ──
-    const poll = useCallback(async () => {
-        if (!guest) return;
+    // Sin señal, la respuesta queda acá y sale en la primera vuelta que ande
+    // (071). En sessionStorage: si se recarga la página, sigue ahí.
+    const [pendiente, setPendiente] = useState<{ activityId: string; payload: GuestPayload } | null>(null);
+    const pendienteRef = useRef<typeof pendiente>(null);
+    const clavePendiente = guest ? `estudia_vivo_pendiente_invitado:${guest.token}` : null;
+    const ponerPendiente = useCallback((p: typeof pendiente) => {
+        pendienteRef.current = p;
+        setPendiente(p);
+        if (!clavePendiente) return;
         try {
-            const s = await getGuestState(guest.token);
-            setState(s);
-            // Actividad nueva → limpiamos los borradores de la anterior
-            const actId = s.status === 'active' ? s.activity.id : null;
-            if (actId !== lastActivityId.current) {
-                lastActivityId.current = actId;
-                setTextDraft('');
-                setWordDraft('');
-                setSendError('');
-            }
+            if (p) sessionStorage.setItem(clavePendiente, JSON.stringify(p));
+            else sessionStorage.removeItem(clavePendiente);
+        } catch { /* sin almacenamiento: queda en memoria */ }
+    }, [clavePendiente]);
+    useEffect(() => {
+        if (!clavePendiente) return;
+        try {
+            const v = sessionStorage.getItem(clavePendiente);
+            const p = v ? JSON.parse(v) as { activityId: string; payload: GuestPayload } : null;
+            pendienteRef.current = p;
+            setPendiente(p);
+        } catch { /* nada guardado */ }
+    }, [clavePendiente]);
+    // Lo último que eligió: una vuelta que salió antes trae lo de antes y no lo pisa
+    const versionRef = useRef(0);
+    const elegidaRef = useRef<{ activityId: string; payload: GuestPayload } | null>(null);
+
+    // ── Una vuelta: un solo llamado, sin encimarse (lib/sondeo) ──
+    const vuelta = useCallback(async (senal: AbortSignal) => {
+        if (!guest) return;
+        const version = versionRef.current;
+        let s: GuestState;
+        try {
+            s = await getGuestState(guest.token, senal);
         } catch (err) {
             // El token dejó de existir (se reinició la sala): volvemos a
             // la puerta en vez de dejarlo mirando una pantalla muerta.
@@ -73,16 +95,49 @@ export default function ClaseEnVivoInvitado() {
                 clearGuestSession(code);
                 setGuest(null);
                 setJoinError(err.message);
+                return;
+            }
+            throw err;
+        }
+        // Actividad nueva → limpiamos los borradores de la anterior
+        const actId = s.status === 'active' ? s.activity.id : null;
+        if (actId !== lastActivityId.current) {
+            lastActivityId.current = actId;
+            setTextDraft('');
+            setWordDraft('');
+            setSendError('');
+        }
+        // Eligió algo mientras viajaba esta vuelta: se ve lo que eligió
+        const elegida = elegidaRef.current;
+        if (versionRef.current !== version && elegida && s.status === 'active' && s.activity.id === elegida.activityId) {
+            s = { ...s, myAnswer: elegida.payload as Record<string, unknown> };
+        }
+        // Hay señal: la respuesta que quedó esperando sale ahora (con los
+        // botones quietos, para que no se cruce con otra)
+        const p = pendienteRef.current;
+        if (p) {
+            if (s.status !== 'active' || s.activity.id !== p.activityId || s.activity.status !== 'active') {
+                ponerPendiente(null);
+                setSendError('Tu respuesta no llegó a salir: la actividad se cerró mientras no había señal.');
+            } else {
+                setSending(true);
+                try {
+                    await submitGuestResponse(guest.token, p.activityId, p.payload);
+                    if (pendienteRef.current === p) ponerPendiente(null);
+                    s = { ...s, myAnswer: p.payload as Record<string, unknown> };
+                } catch (err) {
+                    if (err instanceof GuestError && err.code === 'SIN_SENIAL') throw err;
+                    if (pendienteRef.current === p) ponerPendiente(null);
+                    setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
+                } finally {
+                    setSending(false);
+                }
             }
         }
-    }, [guest, code]);
+        setState(s);
+    }, [guest, code, ponerPendiente]);
 
-    useEffect(() => {
-        if (!guest) return;
-        poll();
-        const id = window.setInterval(poll, POLL_MS);
-        return () => window.clearInterval(id);
-    }, [guest, poll]);
+    const sondeo = useSondeo(vuelta, POLL_MS, Boolean(guest));
 
     // ── Entrar ──
     const handleJoin = async () => {
@@ -94,7 +149,9 @@ export default function ClaseEnVivoInvitado() {
             saveGuestSession(code, g);
             setGuest(g);
         } catch (err) {
-            setJoinError(err instanceof Error ? err.message : 'No se pudo entrar.');
+            setJoinError(err instanceof GuestError && err.code === 'SIN_SENIAL'
+                ? 'Sin señal. Probá de nuevo en unos segundos.'
+                : err instanceof Error ? err.message : 'No se pudo entrar.');
         } finally {
             setJoining(false);
         }
@@ -102,14 +159,24 @@ export default function ClaseEnVivoInvitado() {
 
     const submit = async (payload: GuestPayload) => {
         if (!guest || state?.status !== 'active' || sending) return;
+        const activityId = state.activity.id;
+        versionRef.current++;
+        elegidaRef.current = { activityId, payload };
         setSending(true);
         setSendError('');
         try {
-            await submitGuestResponse(guest.token, state.activity.id, payload);
+            await submitGuestResponse(guest.token, activityId, payload);
+            ponerPendiente(null);
             // Optimista: el poll confirma en menos de 3 segundos
             setState({ ...state, myAnswer: payload as Record<string, unknown> });
+            sondeo.ahora();
         } catch (err) {
-            setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
+            if (err instanceof GuestError && err.code === 'SIN_SENIAL') {
+                // Queda guardada y sale sola cuando vuelva la señal
+                ponerPendiente({ activityId, payload });
+            } else {
+                setSendError(err instanceof Error ? err.message : 'No se pudo enviar.');
+            }
         } finally {
             setSending(false);
         }
@@ -186,7 +253,10 @@ export default function ClaseEnVivoInvitado() {
     }
 
     const activity = state?.status === 'active' ? state.activity : null;
-    const myAnswer = state?.status === 'active' ? state.myAnswer : null;
+    // La que espera señal se ve elegida igual
+    const esperandoSenial = pendiente !== null && pendiente.activityId === activity?.id;
+    const myAnswer = esperandoSenial ? pendiente.payload as Record<string, unknown>
+        : state?.status === 'active' ? state.myAnswer : null;
     const results = state?.status === 'active' ? state.results : null;
     const reactionsEnabled = state?.status === 'active' || state?.status === 'idle'
         ? state.reactionsEnabled : false;
@@ -208,14 +278,23 @@ export default function ClaseEnVivoInvitado() {
                 </div>
             </div>
 
+            <SenialEnVivo fallas={sondeo.fallas} deRed={sondeo.deRed} ultimaOk={sondeo.ultimaOk} detalle="Seguí en esta pantalla: lo que respondas sale solo cuando se pueda." />
+
             {activity ? (
                 <div className="card cv-activity">
                     <div className="cv-activity-head">
                         <span className="badge badge-ia">
                             {LIVE_KIND_META[activity.kind].emoji} {LIVE_KIND_META[activity.kind].label}
                         </span>
-                        {answered && <span className="badge badge-success">✓ Respondiste</span>}
+                        {esperandoSenial
+                            ? <span className="badge badge-warning">Esperando señal</span>
+                            : answered && <span className="badge badge-success">✓ Respondiste</span>}
                     </div>
+                    {esperandoSenial && (
+                        <p className="cv-pendiente" role="status">
+                            <CloudUpload size={14} aria-hidden="true" /> Tu respuesta quedó guardada en el celular y sale sola cuando vuelva la señal.
+                        </p>
+                    )}
                     {activity.config.question && <h3 className="cv-question">{activity.config.question}</h3>}
 
                     {activity.kind === 'checkin' && (

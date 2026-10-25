@@ -6,12 +6,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Sparkles, Loader2, Copy, Check, Users, ClipboardList, Medal, Clock, Smile, ListChecks, RotateCcw } from 'lucide-react';
 import {
-  getLiveSessionSummary, saveLiveSessionReport, getMaterialesDeClase, LIVE_KIND_META, LIVE_REACTIONS,
-  type ResumenClase as Datos, type MaterialEnLista,
+  getLiveSessionSummary, saveLiveSessionReport, getMaterialesDeClase, getLiveSession, getPreguntasDeLaClase,
+  LIVE_KIND_META, LIVE_REACTIONS,
+  type ResumenClase as Datos, type MaterialEnLista, type LiveSession,
 } from '../services/live.service';
 import { classReport } from '../services/documents.service';
+import { createActivity } from '../services/activities.service';
+import { useAuth } from '../contexts/AuthContext';
+import type { ActivityQuestion } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
 import EstadoVacio from './ui/EstadoVacio';
 import { Esqueleto } from './ui/Esqueleto';
@@ -107,7 +112,58 @@ function datosParaInforme(d: Datos, materiales: MaterialEnLista[]): { texto: str
   return { texto: l.join('\n'), ponerNombres };
 }
 
+/**
+ * Las preguntas rápidas de la clase como partes de una actividad de repaso:
+ * primero las que más costaron. Sin las dirigidas a un solo estudiante ni
+ * las repetidas. Cada una se empareja con su resultado del resumen por el
+ * texto de la pregunta (sin resultado: va al final).
+ */
+function partesDeRepaso(
+  preguntas: Awaited<ReturnType<typeof getPreguntasDeLaClase>>,
+  quizDelResumen: Datos['actividades'],
+): ActivityQuestion[] {
+  const vistas = new Set<string>();
+  const usados = new Set<number>();
+  return preguntas
+    .map(p => {
+      const texto = p.config.question?.trim() ?? '';
+      const i = quizDelResumen.findIndex((r, j) => !usados.has(j) && (r.pregunta ?? '').trim() === texto);
+      if (i >= 0) usados.add(i);
+      const r = i >= 0 ? quizDelResumen[i] : null;
+      const tasa = r && r.respondieron > 0 && r.aciertos != null ? r.aciertos / r.respondieron : 1;
+      return { p, tasa };
+    })
+    .filter(({ p }) => {
+      const pregunta = p.config.question?.trim() ?? '';
+      const opciones = p.config.options ?? [];
+      const clave = pregunta.toLowerCase();
+      if (!pregunta || p.targetStudentId || opciones.length < 2 || vistas.has(clave)) return false;
+      if (!opciones.some(o => o.id === p.config.correctId)) return false;
+      vistas.add(clave);
+      return true;
+    })
+    .sort((a, b) => a.tasa - b.tasa)
+    .map(({ p }, i) => {
+      const opciones = p.config.options ?? [];
+      return {
+        id: `q${i + 1}`,
+        type: 'multiple_choice' as const,
+        prompt: p.config.question!.trim(),
+        options: opciones.map(o => o.label),
+        correct_index: opciones.findIndex(o => o.id === p.config.correctId),
+      };
+    });
+}
+
+/** ¿Fue hoy? (la asistencia es del día) */
+const esHoy = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
+
 export default function ResumenClase({ sessionId, onVolver }: { sessionId: string; onVolver: () => void }) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  // La clase (materia, curso, tema): para pasar lista y armar el repaso
+  const [sesion, setSesion] = useState<LiveSession | null>(null);
+  const [armandoRepaso, setArmandoRepaso] = useState(false);
   const [datos, setDatos] = useState<Datos | null | undefined>(undefined);
   const [error, setError] = useState('');
   const [informe, setInforme] = useState<string | null>(null);
@@ -120,6 +176,7 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
   useEffect(() => {
     let cancelado = false;
     getMaterialesDeClase(sessionId).then(m => { if (!cancelado) setMateriales(m); }).catch(console.error);
+    getLiveSession(sessionId).then(s => { if (!cancelado) setSesion(s); }).catch(console.error);
     getLiveSessionSummary(sessionId)
       .then(d => { if (cancelado) return; setDatos(d); setInforme(d?.sesion.ai_summary ?? null); })
       .catch(err => { if (!cancelado) { setDatos(null); setError(err instanceof Error ? err.message : 'No se pudo cargar el resumen.'); } });
@@ -142,6 +199,43 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
       setErrorInforme(err instanceof Error ? err.message : 'No se pudo escribir el informe.');
     } finally {
       setGenerando(false);
+    }
+  };
+
+  /** Un borrador con las preguntas de la clase; se abre para revisarlo y publicarlo */
+  const armarRepaso = async () => {
+    if (!datos || !sesion || !user || armandoRepaso) return;
+    setArmandoRepaso(true);
+    try {
+      const partes = partesDeRepaso(
+        await getPreguntasDeLaClase(sessionId),
+        datos.actividades.filter(a => a.tipo === 'quiz'),
+      );
+      if (partes.length === 0) {
+        avisar.info('No hay preguntas para armar el repaso', 'Hacen falta preguntas rápidas con su respuesta correcta.');
+        return;
+      }
+      const sobre = datos.material?.tipo === 'tema' ? datos.material.titulo : datos.sesion.titulo;
+      const dia = new Date(datos.sesion.inicio).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+      const act = await createActivity({
+        title: `Repaso: ${sobre}`.slice(0, 120),
+        contentMd: `Las preguntas de la clase del ${dia}, para repasar. Primero van las que más costaron.`,
+        questions: partes,
+        subjectId: sesion.subjectId,
+        courseId: sesion.courseId,
+        teacherId: user.id,
+        schoolId: sesion.schoolId,
+        classId: sesion.classId,
+        tipo: 'actividad',
+        estado: 'draft',
+      });
+      avisar.exito('Repaso armado', 'Quedó como borrador: revisalo, sumale lo que quieras y publicalo.');
+      navigate(`/actividades/${act.id}/editar`);
+    } catch (err) {
+      console.error(err);
+      avisar.error('No se pudo armar el repaso.', 'Probá de nuevo en un rato.');
+    } finally {
+      setArmandoRepaso(false);
     }
   };
 
@@ -217,6 +311,45 @@ export default function ResumenClase({ sessionId, onVolver }: { sessionId: strin
           <span className="rc-tile-sub">{datos.medallas.map(m => AWARD_META[m.medalla]?.emoji ?? '🏅').join(' ') || 'ninguna'}</span>
         </div>
       </section>
+
+      {/* Qué sigue (fase 5, parte 4): lo que el docente hace después de la clase */}
+      {sesion && (
+        <section className="card rc-bloque rc-sigue" aria-labelledby="rc-sigue">
+          <h3 id="rc-sigue">Qué sigue</h3>
+          <div className="rc-sigue-acciones">
+            {esHoy(datos.sesion.inicio) && (
+              <Link to={`/asistencia?curso=${sesion.courseId}&materia=${sesion.subjectId}`} className="rc-sigue-item">
+                <ListChecks size={18} aria-hidden="true" />
+                <span>
+                  <strong>Pasar asistencia de hoy</strong>
+                  {/* La lista marca a los que respondieron o mandaron un emoji hoy (sin número
+                      acá: esa cuenta suma todas las clases del día y no coincidiría) */}
+                  <small>{t.participaron > 0
+                    ? 'En la lista vas a ver quiénes participaron desde el celular. Ojo: alguien pudo hacerlo sin estar en el aula, y otro estar sin celular.'
+                    : 'Nadie participó desde el celular: pasala como siempre.'}</small>
+                </span>
+              </Link>
+            )}
+            {datos.actividades.some(a => a.tipo === 'quiz' && !a.dirigida) ? (
+              <button type="button" className="rc-sigue-item" onClick={() => void armarRepaso()} disabled={armandoRepaso}>
+                {armandoRepaso ? <Loader2 size={18} className="spin" aria-hidden="true" /> : <RotateCcw size={18} aria-hidden="true" />}
+                <span>
+                  <strong>{armandoRepaso ? 'Armando el repaso…' : 'Armar un repaso con estas preguntas'}</strong>
+                  <small>Una actividad para el celular con las preguntas de hoy, primero las que más costaron. Queda como borrador.</small>
+                </span>
+              </button>
+            ) : sesion.classId && (
+              <Link to={`/actividades/nueva?tipo=actividad&tema=${sesion.classId}`} className="rc-sigue-item">
+                <RotateCcw size={18} aria-hidden="true" />
+                <span>
+                  <strong>Armar una actividad de repaso</strong>
+                  <small>Del tema de la clase, con la IA o a mano. Queda como borrador.</small>
+                </span>
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="card rc-bloque" aria-labelledby="rc-informe">
         <div className="rc-bloque-head">

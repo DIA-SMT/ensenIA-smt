@@ -378,12 +378,18 @@ export async function getStudentIdsWithRecentEvents(activityIds: string[], since
 
 // ── Student: mi vista ──
 
-export async function getStudentByUserId(userId: string): Promise<Student | null> {
-  const { data } = await supabase
+/**
+ * La ficha del estudiante de esta cuenta, o null si no tiene. `tirarSiFalla`:
+ * un error (sin señal) se tira en vez de volver null, que se leería como
+ * "tu cuenta no está vinculada a un curso" (la clase en vivo lo usa, 071).
+ */
+export async function getStudentByUserId(userId: string, { tirarSiFalla = false } = {}): Promise<Student | null> {
+  const { data, error } = await supabase
     .from('students')
     .select('*, courses(name)')
     .eq('user_id', userId)
     .maybeSingle();
+  if (error && tirarSiFalla) throw error;
   if (!data) return null;
   return {
     id: data.id,

@@ -11,7 +11,7 @@ import type { StudentAward, TeacherAward } from '../types';
 
 // ── Mappers ──
 
-function mapStudentAward(row: any): StudentAward {
+export function mapStudentAward(row: any): StudentAward {
   return {
     id: row.id,
     studentId: row.student_id,

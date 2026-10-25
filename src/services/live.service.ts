@@ -10,7 +10,8 @@
  */
 
 import { supabase, unwrap } from './_helpers';
-import type { CheckinFeeling, LibraryMaterial, FileType } from '../types';
+import { mapStudentAward } from './awards.service';
+import type { CheckinFeeling, LibraryMaterial, FileType, StudentAward } from '../types';
 
 // ── Tipos ──
 
@@ -138,7 +139,9 @@ function mapActivity(row: any): LiveActivity {
 // ── Sesiones (docente) ──
 
 export async function getMyLiveSession(teacherId: string): Promise<LiveSession | null> {
-  const { data } = await supabase
+  // Sin señal se tira el error: "no tenés clase abierta" llevaba a arrancar
+  // otra, que choca con la que sigue abierta (071)
+  const { data, error } = await supabase
     .from('live_sessions')
     .select('*')
     .eq('teacher_id', teacherId)
@@ -146,6 +149,7 @@ export async function getMyLiveSession(teacherId: string): Promise<LiveSession |
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return data ? mapSession(data) : null;
 }
 
@@ -413,6 +417,26 @@ export async function saveLiveSessionReport(sessionId: string, informe: string):
   if (error) throw error;
 }
 
+/** Una clase en vivo (la del resumen): materia, curso, tema y cuándo fue. */
+export async function getLiveSession(sessionId: string): Promise<LiveSession | null> {
+  const { data, error } = await supabase.from('live_sessions').select('*').eq('id', sessionId).maybeSingle();
+  if (error) throw error;
+  return data ? mapSession(data) : null;
+}
+
+/** Las preguntas rápidas (con su correcta) que se lanzaron en una clase, en orden. */
+export async function getPreguntasDeLaClase(sessionId: string): Promise<LiveActivity[]> {
+  const data = unwrap(
+    await supabase
+      .from('live_activities')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('kind', 'quiz')
+      .order('created_at'),
+  );
+  return (data as unknown[]).map(mapActivity);
+}
+
 /** Las últimas clases que terminó el docente (para volver a ver su resumen). */
 export async function getMyPastSessions(teacherId: string, limit = 8): Promise<LiveSession[]> {
   const { data } = await supabase
@@ -435,14 +459,16 @@ export async function getSessionState(
   sessionId: string,
   { asStudent = false }: { asStudent?: boolean } = {},
 ): Promise<{ session: LiveSession; activity: LiveActivity | null } | null> {
-  const { data: ses } = await supabase
+  // Un error (sin señal) se tira: devolver null decía "no hay clase" (071)
+  const { data: ses, error } = await supabase
     .from('live_sessions')
     .select('*')
     .eq('id', sessionId)
     .maybeSingle();
+  if (error) throw error;
   if (!ses) return null;
 
-  const { data: act } = await supabase
+  const { data: act, error: errorAct } = await supabase
     // Mismas columnas en los dos: el cast es solo para que TS acepte la unión
     .from((asStudent ? 'live_activities_alumno' : 'live_activities') as 'live_activities')
     .select('*')
@@ -450,19 +476,117 @@ export async function getSessionState(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (errorAct) throw errorAct;
 
   return { session: mapSession(ses), activity: act ? mapActivity(act) : null };
 }
 
 /** Sesión en vivo del curso del estudiante (para el banner y su pantalla). */
 export async function getLiveSessionForCourse(courseId: string): Promise<LiveSession | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('live_sessions')
     .select('*')
     .eq('course_id', courseId)
     .eq('status', 'live')
     .maybeSingle();
+  // Sin señal no es "no hay clase": quien llama decide qué mostrar
+  if (error) throw error;
   return data ? mapSession(data) : null;
+}
+
+// ── Un pedido por vuelta (071) ──
+// Antes cada vuelta eran 2 a 6 pedidos; con poca señal se encimaban.
+
+/** Lo que devuelven live_estado_alumno y live_estado_docente (filas tal cual de la base) */
+type Fila = Record<string, unknown>;
+interface FilaEstadoAlumno {
+  estado?: string; sessionId?: string; titulo?: string;
+  session?: Fila; activity?: Fila | null; myAnswer?: Fila | null; results?: LiveResults | null; medalla?: Fila | null;
+}
+interface FilaEstadoDocente {
+  session: Fila; activity: Fila | null; results: LiveResults | null; olvidada?: boolean;
+  reacciones?: { emoji: string; createdAt: string }[]; invitados?: InvitadoEnSala[]; conectados?: string[];
+}
+
+export type EstadoAlumno =
+  | {
+    estado: 'en_vivo';
+    session: LiveSession;
+    activity: LiveActivity | null;
+    myAnswer: Record<string, unknown> | null;
+    /** Solo después de responder (antes ni viajan) */
+    results: LiveResults | null;
+    /** Una medalla que le dieron desde `medallasDesde` */
+    medalla: StudentAward | null;
+  }
+  | { estado: 'terminada'; sessionId: string; titulo: string }
+  | { estado: 'sin_clase' };
+
+/**
+ * Todo lo que el celular del estudiante necesita, en un pedido; de paso
+ * marca su presencia. `sessionId`: la clase que tiene abierta (null: la que
+ * esté viva en su curso). Sin señal tira el error: nunca dice "sin clase"
+ * por no haber podido preguntar.
+ */
+export async function getEstadoAlumno(sessionId: string | null, medallasDesde: string | null, senal?: AbortSignal): Promise<EstadoAlumno> {
+  const pedido = supabase.rpc('live_estado_alumno' as never, {
+    p_session: sessionId, p_medallas_desde: medallasDesde,
+  } as never);
+  const { data, error } = await (senal ? pedido.abortSignal(senal) : pedido);
+  if (error) throw error;
+  const d = data as unknown as FilaEstadoAlumno | null;
+  if (!d?.estado) throw new Error('Respuesta inesperada del servidor');
+  if (d.estado === 'sin_clase') return { estado: 'sin_clase' };
+  if (d.estado === 'terminada') return { estado: 'terminada', sessionId: d.sessionId ?? '', titulo: d.titulo ?? '' };
+  return {
+    estado: 'en_vivo',
+    session: mapSession(d.session),
+    activity: d.activity ? mapActivity(d.activity) : null,
+    myAnswer: d.myAnswer ?? null,
+    results: d.results ?? null,
+    medalla: d.medalla ? mapStudentAward(d.medalla) : null,
+  };
+}
+
+export interface EstadoDocente {
+  session: LiveSession;
+  activity: LiveActivity | null;
+  results: LiveResults | null;
+  /** Quedó abierta sin uso (2 h sin señales): se cierra sola */
+  olvidada: boolean;
+  /** Emojis del último minuto */
+  reacciones: { emoji: string; createdAt: string }[];
+  invitados: InvitadoEnSala[];
+  /** Estudiantes vistos en los últimos 90 s */
+  conectados: Set<string>;
+}
+
+/**
+ * Cierra una clase propia que quedó olvidada (2 h sin señales), con la hora
+ * de su última señal. false si no era suya o no estaba olvidada.
+ */
+export async function cerrarMiClaseOlvidada(sessionId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('cerrar_mi_clase_olvidada' as never, { p_session: sessionId } as never);
+  if (error) throw error;
+  return Boolean(data);
+}
+
+/** Todo el panel del docente en un pedido. null si la clase no es suya o no existe. */
+export async function getEstadoDocente(sessionId: string, senal?: AbortSignal): Promise<EstadoDocente | null> {
+  const pedido = supabase.rpc('live_estado_docente' as never, { p_session: sessionId } as never);
+  const { data, error } = await (senal ? pedido.abortSignal(senal) : pedido);
+  if (error) throw error;
+  const d = data as unknown as FilaEstadoDocente | null;
+  if (!d) return null;
+  return {
+    session: mapSession(d.session),
+    activity: d.activity ? mapActivity(d.activity) : null,
+    results: d.results ?? null,
+    olvidada: Boolean(d.olvidada),
+    reacciones: d.reacciones ?? [],
+    invitados: d.invitados ?? [],
+    conectados: new Set<string>(d.conectados ?? []),
+  };
 }
 
 // ── Actividades ──

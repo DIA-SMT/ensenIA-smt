@@ -8,7 +8,7 @@
  * (no siempre suma). Todo responsive: mismo panel en cualquier pantalla.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     Radio, Square, Plus, Eye, Lock, CheckCircle, Users,
@@ -22,9 +22,9 @@ import { getGroupsByCourse, type CourseGroup } from '../services/groups.service'
 import GruposModal from '../components/GruposModal';
 import {
     getMyLiveSession, startLiveSession, endLiveSession, setReactionsEnabled,
-    getSessionState, launchActivity, setActivityStatus, getLiveResults,
-    getRecentReactions, setGuestsEnabled, getInvitadosEnSala, sacarInvitado, deleteLiveResponse, sacarPalabraEnVivo,
-    getOnlineStudentIds, setLiveMaterial, type InvitadoEnSala,
+    getEstadoDocente, cerrarMiClaseOlvidada, launchActivity, setActivityStatus, getLiveResults,
+    setGuestsEnabled, sacarInvitado, deleteLiveResponse, sacarPalabraEnVivo,
+    setLiveMaterial, type InvitadoEnSala,
     getCorrectResponders, getMyPastSessions, sincronizarMaterialesDeClase,
     LIVE_KIND_META, type EleccionMaterial,
     type LiveSession, type LiveActivity, type LiveActivityKind,
@@ -41,6 +41,9 @@ import ElegirMaterial from '../components/ElegirMaterial';
 import QRCode from 'qrcode';
 import QrModal from '../components/QrModal';
 import ProyectarVivo from '../components/ProyectarVivo';
+import SenialEnVivo from '../components/SenialEnVivo';
+import { useSondeo } from '../lib/sondeo';
+import { esErrorDeRed } from '../lib/conexion';
 import { enlacePublico } from '../lib/direccion';
 import { avisar, confirmar } from '../components/ui/avisar';
 import { Esqueleto, Cargando } from '../components/ui/Esqueleto';
@@ -99,8 +102,6 @@ export default function ClaseEnVivo() {
     const [resumenId, setResumenId] = useState<string | null>(null);
     const [pasadas, setPasadas] = useState<LiveSession[]>([]);
 
-    const pollRef = useRef<number | null>(null);
-
     const assignments = user?.subjects ?? [];
 
     useEffect(() => {
@@ -111,10 +112,28 @@ export default function ClaseEnVivo() {
         }).catch(console.error);
     }, []);
 
-    // Sesión viva existente (si recarga la página, la retoma)
+    // Sesión viva existente (si recarga la página, la retoma). Sin señal no
+    // se sabe si hay una abierta: se reintenta en vez de ofrecer arrancar
+    // otra, que chocaría con la que sigue abierta (071).
+    // null: anda (o todavía no falló) · si no, si la falla es de red o del servidor
+    const [buscandoSinSenial, setBuscandoSinSenial] = useState<null | 'red' | 'servidor'>(null);
     useEffect(() => {
         if (!user) return;
-        getMyLiveSession(user.id).then(setSession).catch(() => setSession(null));
+        let vivo = true;
+        let intentos = 0;
+        let timer: number | undefined;
+        const buscar = () => {
+            getMyLiveSession(user.id)
+                .then(s => { if (vivo) { setBuscandoSinSenial(null); setSession(s); } })
+                .catch(err => {
+                    if (!vivo) return;
+                    intentos++;
+                    setBuscandoSinSenial(esErrorDeRed(err) ? 'red' : 'servidor');
+                    timer = window.setTimeout(buscar, Math.min(2500 * 2 ** Math.min(intentos, 3), 15_000));
+                });
+        };
+        buscar();
+        return () => { vivo = false; window.clearTimeout(timer); };
     }, [user]);
 
     // Llegado desde la Biblioteca (?material=) o el temario (?tema=): ese
@@ -215,43 +234,47 @@ export default function ClaseEnVivo() {
         getGroupsByCourse(session.courseId).then(setGroups).catch(console.error);
     }, [session?.id, session?.status]);
 
-    // ── Poll del estado + resultados + reacciones ──
-    const poll = useCallback(async () => {
-        if (!session) return;
-        try {
-            const state = await getSessionState(session.id);
-            if (!state) return;
-            setSession(state.session);
-            setActivity(state.activity);
-            if (state.activity && state.activity.status !== 'closed') {
-                getLiveResults(state.activity.id).then(setResults).catch(console.error);
-            }
-            if (state.session.reactionsEnabled) {
-                const since = new Date(Date.now() - 60_000).toISOString();
-                getRecentReactions(session.id, since).then(setReactions).catch(console.error);
-            }
-            if (state.session.guestsEnabled) {
-                getInvitadosEnSala(session.id).then(l => {
-                    setInvitados(l);
-                    // Conectados: los que dieron señal en los últimos 2 minutos
-                    const desde = Date.now() - 120_000;
-                    setConnected(l.filter(g => new Date(g.vistoAt).getTime() > desde).length);
-                }).catch(console.error);
-            } else {
-                setInvitados([]);
-            }
-            getOnlineStudentIds(session.id).then(setOnlineIds).catch(console.error);
-        } catch (err) {
-            console.error('poll error:', err);
+    // ── Una vuelta: estado, resultados, emojis, invitados y presencia en un
+    // solo pedido (071; antes eran seis, que con poca señal se encimaban) ──
+    const sessionId = session?.id ?? null;
+    const vuelta = useCallback(async (senal: AbortSignal) => {
+        if (!sessionId) return;
+        const e = await getEstadoDocente(sessionId, senal);
+        if (!e) return;
+        if (e.session.status === 'ended') {
+            // Se terminó por otro lado (desde otro equipo, o sola por quedar
+            // 2 horas sin uso): se muestra cómo le fue, no la pantalla de inicio
+            setResumenId(sessionId);
+            setSession(null);
+            setActivity(null);
+            setResults(null);
+            avisar.info('La clase terminó', 'Se cerró desde otro equipo o por estar más de 2 horas sin uso. Acá está su resumen.');
+            return;
         }
-    }, [session?.id, session?.reactionsEnabled]);
-
-    useEffect(() => {
-        if (!session || session.status !== 'live') return;
-        poll();
-        pollRef.current = window.setInterval(poll, POLL_MS);
-        return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
-    }, [session?.id, session?.status, poll]);
+        if (e.olvidada) {
+            // Quedó abierta horas sin uso (por ejemplo, desde ayer): se cierra
+            // con la hora de su última señal y se muestra cómo le fue
+            if (await cerrarMiClaseOlvidada(sessionId)) {
+                setResumenId(sessionId);
+                setSession(null);
+                setActivity(null);
+                setResults(null);
+                avisar.info('Esta clase había quedado abierta', 'Tenía más de 2 horas sin uso y la cerramos. Acá está su resumen; si querés seguir, arrancá una nueva.');
+                return;
+            }
+        }
+        setSession(e.session);
+        setActivity(e.activity);
+        // Una actividad cerrada deja a la vista los últimos resultados que tuvo
+        if (e.activity && e.activity.status !== 'closed') setResults(e.results);
+        setReactions(e.reacciones);
+        setInvitados(e.invitados);
+        // Invitados conectados: los que dieron señal en los últimos 2 minutos
+        const desde = Date.now() - 120_000;
+        setConnected(e.invitados.filter(g => new Date(g.vistoAt).getTime() > desde).length);
+        setOnlineIds(e.conectados);
+    }, [sessionId]);
+    const sondeo = useSondeo(vuelta, POLL_MS, Boolean(session && session.status === 'live'));
 
     // El QR vive en el panel, no en un modal: con la notebook espejada al
     // proyector, esta pantalla es la que ve la sala. Un modal que hay que
@@ -489,7 +512,14 @@ export default function ClaseEnVivo() {
 
     // ── Render: cargando ──
     if (session === undefined) {
-        return <div className="cv-container"><Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando la clase en vivo…" /></div>;
+        return (
+            <div className="cv-container">
+                {buscandoSinSenial && (
+                    <SenialEnVivo fallas={2} deRed={buscandoSinSenial === 'red'} ultimaOk={null} detalle="Todavía no pudimos ver si tenés una clase abierta. Seguimos probando." />
+                )}
+                <Esqueleto tipo="tarjetas" cantidad={2} etiqueta="Cargando la clase en vivo…" />
+            </div>
+        );
     }
 
     // ── Render: resumen de una clase terminada ──
@@ -653,6 +683,13 @@ export default function ClaseEnVivo() {
                     </button>
                 </div>
             </div>
+
+            <SenialEnVivo
+                fallas={sondeo.fallas}
+                deRed={sondeo.deRed}
+                ultimaOk={sondeo.ultimaOk}
+                detalle="Los chicos pueden seguir respondiendo desde sus celulares: cuando se pueda, ves todo."
+            />
 
             {/* Puerta de entrada. Grande mientras no hay actividad —que es
                 cuando la gente está entrando— y compacta cuando sí la hay,
@@ -937,6 +974,7 @@ export default function ClaseEnVivo() {
                     results={results}
                     connected={connected}
                     reactions={session.reactionsEnabled ? reactions : []}
+                    sinSenial={sondeo.fallas >= 2}
                     onClose={() => setProjecting(false)}
                 />
             )}
