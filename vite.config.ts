@@ -81,7 +81,10 @@ export default defineConfig(({ mode }) => {
           navigateFallback: '/index.html',
           // El ingreso con CiDiTuc es del servidor: si el service worker
           // contestara con la app, la vuelta de Derivador nunca llegaría.
-          navigateFallbackDenylist: [/^\/api\//, /^\/auth\/cidituc\//],
+          // Y el servidor de datos, que desde el 26/10/2026 también se sirve por
+          // este dominio (la red de la Muni no resuelve sslip.io): abrir un
+          // archivo de la biblioteca en otra pestaña tiene que traer el archivo.
+          navigateFallbackDenylist: [/^\/api\//, /^\/auth\/cidituc\//, /^\/(auth|rest|storage|functions)\/v1\//],
           // Que tome el control de la página ya en la primera visita: si no,
           // lo que se baja en esa visita no queda guardado para usar sin conexión.
           // Con skipWaiting, una versión nueva se activa sin esperar a que se
