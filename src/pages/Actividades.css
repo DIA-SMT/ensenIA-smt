@@ -110,6 +110,21 @@
   overflow-y: auto;
 }
 .acts-content-preview ul, .acts-content-preview ol { padding-left: 20px; }
+/* Respuestas y clave de corrección: el estudiante no las recibe (084) */
+.acts-solo-docente {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border-color);
+}
+.acts-solo-docente-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
 .acts-question-list {
   margin-top: var(--space-3);
   padding-top: var(--space-3);

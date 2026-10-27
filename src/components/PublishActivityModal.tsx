@@ -5,10 +5,11 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Send, Sparkles, Trash2, AlertCircle, CheckCircle, ListChecks } from 'lucide-react';
+import { X, Send, Sparkles, Trash2, AlertCircle, CheckCircle, ListChecks, Lock } from 'lucide-react';
 import { createActivity } from '../services/activities.service';
 import ElegirNivelIA from './ElegirNivelIA';
 import { nivelIAPorDefecto, type NivelIA } from '../lib/nivelIA';
+import { separarParteDocente, tituloParteDocente } from '../lib/parteDocente';
 import { extractQuestions } from '../services/documents.service';
 import type { ActivityQuestion, IAToolType } from '../types';
 import Dialogo from './shell/Dialogo';
@@ -41,6 +42,8 @@ export default function PublishActivityModal(props: Props) {
   const [publishing, setPublishing] = useState(false);
   const [done, setDone] = useState<{ id: string; borrador: boolean } | null>(null);
   const [error, setError] = useState('');
+  // Respuestas, clave o notas al final: quedan para el docente (084)
+  const { docente: parteDocente } = separarParteDocente(props.contentMd);
 
   const handleExtract = async () => {
     setExtracting(true);
@@ -142,6 +145,12 @@ export default function PublishActivityModal(props: Props) {
                   <input type="number" min="1" max="100" value={points} onChange={e => setPoints(e.target.value)} />
                 </div>
               </div>
+
+              {parteDocente && (
+                <p className="em-hint">
+                  <Lock size={13} style={{ verticalAlign: -2 }} aria-hidden="true" /> Desde «{tituloParteDocente(parteDocente)}» hasta el final queda solo para vos: los estudiantes no lo ven.
+                </p>
+              )}
 
               <ElegirNivelIA id="pub-nivel-ia" valor={nivelIA} alCambiar={setNivelIA} />
 

@@ -5,7 +5,7 @@ import { useContextoMigue } from '../contexts/MigueContext';
 import {
   ArrowLeft, Eye, Play, Send, CheckCircle, Clock, X, Fingerprint,
   MousePointerClick, LogOut as FocusLost, LogIn as FocusGained, RotateCcw, FileText, QrCode,
-  PencilLine, Undo2, Ban, WifiOff, Loader2
+  PencilLine, Undo2, Ban, WifiOff, Loader2, Lock
 } from 'lucide-react';
 import QrModal from '../components/QrModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,7 @@ import { NIVEL_IA } from '../lib/nivelIA';
 import { getCheckinsByActivity, getObservationsByStudent } from '../services/wellbeing.service';
 import { guardarObservacionResiliente } from '../services/offline-queue.service';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { separarParteDocente } from '../lib/parteDocente';
 import SugerirDevolucion from '../components/SugerirDevolucion';
 import BotonCopiarActividad from '../components/CopiarActividad';
 import { sugerirDevolucion } from '../components/devolucion-ia';
@@ -553,7 +554,19 @@ export default function ActividadDetalle() {
 
         {showContent && (
           <div className="acts-content-preview">
-            <MarkdownRenderer content={activity.contentMd} />
+            {(() => {
+              // Respuestas, clave o notas al final: el estudiante no las recibe (084)
+              const { estudiante, docente } = separarParteDocente(activity.contentMd);
+              return <>
+                <MarkdownRenderer content={estudiante} />
+                {docente && (
+                  <div className="acts-solo-docente">
+                    <p className="acts-solo-docente-titulo"><Lock size={13} aria-hidden="true" /> Solo para vos: los estudiantes no ven esta parte</p>
+                    <MarkdownRenderer content={docente} />
+                  </div>
+                )}
+              </>;
+            })()}
             {activity.questions.length > 0 && (
               <ol className="acts-question-list">
                 {activity.questions.map(q => (
