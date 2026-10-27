@@ -50,7 +50,9 @@ Generá una evaluación formal, prolija y lista para imprimir. Estructurá así:
 
 **Puntaje** — Indicá el valor de cada consigna y el total.
 
-**Criterios de corrección / Rúbrica** — Tabla clara con niveles de desempeño.
+**Al final, y solo ahí, lo que es para el docente.** Abrí esa parte con este título, exacto y en una línea sola:
+## 🔒 Solo para el docente
+Debajo: las respuestas correctas (clave de corrección), los criterios de corrección / rúbrica con niveles de desempeño y cualquier nota para el docente. Antes de ese título no escribas ninguna respuesta ni marques cuál opción es la correcta: si el docente la publica, los estudiantes ven todo lo de arriba y nada de esa parte.
 
 Asegurate de que la evaluación sea justa, clara y que evalúe comprensión, no solo memoria.`,
 

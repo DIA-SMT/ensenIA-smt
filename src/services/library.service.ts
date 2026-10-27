@@ -1,5 +1,6 @@
 import { supabase, unwrap, ServiceError } from './_helpers';
 import type { LibraryMaterial } from '../types';
+import { parteParaEstudiante } from '../lib/parteDocente';
 
 export async function getMaterialsByTeacher(teacherId: string): Promise<LibraryMaterial[]> {
   const data = unwrap(
@@ -113,7 +114,9 @@ export async function getSharedMaterialsForStudent(): Promise<LibraryMaterial[]>
       .eq('is_shared_with_students', true)
       .order('uploaded_at', { ascending: false })
   );
-  return data.map(mapMaterial);
+  // Una evaluación guardada como material trae la clave al final: al
+  // estudiante no se le muestra (ni la lee la IA con "Explicámelo fácil")
+  return data.map(mapMaterial).map(m => (m.extractedText ? { ...m, extractedText: parteParaEstudiante(m.extractedText) } : m));
 }
 
 function mapMaterial(row: any): LibraryMaterial {
