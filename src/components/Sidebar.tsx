@@ -6,9 +6,9 @@
  * escuela, con el color del rol: en una compu compartida se ve al instante.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronsLeft, ChevronsRight, LogOut, Accessibility } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, ChevronDown, LogOut, Accessibility } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { NAV_POR_ROL, ETIQUETA_ROL, itemActivo, inicioDe } from '../lib/navegacion';
 import { getUnreadAlertCount, getEscaladasPendientes } from '../services/alerts.service';
@@ -103,6 +103,28 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
     return () => { alive = false; window.clearInterval(id); };
   }, [userId, isDocente]);
 
+  // Solo el menú del medio se desplaza (arriba y el pie quedan fijos), y sin
+  // una pista no se notaba que había más opciones abajo (capacitación del
+  // 26/10): se marca el borde que tiene más y se ofrece "Más opciones".
+  const navRef = useRef<HTMLElement>(null);
+  const [desborde, setDesborde] = useState({ arriba: false, abajo: false });
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const medir = () => {
+      const arriba = nav.scrollTop > 2;
+      const abajo = nav.scrollTop + nav.clientHeight < nav.scrollHeight - 2;
+      setDesborde(d => (d.arriba === arriba && d.abajo === abajo ? d : { arriba, abajo }));
+    };
+    medir();
+    nav.addEventListener('scroll', medir, { passive: true });
+    // La ventana, la letra grande o un grupo que cambia de alto
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
+    ro?.observe(nav);
+    Array.from(nav.children).forEach(hijo => ro?.observe(hijo));
+    return () => { nav.removeEventListener('scroll', medir); ro?.disconnect(); };
+  }, [user?.role, colapsada]);
+
   if (!user) return null;
 
   const items = NAV_POR_ROL[user.role];
@@ -156,37 +178,53 @@ export default function Sidebar({ alAbrirPreferencias }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="sidebar-nav" aria-label="Principal">
-        {grupos.filter(g => g !== 'Cuenta').map(g => (
-          <div className="nav-grupo" key={g}>
-            <h2 className="nav-grupo-titulo" id={idGrupo(g)}>{g}</h2>
-            <ul aria-labelledby={idGrupo(g)}>
-              {items.filter(i => i.grupo === g).map(i => {
-                const esActivo = activo === i.ruta;
-                return (
-                  <li key={i.ruta}>
-                    <Link
-                      to={i.ruta}
-                      className={`nav-item${esActivo ? ' active' : ''}${i.ia ? ' nav-ia' : ''}`}
-                      aria-current={esActivo ? 'page' : undefined}
-                      title={colapsada ? i.etiqueta : undefined}
-                    >
-                      <span className={`nav-icon-wrap${i.imagen ? ' nav-avatar-wrap' : ''}`}>
-                        {i.imagen
-                          ? <img src={i.imagen} alt="" className="nav-avatar" aria-hidden="true" />
-                          : <i.icono size={19} aria-hidden="true" />}
-                      </span>
-                      <span className="nav-label">{i.etiqueta}</span>
-                      {i.ia && <span className="ia-tag" aria-hidden="true">IA</span>}
-                      {insignias(i.ruta)}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      <div className={`sidebar-menu${desborde.arriba ? ' hay-arriba' : ''}${desborde.abajo ? ' hay-abajo' : ''}`}>
+        <nav ref={navRef} className="sidebar-nav" aria-label="Principal">
+          {grupos.filter(g => g !== 'Cuenta').map(g => (
+            <div className="nav-grupo" key={g}>
+              <h2 className="nav-grupo-titulo" id={idGrupo(g)}>{g}</h2>
+              <ul aria-labelledby={idGrupo(g)}>
+                {items.filter(i => i.grupo === g).map(i => {
+                  const esActivo = activo === i.ruta;
+                  return (
+                    <li key={i.ruta}>
+                      <Link
+                        to={i.ruta}
+                        className={`nav-item${esActivo ? ' active' : ''}${i.ia ? ' nav-ia' : ''}`}
+                        aria-current={esActivo ? 'page' : undefined}
+                        title={colapsada ? i.etiqueta : undefined}
+                      >
+                        <span className={`nav-icon-wrap${i.imagen ? ' nav-avatar-wrap' : ''}`}>
+                          {i.imagen
+                            ? <img src={i.imagen} alt="" className="nav-avatar" aria-hidden="true" />
+                            : <i.icono size={19} aria-hidden="true" />}
+                        </span>
+                        <span className="nav-label">{i.etiqueta}</span>
+                        {i.ia && <span className="ia-tag" aria-hidden="true">IA</span>}
+                        {insignias(i.ruta)}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        {/* Atajo para el mouse: con el teclado se llega recorriendo el menú */}
+        {desborde.abajo && (
+          <button
+            type="button"
+            className="sidebar-mas"
+            tabIndex={-1}
+            aria-hidden="true"
+            title="Hay más opciones abajo"
+            onClick={() => navRef.current?.scrollBy({ top: navRef.current.clientHeight * 0.7, behavior: 'smooth' })}
+          >
+            <span className="nav-label">Más opciones</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+        )}
+      </div>
 
       <div className="sidebar-footer">
         {items.filter(i => i.grupo === 'Cuenta').map(i => (
