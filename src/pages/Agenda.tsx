@@ -136,10 +136,13 @@ export default function Agenda() {
             startHour: inicio, duration: form.duracion / 60, room: form.aula, colorClass: colorDe(a.subjectId),
         };
         // Superposición con otra clase propia: la base no la deja guardar (045),
-        // así que se avisa antes en vez de ofrecer "guardar igual"
+        // así que se avisa antes en vez de ofrecer "guardar igual". En minutos
+        // enteros (083): la base guarda 9:40 como 9.67, y en horas una clase
+        // que termina 9:40 "chocaba" con la que empieza 9:40.
+        const desde = minutos(inicio);
         const choca = [...form.dias].some(d => bloques.some(b =>
             b.id !== editando && b.dayIndex === d &&
-            inicio < b.startHour + b.duration && b.startHour < inicio + form.duracion / 60));
+            desde < minutos(b.startHour + b.duration) && minutos(b.startHour) < desde + form.duracion));
         if (choca) {
             avisar.error('Se superpone con otra clase tuya', 'En ese horario ya tenés otra clase cargada. Cambiá el día o la hora.');
             return;
