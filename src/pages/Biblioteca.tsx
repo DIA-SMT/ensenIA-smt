@@ -6,7 +6,7 @@ import {
   Download, Trash2, Share2, MessagesSquare, AlertCircle, FileUp, Loader2, Layers, PencilLine, Youtube, Captions,
   Headphones, ScanText, Eye, Radio, Check, Play, Presentation, Wand2, WifiOff, ScanLine,
 } from 'lucide-react';
-import { hayQueAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
+import { convieneAchicar, entraSinAchicar, achicar, LIMITE_SUBIDA, NoSePudoAchicar, AchicadoCancelado } from '../lib/comprimir';
 import { borrarEscaneo } from '../lib/escaneoGuardado';
 import { empezarLectura, avanceDeLectura, terminarLectura, suscribirLecturas, lecturasActuales } from '../lib/lecturasEnCurso';
 import { haySenial, esErrorDeRed } from '../lib/conexion';
@@ -15,7 +15,7 @@ import { getMaterialsByTeacher, searchMaterials, createMaterial, deleteMaterial,
 import { getSubjects } from '../services/subjects.service';
 import { getTema, getTemasConFecha } from '../services/planning.service';
 import {
-  uploadFile, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
+  uploadFile, SubidaRechazada, getSignedUrl, removeFile, fileToBase64, leerTextoDeArchivo,
   summarizeDocument, updateMaterial, formatFileSize,
   generateStudyCards, generatePodcast, type TemaParaIA,
 } from '../services/documents.service';
@@ -455,8 +455,8 @@ export default function Biblioteca() {
   };
 
   /**
-   * El archivo elegido (o escaneado). Si pesa más de lo que entra, o es una
-   * foto en un formato que el depósito no acepta, se achica acá mismo.
+   * El archivo elegido (o escaneado). Si no entra, o pesa de más para lo que
+   * es (comprimir.ts), se achica acá mismo.
    */
   const elegirArchivo = async (f: File | null, { conservarTitulo = false, escaneo = false } = {}) => {
     const pedido = ++pedidoAchicar.current;
@@ -478,7 +478,8 @@ export default function Biblioteca() {
     const ok = f.type === 'application/pdf' || f.type === DOCX_MIME || f.type === PPTX_MIME || f.type.startsWith('image/');
     if (!ok) { setUplError('Ese formato no se puede subir: PDF, Word (.docx), PowerPoint (.pptx) o fotos.'); return; }
     if (!conservarTitulo && !uplTitle.trim()) setUplTitle(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
-    if (!hayQueAchicar(f)) { setUplFile(f); return; }
+    // Lo escaneado ya sale achicado del escáner: solo se toca si no entra
+    if (!convieneAchicar(f) || (escaneo && f.size <= LIMITE_SUBIDA)) { setUplFile(f); return; }
     if (f.size > MAXIMO_PARA_ACHICAR) {
       setUplFile(null);
       setUplError(`Pesa ${formatFileSize(f.size)}: es demasiado para achicarlo en el navegador. Dividilo en partes más chicas (por ejemplo, por unidad) y subí cada una.`);
@@ -492,10 +493,12 @@ export default function Biblioteca() {
       if (!vigente()) return;
       setUplFile(archivo);
       setUplTexto(texto);
-      if (f.size > LIMITE_SUBIDA) setUplAchicado({ antes: f.size, despues: archivo.size });
+      if (archivo !== f) setUplAchicado({ antes: f.size, despues: archivo.size });
     } catch (err) {
       if (!vigente() || err instanceof AchicadoCancelado) return;
       console.error('No se pudo achicar:', err);
+      // Era para que ocupe menos, no para que entre: va el original
+      if (entraSinAchicar(f)) { setUplFile(f); return; }
       // Los mensajes pensados para el docente, tal cual; los técnicos, no
       setUplError(err instanceof NoSePudoAchicar ? err.message : 'No se pudo achicar el archivo. Probá de nuevo; si sigue, guardalo como PDF más liviano y subilo.');
     } finally {
@@ -610,6 +613,8 @@ export default function Biblioteca() {
       if (esErrorDeRed(err) || /fetch|network|load failed|señal/i.test(mensaje)) {
         setUplSinRed(true);
         setUplError('Se cortó la conexión y no se pudo subir. Queda acá: probá de nuevo cuando vuelva la señal.');
+      } else if (err instanceof SubidaRechazada) {
+        setUplError(mensaje);
       } else {
         // Sin el mensaje técnico del almacenamiento
         console.error('subir material:', mensaje);
@@ -1631,7 +1636,7 @@ export default function Biblioteca() {
                 <>
                   <Loader2 size={26} className="spin" />
                   <span role="status">{achicando}</span>
-                  <span className="text-xs text-subtle">Lo achicamos acá, en tu equipo, para que entre.</span>
+                  <span className="text-xs text-subtle">Lo achicamos acá, en tu equipo: sube más rápido y ocupa menos.</span>
                 </>
               ) : (
                 <>

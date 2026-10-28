@@ -23,6 +23,7 @@ import { TIPOS_LAMINA, aTextoPlano, type Mazo, type Diapositiva, type TipoLamina
 import { exportarMazoPptx } from '../lib/pptxMazo';
 import { dibujarDiagrama, svgAPng } from '../lib/dibujarDiagrama';
 import { uploadFile, generarImagenDeLamina } from '../services/documents.service';
+import { achicar, convieneAchicar, entraSinAchicar, NoSePudoAchicar } from '../lib/comprimir';
 import { generarDiagrama, generarDatosJuego } from '../services/visuales.service';
 import { avisar } from './ui/avisar';
 import './MazoEditor.css';
@@ -186,13 +187,22 @@ export default function MazoEditor({ mazo, alCambiar, alGuardar, guardando, pie,
             avisar.error('No puedo subir la imagen', 'Falta saber de quién es el material.');
             return;
         }
-        if (archivo.size > 5 * 1024 * 1024) {
-            avisar.error('La imagen pesa demasiado', 'Máximo 5 MB. Una captura o una foto reducida alcanza.');
-            return;
-        }
         setSubiendo(true);
         try {
-            const { storagePath } = await uploadFile(docenteId, archivo);
+            // Una foto del celular se achica antes (lib/comprimir): en una lámina se ve igual.
+            // Si achicar falla y la original entra, va la original.
+            let imagen = archivo;
+            if (convieneAchicar(archivo)) {
+                try {
+                    imagen = (await achicar(archivo)).archivo;
+                } catch (err) {
+                    if (!entraSinAchicar(archivo)) {
+                        avisar.error('La imagen pesa demasiado', err instanceof NoSePudoAchicar ? err.message : 'Probá con una captura o una foto más chica.');
+                        return;
+                    }
+                }
+            }
+            const { storagePath } = await uploadFile(docenteId, imagen);
             reemplazar(idx, { ...dia, imagen: { ruta: storagePath, alt: dia.imagen?.alt ?? '' } });
         } catch (err) {
             avisar.error('No se pudo subir la imagen', err instanceof Error ? err.message : '');

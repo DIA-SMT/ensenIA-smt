@@ -19,7 +19,7 @@ import type { ImportedProgram } from '../types';
 import Dialogo from './shell/Dialogo';
 import { esErrorDeRed } from '../lib/conexion';
 import { confirmar } from './ui/avisar';
-import { achicar, AchicadoCancelado } from '../lib/comprimir';
+import { achicar, convieneAchicar, entraSinAchicar, AchicadoCancelado, NoSePudoAchicar, LIMITE_TEXTO } from '../lib/comprimir';
 import './Modals.css';
 
 interface Props {
@@ -52,9 +52,14 @@ export default function ImportProgramModal(props: Props) {
   const [resultado, setResultado] = useState<ResultadoImportar | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [achicando, setAchicando] = useState('');
+  const [achicado, setAchicado] = useState<{ antes: number; despues: number } | null>(null);
+  // El texto de un PDF que se achicó (el achicado ya no lo trae): la IA lee eso, más barato
+  const [textoDelPdf, setTextoDelPdf] = useState<string | undefined>();
 
   const handleFile = async (f: File | null) => {
     setError('');
+    setAchicado(null);
+    setTextoDelPdf(undefined);
     if (!f) return;
     // Algunos celulares no informan el tipo del Word: se mira la extensión (como en Mis materiales)
     const esWord = f.type === DOCX_MIME || (!f.type && /\.docx$/i.test(f.name));
@@ -64,24 +69,26 @@ export default function ImportProgramModal(props: Props) {
       return;
     }
     const conTipo = esWord && !f.type ? new File([f], f.name, { type: DOCX_MIME }) : f;
-    if (conTipo.size > 11 * 1024 * 1024) {
-      if (esWord) {
-        setError('El Word supera los 11 MB. Guardalo como PDF y subilo de nuevo.');
-        return;
-      }
-      // Un PDF pesado (un escaneo largo) se achica acá, en el equipo
-      try {
-        setAchicando('Achicando el PDF…');
-        const { archivo } = await achicar(conTipo, m => { setAchicando(m); });
-        setFile(archivo);
-      } catch (err) {
-        if (!(err instanceof AchicadoCancelado)) setError('El PDF es muy pesado y no se pudo achicar. Probá con una versión más liviana.');
-      } finally {
-        setAchicando('');
-      }
-      return;
+    if (!convieneAchicar(conTipo)) { setFile(conTipo); return; }
+    // Lo que pesa de más (un escaneo, un Word con fotos) se achica acá, en el
+    // equipo, con el mismo criterio que en Mis materiales (lib/comprimir)
+    try {
+      setAchicando('Preparando…');
+      const { archivo, texto } = await achicar(conTipo, m => { setAchicando(m); });
+      setFile(archivo);
+      setTextoDelPdf(texto);
+      if (archivo !== conTipo) setAchicado({ antes: conTipo.size, despues: archivo.size });
+    } catch (err) {
+      if (err instanceof AchicadoCancelado) return;
+      console.error('No se pudo achicar:', err);
+      // Era para que ocupe menos, no para que entre: va el original
+      if (entraSinAchicar(conTipo)) { setFile(conTipo); return; }
+      setError(err instanceof NoSePudoAchicar
+        ? err.message
+        : `Pesa más de ${LIMITE_TEXTO} y no se pudo achicar. Probá con una versión más liviana.`);
+    } finally {
+      setAchicando('');
     }
-    setFile(conTipo);
   };
 
   const analyze = async () => {
@@ -90,8 +97,8 @@ export default function ImportProgramModal(props: Props) {
     setError('');
     try {
       let result: ImportedProgram;
-      if (file.type === DOCX_MIME) {
-        const text = await extractDocxText(file);
+      if (file.type === DOCX_MIME || textoDelPdf) {
+        const text = textoDelPdf ?? await extractDocxText(file);
         result = await importProgram({
           text, title: file.name,
           subjectName: props.subjectName, courseName: props.courseName,
@@ -244,6 +251,11 @@ export default function ImportProgramModal(props: Props) {
                   onChange={e => void handleFile(e.target.files?.[0] ?? null)}
                 />
               </div>
+              {achicado && (
+                <p className="em-hint" role="status">
+                  <CheckCircle size={14} /> Pesaba {formatFileSize(achicado.antes)} y quedó en {formatFileSize(achicado.despues)}.
+                </p>
+              )}
               <label className="em-checkbox-row">
                 <input type="checkbox" checked={saveToLibrary} onChange={e => setSaveToLibrary(e.target.checked)} />
                 Guardar el programa también en Mis materiales

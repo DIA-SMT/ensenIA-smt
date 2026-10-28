@@ -1,10 +1,17 @@
 /**
- * Achicar un material que no entra, en el equipo del docente (sin servidor):
- * - PDF: cada página pasa a imagen (se ve igual, pesa mucho menos). Si el
- *   PDF tenía texto (uno exportado de Word, de una web), ese texto se lee
- *   ANTES de achicarlo y se guarda: la IA lo usa sin gastar en leerlo.
- * - Foto: más chica y en JPEG (WebP y otros formatos el depósito no los acepta).
- * - Word y PowerPoint: las imágenes de adentro, más chicas. El texto no se toca.
+ * Achicar lo que se sube, en el equipo del docente (sin servidor). No solo
+ * lo que no entra: desde el 28/10/2026 también lo que pesa de más para lo
+ * que es, así el depósito y los respaldos no se llenan de fotos de 4 MB.
+ * - Foto de más de 1 MB (o en un formato que el depósito no acepta, como
+ *   WebP): a JPEG de hasta 2000 px de lado. En pantalla se ve igual.
+ * - PDF escaneado (sin texto) de más de 3 MB: cada página pasa a imagen a
+ *   150 ppp, lo mismo que mira la IA al leer un escaneo.
+ * - PDF con texto (exportado de Word, de una web): queda como está mientras
+ *   entre (nítido y con su texto). Si no entra, pasa a imagen, y su texto se
+ *   lee ANTES y se guarda: la IA lo usa sin gastar en leerlo.
+ * - Word y PowerPoint de más de 5 MB: las imágenes de adentro, más chicas.
+ *   El texto no se toca.
+ * Si achicado no baja al menos un 20 %, se sube el original.
  *
  * El límite lo pone la lectura con IA de un escaneo (process-document, ~11 MB).
  */
@@ -20,6 +27,14 @@ const navegador = () => import('./escanerNavegador');
  * (11 MiB, lo de antes, son 11.534.336: se subían y la IA no los leía.)
  */
 export const LIMITE_SUBIDA = 11_000_000;
+/** El límite, dicho para el docente: en las unidades en que la app muestra los pesos (formatFileSize) */
+export const LIMITE_TEXTO = '10,5 MB';
+// Desde acá se achica aunque entre: más es peso de sobra para lo que es
+const FOTO_LIVIANA = 1_000_000;
+const PDF_LIVIANO = 3_000_000;
+const OFFICE_LIVIANO = 5_000_000;
+// Lo achicado se usa si pesa al menos un 20 % menos que el original
+const VALE_LA_PENA = 0.8;
 // Formatos de foto que acepta el depósito (bucket "library")
 const FOTOS_ACEPTADAS = ['image/jpeg', 'image/png'];
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -43,11 +58,29 @@ export class AchicadoCancelado extends Error {
 /** Un problema que el docente puede resolver: su mensaje se muestra tal cual (los demás, no) */
 export class NoSePudoAchicar extends Error {}
 
-/** Si hay que pasarlo por acá antes de subirlo: pesa de más o es una foto en un formato que no se acepta */
-export function hayQueAchicar(f: File): boolean {
-  return f.size > LIMITE_SUBIDA || (f.type.startsWith('image/') && !FOTOS_ACEPTADAS.includes(f.type));
+/** Si se puede subir tal cual: entra y, si es una foto, está en un formato que se acepta */
+export function entraSinAchicar(f: File): boolean {
+  return f.size <= LIMITE_SUBIDA && (!f.type.startsWith('image/') || FOTOS_ACEPTADAS.includes(f.type));
 }
 
+/**
+ * Si conviene pasarlo por acá antes de subirlo: no entra, o pesa de más para
+ * lo que es. Si achicar falla y entraSinAchicar(f), se sube el original.
+ */
+export function convieneAchicar(f: File): boolean {
+  if (!entraSinAchicar(f)) return true;
+  if (f.type.startsWith('image/')) return f.size > FOTO_LIVIANA;
+  if (f.type === 'application/pdf') return f.size > PDF_LIVIANO;
+  if (f.type === DOCX || f.type === PPTX) return f.size > OFFICE_LIVIANO;
+  return false;
+}
+
+/** Lo achicado, si sirve: si baja menos de un 20 % y el original entra, el original */
+function elMejor(original: File, achicado: File): File {
+  return entraSinAchicar(original) && achicado.size > original.size * VALE_LA_PENA ? original : achicado;
+}
+
+/** Achica lo que convenga (convieneAchicar). `archivo` puede ser el mismo `f`: no hacía falta tocarlo. */
 export async function achicar(f: File, alAvanzarDe: AlAvanzar = () => {}): Promise<Comprimido> {
   // En un celular achicar cuesta: si nadie espera el resultado, se corta en el próximo paso
   const alAvanzar = (mensaje: string) => { if (alAvanzarDe(mensaje) === false) throw new AchicadoCancelado(); };
@@ -68,8 +101,8 @@ async function achicarFoto(f: File): Promise<File> {
   let img: HTMLImageElement;
   try { img = await abrirImagen(f); } catch (err) { throw new NoSePudoAchicar((err as Error).message); }
   const nombre = `${sinExtension(f.name)}.jpg`;
-  for (const lado of [2400, 2000, 1600, 1200]) {
-    for (const calidad of [0.82, 0.68]) {
+  for (const lado of [2000, 1600, 1200]) {
+    for (const calidad of [0.8, 0.68]) {
       const k = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement('canvas');
       c.width = Math.round(img.naturalWidth * k);
@@ -81,10 +114,10 @@ async function achicarFoto(f: File): Promise<File> {
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.drawImage(img, 0, 0, c.width, c.height);
       const blob = await lienzoAJpeg(c, calidad).finally(() => soltarLienzo(c));
-      if (blob.size <= LIMITE_SUBIDA) return new File([blob], nombre, { type: 'image/jpeg' });
+      if (blob.size <= LIMITE_SUBIDA) return elMejor(f, new File([blob], nombre, { type: 'image/jpeg' }));
     }
   }
-  throw new NoSePudoAchicar('La foto no baja de 11 MB.');
+  throw new NoSePudoAchicar(`La foto no baja de ${LIMITE_TEXTO}.`);
 }
 
 // ── PDF ──
@@ -98,7 +131,7 @@ const PASOS = [
 ];
 
 async function achicarPdf(f: File, alAvanzar: (mensaje: string) => void): Promise<Comprimido> {
-  const [{ cargarPdfjs }, { jsPDF }] = await Promise.all([import('../services/documents.service'), import('jspdf')]);
+  const { cargarPdfjs } = await import('../services/documents.service');
   const pdfjs = await cargarPdfjs();
   alAvanzar('Abriendo el PDF…');
   let doc: DocPdf;
@@ -122,8 +155,15 @@ async function achicarPdf(f: File, alAvanzar: (mensaje: string) => void): Promis
     const texto = textos.join('\n\n').replace(/[ \t]+\n/g, '\n').trim();
     const conTexto = texto.replace(/\s/g, '').length >= LETRAS_POR_PAGINA * n;
 
-    // 2. Cada página como imagen. Se prueba con las primeras páginas qué paso
-    //    alcanza, para no achicar todo el PDF dos veces.
+    // 2. Si entra: uno con texto queda como está (nítido y con su texto); un
+    //    escaneo pasa a 150 ppp, si así baja de verdad
+    if (f.size <= LIMITE_SUBIDA) {
+      if (conTexto) return { archivo: f };
+      return { archivo: elMejor(f, await armarPdf(doc, f.name, PASOS[0], alAvanzar)) };
+    }
+
+    // 3. No entra: cada página como imagen. Se prueba con las primeras páginas
+    //    qué paso alcanza, para no achicar todo el PDF dos veces.
     const presupuesto = (LIMITE_SUBIDA * 0.95) / n;
     // La muestra, repartida: la primera página (una portada liviana) no alcanza para decidir
     const muestra = [...new Set([1, Math.ceil(n / 2), n])];
@@ -136,28 +176,30 @@ async function achicarPdf(f: File, alAvanzar: (mensaje: string) => void): Promis
     }
 
     for (let k = paso; k < PASOS.length; k++) {
-      let salida: InstanceType<typeof jsPDF> | null = null;
-      for (let i = 1; i <= n; i++) {
-        alAvanzar(`Achicando la página ${i} de ${n}…`);
-        const { jpeg, ancho, alto } = await paginaComoJpeg(doc, i, PASOS[k]);
-        const orientacion = ancho > alto ? 'landscape' : 'portrait';
-        if (!salida) salida = new jsPDF({ unit: 'pt', format: [ancho, alto], orientation: orientacion, compress: true });
-        else salida.addPage([ancho, alto], orientacion);
-        salida.addImage(jpeg, 'JPEG', 0, 0, ancho, alto, undefined, 'NONE');
-      }
-      salida!.setProperties({ title: sinExtension(f.name), creator: 'SMT EstudIA' });
-      const blob = salida!.output('blob');
-      if (blob.size <= LIMITE_SUBIDA) {
-        return {
-          archivo: new File([blob], f.name, { type: 'application/pdf' }),
-          texto: conTexto ? texto : undefined,
-        };
-      }
+      const archivo = await armarPdf(doc, f.name, PASOS[k], alAvanzar);
+      if (archivo.size <= LIMITE_SUBIDA) return { archivo, texto: conTexto ? texto : undefined };
     }
-    throw new NoSePudoAchicar(`Tiene ${n} páginas y ni achicado baja de 11 MB. Dividilo en partes (por ejemplo, por unidad) y subí cada una.`);
+    throw new NoSePudoAchicar(`Tiene ${n} páginas y ni achicado baja de ${LIMITE_TEXTO}. Dividilo en partes (por ejemplo, por unidad) y subí cada una.`);
   } finally {
     void doc.destroy();
   }
+}
+
+/** El PDF de nuevo, con cada página como imagen JPEG */
+async function armarPdf(doc: DocPdf, nombre: string, paso: { ppp: number; calidad: number }, alAvanzar: (mensaje: string) => void): Promise<File> {
+  const { jsPDF } = await import('jspdf');
+  const n = doc.numPages;
+  let salida: InstanceType<typeof jsPDF> | null = null;
+  for (let i = 1; i <= n; i++) {
+    alAvanzar(`Achicando la página ${i} de ${n}…`);
+    const { jpeg, ancho, alto } = await paginaComoJpeg(doc, i, paso);
+    const orientacion = ancho > alto ? 'landscape' : 'portrait';
+    if (!salida) salida = new jsPDF({ unit: 'pt', format: [ancho, alto], orientation: orientacion, compress: true });
+    else salida.addPage([ancho, alto], orientacion);
+    salida.addImage(jpeg, 'JPEG', 0, 0, ancho, alto, undefined, 'NONE');
+  }
+  salida!.setProperties({ title: sinExtension(nombre), creator: 'SMT EstudIA' });
+  return new File([salida!.output('blob')], nombre, { type: 'application/pdf' });
 }
 
 type DocPdf = Awaited<ReturnType<Awaited<ReturnType<typeof import('../services/documents.service').cargarPdfjs>>['getDocument']>['promise']>;
@@ -267,5 +309,5 @@ async function achicarOffice(f: File, o: typeof OFFICE.word, alAvanzar: (mensaje
   if (blob.size > LIMITE_SUBIDA) {
     throw new NoSePudoAchicar(`Achicado sigue pesando ${mb(blob.size)}. Guardalo como PDF (${o.comoPdf}) y subí el PDF: ese sí se puede achicar más.`);
   }
-  return new File([blob], f.name, { type: o.tipo });
+  return elMejor(f, new File([blob], f.name, { type: o.tipo }));
 }
