@@ -105,8 +105,12 @@
   box-shadow: 0 0 0 3px var(--cyan-glow);
 }
 
-.em-row { display: flex; gap: var(--space-4); }
-.em-row > .em-field { flex: 1; }
+/* Dos campos lado a lado; en un celular, uno abajo del otro. Sin el
+   min-width: 0, un campo no se achica de su ancho natural y se sale de la
+   ventana (pasaba con "Tags" en Subir material). */
+.em-row { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.em-row > .em-field { flex: 1 1 180px; min-width: 0; }
+.em-field input, .em-field select, .em-field textarea { min-width: 0; }
 
 /* ── Dropzone ── */
 .em-dropzone {

@@ -339,8 +339,8 @@ export default function Migue({ enPanel = false, alCerrar, pantalla, contexto = 
         </div>
         <div className="migue-head-acciones">
           {burbujas.length > 0 && (
-            <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo}>
-              <RotateCcw size={14} /> Empezar de cero
+            <button className="btn btn-ghost btn-sm" onClick={limpiar} disabled={enVuelo} title="Empezar de cero">
+              <RotateCcw size={14} aria-hidden="true" /> <span className="migue-reiniciar-texto">Empezar de cero</span>
             </button>
           )}
           {enPanel && alCerrar && (
