@@ -12,6 +12,7 @@ import type { ImportedProgram, ActivityQuestion, PracticeQuestion, StudyCard, Ti
 import { usoIAGastado } from '../lib/usoIA';
 import { esErrorDeRed } from '../lib/conexion';
 import { leerBanco, type BancoJuegos } from '../lib/juegosRepaso';
+import { LIMITE_SUBIDA, LIMITE_TEXTO } from '../lib/comprimir';
 
 const BUCKET = 'library';
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-document`;
@@ -23,7 +24,14 @@ export interface UploadResult {
   fileSizeBytes: number;
 }
 
+/** Un rechazo que el docente puede entender: las pantallas muestran su mensaje tal cual */
+export class SubidaRechazada extends Error {}
+
 export async function uploadFile(teacherId: string, file: File): Promise<UploadResult> {
+  // El mismo límite en todas las pantallas: lo que pesa más se achica antes (lib/comprimir)
+  if (file.size > LIMITE_SUBIDA) {
+    throw new SubidaRechazada(`Pesa ${formatFileSize(file.size)} y el máximo es ${LIMITE_TEXTO}. Dividilo en partes (por ejemplo, por unidad) y subí cada una.`);
+  }
   const safeName = file.name.normalize('NFKD').replace(/[^\w.\- ]/g, '').replace(/\s+/g, '_');
   const storagePath = `${teacherId}/${crypto.randomUUID().slice(0, 8)}_${safeName}`;
   const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
@@ -33,11 +41,10 @@ export async function uploadFile(teacherId: string, file: File): Promise<UploadR
   if (error) {
     // El mensaje del almacenamiento queda en la consola; al docente, uno que entienda
     console.error('subir archivo:', error.message);
-    throw new Error(esErrorDeRed(error)
-      ? 'No se pudo subir el archivo: se cortó la señal. Probá de nuevo cuando vuelva.'
-      : /payload|too large|413|exceed|size/i.test(error.message)
-        ? 'El archivo es muy pesado para subirlo. Probá con una versión más liviana.'
-        : 'No se pudo subir el archivo. Probá de nuevo en un momento.');
+    if (esErrorDeRed(error)) throw new Error('No se pudo subir el archivo: se cortó la señal. Probá de nuevo cuando vuelva.');
+    throw new SubidaRechazada(/payload|too large|413|exceed|size/i.test(error.message)
+      ? `El archivo es muy pesado para subirlo (el máximo es ${LIMITE_TEXTO}). Probá con una versión más liviana.`
+      : 'No se pudo subir el archivo. Probá de nuevo en un momento.');
   }
   return { storagePath, fileSizeBytes: file.size };
 }
