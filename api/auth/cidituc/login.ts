@@ -1,4 +1,4 @@
-// "Ingresar con CiDiTuc": genera el state y manda a Derivador (ver api/_cidituc.ts)
+// "Ingresar con CiDiTuc": genera el state y manda a Ciudad Digital (ver api/_cidituc.ts)
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { iniciar } from '../../_cidituc.js';
 

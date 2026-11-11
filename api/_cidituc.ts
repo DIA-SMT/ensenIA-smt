@@ -1,12 +1,19 @@
 /**
- * Ingreso con CiDiTuc (la identidad ciudadana de la Municipalidad), vía Derivador.
+ * Ingreso con CiDiTuc (la identidad ciudadana de la Municipalidad), vía Ciudad
+ * Digital (repo ditec-desarrollo/cidituc, src/routes/PrivateRoute.jsx). Hasta
+ * noviembre de 2026 era vía el derivador, que dejó de usarse.
  *
- * El contrato de Derivador:
+ * El contrato:
  *   1. /api/auth/cidituc/login genera un `state`, lo guarda en una cookie
- *      httpOnly corta y manda a <CIDITUC_LOGIN_URL>/#/login?next=<clave>&state=…
- *      (Derivador usa rutas con #: sin el #, su pantalla de ingreso no ve el next)
- *   2. Derivador pide CUIL y clave y vuelve a /auth/cidituc/callback?auth=<JWT>&state=…
- *      (el JWT se entrega una sola vez; Derivador no guarda sesión).
+ *      httpOnly corta y manda a
+ *      <CIDITUC_LOGIN_URL>/?ingreso=<al azar>#/login?next=<clave>&state=…
+ *      (Ciudad Digital usa rutas con #: sin el #, su pantalla de ingreso no ve
+ *      el next). El ?ingreso= cambia en cada pedido: Ciudad Digital se sirve
+ *      sin Cache-Control y el navegador seguía usando una versión vieja (que no
+ *      conoce a EstudIA y manda al derivador) días después de cada publicación.
+ *   2. Ciudad Digital pide CUIL y clave y vuelve a /auth/cidituc/callback?auth=<JWT>&state=…
+ *      (el JWT se entrega una sola vez; para EstudIA pide la clave en cada
+ *      ingreso y no deja la sesión guardada en el navegador).
  *   3. El callback compara el state con la cookie, valida el JWT contra
  *      <CIDITUC_BACKEND_URL>/usuarios/authStatus (Authorization: el token crudo,
  *      sin "Bearer"), busca la cuenta de EstudIA por DNI y crea la sesión.
@@ -49,7 +56,7 @@ export interface Config {
 
 export function leerConfig(env: NodeJS.ProcessEnv = process.env): Config | null {
   const sinBarra = (s?: string) => s?.replace(/\/+$/, '');
-  // Con o sin el # de las rutas de Derivador: el # lo pone iniciar()
+  // Con o sin el # de las rutas de Ciudad Digital: el # lo pone urlDeIngreso()
   const loginUrl = env.CIDITUC_LOGIN_URL?.replace(/[/#]+$/, '');
   const backendUrl = sinBarra(env.CIDITUC_BACKEND_URL);
   const nextKey = env.CIDITUC_NEXT_KEY;
@@ -294,15 +301,19 @@ function json(res: ServerResponse, status: number, cuerpo: unknown, cookies: str
 
 const conError = (codigo: string) => `/login?cidituc_error=${codigo}`;
 
-/** 1 · "Ingresar con CiDiTuc": state nuevo y a Derivador */
+/** La pantalla de ingreso de Ciudad Digital para EstudIA (ver el contrato, arriba) */
+export const urlDeIngreso = (config: Config, state: string, ingreso = randomBytes(6).toString('base64url')) =>
+  `${config.loginUrl}/?ingreso=${encodeURIComponent(ingreso)}` +
+  `#/login?next=${encodeURIComponent(config.nextKey)}&state=${encodeURIComponent(state)}`;
+
+/** 1 · "Ingresar con CiDiTuc": state nuevo y a Ciudad Digital */
 export function iniciar(req: IncomingMessage, res: ServerResponse, config = leerConfig()) {
   if (!config) return redirigir(res, conError('config'));
   const state = randomBytes(32).toString('base64url');
-  const destino = `${config.loginUrl}/#/login?next=${encodeURIComponent(config.nextKey)}&state=${encodeURIComponent(state)}`;
-  redirigir(res, destino, [cookie(req, COOKIE_STATE, state, { maxAge: DURACION_STATE_S })]);
+  redirigir(res, urlDeIngreso(config, state), [cookie(req, COOKIE_STATE, state, { maxAge: DURACION_STATE_S })]);
 }
 
-/** 2 · La vuelta de Derivador */
+/** 2 · La vuelta de Ciudad Digital */
 export async function volver(req: IncomingMessage, res: ServerResponse, config = leerConfig(), dep: Dependencias = DEPENDENCIAS) {
   // El state es de un solo uso: se borra pase lo que pase
   const sinState = borrar(req, COOKIE_STATE);

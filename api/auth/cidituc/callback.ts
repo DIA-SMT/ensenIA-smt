@@ -1,4 +1,4 @@
-// La vuelta de Derivador: /auth/cidituc/callback llega acá por vercel.json (ver api/_cidituc.ts)
+// La vuelta de Ciudad Digital: /auth/cidituc/callback llega acá por vercel.json (ver api/_cidituc.ts)
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { volver } from '../../_cidituc.js';
 

@@ -80,7 +80,7 @@ export default defineConfig(({ mode }) => {
         workbox: {
           navigateFallback: '/index.html',
           // El ingreso con CiDiTuc es del servidor: si el service worker
-          // contestara con la app, la vuelta de Derivador nunca llegaría.
+          // contestara con la app, la vuelta de Ciudad Digital nunca llegaría.
           // Y el servidor de datos, que desde el 26/10/2026 también se sirve por
           // este dominio (la red de la Muni no resuelve sslip.io): abrir un
           // archivo de la biblioteca en otra pestaña tiene que traer el archivo.

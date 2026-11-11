@@ -1,7 +1,7 @@
 /**
  * Ingreso con CiDiTuc, del lado de la app (el servidor está en api/_cidituc.ts).
  *
- * El botón lleva a /api/auth/cidituc/login, que manda a Derivador. A la
+ * El botón lleva a /api/auth/cidituc/login, que manda a Ciudad Digital. A la
  * vuelta, el servidor deja la sesión de EstudIA en una cookie que solo él
  * puede leer y manda a /login?cidituc=listo; acá se la pide UNA vez y se la
  * da a supabase-js: desde ahí es una sesión como cualquier otra.
